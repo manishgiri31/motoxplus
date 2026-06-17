@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  GUEST
+  DEALER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum DealerStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum PaymentType {
+  ADVANCE_20
+  FULL_100
+  COD
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(DEALER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  dealer   Dealer?
+  admin    Admin?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Dealer {
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  companyName String
+  gstNumber   String       @unique
+  ownerName   String
+  phone       String
+  state       String
+  city        String
+  address     String
+  pincode     String
+  status      DealerStatus @default(PENDING)
+  creditLimit Float        @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders    Order[]
+  invoices  Invoice[]
+  cart      Cart?
+  documents DealerDocument[]
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  isSuperAdmin Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  image       String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  name             String
+  sku              String   @unique
+  partNumber       String   @unique
+  description      String?  @db.Text
+  categoryId       String
+  // Legacy image URLs kept for backward compat
+  images           String[]
+  compatibility    String[]
+  isActive         Boolean  @default(true)
+  // Pricing & inventory
+  price            Float
+  gstRate          Float    @default(18)
+  hsnCode          String   @default("")
+  moq              Int      @default(1)
+  stock            Int      @default(0)
+  // Product identity
+  brand            String   @default("MOTOXPLUS")
+  oemNumber        String?
+  warranty         String   @default("No Warranty")
+  countryOfOrigin  String   @default("India")
+  // Physical dimensions
+  weight           Float?
+  packageWeight    Float?
+  packageLength    Float?
+  packageWidth     Float?
+  packageHeight    Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  category      Category       @relation(fields: [categoryId], references: [id])
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  productImages ProductImage[]
+}
+
+model ProductImage {
+  id           String   @id @default(cuid())
+  productId    String
+  imageUrl     String
+  mediumUrl    String?
+  thumbnailUrl String?
+  fileName     String   @default("")
+  fileSize     Int      @default(0)
+  mimeType     String   @default("image/webp")
+  key          String   @default("")
+  isPrimary    Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+enum DealerDocumentType {
+  GST_CERTIFICATE
+  PAN_CARD
+  BUSINESS_REGISTRATION
+  SHOP_IMAGE
+  OTHER
+}
+
+model DealerDocument {
+  id           String             @id @default(cuid())
+  dealerId     String
+  documentType DealerDocumentType
+  fileUrl      String
+  fileName     String
+  fileSize     Int
+  mimeType     String
+  key          String
+  uploadedAt   DateTime           @default(now())
+
+  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@unique([dealerId, documentType])
+}
+
+model StorageAuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  fileKey   String
+  fileUrl   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  dealerId  String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  dealer Dealer     @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  items  CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  dealerId        String
+  subtotal        Float
+  gstAmount       Float
+  grandTotal      Float
+  paymentType     PaymentType
+  amountPaid      Float         @default(0)
+  amountDue       Float
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  notes           String?
+  shippingAddress String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  dealer   Dealer      @relation(fields: [dealerId], references: [id])
+  items    OrderItem[]
+  payments Payment[]
+  invoice  Invoice?
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Float
+  gstRate   Float
+  gstAmount Float
+  total     Float
+  createdAt DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+  amount            Float
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  paymentType       PaymentType
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  invoiceNumber String    @unique
+  orderId       String    @unique
+  dealerId      String
+  pdfUrl        String?
+  subtotal      Float
+  gstAmount     Float
+  grandTotal    Float
+  issuedAt      DateTime  @default(now())
+  dueDate       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  order  Order  @relation(fields: [orderId], references: [id])
+  dealer Dealer @relation(fields: [dealerId], references: [id])
+}
