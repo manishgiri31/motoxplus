@@ -33,9 +33,15 @@ export const metadata: Metadata = {
   authors: [{ name: "MOTOXPLUS India Private Limited" }],
   icons: {
     icon: [
-      { url: "/motoxplus/logo.png", sizes: "any" },
+      { url: "/motoxplus/logo.png", sizes: "32x32", type: "image/png" },
+      { url: "/motoxplus/logo.png", sizes: "64x64", type: "image/png" },
+      { url: "/motoxplus/logo.png", sizes: "128x128", type: "image/png" },
+      { url: "/motoxplus/logo.png", sizes: "192x192", type: "image/png" },
+      { url: "/motoxplus/logo.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: "/motoxplus/logo.png",
+    apple: [
+      { url: "/motoxplus/logo.png", sizes: "180x180", type: "image/png" },
+    ],
     shortcut: "/motoxplus/logo.png",
   },
   openGraph: {
