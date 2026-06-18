@@ -51,3 +51,46 @@ export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;
   return str.slice(0, length) + "...";
 }
+
+export function generateVendorCode(): string {
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 100).toString().padStart(2, "0");
+  return `VND${timestamp}${random}`;
+}
+
+export function generatePurchaseRequestNumber(): string {
+  const year = new Date().getFullYear();
+  const timestamp = Date.now().toString().slice(-5);
+  return `PR-${year}-${timestamp}`;
+}
+
+export function generatePurchaseOrderNumber(): string {
+  const year = new Date().getFullYear();
+  const timestamp = Date.now().toString().slice(-5);
+  return `PO-${year}-${timestamp}`;
+}
+
+export function generateGRNNumber(): string {
+  const year = new Date().getFullYear();
+  const timestamp = Date.now().toString().slice(-5);
+  return `GRN-${year}-${timestamp}`;
+}
+
+export function generateLeadNumber(): string {
+  const year = new Date().getFullYear();
+  const timestamp = Date.now().toString().slice(-5);
+  return `LEAD-${year}-${timestamp}`;
+}
+
+export function formatRelativeTime(date: Date | string): string {
+  const now = new Date();
+  const d = new Date(date);
+  const diff = now.getTime() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return formatDate(date);
+}

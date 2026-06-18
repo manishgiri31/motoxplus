@@ -1,21 +1,31 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+
 export default withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl;
     const token = req.nextauth.token;
+    const role = token?.role as string;
+
+    // Vendor portal — only VENDOR role
+    if (pathname.startsWith("/vendor") && role !== "VENDOR") {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // Redirect vendors away from admin and dealer portals
+    if ((pathname.startsWith("/admin") || pathname.startsWith("/dealer")) && role === "VENDOR") {
+      return NextResponse.redirect(new URL("/vendor/dashboard", req.url));
+    }
 
     // Redirect dealers away from admin
-    if (pathname.startsWith("/admin") && token?.role === "DEALER") {
+    if (pathname.startsWith("/admin") && role === "DEALER") {
       return NextResponse.redirect(new URL("/dealer/dashboard", req.url));
     }
 
     // Redirect admins away from dealer portal
-    if (
-      pathname.startsWith("/dealer") &&
-      (token?.role === "ADMIN" || token?.role === "SUPER_ADMIN")
-    ) {
+    if (pathname.startsWith("/dealer") && ADMIN_ROLES.includes(role)) {
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
 
@@ -25,12 +35,13 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
-
-        // Protect dealer and admin routes
-        if (pathname.startsWith("/dealer") || pathname.startsWith("/admin")) {
+        if (
+          pathname.startsWith("/dealer") ||
+          pathname.startsWith("/admin") ||
+          pathname.startsWith("/vendor")
+        ) {
           return !!token;
         }
-
         return true;
       },
     },
@@ -38,5 +49,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/dealer/:path*", "/admin/:path*"],
+  matcher: ["/dealer/:path*", "/admin/:path*", "/vendor/:path*"],
 };

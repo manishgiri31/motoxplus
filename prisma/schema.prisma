@@ -12,6 +12,7 @@ enum UserRole {
   DEALER
   ADMIN
   SUPER_ADMIN
+  VENDOR
 }
 
 enum DealerStatus {
@@ -59,6 +60,7 @@ model User {
   sessions Session[]
   dealer   Dealer?
   admin    Admin?
+  vendor   Vendor?
 }
 
 model Account {
@@ -326,4 +328,345 @@ model Invoice {
 
   order  Order  @relation(fields: [orderId], references: [id])
   dealer Dealer @relation(fields: [dealerId], references: [id])
+}
+
+// ─── VENDOR MANAGEMENT ───────────────────────────────────────────────────────
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  BLACKLISTED
+}
+
+enum VendorCategory {
+  RAW_MATERIALS
+  PACKAGING
+  PRINTING
+  LOGISTICS
+  MANUFACTURING_COMPONENTS
+  TOOLING
+  SERVICES
+}
+
+enum VendorDocumentType {
+  GST_CERTIFICATE
+  PAN_CARD
+  BUSINESS_REGISTRATION
+  BANK_STATEMENT
+  CANCELLED_CHEQUE
+  OTHER
+}
+
+model Vendor {
+  id            String         @id @default(cuid())
+  userId        String?        @unique
+  vendorCode    String         @unique
+  companyName   String
+  ownerName     String
+  email         String         @unique
+  phone         String
+  gstNumber     String?        @unique
+  panNumber     String?
+  category      VendorCategory
+  status        VendorStatus   @default(PENDING)
+  creditDays    Int            @default(30)
+  bankName      String?
+  accountNumber String?
+  ifscCode      String?
+  address       String
+  city          String
+  state         String
+  pincode       String
+  website       String?
+  notes         String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  contacts       VendorContact[]
+  documents      VendorDocument[]
+  ratings        VendorRating[]
+  payments       VendorPayment[]
+  purchaseOrders PurchaseOrder[]
+}
+
+model VendorContact {
+  id          String   @id @default(cuid())
+  vendorId    String
+  name        String
+  designation String?
+  email       String?
+  phone       String
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model VendorDocument {
+  id           String             @id @default(cuid())
+  vendorId     String
+  documentType VendorDocumentType
+  fileUrl      String
+  fileName     String
+  fileSize     Int                @default(0)
+  key          String             @default("")
+  uploadedAt   DateTime           @default(now())
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model VendorRating {
+  id            String   @id @default(cuid())
+  vendorId      String
+  ratedById     String
+  qualityScore  Float
+  deliveryScore Float
+  priceScore    Float
+  overallScore  Float
+  period        String
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, period])
+}
+
+model VendorPayment {
+  id              String        @id @default(cuid())
+  vendorId        String
+  purchaseOrderId String?
+  amount          Float
+  currency        String        @default("INR")
+  paymentDate     DateTime
+  paymentMode     String
+  referenceNumber String?
+  status          PaymentStatus @default(PENDING)
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  vendor        Vendor         @relation(fields: [vendorId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+}
+
+// ─── PROCUREMENT MANAGEMENT ──────────────────────────────────────────────────
+
+enum PurchaseRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CONVERTED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  PARTIALLY_RECEIVED
+  FULLY_RECEIVED
+  CANCELLED
+  CLOSED
+}
+
+enum Urgency {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+model PurchaseRequest {
+  id                String                @id @default(cuid())
+  requestNumber     String                @unique
+  requestedById     String
+  requestedByName   String
+  departmentCode    String                @default("GENERAL")
+  title             String
+  urgency           Urgency               @default(NORMAL)
+  status            PurchaseRequestStatus @default(DRAFT)
+  approvedById      String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+  notes             String?               @db.Text
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  items         PurchaseRequestItem[]
+  purchaseOrder PurchaseOrder?
+}
+
+model PurchaseRequestItem {
+  id                 String  @id @default(cuid())
+  purchaseRequestId  String
+  description        String
+  quantity           Int
+  unit               String  @default("PCS")
+  estimatedUnitPrice Float?
+  notes              String?
+
+  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+}
+
+model PurchaseOrder {
+  id                 String              @id @default(cuid())
+  poNumber           String              @unique
+  purchaseRequestId  String?             @unique
+  vendorId           String
+  createdById        String
+  status             PurchaseOrderStatus @default(DRAFT)
+  urgency            Urgency             @default(NORMAL)
+  deliveryDate       DateTime
+  deliveryAddress    String
+  subtotal           Float
+  taxAmount          Float               @default(0)
+  grandTotal         Float
+  termsAndConditions String?             @db.Text
+  vendorNotes        String?
+  rejectedAt         DateTime?
+  acceptedAt         DateTime?
+  closedAt           DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  purchaseRequest    PurchaseRequest?    @relation(fields: [purchaseRequestId], references: [id])
+  vendor             Vendor              @relation(fields: [vendorId], references: [id])
+  items              PurchaseOrderItem[]
+  goodsReceivedNotes GoodsReceivedNote[]
+  vendorPayments     VendorPayment[]
+}
+
+model PurchaseOrderItem {
+  id              String @id @default(cuid())
+  purchaseOrderId String
+  description     String
+  quantity        Int
+  receivedQty     Int    @default(0)
+  unit            String @default("PCS")
+  unitPrice       Float
+  gstRate         Float  @default(18)
+  gstAmount       Float
+  total           Float
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
+
+model GoodsReceivedNote {
+  id              String   @id @default(cuid())
+  grnNumber       String   @unique
+  purchaseOrderId String
+  receivedById    String
+  receivedByName  String
+  receivedAt      DateTime
+  qualityStatus   String   @default("ACCEPTED")
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  purchaseOrder PurchaseOrder      @relation(fields: [purchaseOrderId], references: [id])
+  items         GoodsReceivedItem[]
+}
+
+model GoodsReceivedItem {
+  id                  String  @id @default(cuid())
+  goodsReceivedNoteId String
+  description         String
+  orderedQuantity     Int
+  receivedQuantity    Int
+  acceptedQuantity    Int
+  rejectedQuantity    Int     @default(0)
+  rejectionReason     String?
+
+  goodsReceivedNote GoodsReceivedNote @relation(fields: [goodsReceivedNoteId], references: [id], onDelete: Cascade)
+}
+
+// ─── SALES CRM ───────────────────────────────────────────────────────────────
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  NEGOTIATION
+  CONVERTED
+  LOST
+  DORMANT
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  TRADE_SHOW
+  COLD_CALL
+  SOCIAL_MEDIA
+  ADVERTISEMENT
+  WHATSAPP
+  WALK_IN
+  OTHER
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  leadNumber     String       @unique
+  companyName    String
+  ownerName      String
+  designation    String?
+  email          String
+  phone          String
+  alternatePhone String?
+  city           String
+  state          String
+  pincode        String?
+  address        String?
+  status         LeadStatus   @default(NEW)
+  source         LeadSource   @default(WEBSITE)
+  priority       LeadPriority @default(MEDIUM)
+  assignedToId   String?
+  assignedToName String?
+  convertedAt    DateTime?
+  dealerId       String?      @unique
+  lostReason     String?
+  estimatedValue Float?
+  nextFollowUp   DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  activities LeadActivity[]
+  notes      LeadNote[]
+}
+
+model LeadActivity {
+  id          String   @id @default(cuid())
+  leadId      String
+  performedBy String
+  performedByName String
+  type        String
+  description String   @db.Text
+  outcome     String?
+  nextAction  String?
+  createdAt   DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model LeadNote {
+  id          String   @id @default(cuid())
+  leadId      String
+  authorId    String
+  authorName  String
+  content     String   @db.Text
+  isPrivate   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }

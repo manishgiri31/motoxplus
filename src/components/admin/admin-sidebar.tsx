@@ -16,6 +16,11 @@ import {
   Menu,
   X,
   ShieldCheck,
+  Truck,
+  ShoppingCart,
+  PackageCheck,
+  UserSearch,
+  Kanban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +30,18 @@ const navItems = [
   { icon: Users, label: "Dealers", href: "/admin/dealers" },
   { icon: ClipboardList, label: "Orders", href: "/admin/orders" },
   { icon: FileText, label: "Invoices", href: "/admin/invoices" },
+  { icon: Truck, label: "Vendors", href: "/admin/vendors" },
+];
+
+const procurementItems = [
+  { icon: ClipboardList, label: "Requests", href: "/admin/procurement/requests" },
+  { icon: ShoppingCart, label: "Purchase Orders", href: "/admin/procurement/purchase-orders" },
+  { icon: PackageCheck, label: "GRN", href: "/admin/procurement/grn" },
+];
+
+const crmItems = [
+  { icon: UserSearch, label: "Leads", href: "/admin/crm/leads" },
+  { icon: Kanban, label: "Pipeline", href: "/admin/crm/pipeline" },
 ];
 
 const superAdminItems = [
@@ -84,6 +101,52 @@ export function AdminSidebar({ user }: Props) {
       {/* Nav */}
       <nav className="flex-1 px-4 space-y-1">
         {navItems.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "bg-red-600/10 text-red-500 border-l-2 border-red-600"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
+              )}
+            >
+              <item.icon size={18} className={isActive ? "text-red-500" : "text-[var(--text-muted)]"} />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        <div className="pt-4 pb-2 px-4">
+          <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Procurement</div>
+        </div>
+        {procurementItems.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "bg-red-600/10 text-red-500 border-l-2 border-red-600"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
+              )}
+            >
+              <item.icon size={18} className={isActive ? "text-red-500" : "text-[var(--text-muted)]"} />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        <div className="pt-4 pb-2 px-4">
+          <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">CRM</div>
+        </div>
+        {crmItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link

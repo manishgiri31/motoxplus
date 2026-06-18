@@ -32,6 +32,7 @@ export const authOptions: NextAuthOptions = {
           include: {
             dealer: true,
             admin: true,
+            vendor: true,
           },
         });
 
@@ -57,6 +58,19 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
+        // Check vendor approval
+        if (user.role === UserRole.VENDOR && user.vendor?.status !== "APPROVED") {
+          if (user.vendor?.status === "PENDING") {
+            throw new Error("Your vendor account is pending approval");
+          }
+          if (user.vendor?.status === "SUSPENDED") {
+            throw new Error("Your vendor account has been suspended");
+          }
+          if (user.vendor?.status === "BLACKLISTED") {
+            throw new Error("Your vendor account has been blacklisted");
+          }
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -64,6 +78,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           dealerId: user.dealer?.id,
           isSuperAdmin: user.admin?.isSuperAdmin,
+          vendorId: user.vendor?.id,
         };
       },
     }),
@@ -75,6 +90,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.dealerId = (user as any).dealerId;
         token.isSuperAdmin = (user as any).isSuperAdmin;
+        token.vendorId = (user as any).vendorId;
       }
       return token;
     },
@@ -84,6 +100,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as UserRole;
         session.user.dealerId = token.dealerId as string | undefined;
         session.user.isSuperAdmin = token.isSuperAdmin as boolean | undefined;
+        session.user.vendorId = token.vendorId as string | undefined;
       }
       return session;
     },

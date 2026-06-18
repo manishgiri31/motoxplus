@@ -7,6 +7,7 @@ declare module "next-auth" {
     role: UserRole;
     dealerId?: string;
     isSuperAdmin?: boolean;
+    vendorId?: string;
   }
   interface Session {
     user: {
@@ -17,6 +18,7 @@ declare module "next-auth" {
       role: UserRole;
       dealerId?: string;
       isSuperAdmin?: boolean;
+      vendorId?: string;
     };
   }
 }
@@ -27,5 +29,6 @@ declare module "next-auth/jwt" {
     role: UserRole;
     dealerId?: string;
     isSuperAdmin?: boolean;
+    vendorId?: string;
   }
 }
