@@ -3,11 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+import { requireSectionAccess } from "@/lib/staff-access";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || !ADMIN_ROLES.includes(session.user.role)) {
+  if (!session || !requireSectionAccess(session.user.role, session.user.department, "crm")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

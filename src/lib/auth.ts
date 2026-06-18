@@ -79,6 +79,7 @@ export const authOptions: NextAuthOptions = {
           dealerId: user.dealer?.id,
           isSuperAdmin: user.admin?.isSuperAdmin,
           vendorId: user.vendor?.id,
+          department: user.department ?? undefined,
         };
       },
     }),
@@ -91,6 +92,7 @@ export const authOptions: NextAuthOptions = {
         token.dealerId = (user as any).dealerId;
         token.isSuperAdmin = (user as any).isSuperAdmin;
         token.vendorId = (user as any).vendorId;
+        token.department = (user as any).department;
       }
       return token;
     },
@@ -101,6 +103,7 @@ export const authOptions: NextAuthOptions = {
         session.user.dealerId = token.dealerId as string | undefined;
         session.user.isSuperAdmin = token.isSuperAdmin as boolean | undefined;
         session.user.vendorId = token.vendorId as string | undefined;
+        session.user.department = token.department as any;
       }
       return session;
     },

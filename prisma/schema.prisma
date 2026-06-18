@@ -13,6 +13,14 @@ enum UserRole {
   ADMIN
   SUPER_ADMIN
   VENDOR
+  STAFF
+}
+
+enum StaffDepartment {
+  SALES
+  MARKETING
+  PRODUCTION
+  ACCOUNTS
 }
 
 enum DealerStatus {
@@ -46,15 +54,16 @@ enum PaymentType {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String           @unique
   emailVerified DateTime?
   image         String?
   password      String?
-  role          UserRole  @default(DEALER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          UserRole         @default(DEALER)
+  department    StaffDepartment?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   accounts Account[]
   sessions Session[]

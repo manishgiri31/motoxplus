@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { UserRole, StaffDepartment } from "@prisma/client";
 import "next-auth";
 import "next-auth/jwt";
 
@@ -8,6 +8,7 @@ declare module "next-auth" {
     dealerId?: string;
     isSuperAdmin?: boolean;
     vendorId?: string;
+    department?: StaffDepartment;
   }
   interface Session {
     user: {
@@ -19,6 +20,7 @@ declare module "next-auth" {
       dealerId?: string;
       isSuperAdmin?: boolean;
       vendorId?: string;
+      department?: StaffDepartment;
     };
   }
 }
@@ -30,5 +32,6 @@ declare module "next-auth/jwt" {
     dealerId?: string;
     isSuperAdmin?: boolean;
     vendorId?: string;
+    department?: StaffDepartment;
   }
 }

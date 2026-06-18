@@ -21,9 +21,11 @@ import {
   PackageCheck,
   UserSearch,
   Kanban,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Full admin nav
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
   { icon: Package, label: "Products", href: "/admin/products" },
@@ -32,22 +34,65 @@ const navItems = [
   { icon: FileText, label: "Invoices", href: "/admin/invoices" },
   { icon: Truck, label: "Vendors", href: "/admin/vendors" },
 ];
-
 const procurementItems = [
   { icon: ClipboardList, label: "Requests", href: "/admin/procurement/requests" },
   { icon: ShoppingCart, label: "Purchase Orders", href: "/admin/procurement/purchase-orders" },
   { icon: PackageCheck, label: "GRN", href: "/admin/procurement/grn" },
 ];
-
 const crmItems = [
   { icon: UserSearch, label: "Leads", href: "/admin/crm/leads" },
   { icon: Kanban, label: "Pipeline", href: "/admin/crm/pipeline" },
 ];
-
 const superAdminItems = [
   { icon: ShieldCheck, label: "Admins", href: "/admin/admins" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ];
+
+// Staff department nav — icon map by href
+const ICON_MAP: Record<string, any> = {
+  "/admin/dashboard": LayoutDashboard,
+  "/admin/dealers": Users,
+  "/admin/orders": ClipboardList,
+  "/admin/crm/leads": UserSearch,
+  "/admin/crm/pipeline": Kanban,
+  "/admin/products": Package,
+  "/admin/procurement/grn": PackageCheck,
+  "/admin/invoices": FileText,
+};
+
+const STAFF_NAV: Record<string, { label: string; href: string }[]> = {
+  SALES: [
+    { label: "Dashboard", href: "/admin/dashboard" },
+    { label: "Dealers", href: "/admin/dealers" },
+    { label: "Orders", href: "/admin/orders" },
+    { label: "Leads", href: "/admin/crm/leads" },
+    { label: "Pipeline", href: "/admin/crm/pipeline" },
+  ],
+  MARKETING: [
+    { label: "Dashboard", href: "/admin/dashboard" },
+    { label: "Products", href: "/admin/products" },
+    { label: "Leads", href: "/admin/crm/leads" },
+    { label: "Pipeline", href: "/admin/crm/pipeline" },
+  ],
+  PRODUCTION: [
+    { label: "Dashboard", href: "/admin/dashboard" },
+    { label: "Orders", href: "/admin/orders" },
+    { label: "Products", href: "/admin/products" },
+    { label: "GRN", href: "/admin/procurement/grn" },
+  ],
+  ACCOUNTS: [
+    { label: "Dashboard", href: "/admin/dashboard" },
+    { label: "Orders", href: "/admin/orders" },
+    { label: "Invoices", href: "/admin/invoices" },
+  ],
+};
+
+const DEPT_COLORS: Record<string, string> = {
+  SALES: "text-blue-400",
+  MARKETING: "text-purple-400",
+  PRODUCTION: "text-orange-400",
+  ACCOUNTS: "text-green-400",
+};
 
 interface Props {
   user: {
@@ -55,141 +100,113 @@ interface Props {
     email?: string | null;
     role: string;
     isSuperAdmin?: boolean;
+    department?: string | null;
   };
 }
 
 export function AdminSidebar({ user }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isStaff = user.role === "STAFF";
+  const staffNav = isStaff ? (STAFF_NAV[user.department || ""] ?? []) : [];
+
+  const navLink = (href: string, label: string, Icon: any) => {
+    const isActive = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={() => setMobileOpen(false)}
+        className={cn(
+          "flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200",
+          isActive
+            ? "bg-red-600/10 text-red-500 border-l-2 border-red-600"
+            : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
+        )}
+      >
+        <Icon size={18} className={isActive ? "text-red-500" : "text-[var(--text-muted)]"} />
+        {label}
+      </Link>
+    );
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="p-6 border-b border-[var(--border-color)]">
         <Link href="/" className="flex flex-col items-center gap-3 text-center">
-          <Image
-            src="/motoxplus/logo.png"
-            alt="MOTOXPLUS"
-            width={64}
-            height={64}
-            className="object-contain"
-          />
+          <Image src="/motoxplus/logo.png" alt="MOTOXPLUS" width={64} height={64} className="object-contain" />
           <div>
             <div className="text-[var(--text-primary)] font-black text-base tracking-wide leading-tight">
               MOTOX<span className="text-red-500">PLUS</span>
             </div>
             <div className="text-[var(--text-muted)] text-[9px] leading-tight">India Private Limited</div>
             <div className="text-red-600 text-[9px] uppercase tracking-widest mt-1 font-semibold">
-              {user.isSuperAdmin ? "Super Admin" : "Admin Panel"}
+              {isStaff ? `${user.department} Portal` : user.isSuperAdmin ? "Super Admin" : "Admin Panel"}
             </div>
           </div>
         </Link>
       </div>
 
-      {/* User */}
+      {/* User badge */}
       <div className="p-4 mx-4 my-4 glass border border-[var(--border-color)] rounded-sm">
         <div className="text-[var(--text-primary)] font-semibold text-sm truncate">{user.name}</div>
         <div className="text-[var(--text-muted)] text-xs truncate">{user.email}</div>
         <div className="mt-2 inline-flex items-center gap-1.5">
-          <ShieldCheck size={10} className={user.isSuperAdmin ? "text-red-500" : "text-blue-500"} />
-          <span className={`text-[10px] uppercase tracking-widest font-semibold ${user.isSuperAdmin ? "text-red-500" : "text-blue-500"}`}>
-            {user.isSuperAdmin ? "Super Admin" : "Admin"}
-          </span>
+          {isStaff ? (
+            <>
+              <span className={`w-2 h-2 rounded-full bg-current ${DEPT_COLORS[user.department || "SALES"]}`} />
+              <span className={`text-[10px] uppercase tracking-widest font-semibold ${DEPT_COLORS[user.department || "SALES"]}`}>
+                {user.department}
+              </span>
+            </>
+          ) : (
+            <>
+              <ShieldCheck size={10} className={user.isSuperAdmin ? "text-red-500" : "text-blue-500"} />
+              <span className={`text-[10px] uppercase tracking-widest font-semibold ${user.isSuperAdmin ? "text-red-500" : "text-blue-500"}`}>
+                {user.isSuperAdmin ? "Super Admin" : "Admin"}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-4 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-red-600/10 text-red-500 border-l-2 border-red-600"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-              )}
-            >
-              <item.icon size={18} className={isActive ? "text-red-500" : "text-[var(--text-muted)]"} />
-              {item.label}
-            </Link>
-          );
-        })}
-
-        <div className="pt-4 pb-2 px-4">
-          <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Procurement</div>
-        </div>
-        {procurementItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-red-600/10 text-red-500 border-l-2 border-red-600"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-              )}
-            >
-              <item.icon size={18} className={isActive ? "text-red-500" : "text-[var(--text-muted)]"} />
-              {item.label}
-            </Link>
-          );
-        })}
-
-        <div className="pt-4 pb-2 px-4">
-          <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">CRM</div>
-        </div>
-        {crmItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-red-600/10 text-red-500 border-l-2 border-red-600"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-              )}
-            >
-              <item.icon size={18} className={isActive ? "text-red-500" : "text-[var(--text-muted)]"} />
-              {item.label}
-            </Link>
-          );
-        })}
-
-        {user.isSuperAdmin && (
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto min-h-0">
+        {isStaff ? (
+          // Staff: flat department-specific list
+          staffNav.map((item) => {
+            const Icon = ICON_MAP[item.href] || LayoutDashboard;
+            return navLink(item.href, item.label, Icon);
+          })
+        ) : (
+          // Admin/Super Admin: full nav
           <>
+            {navItems.map((item) => navLink(item.href, item.label, item.icon))}
+
             <div className="pt-4 pb-2 px-4">
-              <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Super Admin</div>
+              <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Procurement</div>
             </div>
-            {superAdminItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all",
-                    isActive
-                      ? "bg-red-600/10 text-red-500 border-l-2 border-red-600"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
-                  )}
-                >
-                  <item.icon size={18} className={isActive ? "text-red-500" : "text-[var(--text-muted)]"} />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {procurementItems.map((item) => navLink(item.href, item.label, item.icon))}
+
+            <div className="pt-4 pb-2 px-4">
+              <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">CRM</div>
+            </div>
+            {crmItems.map((item) => navLink(item.href, item.label, item.icon))}
+
+            <div className="pt-4 pb-2 px-4">
+              <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Team</div>
+            </div>
+            {navLink("/admin/staff", "Staff Accounts", UserCog)}
+
+            {user.isSuperAdmin && (
+              <>
+                <div className="pt-4 pb-2 px-4">
+                  <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Super Admin</div>
+                </div>
+                {superAdminItems.map((item) => navLink(item.href, item.label, item.icon))}
+              </>
+            )}
           </>
         )}
       </nav>
@@ -224,10 +241,7 @@ export function AdminSidebar({ user }: Props) {
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <aside className="relative w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col z-10">
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            >
+            <button onClick={() => setMobileOpen(false)} className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
               <X size={20} />
             </button>
             <SidebarContent />

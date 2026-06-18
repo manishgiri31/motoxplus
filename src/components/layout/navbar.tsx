@@ -13,6 +13,7 @@ const navLinks = [
   { label: "Products", href: "/products" },
   { label: "About", href: "/about" },
   { label: "Become a Dealer", href: "/become-dealer" },
+  { label: "Become a Vendor", href: "/become-vendor" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -30,6 +31,8 @@ export function Navbar() {
   const dashboardHref =
     session?.user?.role === "DEALER"
       ? "/dealer/dashboard"
+      : session?.user?.role === "VENDOR"
+      ? "/vendor/dashboard"
       : ["ADMIN", "SUPER_ADMIN"].includes(session?.user?.role ?? "")
       ? "/admin/dashboard"
       : "/login";
@@ -74,7 +77,7 @@ export function Navbar() {
                 href={link.href}
                 className={cn(
                   "text-sm font-medium tracking-wide transition-colors duration-200",
-                  link.href === "/become-dealer"
+                  link.href === "/become-dealer" || link.href === "/become-vendor"
                     ? "text-red-500 hover:text-red-400"
                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 )}

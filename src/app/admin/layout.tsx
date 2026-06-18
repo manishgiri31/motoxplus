@@ -6,7 +6,7 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
 
-  const INTERNAL_ROLES = ["ADMIN", "SUPER_ADMIN"];
+  const INTERNAL_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
   if (!session) redirect("/login");
   if (!INTERNAL_ROLES.includes(session.user.role)) {
