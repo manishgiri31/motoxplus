@@ -7,6 +7,505 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String           @id @default(cuid())
+  name          String?
+  email         String           @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole         @default(DEALER)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  department    StaffDepartment?
+  accounts      Account[]
+  admin         Admin?
+  dealer        Dealer?
+  sessions      Session[]
+  vendor        Vendor?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Dealer {
+  id          String           @id @default(cuid())
+  userId      String           @unique
+  companyName String
+  gstNumber   String           @unique
+  ownerName   String
+  phone       String
+  state       String
+  city        String
+  address     String
+  pincode     String
+  status      DealerStatus     @default(PENDING)
+  creditLimit Float            @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  cart        Cart?
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents   DealerDocument[]
+  invoices    Invoice[]
+  orders      Order[]
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  isSuperAdmin Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Product {
+  id              String         @id @default(cuid())
+  name            String
+  sku             String         @unique
+  partNumber      String         @unique
+  description     String?
+  categoryId      String
+  weight          Float?
+  moq             Int            @default(1)
+  price           Float
+  gstRate         Float          @default(18)
+  images          String[]
+  compatibility   String[]
+  isActive        Boolean        @default(true)
+  stock           Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  brand           String         @default("MOTOXPLUS")
+  countryOfOrigin String         @default("India")
+  hsnCode         String         @default("")
+  oemNumber       String?
+  packageHeight   Float?
+  packageLength   Float?
+  packageWeight   Float?
+  packageWidth    Float?
+  warranty        String         @default("No Warranty")
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  category        Category       @relation(fields: [categoryId], references: [id])
+  productImages   ProductImage[]
+}
+
+model ProductImage {
+  id           String   @id @default(cuid())
+  productId    String
+  imageUrl     String
+  key          String   @default("")
+  isPrimary    Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  fileName     String   @default("")
+  fileSize     Int      @default(0)
+  mediumUrl    String?
+  mimeType     String   @default("image/webp")
+  thumbnailUrl String?
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model DealerDocument {
+  id           String             @id @default(cuid())
+  dealerId     String
+  documentType DealerDocumentType
+  fileUrl      String
+  fileName     String
+  fileSize     Int
+  mimeType     String
+  key          String
+  uploadedAt   DateTime           @default(now())
+  dealer       Dealer             @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@unique([dealerId, documentType])
+}
+
+model StorageAuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  fileKey   String
+  fileUrl   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  dealerId  String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  dealer    Dealer     @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  dealerId        String
+  subtotal        Float
+  gstAmount       Float
+  grandTotal      Float
+  paymentType     PaymentType
+  amountPaid      Float         @default(0)
+  amountDue       Float
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  notes           String?
+  shippingAddress String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  invoice         Invoice?
+  dealer          Dealer        @relation(fields: [dealerId], references: [id])
+  items           OrderItem[]
+  payments        Payment[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Float
+  gstRate   Float
+  gstAmount Float
+  total     Float
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+  amount            Float
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  paymentType       PaymentType
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  invoiceNumber String    @unique
+  orderId       String    @unique
+  dealerId      String
+  pdfUrl        String?
+  subtotal      Float
+  gstAmount     Float
+  grandTotal    Float
+  issuedAt      DateTime  @default(now())
+  dueDate       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  dealer        Dealer    @relation(fields: [dealerId], references: [id])
+  order         Order     @relation(fields: [orderId], references: [id])
+}
+
+model Vendor {
+  id             String           @id @default(cuid())
+  userId         String?          @unique
+  vendorCode     String           @unique
+  companyName    String
+  ownerName      String
+  email          String           @unique
+  phone          String
+  gstNumber      String?          @unique
+  panNumber      String?
+  category       VendorCategory
+  status         VendorStatus     @default(PENDING)
+  creditDays     Int              @default(30)
+  bankName       String?
+  accountNumber  String?
+  ifscCode       String?
+  address        String
+  city           String
+  state          String
+  pincode        String
+  website        String?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  purchaseOrders PurchaseOrder[]
+  user           User?            @relation(fields: [userId], references: [id])
+  contacts       VendorContact[]
+  documents      VendorDocument[]
+  payments       VendorPayment[]
+  ratings        VendorRating[]
+}
+
+model VendorContact {
+  id          String   @id @default(cuid())
+  vendorId    String
+  name        String
+  designation String?
+  email       String?
+  phone       String
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model VendorDocument {
+  id           String             @id @default(cuid())
+  vendorId     String
+  documentType VendorDocumentType
+  fileUrl      String
+  fileName     String
+  fileSize     Int                @default(0)
+  key          String             @default("")
+  uploadedAt   DateTime           @default(now())
+  vendor       Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+}
+
+model VendorRating {
+  id            String   @id @default(cuid())
+  vendorId      String
+  ratedById     String
+  qualityScore  Float
+  deliveryScore Float
+  priceScore    Float
+  overallScore  Float
+  period        String
+  notes         String?
+  createdAt     DateTime @default(now())
+  vendor        Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([vendorId, period])
+}
+
+model VendorPayment {
+  id              String         @id @default(cuid())
+  vendorId        String
+  amount          Float
+  currency        String         @default("INR")
+  paymentDate     DateTime
+  paymentMode     String
+  referenceNumber String?
+  status          PaymentStatus  @default(PENDING)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  vendor          Vendor         @relation(fields: [vendorId], references: [id])
+}
+
+model PurchaseRequest {
+  id              String                @id @default(cuid())
+  requestNumber   String                @unique
+  requestedById   String
+  requestedByName String
+  departmentCode  String                @default("GENERAL")
+  title           String
+  urgency         Urgency               @default(NORMAL)
+  status          PurchaseRequestStatus @default(DRAFT)
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  notes           String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  purchaseOrder   PurchaseOrder?
+  items           PurchaseRequestItem[]
+}
+
+model PurchaseRequestItem {
+  id                 String          @id @default(cuid())
+  purchaseRequestId  String
+  description        String
+  quantity           Int
+  unit               String          @default("PCS")
+  estimatedUnitPrice Float?
+  notes              String?
+  purchaseRequest    PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+}
+
+model PurchaseOrder {
+  id                 String              @id @default(cuid())
+  poNumber           String              @unique
+  purchaseRequestId  String?             @unique
+  vendorId           String
+  createdById        String
+  status             PurchaseOrderStatus @default(DRAFT)
+  urgency            Urgency             @default(NORMAL)
+  deliveryDate       DateTime
+  deliveryAddress    String
+  subtotal           Float
+  taxAmount          Float               @default(0)
+  grandTotal         Float
+  termsAndConditions String?
+  vendorNotes        String?
+  rejectedAt         DateTime?
+  acceptedAt         DateTime?
+  closedAt           DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  goodsReceivedNotes GoodsReceivedNote[]
+  purchaseRequest    PurchaseRequest?    @relation(fields: [purchaseRequestId], references: [id])
+  vendor             Vendor              @relation(fields: [vendorId], references: [id])
+  items              PurchaseOrderItem[]
+  vendorPayments     VendorPayment[]
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  description     String
+  quantity        Int
+  receivedQty     Int           @default(0)
+  unit            String        @default("PCS")
+  unitPrice       Float
+  gstRate         Float         @default(18)
+  gstAmount       Float
+  total           Float
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+}
+
+model GoodsReceivedNote {
+  id              String              @id @default(cuid())
+  grnNumber       String              @unique
+  purchaseOrderId String
+  receivedById    String
+  receivedByName  String
+  receivedAt      DateTime
+  qualityStatus   String              @default("ACCEPTED")
+  notes           String?
+  createdAt       DateTime            @default(now())
+  items           GoodsReceivedItem[]
+  purchaseOrder   PurchaseOrder       @relation(fields: [purchaseOrderId], references: [id])
+}
+
+model GoodsReceivedItem {
+  id                  String            @id @default(cuid())
+  goodsReceivedNoteId String
+  description         String
+  orderedQuantity     Int
+  receivedQuantity    Int
+  acceptedQuantity    Int
+  rejectedQuantity    Int               @default(0)
+  rejectionReason     String?
+  goodsReceivedNote   GoodsReceivedNote @relation(fields: [goodsReceivedNoteId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id             String         @id @default(cuid())
+  leadNumber     String         @unique
+  companyName    String
+  ownerName      String
+  email          String
+  phone          String
+  city           String
+  state          String
+  status         LeadStatus     @default(NEW)
+  source         LeadSource     @default(WEBSITE)
+  priority       LeadPriority   @default(MEDIUM)
+  assignedToId   String?
+  assignedToName String?
+  convertedAt    DateTime?
+  dealerId       String?        @unique
+  lostReason     String?
+  estimatedValue Float?
+  nextFollowUp   DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  address        String?
+  alternatePhone String?
+  designation    String?
+  pincode        String?
+  activities     LeadActivity[]
+  notes          LeadNote[]
+}
+
+model LeadActivity {
+  id              String   @id @default(cuid())
+  leadId          String
+  performedBy     String
+  performedByName String
+  type            String
+  description     String
+  outcome         String?
+  nextAction      String?
+  createdAt       DateTime @default(now())
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model LeadNote {
+  id         String   @id @default(cuid())
+  leadId     String
+  authorId   String
+  authorName String
+  content    String
+  isPrivate  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
 enum UserRole {
   GUEST
   DEALER
@@ -53,162 +552,6 @@ enum PaymentType {
   COD
 }
 
-model User {
-  id            String           @id @default(cuid())
-  name          String?
-  email         String           @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          UserRole         @default(DEALER)
-  department    StaffDepartment?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
-  accounts Account[]
-  sessions Session[]
-  dealer   Dealer?
-  admin    Admin?
-  vendor   Vendor?
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-model Dealer {
-  id          String       @id @default(cuid())
-  userId      String       @unique
-  companyName String
-  gstNumber   String       @unique
-  ownerName   String
-  phone       String
-  state       String
-  city        String
-  address     String
-  pincode     String
-  status      DealerStatus @default(PENDING)
-  creditLimit Float        @default(0)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders    Order[]
-  invoices  Invoice[]
-  cart      Cart?
-  documents DealerDocument[]
-}
-
-model Admin {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  isSuperAdmin Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?
-  image       String?
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  products Product[]
-}
-
-model Product {
-  id               String   @id @default(cuid())
-  name             String
-  sku              String   @unique
-  partNumber       String   @unique
-  description      String?  @db.Text
-  categoryId       String
-  // Legacy image URLs kept for backward compat
-  images           String[]
-  compatibility    String[]
-  isActive         Boolean  @default(true)
-  // Pricing & inventory
-  price            Float
-  gstRate          Float    @default(18)
-  hsnCode          String   @default("")
-  moq              Int      @default(1)
-  stock            Int      @default(0)
-  // Product identity
-  brand            String   @default("MOTOXPLUS")
-  oemNumber        String?
-  warranty         String   @default("No Warranty")
-  countryOfOrigin  String   @default("India")
-  // Physical dimensions
-  weight           Float?
-  packageWeight    Float?
-  packageLength    Float?
-  packageWidth     Float?
-  packageHeight    Float?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  category      Category       @relation(fields: [categoryId], references: [id])
-  cartItems     CartItem[]
-  orderItems    OrderItem[]
-  productImages ProductImage[]
-}
-
-model ProductImage {
-  id           String   @id @default(cuid())
-  productId    String
-  imageUrl     String
-  mediumUrl    String?
-  thumbnailUrl String?
-  fileName     String   @default("")
-  fileSize     Int      @default(0)
-  mimeType     String   @default("image/webp")
-  key          String   @default("")
-  isPrimary    Boolean  @default(false)
-  sortOrder    Int      @default(0)
-  createdAt    DateTime @default(now())
-
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-}
-
 enum DealerDocumentType {
   GST_CERTIFICATE
   PAN_CARD
@@ -216,130 +559,6 @@ enum DealerDocumentType {
   SHOP_IMAGE
   OTHER
 }
-
-model DealerDocument {
-  id           String             @id @default(cuid())
-  dealerId     String
-  documentType DealerDocumentType
-  fileUrl      String
-  fileName     String
-  fileSize     Int
-  mimeType     String
-  key          String
-  uploadedAt   DateTime           @default(now())
-
-  dealer Dealer @relation(fields: [dealerId], references: [id], onDelete: Cascade)
-
-  @@unique([dealerId, documentType])
-}
-
-model StorageAuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  fileKey   String
-  fileUrl   String?
-  metadata  Json?
-  createdAt DateTime @default(now())
-}
-
-model Cart {
-  id        String     @id @default(cuid())
-  dealerId  String     @unique
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  dealer Dealer     @relation(fields: [dealerId], references: [id], onDelete: Cascade)
-  items  CartItem[]
-}
-
-model CartItem {
-  id        String   @id @default(cuid())
-  cartId    String
-  productId String
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([cartId, productId])
-}
-
-model Order {
-  id              String        @id @default(cuid())
-  orderNumber     String        @unique
-  dealerId        String
-  subtotal        Float
-  gstAmount       Float
-  grandTotal      Float
-  paymentType     PaymentType
-  amountPaid      Float         @default(0)
-  amountDue       Float
-  status          OrderStatus   @default(PENDING)
-  paymentStatus   PaymentStatus @default(PENDING)
-  notes           String?
-  shippingAddress String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  dealer   Dealer      @relation(fields: [dealerId], references: [id])
-  items    OrderItem[]
-  payments Payment[]
-  invoice  Invoice?
-}
-
-model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Int
-  unitPrice Float
-  gstRate   Float
-  gstAmount Float
-  total     Float
-  createdAt DateTime @default(now())
-
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
-}
-
-model Payment {
-  id                String        @id @default(cuid())
-  orderId           String
-  razorpayOrderId   String?
-  razorpayPaymentId String?
-  razorpaySignature String?
-  amount            Float
-  currency          String        @default("INR")
-  status            PaymentStatus @default(PENDING)
-  paymentType       PaymentType
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-}
-
-model Invoice {
-  id            String    @id @default(cuid())
-  invoiceNumber String    @unique
-  orderId       String    @unique
-  dealerId      String
-  pdfUrl        String?
-  subtotal      Float
-  gstAmount     Float
-  grandTotal    Float
-  issuedAt      DateTime  @default(now())
-  dueDate       DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  order  Order  @relation(fields: [orderId], references: [id])
-  dealer Dealer @relation(fields: [dealerId], references: [id])
-}
-
-// ─── VENDOR MANAGEMENT ───────────────────────────────────────────────────────
 
 enum VendorStatus {
   PENDING
@@ -368,102 +587,6 @@ enum VendorDocumentType {
   OTHER
 }
 
-model Vendor {
-  id            String         @id @default(cuid())
-  userId        String?        @unique
-  vendorCode    String         @unique
-  companyName   String
-  ownerName     String
-  email         String         @unique
-  phone         String
-  gstNumber     String?        @unique
-  panNumber     String?
-  category      VendorCategory
-  status        VendorStatus   @default(PENDING)
-  creditDays    Int            @default(30)
-  bankName      String?
-  accountNumber String?
-  ifscCode      String?
-  address       String
-  city          String
-  state         String
-  pincode       String
-  website       String?
-  notes         String?        @db.Text
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  contacts       VendorContact[]
-  documents      VendorDocument[]
-  ratings        VendorRating[]
-  payments       VendorPayment[]
-  purchaseOrders PurchaseOrder[]
-}
-
-model VendorContact {
-  id          String   @id @default(cuid())
-  vendorId    String
-  name        String
-  designation String?
-  email       String?
-  phone       String
-  isPrimary   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-}
-
-model VendorDocument {
-  id           String             @id @default(cuid())
-  vendorId     String
-  documentType VendorDocumentType
-  fileUrl      String
-  fileName     String
-  fileSize     Int                @default(0)
-  key          String             @default("")
-  uploadedAt   DateTime           @default(now())
-
-  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-}
-
-model VendorRating {
-  id            String   @id @default(cuid())
-  vendorId      String
-  ratedById     String
-  qualityScore  Float
-  deliveryScore Float
-  priceScore    Float
-  overallScore  Float
-  period        String
-  notes         String?
-  createdAt     DateTime @default(now())
-
-  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-
-  @@unique([vendorId, period])
-}
-
-model VendorPayment {
-  id              String        @id @default(cuid())
-  vendorId        String
-  purchaseOrderId String?
-  amount          Float
-  currency        String        @default("INR")
-  paymentDate     DateTime
-  paymentMode     String
-  referenceNumber String?
-  status          PaymentStatus @default(PENDING)
-  notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  vendor        Vendor         @relation(fields: [vendorId], references: [id])
-  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
-}
-
-// ─── PROCUREMENT MANAGEMENT ──────────────────────────────────────────────────
-
 enum PurchaseRequestStatus {
   DRAFT
   SUBMITTED
@@ -490,111 +613,6 @@ enum Urgency {
   CRITICAL
 }
 
-model PurchaseRequest {
-  id                String                @id @default(cuid())
-  requestNumber     String                @unique
-  requestedById     String
-  requestedByName   String
-  departmentCode    String                @default("GENERAL")
-  title             String
-  urgency           Urgency               @default(NORMAL)
-  status            PurchaseRequestStatus @default(DRAFT)
-  approvedById      String?
-  approvedAt        DateTime?
-  rejectionReason   String?
-  notes             String?               @db.Text
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-
-  items         PurchaseRequestItem[]
-  purchaseOrder PurchaseOrder?
-}
-
-model PurchaseRequestItem {
-  id                 String  @id @default(cuid())
-  purchaseRequestId  String
-  description        String
-  quantity           Int
-  unit               String  @default("PCS")
-  estimatedUnitPrice Float?
-  notes              String?
-
-  purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
-}
-
-model PurchaseOrder {
-  id                 String              @id @default(cuid())
-  poNumber           String              @unique
-  purchaseRequestId  String?             @unique
-  vendorId           String
-  createdById        String
-  status             PurchaseOrderStatus @default(DRAFT)
-  urgency            Urgency             @default(NORMAL)
-  deliveryDate       DateTime
-  deliveryAddress    String
-  subtotal           Float
-  taxAmount          Float               @default(0)
-  grandTotal         Float
-  termsAndConditions String?             @db.Text
-  vendorNotes        String?
-  rejectedAt         DateTime?
-  acceptedAt         DateTime?
-  closedAt           DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  purchaseRequest    PurchaseRequest?    @relation(fields: [purchaseRequestId], references: [id])
-  vendor             Vendor              @relation(fields: [vendorId], references: [id])
-  items              PurchaseOrderItem[]
-  goodsReceivedNotes GoodsReceivedNote[]
-  vendorPayments     VendorPayment[]
-}
-
-model PurchaseOrderItem {
-  id              String @id @default(cuid())
-  purchaseOrderId String
-  description     String
-  quantity        Int
-  receivedQty     Int    @default(0)
-  unit            String @default("PCS")
-  unitPrice       Float
-  gstRate         Float  @default(18)
-  gstAmount       Float
-  total           Float
-
-  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-}
-
-model GoodsReceivedNote {
-  id              String   @id @default(cuid())
-  grnNumber       String   @unique
-  purchaseOrderId String
-  receivedById    String
-  receivedByName  String
-  receivedAt      DateTime
-  qualityStatus   String   @default("ACCEPTED")
-  notes           String?  @db.Text
-  createdAt       DateTime @default(now())
-
-  purchaseOrder PurchaseOrder      @relation(fields: [purchaseOrderId], references: [id])
-  items         GoodsReceivedItem[]
-}
-
-model GoodsReceivedItem {
-  id                  String  @id @default(cuid())
-  goodsReceivedNoteId String
-  description         String
-  orderedQuantity     Int
-  receivedQuantity    Int
-  acceptedQuantity    Int
-  rejectedQuantity    Int     @default(0)
-  rejectionReason     String?
-
-  goodsReceivedNote GoodsReceivedNote @relation(fields: [goodsReceivedNoteId], references: [id], onDelete: Cascade)
-}
-
-// ─── SALES CRM ───────────────────────────────────────────────────────────────
-
 enum LeadStatus {
   NEW
   CONTACTED
@@ -611,71 +629,14 @@ enum LeadSource {
   TRADE_SHOW
   COLD_CALL
   SOCIAL_MEDIA
-  ADVERTISEMENT
   WHATSAPP
   WALK_IN
   OTHER
+  ADVERTISEMENT
 }
 
 enum LeadPriority {
   LOW
   MEDIUM
   HIGH
-}
-
-model Lead {
-  id             String       @id @default(cuid())
-  leadNumber     String       @unique
-  companyName    String
-  ownerName      String
-  designation    String?
-  email          String
-  phone          String
-  alternatePhone String?
-  city           String
-  state          String
-  pincode        String?
-  address        String?
-  status         LeadStatus   @default(NEW)
-  source         LeadSource   @default(WEBSITE)
-  priority       LeadPriority @default(MEDIUM)
-  assignedToId   String?
-  assignedToName String?
-  convertedAt    DateTime?
-  dealerId       String?      @unique
-  lostReason     String?
-  estimatedValue Float?
-  nextFollowUp   DateTime?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  activities LeadActivity[]
-  notes      LeadNote[]
-}
-
-model LeadActivity {
-  id          String   @id @default(cuid())
-  leadId      String
-  performedBy String
-  performedByName String
-  type        String
-  description String   @db.Text
-  outcome     String?
-  nextAction  String?
-  createdAt   DateTime @default(now())
-
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-}
-
-model LeadNote {
-  id          String   @id @default(cuid())
-  leadId      String
-  authorId    String
-  authorName  String
-  content     String   @db.Text
-  isPrivate   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }
