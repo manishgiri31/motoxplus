@@ -17,6 +17,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -39,6 +40,12 @@ interface Props {
 export function DealerSidebar({ user }: Props) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await signOut({ callbackUrl: "/" });
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -98,11 +105,12 @@ export function DealerSidebar({ user }: Props) {
       {/* Logout */}
       <div className="p-4 border-t border-[var(--border-color)]">
         <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="flex items-center gap-3 w-full px-4 py-3 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-900/10 rounded-sm text-sm font-medium transition-all"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="flex items-center gap-3 w-full px-4 py-3 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-900/10 rounded-sm text-sm font-medium transition-all disabled:opacity-60"
         >
-          <LogOut size={18} />
-          Sign Out
+          {signingOut ? <Spinner size={18} className="text-red-500" /> : <LogOut size={18} />}
+          {signingOut ? "Signing out..." : "Sign Out"}
         </button>
       </div>
     </div>
@@ -127,10 +135,10 @@ export function DealerSidebar({ user }: Props) {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col z-10">
+          <aside className="relative w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col z-10 animate-slide-in-left">
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"

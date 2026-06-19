@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { generateInvoiceNumber } from "@/lib/utils";
+import { createDelhiveryShipment } from "@/lib/delhivery";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -64,6 +65,11 @@ export async function POST(req: NextRequest) {
       gstAmount: order.gstAmount,
       grandTotal: order.grandTotal,
     },
+  });
+
+  // Auto-create Delhivery shipment (fire-and-forget)
+  createDelhiveryShipment(orderId).catch((err) => {
+    console.error(`[Delhivery] Shipment creation failed for order ${orderId}:`, err);
   });
 
   return NextResponse.json({ success: true, invoiceNumber });

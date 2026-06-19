@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
-import { Truck, CreditCard, ChevronRight } from "lucide-react";
+import { Truck, CreditCard, ChevronRight, User, Phone, MapPin } from "lucide-react";
+import { PincodeChecker } from "@/components/shipping/pincode-checker";
+import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
+import { Spinner } from "@/components/ui/spinner";
 
 declare global {
   interface Window {
@@ -13,14 +16,37 @@ declare global {
 
 type PaymentType = "ADVANCE_20" | "FULL_100" | "COD";
 
+interface CartItem {
+  product: {
+    name: string;
+    price: number;
+    gstRate: number;
+    packageWeight?: number | null;
+    weight?: number | null;
+  };
+  quantity: number;
+}
+
 interface CartSummary {
   subtotal: number;
   gstAmount: number;
-  grandTotal: number;
-  items: Array<{
-    product: { name: string; price: number; gstRate: number };
-    quantity: number;
-  }>;
+  items: CartItem[];
+}
+
+interface ServiceabilityResult {
+  serviceable: boolean;
+  estimatedDeliveryDays: number | null;
+  city: string | null;
+  state: string | null;
+}
+
+interface DeliveryForm {
+  name: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
 }
 
 const paymentOptions = [
@@ -47,6 +73,15 @@ const paymentOptions = [
   },
 ];
 
+function calculateCartWeight(items: CartItem[]): number {
+  let total = 0;
+  for (const item of items) {
+    const w = item.product.packageWeight ?? item.product.weight ?? 0.5;
+    total += w * item.quantity;
+  }
+  return Math.max(0.5, total);
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState<CartSummary | null>(null);
@@ -54,7 +89,44 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(true);
+  const [serviceabilityResult, setServiceabilityResult] = useState<ServiceabilityResult | null>(null);
+  const [shippingCost, setShippingCost] = useState<number>(0);
+  const [shippingLoading, setShippingLoading] = useState(false);
 
+  const [delivery, setDelivery] = useState<DeliveryForm>({
+    name: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+  });
+
+  const updateDelivery = (field: keyof DeliveryForm, value: string) => {
+    setDelivery((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Pre-fill dealer profile
+  useEffect(() => {
+    fetch("/api/dealer/account")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data) {
+          setDelivery((prev) => ({
+            ...prev,
+            name: prev.name || data.ownerName || "",
+            phone: prev.phone || data.phone || "",
+            address: prev.address || data.address || "",
+            city: prev.city || data.city || "",
+            state: prev.state || data.state || "",
+            pincode: prev.pincode || data.pincode || "",
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch cart
   useEffect(() => {
     fetch("/api/cart")
       .then((r) => r.json())
@@ -69,29 +141,83 @@ export default function CheckoutPage() {
               sum + (item.product.price * item.quantity * item.product.gstRate) / 100,
             0
           );
-          setCart({ subtotal, gstAmount, grandTotal: subtotal + gstAmount, items: data.items });
+          setCart({ subtotal, gstAmount, items: data.items });
         }
         setCartLoading(false);
       });
 
-    // Preload Razorpay script
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     document.body.appendChild(script);
   }, []);
 
-  const amountDue = cart
-    ? paymentType === "ADVANCE_20"
-      ? cart.grandTotal * 0.2
-      : cart.grandTotal
-    : 0;
+  // Fetch shipping cost when pincode + serviceability + cart ready
+  const fetchShippingCost = useCallback(async () => {
+    if (!cart || !delivery.pincode || !serviceabilityResult?.serviceable) {
+      setShippingCost(0);
+      return;
+    }
+    setShippingLoading(true);
+    try {
+      const weightKg = calculateCartWeight(cart.items);
+      const isCOD = paymentType === "COD";
+      const res = await fetch("/api/shipping/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destinationPincode: delivery.pincode,
+          weightKg,
+          paymentMode: isCOD ? "COD" : "Prepaid",
+          codAmount: isCOD ? (cart.subtotal + cart.gstAmount) : undefined,
+        }),
+      });
+      const data = await res.json();
+      setShippingCost(data.shippingCost ?? 0);
+    } catch {
+      setShippingCost(0);
+    } finally {
+      setShippingLoading(false);
+    }
+  }, [cart, delivery.pincode, serviceabilityResult, paymentType]);
+
+  useEffect(() => {
+    fetchShippingCost();
+  }, [fetchShippingCost]);
+
+  const handleServiceabilityResult = (result: ServiceabilityResult | null) => {
+    setServiceabilityResult(result);
+    // Auto-fill city/state from serviceability result
+    if (result?.city && !delivery.city) updateDelivery("city", result.city);
+    if (result?.state && !delivery.state) updateDelivery("state", result.state);
+  };
+
+  const grandTotal = (cart?.subtotal ?? 0) + (cart?.gstAmount ?? 0) + shippingCost;
+  const amountDue =
+    paymentType === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal;
+
+  const isDeliveryComplete =
+    delivery.name && delivery.phone && delivery.address &&
+    delivery.city && delivery.state && delivery.pincode.length === 6;
+
+  const isServiceable = serviceabilityResult?.serviceable !== false || delivery.pincode.length < 6;
+
+  const buildOrderPayload = () => ({
+    paymentType,
+    notes,
+    deliveryName: delivery.name,
+    deliveryPhone: delivery.phone,
+    deliveryAddress: delivery.address,
+    deliveryCity: delivery.city,
+    deliveryState: delivery.state,
+    deliveryPincode: delivery.pincode,
+  });
 
   const handleCOD = async () => {
     setLoading(true);
     const orderRes = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentType: "COD", notes }),
+      body: JSON.stringify({ ...buildOrderPayload(), paymentType: "COD" }),
     });
 
     if (!orderRes.ok) {
@@ -111,7 +237,7 @@ export default function CheckoutPage() {
       const orderRes = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentType, notes }),
+        body: JSON.stringify(buildOrderPayload()),
       });
 
       if (!orderRes.ok) {
@@ -168,17 +294,23 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
-    if (paymentType === "COD") {
-      handleCOD();
-    } else {
-      handleOnlinePayment();
+    if (!isDeliveryComplete) {
+      alert("Please complete all delivery address fields.");
+      return;
     }
+    if (serviceabilityResult && !serviceabilityResult.serviceable) {
+      alert("Delivery is not available to this pincode. Please enter a different pincode.");
+      return;
+    }
+    if (paymentType === "COD") handleCOD();
+    else handleOnlinePayment();
   };
 
   if (cartLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-[var(--text-muted)]">Loading...</div>
+      <div className="flex items-center justify-center gap-3 h-64 text-[var(--text-muted)]">
+        <Spinner size={20} />
+        <span className="text-sm">Loading cart...</span>
       </div>
     );
   }
@@ -195,14 +327,102 @@ export default function CheckoutPage() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">Checkout</h1>
-        <p className="text-[var(--text-muted)] mt-1">Review your order and choose how to pay.</p>
+        <p className="text-[var(--text-muted)] mt-1">Enter delivery details and choose how to pay.</p>
+      </div>
+
+      {/* Delivery Address */}
+      <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
+        <h3 className="text-[var(--text-primary)] font-bold mb-5">Delivery Address</h3>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="text"
+                  value={delivery.name}
+                  onChange={(e) => updateDelivery("name", e.target.value)}
+                  placeholder="Recipient name"
+                  className="w-full themed-input rounded-sm pl-9 pr-4 py-3 text-sm outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+                Phone <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="tel"
+                  value={delivery.phone}
+                  onChange={(e) => updateDelivery("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="10-digit mobile"
+                  className="w-full themed-input rounded-sm pl-9 pr-4 py-3 text-sm outline-none transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              Street Address <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <MapPin size={14} className="absolute left-3 top-3 text-[var(--text-muted)]" />
+              <textarea
+                rows={2}
+                value={delivery.address}
+                onChange={(e) => updateDelivery("address", e.target.value)}
+                placeholder="House/Shop No., Street, Area"
+                className="w-full themed-input rounded-sm pl-9 pr-4 py-3 text-sm outline-none transition-colors resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+                City <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={delivery.city}
+                onChange={(e) => updateDelivery("city", e.target.value)}
+                placeholder="City"
+                className="w-full themed-input rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+              />
+            </div>
+            <div>
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+                State <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={delivery.state}
+                onChange={(e) => updateDelivery("state", e.target.value)}
+                placeholder="State"
+                className="w-full themed-input rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          <PincodeChecker
+            value={delivery.pincode}
+            onChange={(v) => updateDelivery("pincode", v)}
+            onResult={handleServiceabilityResult}
+          />
+        </div>
       </div>
 
       {/* Order summary */}
       <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
         <h3 className="text-[var(--text-primary)] font-bold mb-4">Order Summary</h3>
         <div className="space-y-2 mb-4">
-          {cart.items.map((item: any, i) => (
+          {cart.items.map((item: any, i: number) => (
             <div key={i} className="flex justify-between text-sm">
               <span className="text-[var(--text-secondary)]">
                 {item.product.name} × {item.quantity}
@@ -220,9 +440,14 @@ export default function CheckoutPage() {
             <span className="text-[var(--text-muted)]">GST</span>
             <span className="text-[var(--text-primary)]">{formatCurrency(cart.gstAmount)}</span>
           </div>
-          <div className="flex justify-between font-bold pt-1">
+          <ShippingEstimate
+            shippingCost={shippingCost}
+            estimatedDays={serviceabilityResult?.estimatedDeliveryDays ?? null}
+            loading={shippingLoading}
+          />
+          <div className="flex justify-between font-bold pt-1 border-t border-[var(--border-color)]">
             <span className="text-[var(--text-primary)]">Grand Total</span>
-            <span className="text-red-500 text-lg">{formatCurrency(cart.grandTotal)}</span>
+            <span className="text-red-500 text-lg">{formatCurrency(grandTotal)}</span>
           </div>
         </div>
       </div>
@@ -233,10 +458,7 @@ export default function CheckoutPage() {
         <div className="space-y-3">
           {paymentOptions.map((option) => {
             const isSelected = paymentType === option.id;
-            const amount =
-              option.id === "ADVANCE_20"
-                ? cart.grandTotal * 0.2
-                : cart.grandTotal;
+            const amount = option.id === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal;
 
             return (
               <button
@@ -248,58 +470,37 @@ export default function CheckoutPage() {
                     : "border-[var(--border-color)] hover:border-red-600/40 glass"
                 }`}
               >
-                {/* Radio */}
-                <div
-                  className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-                    isSelected ? "border-red-600" : "border-[var(--text-muted)]"
-                  }`}
-                >
+                <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? "border-red-600" : "border-[var(--text-muted)]"}`}>
                   {isSelected && <div className="w-2 h-2 bg-red-600 rounded-full" />}
                 </div>
-
-                {/* Icon */}
-                <div className={`w-9 h-9 rounded-sm flex items-center justify-center flex-shrink-0 ${
-                  isSelected ? "bg-red-600/10" : "bg-[var(--bg-card)]"
-                }`}>
+                <div className={`w-9 h-9 rounded-sm flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-red-600/10" : "bg-[var(--bg-card)]"}`}>
                   {option.icon}
                 </div>
-
-                {/* Text */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-[var(--text-primary)] font-semibold text-sm">{option.title}</span>
                     {option.badge && (
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${
-                        option.badge === "COD"
-                          ? "bg-green-900/20 text-green-400"
-                          : "bg-red-900/20 text-red-400"
-                      }`}>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${option.badge === "COD" ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
                         {option.badge}
                       </span>
                     )}
                   </div>
                   <div className="text-[var(--text-muted)] text-xs">{option.subtitle}</div>
                 </div>
-
-                {/* Amount */}
                 <div className="text-right flex-shrink-0">
                   <div className="text-[var(--text-primary)] font-black">{formatCurrency(amount)}</div>
-                  <div className="text-[var(--text-muted)] text-[10px]">
-                    {option.id === "COD" ? "on delivery" : "pay now"}
-                  </div>
+                  <div className="text-[var(--text-muted)] text-[10px]">{option.id === "COD" ? "on delivery" : "pay now"}</div>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* COD notice */}
         {paymentType === "COD" && (
           <div className="mt-4 flex items-start gap-3 bg-green-900/10 border border-green-800/30 rounded-sm p-3">
             <Truck size={16} className="text-green-400 flex-shrink-0 mt-0.5" />
             <p className="text-green-400 text-xs leading-relaxed">
-              Your order will be confirmed immediately. Pay <strong>{formatCurrency(cart.grandTotal)}</strong> in cash
-              when the order is delivered. COD charges may apply.
+              Your order will be confirmed immediately. Pay <strong>{formatCurrency(grandTotal)}</strong> in cash when delivered.
             </p>
           </div>
         )}
@@ -336,31 +537,30 @@ export default function CheckoutPage() {
           )}
         </div>
 
+        {serviceabilityResult && !serviceabilityResult.serviceable && (
+          <div className="mb-4 flex items-center gap-2 bg-red-900/10 border border-red-800/30 rounded-sm px-3 py-2 text-red-400 text-xs">
+            Delivery not available to pincode <strong>{delivery.pincode}</strong>. Please enter a serviceable pincode.
+          </div>
+        )}
+
         <button
           onClick={handlePlaceOrder}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
+          disabled={loading || !isDeliveryComplete || shippingLoading || (serviceabilityResult !== null && !serviceabilityResult.serviceable)}
+          className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
         >
           {loading ? (
-            "Processing..."
+            <><Spinner size={16} />Processing...</>
           ) : paymentType === "COD" ? (
-            <>
-              <Truck size={16} />
-              Confirm COD Order
-            </>
+            <><Truck size={16} />Confirm COD Order<ChevronRight size={16} /></>
           ) : (
-            <>
-              <CreditCard size={16} />
-              {`Pay ${formatCurrency(amountDue)} via Razorpay`}
-            </>
+            <><CreditCard size={16} />{`Pay ${formatCurrency(amountDue)} via Razorpay`}<ChevronRight size={16} /></>
           )}
-          {!loading && <ChevronRight size={16} />}
         </button>
 
         <p className="text-[var(--text-muted)] text-xs text-center mt-3">
           {paymentType === "COD"
-            ? "Order confirmed instantly. Invoice generated on dispatch."
-            : "Secured by Razorpay. Invoice generated after payment."}
+            ? "Order confirmed instantly. Shipment created via Delhivery."
+            : "Secured by Razorpay. Shipment created after payment."}
         </p>
       </div>
     </div>

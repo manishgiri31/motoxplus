@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
 
 export function AdminProductActions({ productId, isActive }: { productId: string; isActive: boolean }) {
   const router = useRouter();
@@ -30,8 +31,9 @@ export function AdminProductActions({ productId, isActive }: { productId: string
       <button
         onClick={toggleActive}
         disabled={loading}
-        className={`text-xs font-semibold transition-colors disabled:opacity-50 uppercase tracking-wider ${isActive ? "text-red-400 hover:text-red-300" : "text-green-400 hover:text-green-300"}`}
+        className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors disabled:opacity-50 uppercase tracking-wider ${isActive ? "text-red-400 hover:text-red-300" : "text-green-400 hover:text-green-300"}`}
       >
+        {loading ? <Spinner size={12} /> : null}
         {isActive ? "Deactivate" : "Activate"}
       </button>
     </div>

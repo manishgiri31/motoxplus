@@ -14,6 +14,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       items: { include: { product: { include: { category: true } } } },
       payments: true,
       invoice: true,
+      shipment: {
+        include: { events: { orderBy: { timestamp: "desc" } } },
+      },
     },
   });
 

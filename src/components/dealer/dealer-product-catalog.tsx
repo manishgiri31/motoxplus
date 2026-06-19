@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, ShoppingCart, CheckCircle, Plus, Minus } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { formatCurrency } from "@/lib/utils";
 
 interface ProductImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
@@ -190,7 +191,7 @@ export function DealerProductCatalog({
                   {addedIds.includes(product.id) ? (
                     <><CheckCircle size={12} /> Added</>
                   ) : addingToCart === product.id ? (
-                    "..."
+                    <><Spinner size={12} /> Adding...</>
                   ) : (
                     <><ShoppingCart size={12} /> Add</>
                   )}

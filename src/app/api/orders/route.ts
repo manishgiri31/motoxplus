@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateOrderNumber, generateInvoiceNumber } from "@/lib/utils";
+import { calculateShippingRate, calculateOrderWeight, createDelhiveryShipment } from "@/lib/delhivery";
+
+const ORIGIN_PINCODE = process.env.DELHIVERY_ORIGIN_PINCODE || "110046";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -19,7 +22,7 @@ export async function GET(req: NextRequest) {
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where: { dealerId: dealer.id },
-        include: { items: { include: { product: true } }, invoice: true },
+        include: { items: { include: { product: true } }, invoice: true, shipment: true },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -37,6 +40,7 @@ export async function GET(req: NextRequest) {
           dealer: { include: { user: true } },
           items: { include: { product: true } },
           invoice: true,
+          shipment: true,
         },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
@@ -57,10 +61,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { paymentType, notes } = await req.json();
+  const {
+    paymentType,
+    notes,
+    deliveryName,
+    deliveryPhone,
+    deliveryAddress,
+    deliveryCity,
+    deliveryState,
+    deliveryPincode,
+  } = await req.json();
 
   if (!paymentType || !["ADVANCE_20", "FULL_100", "COD"].includes(paymentType)) {
     return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
+  }
+
+  if (!deliveryPincode || !/^\d{6}$/.test(deliveryPincode)) {
+    return NextResponse.json({ error: "Valid delivery pincode is required" }, { status: 400 });
   }
 
   const dealer = await prisma.dealer.findUnique({ where: { userId: session.user.id } });
@@ -85,17 +102,25 @@ export async function POST(req: NextRequest) {
     gstAmount += itemGST;
   }
 
-  const grandTotal = subtotal + gstAmount;
+  // Calculate shipping cost
+  const weightKg = calculateOrderWeight(cart.items);
+  const isCOD = paymentType === "COD";
 
-  // COD: full amount due on delivery, order auto-confirmed
+  const shippingResult = await calculateShippingRate({
+    originPincode: ORIGIN_PINCODE,
+    destinationPincode: deliveryPincode,
+    weightKg,
+    paymentMode: isCOD ? "COD" : "Prepaid",
+    codAmount: isCOD ? subtotal + gstAmount : undefined,
+  }).catch(() => ({ shippingCost: 0, source: "default" as const }));
+
+  const shippingCost = shippingResult.shippingCost;
+  const grandTotal = subtotal + gstAmount + shippingCost;
+
   const amountDue =
     paymentType === "ADVANCE_20"
       ? grandTotal * 0.2
-      : paymentType === "COD"
-      ? grandTotal
       : grandTotal;
-
-  const isCOD = paymentType === "COD";
 
   const order = await prisma.order.create({
     data: {
@@ -103,13 +128,20 @@ export async function POST(req: NextRequest) {
       dealerId: dealer.id,
       subtotal,
       gstAmount,
+      shippingCost,
       grandTotal,
       paymentType,
-      amountDue: isCOD ? grandTotal : amountDue,
+      amountDue,
       amountPaid: 0,
       notes: isCOD ? `[COD ORDER] ${notes || ""}`.trim() : notes,
       status: isCOD ? "CONFIRMED" : "PENDING",
       paymentStatus: isCOD ? "PENDING" : "PENDING",
+      shippingAddress: deliveryAddress,
+      deliveryName: deliveryName || dealer.ownerName,
+      deliveryPhone: deliveryPhone || dealer.phone,
+      deliveryCity: deliveryCity || dealer.city,
+      deliveryState: deliveryState || dealer.state,
+      deliveryPincode,
       items: {
         create: cart.items.map((item) => ({
           productId: item.productId,
@@ -139,6 +171,13 @@ export async function POST(req: NextRequest) {
 
   // Clear cart
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+  // COD: auto-create Delhivery shipment (fire-and-forget, don't block response)
+  if (isCOD) {
+    createDelhiveryShipment(order.id).catch((err) => {
+      console.error(`[Delhivery] COD shipment creation failed for order ${order.id}:`, err);
+    });
+  }
 
   return NextResponse.json({ order, isCOD });
 }

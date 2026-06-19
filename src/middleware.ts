@@ -29,6 +29,14 @@ export default withAuth(
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
 
+    // Redirect authenticated users away from auth pages
+    const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/reset-password"];
+    if (AUTH_PAGES.some((p) => pathname === p) && token) {
+      if (role === "DEALER") return NextResponse.redirect(new URL("/dealer/dashboard", req.url));
+      if (ADMIN_ROLES.includes(role)) return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+      if (role === "VENDOR") return NextResponse.redirect(new URL("/vendor/dashboard", req.url));
+    }
+
     return NextResponse.next();
   },
   {
@@ -49,5 +57,13 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/dealer/:path*", "/admin/:path*", "/vendor/:path*"],
+  matcher: [
+    "/dealer/:path*",
+    "/admin/:path*",
+    "/vendor/:path*",
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+  ],
 };

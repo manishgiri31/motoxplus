@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Props {
   dealerId: string;
@@ -10,17 +11,17 @@ interface Props {
 
 export function AdminDealerActions({ dealerId, currentStatus }: Props) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
 
   const updateStatus = async (status: string) => {
-    setLoading(true);
+    setLoadingStatus(status);
     await fetch(`/api/admin/dealers/${dealerId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
     router.refresh();
-    setLoading(false);
+    setLoadingStatus(null);
   };
 
   return (
@@ -28,27 +29,30 @@ export function AdminDealerActions({ dealerId, currentStatus }: Props) {
       {currentStatus !== "APPROVED" && (
         <button
           onClick={() => updateStatus("APPROVED")}
-          disabled={loading}
-          className="text-xs font-semibold text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          disabled={!!loadingStatus}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
         >
+          {loadingStatus === "APPROVED" ? <Spinner size={12} /> : null}
           Approve
         </button>
       )}
       {currentStatus !== "REJECTED" && currentStatus !== "PENDING" && (
         <button
           onClick={() => updateStatus("SUSPENDED")}
-          disabled={loading}
-          className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          disabled={!!loadingStatus}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
         >
+          {loadingStatus === "SUSPENDED" ? <Spinner size={12} /> : null}
           Suspend
         </button>
       )}
       {currentStatus === "PENDING" && (
         <button
           onClick={() => updateStatus("REJECTED")}
-          disabled={loading}
-          className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          disabled={!!loadingStatus}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
         >
+          {loadingStatus === "REJECTED" ? <Spinner size={12} /> : null}
           Reject
         </button>
       )}

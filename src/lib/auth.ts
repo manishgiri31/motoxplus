@@ -9,7 +9,7 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
     signIn: "/login",
@@ -29,46 +29,54 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: {
-            dealer: true,
-            admin: true,
-            vendor: true,
-          },
+          include: { dealer: true, admin: true, vendor: true },
         });
 
         if (!user || !user.password) {
           throw new Error("Invalid credentials");
         }
 
+        if (!user.isActive) {
+          throw new Error("Account has been disabled. Contact support.");
+        }
+
+        if (user.accountLockedUntil && user.accountLockedUntil > new Date()) {
+          const mins = Math.ceil((user.accountLockedUntil.getTime() - Date.now()) / 60000);
+          throw new Error(`Account locked. Try again in ${mins} minutes.`);
+        }
+
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) {
+          const newAttempts = (user.failedLoginAttempts || 0) + 1;
+          const updates: Record<string, unknown> = { failedLoginAttempts: newAttempts };
+          if (newAttempts >= 5) {
+            updates.accountLockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+          }
+          await prisma.user.update({ where: { id: user.id }, data: updates });
           throw new Error("Invalid credentials");
         }
 
-        // Check dealer approval
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { failedLoginAttempts: 0, accountLockedUntil: null, lastLogin: new Date() },
+        });
+
         if (user.role === UserRole.DEALER && user.dealer?.status !== "APPROVED") {
-          if (user.dealer?.status === "PENDING") {
-            throw new Error("Your dealer account is pending approval");
-          }
-          if (user.dealer?.status === "REJECTED") {
-            throw new Error("Your dealer application has been rejected");
-          }
-          if (user.dealer?.status === "SUSPENDED") {
-            throw new Error("Your dealer account has been suspended");
-          }
+          const msgs: Record<string, string> = {
+            PENDING: "Your dealer account is pending approval",
+            REJECTED: "Your dealer application has been rejected",
+            SUSPENDED: "Your dealer account has been suspended",
+          };
+          throw new Error(msgs[user.dealer?.status ?? ""] || "Account not approved");
         }
 
-        // Check vendor approval
         if (user.role === UserRole.VENDOR && user.vendor?.status !== "APPROVED") {
-          if (user.vendor?.status === "PENDING") {
-            throw new Error("Your vendor account is pending approval");
-          }
-          if (user.vendor?.status === "SUSPENDED") {
-            throw new Error("Your vendor account has been suspended");
-          }
-          if (user.vendor?.status === "BLACKLISTED") {
-            throw new Error("Your vendor account has been blacklisted");
-          }
+          const msgs: Record<string, string> = {
+            PENDING: "Your vendor account is pending approval",
+            SUSPENDED: "Your vendor account has been suspended",
+            BLACKLISTED: "Your vendor account has been blacklisted",
+          };
+          throw new Error(msgs[user.vendor?.status ?? ""] || "Account not approved");
         }
 
         return {
