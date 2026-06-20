@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { X, MessageCircle } from "lucide-react";
 
 const PHONE = (process.env.NEXT_PUBLIC_COMPANY_WHATSAPP || "919217131801").replace(/\D/g, "");
 const MESSAGE = encodeURIComponent("Hello! I'm interested in MOTOXPLUS products. Please share details.");

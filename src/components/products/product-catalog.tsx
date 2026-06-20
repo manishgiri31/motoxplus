@@ -118,7 +118,7 @@ export function ProductCatalog({
       <div className="flex items-center justify-between mb-6">
         <span className="text-[var(--text-muted)] text-sm">
           Showing <span className="text-[var(--text-primary)] font-semibold">{products.length}</span> of <span className="text-[var(--text-primary)] font-semibold">{totalProducts}</span> products
-          {currentCategory && <span className="text-red-500"> in "{currentCategory}"</span>}
+          {currentCategory && <span className="text-red-500"> in &quot;{currentCategory}&quot;</span>}
         </span>
         {!isDealer && (
           <div className="flex items-center gap-2 glass border border-red-900/25 rounded-full px-4 py-1.5">

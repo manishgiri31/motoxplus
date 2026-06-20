@@ -12,6 +12,6 @@ export async function deleteFromR2(key: string): Promise<void> {
   return deleteFile(key);
 }
 
-export async function getPresignedUploadUrl(key: string, _contentType: string): Promise<string> {
+export async function getPresignedUploadUrl(key: string): Promise<string> {
   return generateSignedUrl(key);
 }

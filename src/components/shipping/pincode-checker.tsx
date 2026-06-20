@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { MapPin, CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 interface PincodeCheckerProps {
@@ -22,13 +22,19 @@ export function PincodeChecker({ value, onChange, onResult }: PincodeCheckerProp
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<ServiceabilityResult | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onResultRef = useRef(onResult);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+
+  const stableOnResult = useCallback((r: ServiceabilityResult | null) => {
+    onResultRef.current?.(r);
+  }, []);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (value.length !== 6 || !/^\d{6}$/.test(value)) {
       setResult(null);
-      onResult?.(null);
+      stableOnResult(null);
       return;
     }
 
@@ -38,11 +44,11 @@ export function PincodeChecker({ value, onChange, onResult }: PincodeCheckerProp
         const res = await fetch(`/api/shipping/serviceability?pincode=${value}`);
         const data: ServiceabilityResult = await res.json();
         setResult(data);
-        onResult?.(data);
+        stableOnResult(data);
       } catch {
         const err = { serviceable: false, estimatedDeliveryDays: null, availableServices: [], city: null, state: null, error: "Check failed" };
         setResult(err);
-        onResult?.(err);
+        stableOnResult(err);
       } finally {
         setChecking(false);
       }
@@ -51,7 +57,7 @@ export function PincodeChecker({ value, onChange, onResult }: PincodeCheckerProp
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [value]);
+  }, [value, stableOnResult]);
 
   return (
     <div className="space-y-2">

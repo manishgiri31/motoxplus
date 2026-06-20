@@ -35,7 +35,7 @@ export function ContactSection() {
             Let&apos;s Talk Business.
           </h2>
           <p className="text-[var(--text-muted)] mt-4 max-w-lg mx-auto">
-            Have questions? We'd love to hear from you. Send us a message and we'll respond within 24 hours.
+            Have questions? We&apos;d love to hear from you. Send us a message and we&apos;ll respond within 24 hours.
           </p>
         </div>
 
