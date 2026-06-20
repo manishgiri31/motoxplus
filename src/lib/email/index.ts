@@ -1,6 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@motoxplus.in";
 const FROM_NAME = "MOTOXPLUS India";
 
@@ -17,6 +16,7 @@ export async function sendEmail(opts: SendEmailOptions) {
     return { id: "skipped" };
   }
 
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const { data, error } = await resend.emails.send({
     from: `${FROM_NAME} <${FROM_EMAIL}>`,
     to: opts.to,
