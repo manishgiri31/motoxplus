@@ -55,6 +55,15 @@ const socialLinks = [
   },
 ];
 
+function FooterHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h4 className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
+      <span className="w-5 h-[2px] bg-red-600 rounded-full" />
+      {children}
+    </h4>
+  );
+}
+
 export function Footer() {
   return (
     <footer className="bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
@@ -86,7 +95,7 @@ export function Footer() {
             </p>
 
             {/* Social links */}
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-2.5 flex-wrap">
               {socialLinks.map((s) => (
                 <a
                   key={s.name}
@@ -94,7 +103,7 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.name}
-                  className="w-8 h-8 rounded-sm glass border border-[var(--border-color)] hover:border-red-600/50 hover:text-red-500 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"
+                  className="w-9 h-9 rounded-xl glass border border-[var(--border-color)] hover:border-red-600/50 hover:text-red-500 hover:bg-red-900/10 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"
                 >
                   {s.icon}
                 </a>
@@ -104,10 +113,7 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-[var(--text-primary)] font-semibold text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-              <span className="w-4 h-px bg-red-600" />
-              Quick Links
-            </h4>
+            <FooterHeading>Quick Links</FooterHeading>
             <ul className="space-y-3">
               {[
                 { label: "Home", href: "/" },
@@ -119,8 +125,9 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors duration-200"
+                    className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors duration-200 flex items-center gap-2 group"
                   >
+                    <span className="w-0 group-hover:w-3 h-px bg-red-500 transition-all duration-200 rounded-full" />
                     {link.label}
                   </Link>
                 </li>
@@ -130,10 +137,7 @@ export function Footer() {
 
           {/* Products */}
           <div>
-            <h4 className="text-[var(--text-primary)] font-semibold text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-              <span className="w-4 h-px bg-red-600" />
-              Products
-            </h4>
+            <FooterHeading>Products</FooterHeading>
             <ul className="space-y-3">
               {[
                 { label: "Brake Parts", slug: "brake-parts" },
@@ -146,8 +150,9 @@ export function Footer() {
                 <li key={item.slug}>
                   <Link
                     href={`/products?category=${item.slug}`}
-                    className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors duration-200"
+                    className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors duration-200 flex items-center gap-2 group"
                   >
+                    <span className="w-0 group-hover:w-3 h-px bg-red-500 transition-all duration-200 rounded-full" />
                     {item.label}
                   </Link>
                 </li>
@@ -157,19 +162,16 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="text-[var(--text-primary)] font-semibold text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-              <span className="w-4 h-px bg-red-600" />
-              Contact
-            </h4>
+            <FooterHeading>Contact</FooterHeading>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
-                <MapPin size={15} className="text-red-500 mt-0.5 flex-shrink-0" />
+                <MapPin size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
                 <span className="text-[var(--text-muted)] text-sm leading-relaxed">
                   {process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "New Delhi, India"}
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <Phone size={15} className="text-red-500 flex-shrink-0" />
+                <Phone size={14} className="text-red-500 flex-shrink-0" />
                 <a
                   href={`tel:${process.env.NEXT_PUBLIC_COMPANY_PHONE}`}
                   className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors"
@@ -178,7 +180,7 @@ export function Footer() {
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <Mail size={15} className="text-red-500 flex-shrink-0" />
+                <Mail size={14} className="text-red-500 flex-shrink-0" />
                 <a
                   href={`mailto:${process.env.NEXT_PUBLIC_COMPANY_EMAIL}`}
                   className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors"
@@ -187,7 +189,7 @@ export function Footer() {
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <Globe size={15} className="text-red-500 flex-shrink-0" />
+                <Globe size={14} className="text-red-500 flex-shrink-0" />
                 <a
                   href="https://www.motoxplus.in"
                   target="_blank"

@@ -90,13 +90,13 @@ export default function CartPage() {
       </div>
 
       {items.length === 0 ? (
-        <div className="text-center py-20 glass border border-[var(--border-color)] rounded-sm">
+        <div className="text-center py-20 glass border border-[var(--border-color)] rounded-xl">
           <ShoppingCart size={48} className="text-gray-700 mx-auto mb-4" />
           <h2 className="text-[var(--text-primary)] font-bold text-xl mb-2">Your cart is empty</h2>
           <p className="text-[var(--text-muted)] mb-6">Browse our products and add items to your cart.</p>
           <Link
             href="/dealer/products"
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider inline-flex items-center gap-2"
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider inline-flex items-center gap-2"
           >
             Browse Products
             <ArrowRight size={16} />
@@ -109,12 +109,12 @@ export default function CartPage() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className={`glass border border-[var(--border-color)] rounded-sm p-4 flex items-center gap-4 transition-opacity ${
+                className={`glass border border-[var(--border-color)] rounded-xl p-4 flex items-center gap-4 transition-opacity ${
                   updating === item.id ? "opacity-50" : ""
                 }`}
               >
                 {/* Image */}
-                <div className="w-16 h-16 bg-gradient-to-br from-zinc-900 to-black rounded-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div className="w-16 h-16 bg-gradient-to-br from-zinc-900 to-black rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {item.product.images[0] ? (
                     <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
                   ) : (
@@ -133,7 +133,7 @@ export default function CartPage() {
                 </div>
 
                 {/* Quantity */}
-                <div className="flex items-center glass border border-[var(--border-color)] rounded-sm overflow-hidden">
+                <div className="flex items-center glass border border-[var(--border-color)] rounded-xl overflow-hidden">
                   <button
                     onClick={() => updateQuantity(item.id, item.product.id, Math.max(item.product.moq, item.quantity - item.product.moq))}
                     disabled={!!updating}
@@ -175,7 +175,7 @@ export default function CartPage() {
 
           {/* Summary */}
           <div>
-            <div className="glass border border-[var(--border-color)] rounded-sm p-6 sticky top-4">
+            <div className="glass border border-[var(--border-color)] rounded-xl p-6 sticky top-4">
               <h3 className="text-[var(--text-primary)] font-bold text-lg mb-6">Order Summary</h3>
 
               <div className="space-y-3 mb-6">
@@ -195,7 +195,7 @@ export default function CartPage() {
 
               <Link
                 href="/dealer/checkout"
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider text-center block"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl transition-colors text-sm uppercase tracking-wider text-center block"
               >
                 Proceed to Checkout
               </Link>

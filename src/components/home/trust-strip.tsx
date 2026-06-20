@@ -15,19 +15,19 @@ export function TrustStrip() {
   const doubled = [...items, ...items];
 
   return (
-    <div className="relative overflow-hidden border-y border-[var(--border-color)] bg-[var(--bg-secondary)] py-3 select-none">
+    <div className="relative overflow-hidden border-y border-[var(--border-color)] bg-[var(--bg-secondary)] py-3.5 select-none">
       {/* Fade edges */}
-      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[var(--bg-secondary)] to-transparent z-10 pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[var(--bg-secondary)] to-transparent z-10 pointer-events-none" />
+      <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[var(--bg-secondary)] to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[var(--bg-secondary)] to-transparent z-10 pointer-events-none" />
 
       <div className="flex gap-0 marquee-track">
         {doubled.map((item, i) => (
           <div
             key={i}
-            className="flex items-center gap-6 flex-shrink-0 px-8"
+            className="flex items-center gap-5 flex-shrink-0 px-6"
           >
-            <span className="w-1 h-1 rounded-full bg-red-600 flex-shrink-0" />
-            <span className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest whitespace-nowrap">
+            <span className="text-red-600 text-[8px] flex-shrink-0">◆</span>
+            <span className="text-[var(--text-muted)] text-[11px] font-semibold uppercase tracking-widest whitespace-nowrap">
               {item}
             </span>
           </div>

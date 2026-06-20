@@ -63,7 +63,7 @@ export function DealerRegistrationForm() {
 
   if (status === "success") {
     return (
-      <div className="glass border border-[var(--border-color)] rounded-sm p-12 text-center">
+      <div className="glass border border-[var(--border-color)] rounded-xl p-12 text-center">
         <div className="w-16 h-16 bg-green-900/20 border border-green-700/30 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle size={32} className="text-green-500" />
         </div>
@@ -73,7 +73,7 @@ export function DealerRegistrationForm() {
           Our team will review your application within 2 business days.
           You&apos;ll receive an email notification once approved.
         </p>
-        <div className="glass border border-[var(--border-color)] rounded-sm p-4 text-left mb-6">
+        <div className="glass border border-[var(--border-color)] rounded-xl p-4 text-left mb-6">
           <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-2">What happens next?</div>
           {[
             "Application review by our dealer team",
@@ -89,7 +89,7 @@ export function DealerRegistrationForm() {
         </div>
         <button
           onClick={() => router.push("/")}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+          className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
         >
           Back to Home
         </button>
@@ -98,7 +98,7 @@ export function DealerRegistrationForm() {
   }
 
   return (
-    <div className="glass border border-[var(--border-color)] rounded-sm p-8">
+    <div className="glass border border-[var(--border-color)] rounded-xl p-8">
       <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">Dealer Application</h2>
       <p className="text-[var(--text-muted)] text-sm mb-8">Fill in your business details to get started.</p>
 
@@ -113,7 +113,7 @@ export function DealerRegistrationForm() {
             required
             value={formData.companyName}
             onChange={(e) => update("companyName", e.target.value)}
-            className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+            className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
             placeholder="Your Business Name"
           />
         </div>
@@ -129,7 +129,7 @@ export function DealerRegistrationForm() {
             pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
             value={formData.gstNumber}
             onChange={(e) => update("gstNumber", e.target.value.toUpperCase())}
-            className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors font-mono"
+            className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors font-mono"
             placeholder="22AAAAA0000A1Z5"
             maxLength={15}
           />
@@ -147,7 +147,7 @@ export function DealerRegistrationForm() {
               required
               value={formData.ownerName}
               onChange={(e) => update("ownerName", e.target.value)}
-              className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+              className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
               placeholder="Owner / Proprietor"
             />
           </div>
@@ -160,7 +160,7 @@ export function DealerRegistrationForm() {
               required
               value={formData.phone}
               onChange={(e) => update("phone", e.target.value)}
-              className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+              className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
               placeholder="+91 98765 43210"
             />
           </div>
@@ -177,7 +177,7 @@ export function DealerRegistrationForm() {
               required
               value={formData.email}
               onChange={(e) => update("email", e.target.value)}
-              className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+              className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
               placeholder="dealer@company.com"
             />
           </div>
@@ -191,7 +191,7 @@ export function DealerRegistrationForm() {
               minLength={8}
               value={formData.password}
               onChange={(e) => update("password", e.target.value)}
-              className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+              className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
               placeholder="Min. 8 characters"
             />
           </div>
@@ -207,7 +207,7 @@ export function DealerRegistrationForm() {
               required
               value={formData.state}
               onChange={(e) => update("state", e.target.value)}
-              className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+              className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
             >
               <option value="">Select State</option>
               {INDIAN_STATES.map((s) => (
@@ -224,7 +224,7 @@ export function DealerRegistrationForm() {
               required
               value={formData.city}
               onChange={(e) => update("city", e.target.value)}
-              className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+              className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
               placeholder="City"
             />
           </div>
@@ -240,7 +240,7 @@ export function DealerRegistrationForm() {
             required
             value={formData.address}
             onChange={(e) => update("address", e.target.value)}
-            className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+            className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
             placeholder="Street address"
           />
         </div>
@@ -255,14 +255,14 @@ export function DealerRegistrationForm() {
             maxLength={6}
             value={formData.pincode}
             onChange={(e) => update("pincode", e.target.value)}
-            className="w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors"
+            className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
             placeholder="000000"
           />
         </div>
 
         {/* Error */}
         {status === "error" && (
-          <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm">
+          <div className="bg-red-900/20 border border-red-900/40 rounded-xl px-4 py-3 text-red-400 text-sm">
             {errorMsg}
           </div>
         )}
@@ -270,7 +270,7 @@ export function DealerRegistrationForm() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm mt-2"
+          className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors uppercase tracking-wider text-sm mt-2"
         >
           {status === "loading" ? "Submitting Application..." : "Submit Application"}
         </button>

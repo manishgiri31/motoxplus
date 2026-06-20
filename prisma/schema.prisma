@@ -150,6 +150,7 @@ model Product {
   weight          Float?
   moq             Int            @default(1)
   price           Float
+  mrp             Float?
   gstRate         Float          @default(18)
   images          String[]
   compatibility   String[]
@@ -166,10 +167,21 @@ model Product {
   packageWeight   Float?
   packageWidth    Float?
   warranty        String         @default("No Warranty")
+  vendorId        String?
+  vendorCostPrice Float?
+  markupPercent   Float?
   cartItems       CartItem[]
   orderItems      OrderItem[]
   category        Category       @relation(fields: [categoryId], references: [id])
   productImages   ProductImage[]
+  vendor          Vendor?        @relation(fields: [vendorId], references: [id])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model ProductImage {
@@ -340,6 +352,7 @@ model Vendor {
   documents      VendorDocument[]
   payments       VendorPayment[]
   ratings        VendorRating[]
+  products       Product[]
 }
 
 model VendorContact {

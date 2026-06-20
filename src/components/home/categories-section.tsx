@@ -10,8 +10,10 @@ const categories = [
     description: "Disc brakes, drum brakes, brake pads, and caliper assemblies engineered for maximum stopping power.",
     count: "80+",
     Icon: Disc2,
-    accent: "from-red-950/60 to-black",
-    iconColor: "text-red-700 group-hover:text-red-500",
+    gradientDark: "from-red-950/50 via-red-950/20 to-black/80",
+    gradientLight: "from-red-50 via-white to-gray-50",
+    iconBg: "bg-red-900/20 group-hover:bg-red-900/35",
+    iconColor: "text-red-600 group-hover:text-red-400",
   },
   {
     name: "Engine Parts",
@@ -19,8 +21,10 @@ const categories = [
     description: "Pistons, gaskets, bearings, and engine components built to OEM specifications for peak performance.",
     count: "120+",
     Icon: Wrench,
-    accent: "from-zinc-900/80 to-black",
-    iconColor: "text-zinc-500 group-hover:text-red-400",
+    gradientDark: "from-zinc-900/70 via-zinc-900/30 to-black/80",
+    gradientLight: "from-zinc-50 via-white to-gray-50",
+    iconBg: "bg-zinc-800/40 group-hover:bg-red-900/25",
+    iconColor: "text-zinc-400 group-hover:text-red-400",
   },
   {
     name: "Suspension Parts",
@@ -28,8 +32,10 @@ const categories = [
     description: "Shock absorbers, springs, fork seals, and linkages for smooth and controlled riding.",
     count: "60+",
     Icon: SlidersVertical,
-    accent: "from-red-950/40 to-black",
-    iconColor: "text-red-800 group-hover:text-red-500",
+    gradientDark: "from-red-950/40 via-red-950/15 to-black/80",
+    gradientLight: "from-orange-50 via-white to-gray-50",
+    iconBg: "bg-red-900/15 group-hover:bg-red-900/30",
+    iconColor: "text-red-700 group-hover:text-red-400",
   },
   {
     name: "Electrical Parts",
@@ -37,8 +43,10 @@ const categories = [
     description: "Stators, CDI units, switches, and wiring harnesses for reliable electrical systems.",
     count: "90+",
     Icon: Zap,
-    accent: "from-zinc-900/60 to-black",
-    iconColor: "text-zinc-500 group-hover:text-red-400",
+    gradientDark: "from-zinc-900/60 via-zinc-900/25 to-black/80",
+    gradientLight: "from-yellow-50 via-white to-gray-50",
+    iconBg: "bg-zinc-800/40 group-hover:bg-yellow-900/20",
+    iconColor: "text-zinc-400 group-hover:text-yellow-400",
   },
 ];
 
@@ -70,45 +78,51 @@ export function CategoriesSection() {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {categories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/products?category=${cat.slug}`}
-              className={`group relative overflow-hidden rounded-sm bg-gradient-to-br ${cat.accent} border border-[var(--border-color)] hover:border-red-800/60 transition-all duration-300 card-hover`}
+              className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br dark:${cat.gradientDark} border border-[var(--border-color)] hover:border-red-700/50 transition-all duration-300 card-hover`}
+              style={{
+                background: `linear-gradient(135deg, var(--bg-card) 0%, transparent 100%)`,
+              }}
             >
-              {/* Hover glow */}
-              <div className="absolute top-0 right-0 w-48 h-48 bg-red-900/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              {/* Gradient overlay */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradientDark} opacity-80 dark:opacity-100 transition-opacity`} />
 
-              <div className="relative z-10 p-8 flex gap-6 items-start">
+              {/* Hover glow */}
+              <div className="absolute top-0 right-0 w-56 h-56 bg-red-900/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+              <div className="relative z-10 p-7 flex gap-6 items-start">
                 {/* Icon block */}
-                <div className="flex-shrink-0 w-14 h-14 rounded-sm border border-[var(--border-color)] group-hover:border-red-900/60 flex items-center justify-center bg-black/40 transition-colors">
+                <div className={`flex-shrink-0 w-14 h-14 rounded-xl border border-white/10 flex items-center justify-center transition-colors duration-300 ${cat.iconBg}`}>
                   <cat.Icon size={26} className={`transition-colors duration-300 ${cat.iconColor}`} />
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xl font-bold text-[var(--text-primary)] group-hover:text-white transition-colors">
+                    <h3 className="text-xl font-bold text-white group-hover:text-white transition-colors">
                       {cat.name}
                     </h3>
                     <ChevronRight
                       size={18}
-                      className="text-[var(--text-muted)] group-hover:text-red-500 group-hover:translate-x-1 transition-all flex-shrink-0"
+                      className="text-white/30 group-hover:text-red-400 group-hover:translate-x-1 transition-all flex-shrink-0"
                     />
                   </div>
-                  <p className="text-[var(--text-muted)] text-sm leading-relaxed mb-4">
+                  <p className="text-white/50 group-hover:text-white/65 text-sm leading-relaxed mb-5 transition-colors">
                     {cat.description}
                   </p>
-                  <div className="inline-flex items-center gap-2">
-                    <span className="text-red-500 font-black text-lg">{cat.count}</span>
-                    <span className="text-[var(--text-muted)] text-xs uppercase tracking-widest">Products</span>
+                  <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1 border border-white/10">
+                    <span className="text-red-400 font-black text-base">{cat.count}</span>
+                    <span className="text-white/40 text-[10px] uppercase tracking-widest">Products</span>
                   </div>
                 </div>
               </div>
 
               {/* Bottom sweep */}
-              <div className="absolute bottom-0 left-0 h-px w-0 group-hover:w-full bg-gradient-to-r from-red-600 via-red-400 to-transparent transition-all duration-500" />
+              <div className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-red-600 via-red-400 to-transparent transition-all duration-500 rounded-b-2xl" />
             </Link>
           ))}
         </div>

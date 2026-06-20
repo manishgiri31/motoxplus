@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
@@ -42,12 +42,12 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
-          ? "bg-[var(--bg-secondary)]/90 backdrop-blur-xl border-b border-[var(--border-color)] shadow-lg"
+          ? "bg-[var(--bg-secondary)]/92 backdrop-blur-2xl border-b border-[var(--border-color)] shadow-[0_1px_24px_rgba(0,0,0,0.18)]"
           : "bg-transparent"
       )}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
-        <div className="flex items-center justify-between h-[76px] md:h-[104px]">
+        <div className="flex items-center justify-between h-[68px] md:h-[84px]">
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
@@ -56,7 +56,7 @@ export function Navbar() {
               alt="MOTOXPLUS India Private Limited"
               width={400}
               height={300}
-              className="h-[56px] md:h-[88px] w-auto object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(220,38,38,0.15)]"
+              className="h-[50px] md:h-[68px] w-auto object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-[0_2px_10px_rgba(220,38,38,0.18)]"
               priority
             />
             <div className="hidden sm:block">
@@ -76,7 +76,7 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "text-sm font-medium tracking-wide transition-colors duration-200",
+                  "nav-link text-sm font-medium tracking-wide transition-colors duration-200",
                   link.href === "/become-dealer" || link.href === "/become-vendor"
                     ? "text-red-500 hover:text-red-400"
                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -93,7 +93,7 @@ export function Navbar() {
             {session ? (
               <Link
                 href={dashboardHref}
-                className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-sm transition-all duration-200 red-glow-sm"
+                className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 red-glow-sm"
               >
                 Dashboard
               </Link>
@@ -101,13 +101,13 @@ export function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors px-3 py-2"
                 >
                   Login
                 </Link>
                 <Link
                   href="/become-dealer"
-                  className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-sm transition-all duration-200"
+                  className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 red-glow-sm"
                 >
                   Become a Dealer
                 </Link>
@@ -120,7 +120,7 @@ export function Navbar() {
             <ThemeToggle />
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-[var(--text-primary)] p-2"
+              className="text-[var(--text-primary)] p-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors"
               aria-label="Toggle menu"
             >
               {isOpen ? <X size={22} /> : <Menu size={22} />}
@@ -131,35 +131,52 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-[var(--bg-secondary)]/95 backdrop-blur-xl border-t border-[var(--border-color)]">
-          <nav className="flex flex-col px-4 py-6 gap-1">
+        <div className="md:hidden bg-[var(--bg-secondary)]/97 backdrop-blur-2xl border-t border-[var(--border-color)] shadow-xl animate-slide-up">
+          <nav className="flex flex-col px-4 py-5 gap-0.5">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium py-3 px-2 border-b border-[var(--border-color)] text-sm transition-colors"
+                className={cn(
+                  "flex items-center justify-between font-medium py-3 px-3 rounded-xl text-sm transition-colors",
+                  link.href === "/become-dealer" || link.href === "/become-vendor"
+                    ? "text-red-500 hover:bg-red-950/30"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
+                )}
               >
                 {link.label}
+                <ChevronRight size={14} className="opacity-40" />
               </Link>
             ))}
-            {session ? (
-              <Link
-                href={dashboardHref}
-                className="mt-4 bg-red-600 text-white font-semibold py-3 text-center rounded-sm text-sm"
-                onClick={() => setIsOpen(false)}
-              >
-                Dashboard
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="mt-4 bg-red-600 text-white font-semibold py-3 text-center rounded-sm text-sm"
-                onClick={() => setIsOpen(false)}
-              >
-                Dealer Login
-              </Link>
-            )}
+            <div className="pt-4 mt-2 border-t border-[var(--border-color)]">
+              {session ? (
+                <Link
+                  href={dashboardHref}
+                  className="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors red-glow-sm"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <div className="flex gap-2">
+                  <Link
+                    href="/login"
+                    className="flex-1 flex items-center justify-center glass border border-[var(--border-color)] text-[var(--text-secondary)] font-semibold py-3 rounded-xl text-sm transition-colors hover:border-red-600/40"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/become-dealer"
+                    className="flex-1 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Become a Dealer
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
         </div>
       )}

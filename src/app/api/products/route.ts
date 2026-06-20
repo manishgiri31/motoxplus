@@ -12,6 +12,7 @@ const productSchema = z.object({
   categoryId: z.string(),
   // Pricing & inventory
   price: z.number().min(0),
+  mrp: z.number().min(0).optional(),
   gstRate: z.number().default(18),
   hsnCode: z.string().length(8, "HSN code must be exactly 8 digits").regex(/^\d{8}$/, "HSN code must be 8 digits"),
   moq: z.number().min(1).default(1),

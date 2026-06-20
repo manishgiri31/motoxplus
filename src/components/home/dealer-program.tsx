@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 const benefits = [
   "Exclusive dealer pricing and margin protection",
@@ -14,14 +14,22 @@ const benefits = [
   "Regional training and product workshops",
 ];
 
+const dealerStats = [
+  { value: "500+", label: "Active Dealers", highlight: true },
+  { value: "18", label: "States Covered", highlight: false },
+  { value: "48h", label: "Avg. Delivery Time", highlight: true },
+  { value: "98%", label: "Order Fulfilment Rate", highlight: false },
+  { value: "4.8★", label: "Dealer Satisfaction", highlight: true },
+];
+
 export function DealerProgram() {
   return (
     <section className="py-24 px-4 md:px-8 bg-[var(--bg-secondary)] relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-900/50 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-900/30 to-transparent" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-950/10 rounded-full blur-[120px]" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-900/40 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-900/25 to-transparent" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-red-950/8 rounded-full blur-[130px]" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
@@ -44,10 +52,10 @@ export function DealerProgram() {
               to serve your customers better.
             </p>
 
-            <ul className="grid grid-cols-1 gap-3 mb-10">
+            <ul className="grid grid-cols-1 gap-2.5 mb-10">
               {benefits.map((benefit) => (
-                <li key={benefit} className="flex items-center gap-3">
-                  <CheckCircle size={16} className="text-red-500 flex-shrink-0" />
+                <li key={benefit} className="flex items-center gap-3 py-1">
+                  <CheckCircle2 size={16} className="text-red-500 flex-shrink-0" />
                   <span className="text-[var(--text-secondary)] text-sm">{benefit}</span>
                 </li>
               ))}
@@ -55,7 +63,7 @@ export function DealerProgram() {
 
             <Link
               href="/become-dealer"
-              className="group inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-sm transition-all duration-200 red-glow text-sm uppercase tracking-wider"
+              className="group inline-flex items-center gap-2.5 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-xl transition-all duration-200 red-glow text-sm uppercase tracking-wider"
             >
               Apply Now — It&apos;s Free
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -64,31 +72,31 @@ export function DealerProgram() {
 
           {/* Right — Stats card */}
           <div className="relative">
-            <div className="glass border border-white/8 rounded-sm p-8">
-              <h3 className="text-[var(--text-primary)] font-bold text-xl mb-8 uppercase tracking-wider">
+            <div className="glass border border-[var(--border-color)] rounded-2xl p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-red-900/10 rounded-full blur-[60px] pointer-events-none" />
+
+              <h3 className="text-[var(--text-primary)] font-bold text-lg mb-8 uppercase tracking-wider relative z-10">
                 Dealer Network Stats
               </h3>
 
-              {[
-                { value: "500+", label: "Active Dealers", color: "text-red-500" },
-                { value: "18", label: "States Covered", color: "text-[var(--text-primary)]" },
-                { value: "48h", label: "Avg. Delivery Time", color: "text-red-500" },
-                { value: "98%", label: "Order Fulfilment Rate", color: "text-[var(--text-primary)]" },
-                { value: "4.8★", label: "Dealer Satisfaction", color: "text-red-500" },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="flex items-center justify-between py-4 border-b border-[var(--border-color)] last:border-0"
-                >
-                  <span className="text-[var(--text-muted)] text-sm">{stat.label}</span>
-                  <span className={`font-black text-2xl ${stat.color}`}>{stat.value}</span>
-                </div>
-              ))}
+              <div className="relative z-10 space-y-0">
+                {dealerStats.map((stat, i) => (
+                  <div
+                    key={stat.label}
+                    className={`flex items-center justify-between py-4 ${i < dealerStats.length - 1 ? "border-b border-[var(--border-color)]" : ""}`}
+                  >
+                    <span className="text-[var(--text-muted)] text-sm">{stat.label}</span>
+                    <span className={`font-black text-2xl ${stat.highlight ? "text-red-500" : "text-[var(--text-primary)]"}`}>
+                      {stat.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Decorative corner */}
-            <div className="absolute -top-4 -right-4 w-24 h-24 border-t-2 border-r-2 border-red-600/30" />
-            <div className="absolute -bottom-4 -left-4 w-24 h-24 border-b-2 border-l-2 border-red-600/20" />
+            {/* Decorative corners */}
+            <div className="absolute -top-3 -right-3 w-20 h-20 border-t-2 border-r-2 border-red-600/35 rounded-tr-lg" />
+            <div className="absolute -bottom-3 -left-3 w-20 h-20 border-b-2 border-l-2 border-red-600/25 rounded-bl-lg" />
           </div>
         </div>
       </div>

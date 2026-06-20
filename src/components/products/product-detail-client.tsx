@@ -20,6 +20,7 @@ interface Product {
   productImages?: ProductImage[];
   compatibility: string[];
   price: number;
+  mrp?: number | null;
   moq: number;
   gstRate: number;
   hsnCode?: string;
@@ -90,7 +91,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
 
         {/* ── Gallery ── */}
         <div>
-          <div className="relative aspect-square bg-gradient-to-br from-zinc-900 to-black rounded-sm overflow-hidden mb-4">
+          <div className="relative aspect-square bg-gradient-to-br from-zinc-900 to-black rounded-xl overflow-hidden mb-4">
             {gallery[selectedIdx] ? (
               <Image
                 src={gallery[selectedIdx]}
@@ -110,13 +111,13 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
               <>
                 <button
                   onClick={prev}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-sm glass border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                   onClick={next}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-sm glass border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -140,7 +141,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
                 <button
                   key={i}
                   onClick={() => setSelectedIdx(i)}
-                  className={`relative w-16 h-16 flex-shrink-0 rounded-sm overflow-hidden border transition-colors ${
+                  className={`relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border transition-colors ${
                     i === selectedIdx ? "border-red-600" : "border-[var(--border-color)] opacity-60 hover:opacity-100"
                   }`}
                 >
@@ -155,16 +156,16 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
         <div>
           {/* Category + Brand */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className="glass border border-red-900/30 text-red-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-sm">
+            <span className="glass border border-red-900/30 text-red-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl">
               {product.category.name}
             </span>
             {product.brand && (
-              <span className="glass border border-[var(--border-color)] text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-sm">
+              <span className="glass border border-[var(--border-color)] text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl">
                 {product.brand}
               </span>
             )}
             {product.warranty && product.warranty !== "No Warranty" && (
-              <span className="glass border border-green-900/40 text-green-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-sm flex items-center gap-1">
+              <span className="glass border border-green-900/40 text-green-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 {product.warranty}
               </span>
@@ -197,7 +198,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
 
           {/* Package dims */}
           {(product.packageWeight || product.packageLength) && (
-            <div className="glass-dark border border-[var(--border-color)] rounded-sm p-4 mb-6 flex items-start gap-3">
+            <div className="glass-dark border border-[var(--border-color)] rounded-xl p-4 mb-6 flex items-start gap-3">
               <PackageOpen className="w-4 h-4 text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
               <div>
                 <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Package Dimensions</div>
@@ -224,7 +225,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
               <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Compatible With</div>
               <div className="flex flex-wrap gap-2">
                 {product.compatibility.map((model) => (
-                  <span key={model} className="glass border border-[var(--border-color)] text-[var(--text-secondary)] text-xs px-3 py-1 rounded-sm">
+                  <span key={model} className="glass border border-[var(--border-color)] text-[var(--text-secondary)] text-xs px-3 py-1 rounded-xl">
                     {model}
                   </span>
                 ))}
@@ -234,10 +235,10 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
 
           {/* Pricing */}
           {isDealer ? (
-            <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-6">
-              <div className="flex items-baseline gap-4 mb-2">
+            <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-6">
+              <div className="flex items-baseline gap-6 mb-3">
                 <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Unit Price (excl. GST)</div>
+                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Dealer Price (excl. GST)</div>
                   <div className="text-3xl font-black text-[var(--text-primary)]">{formatCurrency(product.price)}</div>
                 </div>
                 <div>
@@ -245,13 +246,34 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
                   <div className="text-xl font-bold text-red-400">{formatCurrency(priceWithGST)}</div>
                 </div>
               </div>
+              {product.mrp && (
+                <div className="flex items-center gap-2 mb-2">
+                  <Tag size={12} className="text-[var(--text-muted)]" />
+                  <span className="text-[var(--text-muted)] text-xs">MRP: <span className="line-through">{formatCurrency(product.mrp)}</span></span>
+                </div>
+              )}
               <div className="text-[var(--text-muted)] text-xs">
                 Total for {quantity} pcs: {formatCurrency(product.price * quantity)}
               </div>
             </div>
+          ) : product.mrp ? (
+            <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-6">
+              <div className="flex items-baseline gap-6 mb-3">
+                <div>
+                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">MRP (incl. GST)</div>
+                  <div className="text-3xl font-black text-[var(--text-primary)]">{formatCurrency(product.mrp)}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-2 glass border border-red-900/25 rounded-xl px-3 py-2 w-fit">
+                <Lock size={12} className="text-red-500 flex-shrink-0" />
+                <span className="text-red-400 text-xs font-semibold">Login as Dealer for exclusive wholesale pricing</span>
+              </div>
+            </div>
           ) : (
-            <div className="glass border border-red-900/30 rounded-sm p-6 mb-6 flex items-center gap-4">
-              <Lock size={24} className="text-red-600 flex-shrink-0" />
+            <div className="glass border border-red-900/30 rounded-2xl p-6 mb-6 flex items-center gap-4">
+              <div className="w-10 h-10 bg-red-900/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Lock size={18} className="text-red-600" />
+              </div>
               <div>
                 <div className="text-[var(--text-primary)] font-bold mb-1">Dealer Pricing</div>
                 <div className="text-[var(--text-muted)] text-sm">Login as an approved dealer to view pricing and add to cart.</div>
@@ -262,7 +284,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
           {/* Add to Cart */}
           {isDealer && (
             <div className="flex items-center gap-4">
-              <div className="flex items-center glass border border-[var(--border-color)] rounded-sm overflow-hidden">
+              <div className="flex items-center glass border border-[var(--border-color)] rounded-xl overflow-hidden">
                 <button
                   onClick={() => setQuantity(Math.max(product.moq, quantity - product.moq))}
                   className="px-4 py-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
@@ -280,7 +302,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
               <button
                 onClick={handleAddToCart}
                 disabled={loading || addedToCart}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-sm transition-all text-sm uppercase tracking-wider ${
+                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-xl transition-all text-sm uppercase tracking-wider ${
                   addedToCart ? "bg-green-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
                 }`}
               >
@@ -296,7 +318,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
           {!isDealer && (
             <Link
               href="/login"
-              className="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+              className="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
             >
               Login as Dealer to Order
             </Link>
@@ -317,7 +339,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
                 <Link
                   key={p.id}
                   href={`/products/${p.id}`}
-                  className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-sm overflow-hidden transition-all card-hover"
+                  className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-xl overflow-hidden transition-all card-hover"
                 >
                   <div className="relative h-36 bg-gradient-to-br from-zinc-900 to-black">
                     {thumb ? (

@@ -82,26 +82,26 @@ export function LoginForm() {
     setTimerKey((k) => k + 1);
   }
 
-  const inputCls = "w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors";
+  const inputCls = "w-full themed-input border rounded-xl px-4 py-3 text-sm";
 
   return (
-    <div className="glass border border-[var(--border-color)] rounded-sm p-8">
+    <div className="glass border border-[var(--border-color)] rounded-2xl p-8">
       <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Welcome Back</h1>
       <p className="text-[var(--text-muted)] text-sm mb-6">Sign in to your MOTOXPLUS account.</p>
 
       {/* Tabs */}
-      <div className="flex bg-[var(--bg-secondary)] rounded-sm p-1 mb-8 border border-[var(--border-color)]">
+      <div className="flex bg-[var(--bg-secondary)] rounded-xl p-1 mb-8 border border-[var(--border-color)]">
         <button
           type="button"
           onClick={() => { setTab("password"); setError(""); }}
-          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-sm transition-colors ${tab === "password" ? "bg-red-600 text-white" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
+          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${tab === "password" ? "bg-red-600 text-white shadow-[0_0_10px_rgba(220,38,38,0.3)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
         >
           Email + Password
         </button>
         <button
           type="button"
           onClick={() => { setTab("otp"); setError(""); setOtpStep("enter-mobile"); }}
-          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-sm transition-colors ${tab === "otp" ? "bg-red-600 text-white" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
+          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${tab === "otp" ? "bg-red-600 text-white shadow-[0_0_10px_rgba(220,38,38,0.3)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
         >
           Mobile OTP
         </button>
@@ -126,8 +126,8 @@ export function LoginForm() {
               </button>
             </div>
           </div>
-          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm">{error}</div>}
-          <button type="submit" disabled={status === "loading"} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
+          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>}
+          <button type="submit" disabled={status === "loading"} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors uppercase tracking-wider text-sm red-glow-sm">
             {status === "loading" ? <><Spinner size={15} /> Signing in...</> : "Sign In"}
           </button>
         </form>
@@ -139,12 +139,12 @@ export function LoginForm() {
           <div>
             <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Mobile Number</label>
             <div className="flex gap-2">
-              <span className="themed-input border rounded-sm px-3 py-3 text-sm text-[var(--text-muted)] whitespace-nowrap">+91</span>
+              <span className="themed-input border rounded-xl px-3 py-3 text-sm text-[var(--text-muted)] whitespace-nowrap">+91</span>
               <input type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} className={inputCls} placeholder="10-digit number" maxLength={10} />
             </div>
           </div>
-          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm">{error}</div>}
-          <button type="submit" disabled={status === "loading" || mobile.length !== 10} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
+          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>}
+          <button type="submit" disabled={status === "loading" || mobile.length !== 10} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors uppercase tracking-wider text-sm red-glow-sm">
             {status === "loading" ? <><Spinner size={15} /> Sending OTP...</> : "Send OTP"}
           </button>
         </form>
@@ -154,8 +154,8 @@ export function LoginForm() {
         <form onSubmit={handleOTPLogin} className="space-y-6">
           <p className="text-[var(--text-muted)] text-sm">OTP sent to <span className="text-white">+91 {mobile}</span></p>
           <OtpInput value={otp} onChange={setOtp} disabled={status === "loading"} />
-          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm text-center">{error}</div>}
-          <button type="submit" disabled={status === "loading" || otp.length !== 6} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
+          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-xl px-4 py-3 text-red-400 text-sm text-center">{error}</div>}
+          <button type="submit" disabled={status === "loading" || otp.length !== 6} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors uppercase tracking-wider text-sm red-glow-sm">
             {status === "loading" ? <><Spinner size={15} /> Verifying...</> : "Verify & Sign In"}
           </button>
           <CountdownTimer key={timerKey} seconds={600} onResend={handleResendOTP} label="Resend OTP" />
@@ -175,8 +175,8 @@ export function LoginForm() {
         </Link>
       </div>
 
-      <div className="mt-6 glass border border-[var(--border-color)] rounded-sm p-4">
-        <div className="text-gray-600 text-xs uppercase tracking-widest mb-3">Portal Access</div>
+      <div className="mt-6 glass border border-[var(--border-color)] rounded-xl p-4">
+        <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest mb-3 font-semibold">Portal Access</div>
         <div className="space-y-2 text-xs">
           <div className="flex justify-between">
             <span className="text-[var(--text-muted)]">Dealers</span>

@@ -10,9 +10,9 @@ interface Props {
   product?: any;
 }
 
-const INPUT = "w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors";
+const INPUT = "w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors";
 const LABEL = "text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2";
-const SECTION = "glass-dark border border-[var(--border-color)] rounded-sm p-6 space-y-4";
+const SECTION = "glass-dark border border-[var(--border-color)] rounded-xl p-6 space-y-4";
 const SECTION_TITLE = "text-[var(--text-secondary)] text-xs uppercase tracking-widest font-bold mb-4 flex items-center gap-2";
 
 const WARRANTY_OPTIONS = ["No Warranty", "3 Months", "6 Months", "12 Months"];
@@ -22,6 +22,9 @@ export function ProductForm({ categories, product }: Props) {
   const router = useRouter();
   const isEdit = !!product;
   const imgRef = useRef<ImageUploaderRef>(null);
+
+  const isVendorProduct = !!(product as any)?.vendorId;
+  const vendorCostPrice = (product as any)?.vendorCostPrice ?? null;
 
   const [form, setForm] = useState({
     // Basic
@@ -33,6 +36,8 @@ export function ProductForm({ categories, product }: Props) {
     isActive: product?.isActive ?? true,
     // Pricing & Tax
     price: product?.price?.toString() || "",
+    mrp: (product as any)?.mrp?.toString() || "",
+    markupPercent: (product as any)?.markupPercent?.toString() || "",
     gstRate: product?.gstRate?.toString() || "18",
     hsnCode: product?.hsnCode || "",
     // Inventory
@@ -87,6 +92,8 @@ export function ProductForm({ categories, product }: Props) {
       categoryId: form.categoryId,
       isActive: form.isActive,
       price: parseFloat(form.price),
+      mrp: form.mrp ? parseFloat(form.mrp) : undefined,
+      markupPercent: form.markupPercent ? parseFloat(form.markupPercent) : undefined,
       gstRate: parseFloat(form.gstRate),
       hsnCode: form.hsnCode,
       moq: parseInt(form.moq),
@@ -173,10 +180,57 @@ export function ProductForm({ categories, product }: Props) {
           <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
           Pricing &amp; Tax
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        {/* Vendor product: show cost + markup controls */}
+        {isVendorProduct && vendorCostPrice != null && (
+          <div className="glass border border-amber-900/30 rounded-xl p-4 mb-4">
+            <div className="text-[10px] uppercase tracking-widest text-amber-500 font-bold mb-3">Vendor Submission</div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <div className="text-[var(--text-muted)] text-xs mb-1">Vendor Cost Price</div>
+                <div className="text-amber-400 font-black text-lg">₹{vendorCostPrice.toLocaleString("en-IN")}</div>
+              </div>
+              <div>
+                <label className={LABEL}>Markup (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={form.markupPercent}
+                  onChange={(e) => {
+                    set("markupPercent", e.target.value);
+                    if (e.target.value && vendorCostPrice) {
+                      const computed = (vendorCostPrice * (1 + parseFloat(e.target.value) / 100)).toFixed(2);
+                      set("price", computed);
+                    }
+                  }}
+                  className={INPUT}
+                  placeholder="20"
+                />
+                <p className="text-[var(--text-muted)] text-[10px] mt-1">Auto-updates dealer price</p>
+              </div>
+              <div>
+                <div className="text-[var(--text-muted)] text-xs mb-1">Computed Dealer Price</div>
+                <div className="text-[var(--text-primary)] font-black text-lg">
+                  {form.markupPercent && vendorCostPrice
+                    ? `₹${(vendorCostPrice * (1 + parseFloat(form.markupPercent) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
+                    : form.price ? `₹${parseFloat(form.price).toLocaleString("en-IN")}` : "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className={LABEL}>Price (₹) <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Dealer Price (₹) <span className="text-red-500">*</span></label>
             <input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} className={INPUT} placeholder="0.00" />
+            <p className="text-[var(--text-muted)] text-[10px] mt-1">Shown only to approved dealers</p>
+          </div>
+          <div>
+            <label className={LABEL}>MRP / Retail Price (₹)</label>
+            <input type="number" step="0.01" min="0" value={form.mrp} onChange={(e) => set("mrp", e.target.value)} className={INPUT} placeholder="0.00" />
+            <p className="text-[var(--text-muted)] text-[10px] mt-1">Shown to public visitors</p>
           </div>
           <div>
             <label className={LABEL}>GST Rate (%) <span className="text-red-500">*</span></label>
@@ -316,7 +370,7 @@ export function ProductForm({ categories, product }: Props) {
       </div>
 
       {status === "error" && (
-        <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm">
+        <div className="bg-red-900/20 border border-red-900/40 rounded-xl px-4 py-3 text-red-400 text-sm">
           {errorMsg}
         </div>
       )}
@@ -325,14 +379,14 @@ export function ProductForm({ categories, product }: Props) {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+          className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
         >
           {status === "loading" ? "Saving..." : isEdit ? "Update Product" : "Create Product"}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
-          className="glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-6 py-3 rounded-sm transition-colors text-sm hover:border-red-900/40"
+          className="glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-6 py-3 rounded-xl transition-colors text-sm hover:border-red-900/40"
         >
           Cancel
         </button>

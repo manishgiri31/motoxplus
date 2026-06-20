@@ -49,7 +49,7 @@ export default async function AdminOrdersPage({
           <Link
             key={s || "all"}
             href={`/admin/orders${s ? `?status=${s}` : ""}`}
-            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${
+            className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${
               searchParams.status === s || (!searchParams.status && !s)
                 ? "bg-red-600 text-white"
                 : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
@@ -60,7 +60,7 @@ export default async function AdminOrdersPage({
         ))}
       </div>
 
-      <div className="glass border border-[var(--border-color)] rounded-sm overflow-hidden">
+      <div className="glass border border-[var(--border-color)] rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border-color)]">
@@ -97,7 +97,7 @@ export default async function AdminOrdersPage({
                   </div>
                 </td>
                 <td className="px-4 py-4">
-                  <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${statusColors[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                  <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-xl ${statusColors[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                     {order.status}
                   </span>
                 </td>

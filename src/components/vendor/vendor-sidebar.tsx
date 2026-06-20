@@ -15,11 +15,13 @@ import {
   Menu,
   X,
   Truck,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
+  { icon: Package, label: "My Products", href: "/vendor/products" },
   { icon: ClipboardList, label: "Purchase Orders", href: "/vendor/purchase-orders" },
   { icon: FileText, label: "My Invoices", href: "/vendor/invoices" },
   { icon: CreditCard, label: "Payments", href: "/vendor/payments" },
@@ -40,15 +42,15 @@ export function VendorSidebar({ user }: Props) {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-[var(--border-color)]">
-        <Link href="/" className="flex flex-col items-center gap-3 text-center">
-          <Image src="/motoxplus/logo.png" alt="MOTOXPLUS" width={64} height={64} className="object-contain" />
+      <div className="p-5 border-b border-[var(--border-color)]">
+        <Link href="/" className="flex flex-col items-center gap-2.5 text-center">
+          <Image src="/motoxplus/logo.png" alt="MOTOXPLUS" width={60} height={60} className="object-contain" />
           <div>
-            <div className="text-[var(--text-primary)] font-black text-base tracking-wide leading-tight">
+            <div className="text-[var(--text-primary)] font-black text-sm tracking-wide leading-tight">
               MOTOX<span className="text-red-500">PLUS</span>
             </div>
             <div className="text-[var(--text-muted)] text-[9px] leading-tight">India Private Limited</div>
-            <div className="text-amber-500 text-[9px] uppercase tracking-widest mt-1 font-semibold flex items-center justify-center gap-1">
+            <div className="text-amber-500 text-[9px] uppercase tracking-widest mt-1 font-bold flex items-center justify-center gap-1">
               <Truck size={8} />
               Vendor Portal
             </div>
@@ -56,16 +58,28 @@ export function VendorSidebar({ user }: Props) {
         </Link>
       </div>
 
-      <div className="p-4 mx-4 my-4 glass border border-[var(--border-color)] rounded-sm">
-        <div className="text-[var(--text-primary)] font-semibold text-sm truncate">{user.name}</div>
-        <div className="text-[var(--text-muted)] text-xs truncate">{user.email}</div>
-        <div className="mt-2 inline-flex items-center gap-1.5">
-          <Truck size={10} className="text-amber-500" />
-          <span className="text-[10px] uppercase tracking-widest font-semibold text-amber-500">Vendor</span>
+      <div className="px-4 pt-4 pb-2">
+        <div className="glass border border-[var(--border-color)] rounded-xl p-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-900/20 border border-amber-900/30 flex items-center justify-center flex-shrink-0">
+              <span className="text-amber-400 font-black text-xs">
+                {(user.name || "V").charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[var(--text-primary)] font-semibold text-xs truncate">{user.name}</div>
+              <div className="text-[var(--text-muted)] text-[10px] truncate">{user.email}</div>
+            </div>
+          </div>
+          <div className="mt-2">
+            <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full text-amber-400 bg-amber-500/10">
+              Vendor
+            </span>
+          </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1">
+      <nav className="flex-1 px-3 py-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -74,25 +88,26 @@ export function VendorSidebar({ user }: Props) {
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-0.5",
                 isActive
-                  ? "bg-amber-600/10 text-amber-400 border-l-2 border-amber-500"
+                  ? "bg-amber-600/10 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.2)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
               )}
             >
-              <item.icon size={18} className={isActive ? "text-amber-400" : "text-[var(--text-muted)]"} />
-              {item.label}
+              <item.icon size={17} className={cn("flex-shrink-0", isActive ? "text-amber-400" : "text-[var(--text-muted)]")} />
+              <span>{item.label}</span>
+              {isActive && <div className="ml-auto w-1.5 h-1.5 bg-amber-500 rounded-full" />}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-[var(--border-color)]">
+      <div className="p-3 border-t border-[var(--border-color)]">
         <button
           onClick={() => signOut({ callbackUrl: "/" })}
-          className="flex items-center gap-3 w-full px-4 py-3 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-900/10 rounded-sm text-sm font-medium transition-all"
+          className="flex items-center gap-3 w-full px-3 py-2.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-900/10 rounded-xl text-sm font-medium transition-all"
         >
-          <LogOut size={18} />
+          <LogOut size={17} />
           Sign Out
         </button>
       </div>
@@ -107,18 +122,18 @@ export function VendorSidebar({ user }: Props) {
 
       <button
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-50 glass border border-[var(--border-color)] p-2 rounded-sm"
+        className="md:hidden fixed top-4 left-4 z-50 glass border border-[var(--border-color)] p-2 rounded-xl"
       >
         <Menu size={20} className="text-[var(--text-primary)]" />
       </button>
 
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="relative w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col z-10">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setMobileOpen(false)} />
+          <aside className="relative w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col z-10 animate-slide-in-left">
             <button
               onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1"
             >
               <X size={20} />
             </button>

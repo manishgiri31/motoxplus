@@ -48,7 +48,7 @@ export default async function OrdersPage({
       </div>
 
       {orders.length === 0 ? (
-        <div className="text-center py-20 glass border border-[var(--border-color)] rounded-sm">
+        <div className="text-center py-20 glass border border-[var(--border-color)] rounded-xl">
           <ClipboardList size={48} className="text-gray-700 mx-auto mb-4" />
           <h2 className="text-[var(--text-primary)] font-bold text-xl mb-2">No orders yet</h2>
           <Link href="/dealer/products" className="text-red-400 hover:text-red-300 transition-colors">
@@ -57,7 +57,7 @@ export default async function OrdersPage({
         </div>
       ) : (
         <>
-          <div className="glass border border-[var(--border-color)] rounded-sm overflow-hidden">
+          <div className="glass border border-[var(--border-color)] rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border-color)]">
@@ -87,7 +87,7 @@ export default async function OrdersPage({
                       <span className="text-[var(--text-primary)] font-bold text-sm">{formatCurrency(order.grandTotal)}</span>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${statusColors[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                      <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-xl ${statusColors[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                         {order.status}
                       </span>
                     </td>
@@ -115,7 +115,7 @@ export default async function OrdersPage({
                 <Link
                   key={p}
                   href={`/dealer/orders?page=${p}`}
-                  className={`w-10 h-10 flex items-center justify-center rounded-sm text-sm font-bold transition-colors ${
+                  className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${
                     p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
                   }`}
                 >

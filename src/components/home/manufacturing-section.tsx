@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 const processes = [
   {
@@ -50,7 +50,7 @@ export function ManufacturingSection() {
             From Raw Metal to<br />
             <span className="text-gradient-red">Precision Part.</span>
           </h2>
-          <p className="text-[var(--text-muted)] max-w-xl mx-auto">
+          <p className="text-[var(--text-muted)] max-w-xl mx-auto leading-relaxed">
             Our six-stage manufacturing process ensures every component that leaves
             our facility is built to perform.
           </p>
@@ -58,32 +58,38 @@ export function ManufacturingSection() {
 
         {/* Process grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {processes.map((process, i) => (
+          {processes.map((process) => (
             <div
               key={process.step}
-              className="group relative glass border border-[var(--border-color)] hover:border-red-900/40 rounded-sm p-6 transition-all duration-300"
+              className="group relative glass border border-[var(--border-color)] hover:border-red-900/45 rounded-2xl p-7 transition-all duration-300 card-hover overflow-hidden"
             >
-              {/* Step number */}
-              <div className="absolute top-4 right-4 text-6xl font-black text-[var(--text-primary)]/5 group-hover:text-red-900/20 transition-colors leading-none">
+              {/* Step number watermark */}
+              <div className="absolute top-3 right-4 text-7xl font-black text-[var(--text-primary)]/[0.04] group-hover:text-red-900/15 transition-colors leading-none select-none pointer-events-none">
                 {process.step}
               </div>
 
               {/* Content */}
               <div className="relative z-10">
-                <div className="w-8 h-0.5 bg-red-600 mb-6" />
-                <h3 className="text-[var(--text-primary)] font-bold text-lg mb-3">{process.title}</h3>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-7 h-7 rounded-lg bg-red-600/15 border border-red-900/30 flex items-center justify-center">
+                    <span className="text-red-500 text-[10px] font-black">{process.step}</span>
+                  </div>
+                  <div className="w-6 h-px bg-red-600/50" />
+                </div>
+                <h3 className="text-[var(--text-primary)] font-bold text-base mb-2.5">{process.title}</h3>
                 <p className="text-[var(--text-muted)] text-sm leading-relaxed">{process.description}</p>
               </div>
 
-              {/* Hover accent */}
-              <div className="absolute bottom-0 left-0 h-0.5 w-0 group-hover:w-full bg-red-600 transition-all duration-500" />
+              {/* Bottom sweep */}
+              <div className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-red-600 to-transparent transition-all duration-500 rounded-b-2xl" />
             </div>
           ))}
         </div>
 
         {/* Bottom CTA */}
-        <div className="mt-16 glass border border-[var(--border-color)] rounded-sm p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div>
+        <div className="mt-16 glass border border-[var(--border-color)] rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-red-900/10 rounded-full blur-[80px] pointer-events-none" />
+          <div className="relative z-10">
             <h3 className="text-2xl md:text-3xl font-black text-[var(--text-primary)] mb-2">
               Interested in our manufacturing capabilities?
             </h3>
@@ -93,7 +99,7 @@ export function ManufacturingSection() {
           </div>
           <a
             href="/contact"
-            className="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-sm transition-colors uppercase tracking-wider text-sm"
+            className="relative z-10 flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-xl transition-colors uppercase tracking-wider text-sm red-glow-sm"
           >
             Get in Touch
           </a>
