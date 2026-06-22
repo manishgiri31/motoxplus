@@ -25,12 +25,12 @@ export function AuthPageLayout({ children }: AuthPageLayoutProps) {
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
           <a href="/" className="inline-flex flex-col items-center gap-3 group">
-            <div className="w-18 h-18 rounded-2xl glass border border-[var(--border-color)] flex items-center justify-center p-3 group-hover:border-red-600/40 transition-colors">
+            <div className="w-28 h-28 rounded-2xl glass border border-[var(--border-color)] flex items-center justify-center p-3 group-hover:border-red-600/40 transition-colors">
               <Image
                 src="/motoxplus/logo.png"
                 alt="MOTOXPLUS India Private Limited"
-                width={64}
-                height={64}
+                width={96}
+                height={96}
                 className="object-contain group-hover:scale-105 transition-transform duration-300"
                 priority
               />

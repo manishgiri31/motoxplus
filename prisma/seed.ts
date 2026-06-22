@@ -151,6 +151,41 @@ async function main() {
     console.log("✓ Test Dealer created: dealer@testshop.in / Dealer@123456");
   }
 
+  // Test Vendor
+  const vendorEmail = "vendor@testparts.in";
+  const existingVendorUser = await prisma.user.findUnique({ where: { email: vendorEmail } });
+
+  if (!existingVendorUser) {
+    const password = await bcrypt.hash("Vendor@123456", 12);
+    await prisma.user.create({
+      data: {
+        name: "Suresh Patel",
+        email: vendorEmail,
+        password,
+        role: "VENDOR",
+        vendor: {
+          create: {
+            vendorCode: "VND-TEST-001",
+            companyName: "Patel Auto Components",
+            ownerName: "Suresh Patel",
+            email: vendorEmail,
+            phone: "+91 98765 11111",
+            gstNumber: "24BBBBB0000B1Z3",
+            panNumber: "BBBPP1234C",
+            category: "MANUFACTURING_COMPONENTS",
+            status: "APPROVED",
+            creditDays: 30,
+            address: "Plot 45, Industrial Area, Phase 2",
+            city: "Ahmedabad",
+            state: "Gujarat",
+            pincode: "380015",
+          },
+        },
+      },
+    });
+    console.log("✓ Test Vendor created: vendor@testparts.in / Vendor@123456");
+  }
+
   console.log("✅ Seeding complete!");
 }
 

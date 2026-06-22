@@ -22,6 +22,7 @@ interface Product {
   images: string[];
   productImages?: ProductImage[];
   stock: number;
+  vendorId?: string | null;
   category: { name: string };
 }
 
@@ -122,6 +123,7 @@ export function DealerProductCatalog({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map((product) => {
+          const isInStock = product.vendorId ? true : product.stock > 0;
           const thumb =
             product.productImages && product.productImages.length > 0
               ? (product.productImages.find((i) => i.isPrimary) || product.productImages[0]).imageUrl
@@ -157,8 +159,8 @@ export function DealerProductCatalog({
                   <div className="text-red-400 font-black text-lg">{formatCurrency(product.price)}</div>
                   <div className="text-gray-600 text-[10px]">+ {product.gstRate}% GST • MOQ: {product.moq}</div>
                 </div>
-                <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${product.stock > 0 ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
-                  {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${isInStock ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
+                  {isInStock ? "In Stock" : "Out of Stock"}
                 </div>
               </div>
 
@@ -181,7 +183,7 @@ export function DealerProductCatalog({
                 </div>
                 <button
                   onClick={() => handleAddToCart(product)}
-                  disabled={addingToCart === product.id || product.stock === 0}
+                  disabled={addingToCart === product.id || !isInStock}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${
                     addedIds.includes(product.id)
                       ? "bg-green-700 text-[var(--text-primary)]"

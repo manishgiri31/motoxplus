@@ -199,8 +199,6 @@ export default function CheckoutPage() {
     delivery.name && delivery.phone && delivery.address &&
     delivery.city && delivery.state && delivery.pincode.length === 6;
 
-  const isServiceable = serviceabilityResult?.serviceable !== false || delivery.pincode.length < 6;
-
   const buildOrderPayload = () => ({
     paymentType,
     notes,
@@ -296,10 +294,6 @@ export default function CheckoutPage() {
   const handlePlaceOrder = () => {
     if (!isDeliveryComplete) {
       alert("Please complete all delivery address fields.");
-      return;
-    }
-    if (serviceabilityResult && !serviceabilityResult.serviceable) {
-      alert("Delivery is not available to this pincode. Please enter a different pincode.");
       return;
     }
     if (paymentType === "COD") handleCOD();
@@ -538,14 +532,14 @@ export default function CheckoutPage() {
         </div>
 
         {serviceabilityResult && !serviceabilityResult.serviceable && (
-          <div className="mb-4 flex items-center gap-2 bg-red-900/10 border border-red-800/30 rounded-sm px-3 py-2 text-red-400 text-xs">
-            Delivery not available to pincode <strong>{delivery.pincode}</strong>. Please enter a serviceable pincode.
+          <div className="mb-4 flex items-center gap-2 bg-yellow-900/10 border border-yellow-800/30 rounded-sm px-3 py-2 text-yellow-400 text-xs">
+            Pincode <strong>{delivery.pincode}</strong> may be outside standard courier coverage. Your order will still be placed and our team will arrange delivery.
           </div>
         )}
 
         <button
           onClick={handlePlaceOrder}
-          disabled={loading || !isDeliveryComplete || shippingLoading || (serviceabilityResult !== null && !serviceabilityResult.serviceable)}
+          disabled={loading || !isDeliveryComplete || shippingLoading}
           className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
         >
           {loading ? (

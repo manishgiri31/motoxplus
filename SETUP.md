@@ -64,7 +64,8 @@ Visit: http://localhost:3000
 |-------------|---------------------------|-----------------|
 | Super Admin | superadmin@motoxplus.in   | SuperAdmin@123  |
 | Admin       | admin@motoxplus.in        | Admin@123456    |
-| Test Dealer | dealer@testshop.in        | Dealer@123456   |
+| Test Dealer  | dealer@testshop.in        | Dealer@123456   |
+| Test Vendor  | vendor@testparts.in       | Vendor@123456   |
 
 ---
 
