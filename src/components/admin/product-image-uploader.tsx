@@ -4,6 +4,33 @@ import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "
 import Image from "next/image";
 import { GripVertical, ImagePlus, Star, Trash2, Upload, X } from "lucide-react";
 
+/** Resize + JPEG-compress an image in the browser to avoid Vercel's 4.5 MB body limit. */
+async function compressImage(file: File, maxDim: number, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { naturalWidth: w, naturalHeight: h } = img;
+      if (w > maxDim || h > maxDim) {
+        if (w >= h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+        else { w = Math.round((w * maxDim) / h); h = maxDim; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("Canvas compression failed"))),
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Image load failed")); };
+    img.src = objectUrl;
+  });
+}
+
 export interface UploaderImage {
   id?: string;
   url: string;
@@ -94,12 +121,25 @@ export const ProductImageUploader = forwardRef<ImageUploaderRef, Props>(function
     });
 
     try {
+      // Compress client-side before upload to stay under Vercel's 4.5 MB body limit.
+      const compressed = await compressImage(file, 1920, 0.85);
+
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", compressed, file.name.replace(/\.[^.]+$/, ".jpg"));
       if (productId) fd.append("productId", productId);
 
       const res = await fetch("/api/upload/product-image", { method: "POST", body: fd });
-      const data = await res.json();
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          res.status === 413
+            ? "Image is too large — please use a smaller file."
+            : `Server error (${res.status})`
+        );
+      }
 
       if (!res.ok) throw new Error(data.error || "Upload failed");
 
@@ -219,7 +259,7 @@ export const ProductImageUploader = forwardRef<ImageUploaderRef, Props>(function
           Drop images here or <span className="text-red-500">click to upload</span>
         </p>
         <p className="text-[var(--text-muted)] text-xs mt-1">
-          JPG, PNG, WEBP — max 5 MB each — auto-converted to WebP
+          JPG, PNG, WEBP — auto-resized &amp; converted to WebP
         </p>
       </div>
 
