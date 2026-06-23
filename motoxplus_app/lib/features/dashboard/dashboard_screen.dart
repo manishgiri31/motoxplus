@@ -37,18 +37,20 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            const Text('MOTOXPLUS',
-                style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5)),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              child: Image.asset('assets/images/logo.jpg', height: 28, fit: BoxFit.contain),
+            ),
+            const SizedBox(width: 10),
             Text(
               auth.dealer?.companyName ?? 'Dealer Portal',
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.w400),
+              style: TextStyle(color: context.cTextMuted, fontSize: 13, fontWeight: FontWeight.w400),
             ),
           ],
         ),
@@ -78,13 +80,13 @@ class DashboardScreen extends ConsumerWidget {
               // Greeting
               Text(
                 'Hello, ${auth.dealer?.ownerName.split(' ').first ?? 'Dealer'} 👋',
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.w800),
+                style: TextStyle(
+                    color: context.cTextPrimary, fontSize: 20, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Welcome to your dealer dashboard',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                style: TextStyle(color: context.cTextMuted, fontSize: 13),
               ),
               const SizedBox(height: 20),
 
@@ -167,9 +169,9 @@ class DashboardScreen extends ConsumerWidget {
               ),
 
               const SizedBox(height: 24),
-              const Text('Quick Actions',
+              Text('Quick Actions',
                   style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: context.cTextPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
@@ -247,9 +249,9 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.cBgCard,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.cBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,14 +271,14 @@ class _StatCard extends StatelessWidget {
               Text(
                 value,
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: context.cTextPrimary,
                     fontSize: small ? 14 : 22,
                     fontWeight: FontWeight.w900),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               Text(label,
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                  style: TextStyle(color: context.cTextMuted, fontSize: 11)),
             ],
           ),
         ],
@@ -301,9 +303,9 @@ class _QuickAction extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.cBgCard,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.cBorder),
         ),
         child: Row(
           children: [
@@ -318,8 +320,8 @@ class _QuickAction extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(label,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
+                  style: TextStyle(
+                      color: context.cTextPrimary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600)),
             ),

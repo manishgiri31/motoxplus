@@ -23,9 +23,9 @@ class AppCard extends StatelessWidget {
       child: Container(
         padding: padding ?? const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.cBgCard,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.cBorder),
         ),
         child: child,
       ),
@@ -135,32 +135,25 @@ class ProductImageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl == null || imageUrl!.isEmpty) {
-      return Container(
-        height: height ?? 140,
-        color: AppColors.bgCardHover,
-        child: const Center(
-          child: Text('◈', style: TextStyle(color: AppColors.border, fontSize: 40)),
-        ),
-      );
-    }
+    final placeholder = Container(
+      height: height ?? 140,
+      color: context.cBgCard,
+      child: Center(
+        child: Icon(Icons.image_outlined, color: context.cBorder, size: 40),
+      ),
+    );
+    if (imageUrl == null || imageUrl!.isEmpty) return placeholder;
     return CachedNetworkImage(
       imageUrl: imageUrl!,
       height: height ?? 140,
       width: double.infinity,
       fit: BoxFit.cover,
       placeholder: (_, __) => Shimmer.fromColors(
-        baseColor: AppColors.bgCard,
-        highlightColor: AppColors.bgCardHover,
-        child: Container(height: height ?? 140, color: AppColors.bgCard),
+        baseColor: context.cBgCard,
+        highlightColor: context.isDark ? AppColors.bgCardHover : const Color(0xFFEEEEEE),
+        child: Container(height: height ?? 140, color: context.cBgCard),
       ),
-      errorWidget: (_, __, ___) => Container(
-        height: height ?? 140,
-        color: AppColors.bgCardHover,
-        child: const Center(
-          child: Text('◈', style: TextStyle(color: AppColors.border, fontSize: 40)),
-        ),
-      ),
+      errorWidget: (_, __, ___) => placeholder,
     );
   }
 }
@@ -171,14 +164,14 @@ class ShimmerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: AppColors.bgCard,
-      highlightColor: AppColors.bgCardHover,
+      baseColor: context.cBgCard,
+      highlightColor: context.isDark ? AppColors.bgCardHover : const Color(0xFFEEEEEE),
       child: Container(
         height: 220,
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.cBgCard,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.cBorder),
         ),
       ),
     );
@@ -199,13 +192,13 @@ class SectionHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: const TextStyle(
-                  color: AppColors.textPrimary, fontSize: 22, fontWeight: FontWeight.w900)),
+              style: TextStyle(
+                  color: context.cTextPrimary, fontSize: 22, fontWeight: FontWeight.w900)),
           if (subtitle != null)
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text(subtitle!,
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                  style: TextStyle(color: context.cTextMuted, fontSize: 13)),
             ),
         ],
       ),
@@ -235,11 +228,11 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 48, color: AppColors.textMuted),
+            Icon(icon, size: 48, color: context.cTextMuted),
             const SizedBox(height: 16),
             Text(message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
+                style: TextStyle(color: context.cTextMuted, fontSize: 14)),
             if (onAction != null && actionLabel != null) ...[
               const SizedBox(height: 20),
               SizedBox(

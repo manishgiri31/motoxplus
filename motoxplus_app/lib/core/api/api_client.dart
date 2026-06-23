@@ -54,7 +54,7 @@ class ApiClient {
       if (refreshToken == null) return false;
 
       final res = await Dio().post(
-        '$kBaseUrl/auth/refresh',
+        '$kBaseUrl/mobile/auth/refresh',
         data: {'refreshToken': refreshToken},
       );
       if (res.statusCode == 200) {

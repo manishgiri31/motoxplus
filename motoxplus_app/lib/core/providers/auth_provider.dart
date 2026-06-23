@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../models/user.dart';
@@ -27,7 +28,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> loadCurrentUser() async {
     try {
-      final res = await _api.dio.get('/auth/me');
+      final res = await _api.dio.get('/mobile/auth/me');
       if (res.statusCode == 200) {
         final user = User.fromJson(res.data['user'] as Map<String, dynamic>);
         Dealer? dealer;
@@ -44,7 +45,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<String?> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final res = await _api.dio.post('/auth/login', data: {
+      final res = await _api.dio.post('/mobile/auth/login', data: {
         'email': email,
         'password': password,
       });
@@ -80,12 +81,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   String _extractError(dynamic e) {
     try {
-      if (e is Exception) {
-        final str = e.toString();
-        if (str.contains('error')) return 'Invalid credentials';
+      // DioException carries the server JSON error message
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map) {
+          final msg = data['error'] ?? data['message'];
+          if (msg is String && msg.isNotEmpty) return msg;
+        }
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.sendTimeout) {
+          return 'Connection timed out. Check your internet.';
+        }
+        if (e.type == DioExceptionType.connectionError) {
+          return 'Cannot connect to server. Check your internet.';
+        }
       }
     } catch (_) {}
-    return 'Something went wrong';
+    return 'Something went wrong. Please try again.';
   }
 }
 

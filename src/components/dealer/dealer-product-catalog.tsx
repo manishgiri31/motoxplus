@@ -50,6 +50,7 @@ export function DealerProductCatalog({
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [addedIds, setAddedIds] = useState<string[]>([]);
+  const [cartError, setCartError] = useState<string | null>(null);
   const totalPages = Math.ceil(total / pageSize);
 
   const getQuantity = (product: Product) => quantities[product.id] || product.moq;
@@ -72,16 +73,26 @@ export function DealerProductCatalog({
   const handleAddToCart = async (product: Product) => {
     const qty = getQuantity(product);
     setAddingToCart(product.id);
-    const res = await fetch("/api/cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: product.id, quantity: qty }),
-    });
-    if (res.ok) {
-      setAddedIds((prev) => [...prev, product.id]);
-      setTimeout(() => {
-        setAddedIds((prev) => prev.filter((id) => id !== product.id));
-      }, 2000);
+    setCartError(null);
+    try {
+      const res = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, quantity: qty }),
+      });
+      if (res.ok) {
+        setAddedIds((prev) => [...prev, product.id]);
+        setTimeout(() => {
+          setAddedIds((prev) => prev.filter((id) => id !== product.id));
+        }, 2000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setCartError(data.error || "Failed to add to cart. Please try again.");
+        setTimeout(() => setCartError(null), 4000);
+      }
+    } catch {
+      setCartError("Network error. Please check your connection.");
+      setTimeout(() => setCartError(null), 4000);
     }
     setAddingToCart(null);
   };
@@ -119,6 +130,12 @@ export function DealerProductCatalog({
         </div>
       </div>
 
+      {cartError && (
+        <div className="mb-4 bg-red-900/20 border border-red-900/40 rounded-xl px-4 py-3 text-red-400 text-sm flex items-center gap-2">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          {cartError}
+        </div>
+      )}
       <p className="text-[var(--text-muted)] text-sm mb-4">Showing {products.length} of {total} products</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

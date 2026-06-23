@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
 import 'features/cart/cart_screen.dart';
 import 'features/checkout/checkout_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
@@ -29,6 +30,7 @@ final _routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       ShellRoute(
         builder: (context, state, child) => _MainShell(child: child),
         routes: [
@@ -61,7 +63,9 @@ class App extends ConsumerWidget {
     final router = ref.watch(_routerProvider);
     return MaterialApp.router(
       title: 'MotoXPlus Dealer',
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

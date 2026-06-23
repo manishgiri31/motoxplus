@@ -103,13 +103,13 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: TextField(
               controller: _searchCtrl,
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: context.cTextPrimary),
               decoration: InputDecoration(
                 hintText: 'Search products...',
-                prefixIcon: const Icon(Icons.search, color: AppColors.textMuted, size: 18),
+                prefixIcon: Icon(Icons.search, color: context.cTextMuted, size: 18),
                 suffixIcon: _search.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, color: AppColors.textMuted, size: 18),
+                        icon: Icon(Icons.clear, color: context.cTextMuted, size: 18),
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() => _search = '');
@@ -160,7 +160,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               ),
               error: (e, _) => Center(
                 child: Text('Failed to load products',
-                    style: const TextStyle(color: AppColors.textMuted)),
+                    style: TextStyle(color: context.cTextMuted)),
               ),
               data: (prods) {
                 if (prods.isEmpty) {
@@ -207,15 +207,15 @@ class _CategoryChip extends StatelessWidget {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.bgCard,
+          color: selected ? AppColors.primary : context.cBgCard,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border),
+              color: selected ? AppColors.primary : context.cBorder),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : AppColors.textSecondary,
+            color: selected ? Colors.white : context.cTextSecondary,
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
@@ -268,9 +268,9 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
       onTap: () => context.push('/products/${p.id}'),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.cBgCard,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.cBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,15 +288,15 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                   children: [
                     Text(
                       '${p.partNumber}${p.oemNumber != null ? ' · ${p.oemNumber}' : ''}',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 9),
+                      style: TextStyle(color: context.cTextMuted, fontSize: 9),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
                     Text(
                       p.name,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary,
+                      style: TextStyle(
+                          color: context.cTextPrimary,
                           fontSize: 12,
                           fontWeight: FontWeight.w700),
                       maxLines: 2,
@@ -304,7 +304,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(p.category.name,
-                        style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                        style: TextStyle(color: context.cTextMuted, fontSize: 10)),
                     const Spacer(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -323,7 +323,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            p.isInStock ? 'In Stock' : 'Out of Stock',
+                            p.isInStock ? 'In Stock' : 'Out',
                             style: TextStyle(
                                 color: p.isInStock ? AppColors.success : AppColors.error,
                                 fontSize: 9,
@@ -338,7 +338,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                       children: [
                         Container(
                           decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(color: context.cBorder),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Row(
@@ -348,21 +348,21 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                                 onTap: () {
                                   if (_qty > p.moq) setState(() => _qty -= p.moq);
                                 },
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                  child: Icon(Icons.remove, size: 12, color: AppColors.textMuted),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  child: Icon(Icons.remove, size: 12, color: context.cTextMuted),
                                 ),
                               ),
                               Text('$_qty',
-                                  style: const TextStyle(
-                                      color: AppColors.textPrimary,
+                                  style: TextStyle(
+                                      color: context.cTextPrimary,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700)),
                               GestureDetector(
                                 onTap: () => setState(() => _qty += p.moq),
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                  child: Icon(Icons.add, size: 12, color: AppColors.textMuted),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  child: Icon(Icons.add, size: 12, color: context.cTextMuted),
                                 ),
                               ),
                             ],
@@ -379,7 +379,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                                     ? AppColors.success
                                     : p.isInStock
                                         ? AppColors.primary
-                                        : AppColors.border,
+                                        : context.cBorder,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Center(

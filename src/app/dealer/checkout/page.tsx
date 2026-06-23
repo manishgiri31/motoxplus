@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
-import { Truck, CreditCard, ChevronRight, User, Phone, MapPin } from "lucide-react";
+import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone } from "lucide-react";
 import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,7 +14,7 @@ declare global {
   }
 }
 
-type PaymentType = "ADVANCE_20" | "FULL_100" | "COD";
+type PaymentType = "ADVANCE_20" | "FULL_100" | "COD" | "DIRECT_UPI";
 
 interface CartItem {
   product: {
@@ -51,15 +51,22 @@ interface DeliveryForm {
 
 const paymentOptions = [
   {
-    id: "FULL_100" as PaymentType,
-    title: "Full Payment",
-    subtitle: "Pay 100% now via Razorpay",
-    icon: <CreditCard size={18} className="text-red-500" />,
+    id: "DIRECT_UPI" as PaymentType,
+    title: "Direct UPI / Bank Transfer",
+    subtitle: "Pay via UPI QR or NEFT/IMPS — instant verification",
+    icon: <Smartphone size={18} className="text-purple-400" />,
     badge: "Recommended",
   },
   {
+    id: "FULL_100" as PaymentType,
+    title: "Full Payment via Razorpay",
+    subtitle: "Pay 100% now via cards, netbanking, UPI",
+    icon: <CreditCard size={18} className="text-red-500" />,
+    badge: null,
+  },
+  {
     id: "ADVANCE_20" as PaymentType,
-    title: "20% Advance",
+    title: "20% Advance via Razorpay",
     subtitle: "Pay 20% now, balance before delivery",
     icon: <CreditCard size={18} className="text-blue-400" />,
     badge: null,
@@ -193,7 +200,8 @@ export default function CheckoutPage() {
 
   const grandTotal = (cart?.subtotal ?? 0) + (cart?.gstAmount ?? 0) + shippingCost;
   const amountDue =
-    paymentType === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal;
+    paymentType === "ADVANCE_20" ? grandTotal * 0.2 :
+    paymentType === "DIRECT_UPI" ? grandTotal : grandTotal;
 
   const isDeliveryComplete =
     delivery.name && delivery.phone && delivery.address &&
@@ -291,12 +299,30 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleDirectUpi = async () => {
+    setLoading(true);
+    const orderRes = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...buildOrderPayload(), paymentType: "FULL_100" }),
+    });
+    if (!orderRes.ok) {
+      const err = await orderRes.json();
+      alert(err.error || "Failed to create order");
+      setLoading(false);
+      return;
+    }
+    const { order } = await orderRes.json();
+    router.push(`/dealer/orders/${order.id}/pay-upi`);
+  };
+
   const handlePlaceOrder = () => {
     if (!isDeliveryComplete) {
       alert("Please complete all delivery address fields.");
       return;
     }
     if (paymentType === "COD") handleCOD();
+    else if (paymentType === "DIRECT_UPI") handleDirectUpi();
     else handleOnlinePayment();
   };
 
@@ -498,6 +524,14 @@ export default function CheckoutPage() {
             </p>
           </div>
         )}
+        {paymentType === "DIRECT_UPI" && (
+          <div className="mt-4 flex items-start gap-3 bg-purple-900/10 border border-purple-800/30 rounded-sm p-3">
+            <Smartphone size={16} className="text-purple-400 flex-shrink-0 mt-0.5" />
+            <p className="text-purple-300 text-xs leading-relaxed">
+              Your order will be created and you'll be redirected to pay via UPI QR or bank transfer. Verification takes 1–2 business hours.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Notes */}
@@ -546,6 +580,8 @@ export default function CheckoutPage() {
             <><Spinner size={16} />Processing...</>
           ) : paymentType === "COD" ? (
             <><Truck size={16} />Confirm COD Order<ChevronRight size={16} /></>
+          ) : paymentType === "DIRECT_UPI" ? (
+            <><Smartphone size={16} />Place Order & Pay via UPI<ChevronRight size={16} /></>
           ) : (
             <><CreditCard size={16} />{`Pay ${formatCurrency(amountDue)} via Razorpay`}<ChevronRight size={16} /></>
           )}
@@ -554,6 +590,8 @@ export default function CheckoutPage() {
         <p className="text-[var(--text-muted)] text-xs text-center mt-3">
           {paymentType === "COD"
             ? "Order confirmed instantly. Shipment created via Delhivery."
+            : paymentType === "DIRECT_UPI"
+            ? "No extra charges. Pay directly to MotoXPlus bank account."
             : "Secured by Razorpay. Shipment created after payment."}
         </p>
       </div>

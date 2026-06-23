@@ -59,56 +59,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'MOTOXPLUS',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'India Private Limited',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                const SizedBox(height: 32),
+                Center(
+                  child: Image.asset(
+                    'assets/images/logo.jpg',
+                    height: 90,
+                    fit: BoxFit.contain,
+                  ),
                 ),
                 const SizedBox(height: 48),
-                const Text(
+                Text(
                   'Dealer Portal',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: context.cTextPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Sign in to access your account',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                  style: TextStyle(color: context.cTextMuted, fontSize: 14),
                 ),
                 const SizedBox(height: 36),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: AppColors.textPrimary),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: context.cTextPrimary),
+                  decoration: InputDecoration(
                     labelText: 'Email Address',
-                    prefixIcon: Icon(Icons.email_outlined, color: AppColors.textMuted, size: 18),
+                    prefixIcon: Icon(Icons.email_outlined, color: context.cTextMuted, size: 18),
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Email is required';
@@ -120,15 +100,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 TextFormField(
                   controller: _passCtrl,
                   obscureText: _obscure,
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: context.cTextPrimary),
                   decoration: InputDecoration(
                     labelText: 'Password',
                     prefixIcon:
-                        const Icon(Icons.lock_outline, color: AppColors.textMuted, size: 18),
+                        Icon(Icons.lock_outline, color: context.cTextMuted, size: 18),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        color: AppColors.textMuted,
+                        color: context.cTextMuted,
                         size: 18,
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),
@@ -144,9 +124,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () => context.push('/forgot-password'),
-                    child: const Text('Forgot password?',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                    onPressed: () {},
+                    child: Text('Forgot password?',
+                        style: TextStyle(color: context.cTextMuted, fontSize: 13)),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -160,8 +140,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Not a dealer yet? ',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                    Text('Not a dealer yet? ',
+                        style: TextStyle(color: context.cTextMuted, fontSize: 13)),
                     GestureDetector(
                       onTap: () => context.push('/register'),
                       child: const Text(

@@ -27,7 +27,7 @@ class ProfileScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.primary,
-                border: Border.all(color: AppColors.border, width: 2),
+                border: Border.all(color: context.cBorder, width: 2),
               ),
               child: Center(
                 child: Text(
@@ -40,15 +40,15 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(
               dealer?.ownerName ?? user?.name ?? 'Dealer',
-              style: const TextStyle(
-                  color: AppColors.textPrimary,
+              style: TextStyle(
+                  color: context.cTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
             Text(
               user?.email ?? '',
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+              style: TextStyle(color: context.cTextMuted, fontSize: 13),
             ),
             if (dealer != null) ...[
               const SizedBox(height: 8),
@@ -70,11 +70,11 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             if (dealer != null) ...[
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Business Information',
                     style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: context.cTextPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700)),
               ),
@@ -94,11 +94,11 @@ class ProfileScreen extends ConsumerWidget {
             ],
 
             const SizedBox(height: 24),
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: Text('Account',
                   style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: context.cTextPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700)),
             ),
@@ -125,10 +125,10 @@ class ProfileScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'MOTOXPLUS India Pvt. Ltd.\nDealer Mobile App v1.0.0',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+              style: TextStyle(color: context.cTextMuted, fontSize: 11),
             ),
             const SizedBox(height: 16),
           ],
@@ -148,9 +148,9 @@ class _InfoCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
+        color: context.cBgCard,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.cBorder),
       ),
       child: Column(children: children),
     );
@@ -169,17 +169,17 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: AppColors.textMuted),
+          Icon(icon, size: 16, color: context.cTextMuted),
           const SizedBox(width: 12),
           SizedBox(
             width: 100,
             child: Text(label,
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                style: TextStyle(color: context.cTextMuted, fontSize: 12)),
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(
-                    color: AppColors.textPrimary,
+                style: TextStyle(
+                    color: context.cTextPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600)),
           ),
@@ -209,22 +209,22 @@ class _ActionTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: context.cBgCard,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.cBorder),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: color ?? AppColors.textSecondary),
+            Icon(icon, size: 18, color: color ?? context.cTextSecondary),
             const SizedBox(width: 12),
             Expanded(
               child: Text(label,
                   style: TextStyle(
-                      color: color ?? AppColors.textPrimary,
+                      color: color ?? context.cTextPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600)),
             ),
-            const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
+            Icon(Icons.chevron_right, size: 18, color: context.cTextMuted),
           ],
         ),
       ),

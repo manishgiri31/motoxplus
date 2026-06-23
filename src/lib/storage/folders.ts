@@ -32,6 +32,11 @@ export const folders = {
     return `catalogs/${uuid}_${safe}`;
   },
 
+  /** Payment proof screenshots */
+  paymentScreenshot(orderId: string, uuid: string, ext: string): string {
+    return `payments/screenshots/${orderId}/${uuid}.${ext}`;
+  },
+
   /** Temporary uploads (cleaned up daily) */
   temp(uuid: string, ext: string): string {
     return `temp/${uuid}.${ext}`;

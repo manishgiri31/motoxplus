@@ -97,25 +97,26 @@ model VerificationToken {
 }
 
 model Dealer {
-  id          String           @id @default(cuid())
-  userId      String           @unique
-  companyName String
-  gstNumber   String           @unique
-  ownerName   String
-  phone       String
-  state       String
-  city        String
-  address     String
-  pincode     String
-  status      DealerStatus     @default(PENDING)
-  creditLimit Float            @default(0)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  cart        Cart?
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents   DealerDocument[]
-  invoices    Invoice[]
-  orders      Order[]
+  id                 String               @id @default(cuid())
+  userId             String               @unique
+  companyName        String
+  gstNumber          String               @unique
+  ownerName          String
+  phone              String
+  state              String
+  city               String
+  address            String
+  pincode            String
+  status             DealerStatus         @default(PENDING)
+  creditLimit        Float                @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  cart               Cart?
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents          DealerDocument[]
+  invoices           Invoice[]
+  orders             Order[]
+  paymentSubmissions PaymentSubmission[]
 }
 
 model Admin {
@@ -248,32 +249,33 @@ model CartItem {
 }
 
 model Order {
-  id               String        @id @default(cuid())
-  orderNumber      String        @unique
-  dealerId         String
-  subtotal         Float
-  gstAmount        Float
-  shippingCost     Float         @default(0)
-  grandTotal       Float
-  paymentType      PaymentType
-  amountPaid       Float         @default(0)
-  amountDue        Float
-  status           OrderStatus   @default(PENDING)
-  paymentStatus    PaymentStatus @default(PENDING)
-  notes            String?
-  shippingAddress  String?
-  deliveryName     String?
-  deliveryPhone    String?
-  deliveryCity     String?
-  deliveryState    String?
-  deliveryPincode  String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  invoice          Invoice?
-  shipment         Shipment?
-  dealer           Dealer        @relation(fields: [dealerId], references: [id])
-  items            OrderItem[]
-  payments         Payment[]
+  id                  String               @id @default(cuid())
+  orderNumber         String               @unique
+  dealerId            String
+  subtotal            Float
+  gstAmount           Float
+  shippingCost        Float                @default(0)
+  grandTotal          Float
+  paymentType         PaymentType
+  amountPaid          Float                @default(0)
+  amountDue           Float
+  status              OrderStatus          @default(PENDING)
+  paymentStatus       PaymentStatus        @default(PENDING)
+  notes               String?
+  shippingAddress     String?
+  deliveryName        String?
+  deliveryPhone       String?
+  deliveryCity        String?
+  deliveryState       String?
+  deliveryPincode     String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  invoice             Invoice?
+  shipment            Shipment?
+  dealer              Dealer               @relation(fields: [dealerId], references: [id])
+  items               OrderItem[]
+  payments            Payment[]
+  paymentSubmissions  PaymentSubmission[]
 }
 
 model OrderItem {
@@ -777,4 +779,45 @@ enum ShipmentStatus {
   FAILED_DELIVERY
   RETURNED
   CANCELLED
+}
+
+enum UpiSubmissionStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+enum DirectPaymentMethod {
+  UPI
+  BANK_TRANSFER
+}
+
+model PaymentSubmission {
+  id              String              @id @default(cuid())
+  orderId         String
+  dealerId        String
+  paymentMethod   DirectPaymentMethod
+  utrNumber       String
+  payerName       String
+  payerEmail      String
+  payerPhone      String
+  screenshotUrl   String
+  screenshotKey   String
+  amount          Float
+  status          UpiSubmissionStatus @default(SUBMITTED)
+  notes           String?
+  rejectionReason String?
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  rejectedAt      DateTime?
+  rejectedBy      String?
+  ipAddress       String?
+  submittedAt     DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  order           Order               @relation(fields: [orderId], references: [id])
+  dealer          Dealer              @relation(fields: [dealerId], references: [id])
+
+  @@unique([utrNumber])
 }
