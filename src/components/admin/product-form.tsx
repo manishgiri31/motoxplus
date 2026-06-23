@@ -185,13 +185,13 @@ export function ProductForm({ categories, product }: Props) {
         {isVendorProduct && vendorCostPrice != null && (
           <div className="glass border border-amber-900/30 rounded-xl p-4 mb-4">
             <div className="text-[10px] uppercase tracking-widest text-amber-500 font-bold mb-3">Vendor Submission</div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <div className="text-[var(--text-muted)] text-xs mb-1">Vendor Cost Price</div>
                 <div className="text-amber-400 font-black text-lg">₹{vendorCostPrice.toLocaleString("en-IN")}</div>
               </div>
               <div>
-                <label className={LABEL}>Markup (%)</label>
+                <label className={LABEL}>Markup % (e.g. 20)</label>
                 <input
                   type="number"
                   step="0.1"
@@ -207,14 +207,27 @@ export function ProductForm({ categories, product }: Props) {
                   className={INPUT}
                   placeholder="20"
                 />
-                <p className="text-[var(--text-muted)] text-[10px] mt-1">Auto-updates dealer price</p>
+                <p className="text-[var(--text-muted)] text-[10px] mt-1">Enter 20 for 20% profit margin</p>
               </div>
               <div>
-                <div className="text-[var(--text-muted)] text-xs mb-1">Computed Dealer Price</div>
+                <div className="text-[var(--text-muted)] text-xs mb-1">Base Price (excl. GST)</div>
                 <div className="text-[var(--text-primary)] font-black text-lg">
                   {form.markupPercent && vendorCostPrice
                     ? `₹${(vendorCostPrice * (1 + parseFloat(form.markupPercent) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
                     : form.price ? `₹${parseFloat(form.price).toLocaleString("en-IN")}` : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-[var(--text-muted)] text-xs mb-1">Dealer Pays (incl. GST)</div>
+                <div className="text-green-400 font-black text-lg">
+                  {(form.markupPercent || form.price) && form.gstRate
+                    ? (() => {
+                        const base = form.markupPercent && vendorCostPrice
+                          ? vendorCostPrice * (1 + parseFloat(form.markupPercent) / 100)
+                          : parseFloat(form.price);
+                        return `₹${(base * (1 + parseFloat(form.gstRate) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+                      })()
+                    : "—"}
                 </div>
               </div>
             </div>
@@ -223,9 +236,13 @@ export function ProductForm({ categories, product }: Props) {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className={LABEL}>Dealer Price (₹) <span className="text-red-500">*</span></label>
+            <label className={LABEL}>Base Price excl. GST (₹) <span className="text-red-500">*</span></label>
             <input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} className={INPUT} placeholder="0.00" />
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">Shown only to approved dealers</p>
+            <p className="text-[var(--text-muted)] text-[10px] mt-1">
+              {form.price && form.gstRate
+                ? `Dealer pays ₹${(parseFloat(form.price) * (1 + parseFloat(form.gstRate) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST`
+                : "GST added on top at checkout"}
+            </p>
           </div>
           <div>
             <label className={LABEL}>MRP / Retail Price (₹)</label>

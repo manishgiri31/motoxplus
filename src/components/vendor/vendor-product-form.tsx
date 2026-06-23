@@ -142,7 +142,7 @@ export function VendorProductForm({ categories, defaultMarkup }: Props) {
             Enter your cost price. Our team will apply a markup of <span className="text-amber-400 font-bold">{defaultMarkup}%</span> to determine the final dealer price.
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className={LABEL}>Your Cost Price (₹) <span className="text-red-500">*</span></label>
             <input
@@ -164,11 +164,20 @@ export function VendorProductForm({ categories, defaultMarkup }: Props) {
             <p className="text-[var(--text-muted)] text-[10px] mt-1">Set by MotoXPlus</p>
           </div>
           <div>
-            <label className={LABEL}>Estimated Dealer Price</label>
+            <label className={LABEL}>Base Dealer Price (excl. GST)</label>
             <div className="themed-input border rounded-xl px-4 py-3 text-sm text-[var(--text-primary)] font-black">
               {computedPrice ? `₹${parseFloat(computedPrice).toLocaleString("en-IN")}` : "—"}
             </div>
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">Auto-calculated</p>
+            <p className="text-[var(--text-muted)] text-[10px] mt-1">Before GST is added</p>
+          </div>
+          <div>
+            <label className={LABEL}>Dealer Pays (incl. GST)</label>
+            <div className="themed-input border rounded-xl px-4 py-3 text-sm text-green-400 font-black">
+              {computedPrice && form.gstRate
+                ? `₹${(parseFloat(computedPrice) * (1 + parseFloat(form.gstRate) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
+                : "—"}
+            </div>
+            <p className="text-[var(--text-muted)] text-[10px] mt-1">What dealer actually pays</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">

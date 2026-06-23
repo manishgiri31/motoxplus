@@ -23,6 +23,9 @@ interface PaymentSettings {
 interface OrderData {
   id: string;
   orderNumber: string;
+  subtotal: number;
+  gstAmount: number;
+  shippingCost: number;
   grandTotal: number;
   amountDue: number;
   paymentStatus: string;
@@ -65,6 +68,9 @@ export default function PayUpiPage() {
       .then((data) => {
         setOrder(data.order);
         setSettings(data.paymentSettings);
+        if (data.paymentSettings?.upiEnabled === false) {
+          setActiveTab("bank");
+        }
         if (data.order?.dealer?.user?.email) {
           setForm((f) => ({ ...f, email: data.order.dealer.user.email }));
         }
@@ -236,26 +242,47 @@ export default function PayUpiPage() {
         <p className="text-[var(--text-muted)] text-sm mt-1">Order #{order.orderNumber}</p>
       </div>
 
-      {/* Amount Banner */}
-      <div className="glass border border-[var(--border-color)] rounded-2xl p-5 mb-5 flex items-center justify-between">
-        <div>
-          <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">Amount Payable</div>
-          <div className="text-red-500 text-3xl font-black">{formatCurrency(order.amountDue)}</div>
+      {/* Bill Breakdown */}
+      <div className="glass border border-[var(--border-color)] rounded-2xl p-5 mb-5">
+        <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-4">Order Bill Summary</div>
+        <div className="space-y-2 text-sm mb-4">
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">Subtotal (excl. GST)</span>
+            <span className="text-[var(--text-secondary)]">{formatCurrency(order.subtotal)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">GST</span>
+            <span className="text-[var(--text-secondary)]">{formatCurrency(order.gstAmount)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[var(--text-muted)]">Delivery Charges</span>
+            {order.shippingCost > 0 ? (
+              <span className="text-[var(--text-secondary)]">{formatCurrency(order.shippingCost)}</span>
+            ) : (
+              <span className="text-green-400 font-semibold">Free</span>
+            )}
+          </div>
+          <div className="border-t border-[var(--border-color)] pt-3 flex justify-between font-bold">
+            <span className="text-[var(--text-primary)]">Grand Total</span>
+            <span className="text-[var(--text-primary)]">{formatCurrency(order.grandTotal)}</span>
+          </div>
         </div>
-        <div className="text-right">
-          <div className="text-[var(--text-muted)] text-xs">Order Total</div>
-          <div className="text-[var(--text-secondary)] text-sm font-semibold">{formatCurrency(order.grandTotal)}</div>
+        <div className="bg-red-950/30 border border-red-900/30 rounded-xl px-4 py-3 flex items-center justify-between">
+          <span className="text-[var(--text-muted)] text-xs uppercase tracking-wider">Amount Payable Now</span>
+          <span className="text-red-500 text-2xl font-black">{formatCurrency(order.amountDue)}</span>
         </div>
       </div>
 
       {/* Payment Method Tabs */}
       <div className="flex gap-2 mb-5">
-        <button
-          onClick={() => setActiveTab("upi")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === "upi" ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"}`}
-        >
-          <Smartphone size={16} /> Direct UPI
-        </button>
+        {settings.upiEnabled && (
+          <button
+            onClick={() => setActiveTab("upi")}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === "upi" ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"}`}
+          >
+            <Smartphone size={16} /> Direct UPI
+          </button>
+        )}
         <button
           onClick={() => setActiveTab("bank")}
           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === "bank" ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"}`}

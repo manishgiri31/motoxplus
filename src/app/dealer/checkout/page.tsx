@@ -49,13 +49,14 @@ interface DeliveryForm {
   pincode: string;
 }
 
-const paymentOptions = [
+const ALL_PAYMENT_OPTIONS = [
   {
     id: "DIRECT_UPI" as PaymentType,
     title: "Direct UPI / Bank Transfer",
     subtitle: "Pay via UPI QR or NEFT/IMPS — instant verification",
     icon: <Smartphone size={18} className="text-purple-400" />,
     badge: "Recommended",
+    requiresUpi: true,
   },
   {
     id: "FULL_100" as PaymentType,
@@ -63,6 +64,7 @@ const paymentOptions = [
     subtitle: "Pay 100% now via cards, netbanking, UPI",
     icon: <CreditCard size={18} className="text-red-500" />,
     badge: null,
+    requiresUpi: false,
   },
   {
     id: "ADVANCE_20" as PaymentType,
@@ -70,6 +72,7 @@ const paymentOptions = [
     subtitle: "Pay 20% now, balance before delivery",
     icon: <CreditCard size={18} className="text-blue-400" />,
     badge: null,
+    requiresUpi: false,
   },
   {
     id: "COD" as PaymentType,
@@ -77,6 +80,7 @@ const paymentOptions = [
     subtitle: "Pay full amount when order is delivered",
     icon: <Truck size={18} className="text-green-400" />,
     badge: "COD",
+    requiresUpi: false,
   },
 ];
 
@@ -93,6 +97,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState<CartSummary | null>(null);
   const [paymentType, setPaymentType] = useState<PaymentType>("FULL_100");
+  const [upiEnabled, setUpiEnabled] = useState(false);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(true);
@@ -133,7 +138,7 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, []);
 
-  // Fetch cart
+  // Fetch cart + UPI settings in parallel
   useEffect(() => {
     fetch("/api/cart")
       .then((r) => r.json())
@@ -152,6 +157,15 @@ export default function CheckoutPage() {
         }
         setCartLoading(false);
       });
+
+    fetch("/api/admin/settings/upi")
+      .then((r) => r.json())
+      .then((data) => {
+        const enabled = data.upiEnabled !== false;
+        setUpiEnabled(enabled);
+        if (enabled) setPaymentType("DIRECT_UPI");
+      })
+      .catch(() => {});
 
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -216,6 +230,7 @@ export default function CheckoutPage() {
     deliveryCity: delivery.city,
     deliveryState: delivery.state,
     deliveryPincode: delivery.pincode,
+    clientShippingCost: shippingCost,
   });
 
   const handleCOD = async () => {
@@ -476,7 +491,7 @@ export default function CheckoutPage() {
       <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
         <h3 className="text-[var(--text-primary)] font-bold mb-5">Payment Method</h3>
         <div className="space-y-3">
-          {paymentOptions.map((option) => {
+          {ALL_PAYMENT_OPTIONS.filter((o) => !o.requiresUpi || upiEnabled).map((option) => {
             const isSelected = paymentType === option.id;
             const amount = option.id === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal;
 

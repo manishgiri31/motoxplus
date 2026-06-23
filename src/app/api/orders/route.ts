@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
     deliveryCity,
     deliveryState,
     deliveryPincode,
+    clientShippingCost,
   } = await req.json();
 
   if (!paymentType || !["ADVANCE_20", "FULL_100", "COD"].includes(paymentType)) {
@@ -102,19 +103,25 @@ export async function POST(req: NextRequest) {
     gstAmount += itemGST;
   }
 
-  // Calculate shipping cost
-  const weightKg = calculateOrderWeight(cart.items);
+  // Use client-provided shipping cost if supplied (matches what the dealer saw at checkout).
+  // For COD, always recalculate server-side since COD surcharge must be accurate.
   const isCOD = paymentType === "COD";
+  let shippingCost: number;
 
-  const shippingResult = await calculateShippingRate({
-    originPincode: ORIGIN_PINCODE,
-    destinationPincode: deliveryPincode,
-    weightKg,
-    paymentMode: isCOD ? "COD" : "Prepaid",
-    codAmount: isCOD ? subtotal + gstAmount : undefined,
-  }).catch(() => ({ shippingCost: 0, source: "default" as const }));
+  if (!isCOD && typeof clientShippingCost === "number" && clientShippingCost >= 0) {
+    shippingCost = clientShippingCost;
+  } else {
+    const weightKg = calculateOrderWeight(cart.items);
+    const shippingResult = await calculateShippingRate({
+      originPincode: ORIGIN_PINCODE,
+      destinationPincode: deliveryPincode,
+      weightKg,
+      paymentMode: isCOD ? "COD" : "Prepaid",
+      codAmount: isCOD ? subtotal + gstAmount : undefined,
+    }).catch(() => ({ shippingCost: 0, source: "default" as const }));
+    shippingCost = shippingResult.shippingCost;
+  }
 
-  const shippingCost = shippingResult.shippingCost;
   const grandTotal = subtotal + gstAmount + shippingCost;
 
   const amountDue =

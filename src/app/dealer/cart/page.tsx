@@ -128,7 +128,7 @@ export default function CartPage() {
                   <h3 className="text-[var(--text-primary)] font-bold text-sm truncate">{item.product.name}</h3>
                   <div className="text-[var(--text-muted)] text-xs">{item.product.category.name}</div>
                   <div className="text-red-400 font-bold text-sm mt-1">
-                    {formatCurrency(item.product.price)} /pc
+                    {formatCurrency(item.product.price * (1 + item.product.gstRate / 100))} /pc
                   </div>
                 </div>
 
@@ -154,11 +154,11 @@ export default function CartPage() {
                 </div>
 
                 {/* Total */}
-                <div className="text-right flex-shrink-0 w-20">
+                <div className="text-right flex-shrink-0 w-24">
                   <div className="text-[var(--text-primary)] font-bold text-sm">
-                    {formatCurrency(item.product.price * item.quantity)}
+                    {formatCurrency(item.product.price * item.quantity * (1 + item.product.gstRate / 100))}
                   </div>
-                  <div className="text-gray-600 text-[10px]">excl. GST</div>
+                  <div className="text-gray-600 text-[10px]">incl. {item.product.gstRate}% GST</div>
                 </div>
 
                 {/* Remove */}

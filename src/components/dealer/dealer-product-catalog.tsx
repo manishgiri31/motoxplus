@@ -173,8 +173,8 @@ export function DealerProductCatalog({
 
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <div className="text-red-400 font-black text-lg">{formatCurrency(product.price)}</div>
-                  <div className="text-gray-600 text-[10px]">+ {product.gstRate}% GST • MOQ: {product.moq}</div>
+                  <div className="text-red-400 font-black text-lg">{formatCurrency(product.price * (1 + product.gstRate / 100))}</div>
+                  <div className="text-gray-600 text-[10px]">Base {formatCurrency(product.price)} + {product.gstRate}% GST • MOQ: {product.moq}</div>
                 </div>
                 <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${isInStock ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
                   {isInStock ? "In Stock" : "Out of Stock"}
