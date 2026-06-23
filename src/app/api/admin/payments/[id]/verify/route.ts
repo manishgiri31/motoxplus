@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { baseTemplate } from "@/lib/email/templates/base";
-import { generateInvoiceNumber, formatCurrency } from "@/lib/utils";
+import { generateInvoiceNumber } from "@/lib/utils";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 

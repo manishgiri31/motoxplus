@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   // Generate invoice
   const invoiceNumber = generateInvoiceNumber();
-  const invoice = await prisma.invoice.create({
+  await prisma.invoice.create({
     data: {
       invoiceNumber,
       orderId,

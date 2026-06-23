@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { formatDate } from "@/lib/utils";
+
 import Link from "next/link";
 import { VendorStatusActions } from "@/components/admin/vendor-actions";
 import { Plus, Star } from "lucide-react";

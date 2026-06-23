@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { formatDate, formatCurrency, formatRelativeTime } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { Plus, AlertCircle, Calendar } from "lucide-react";
 

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Package, Plus, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Package, Plus, Clock, CheckCircle } from "lucide-react";
 
 export default async function VendorProductsPage() {
   const session = await getServerSession(authOptions);

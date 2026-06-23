@@ -543,7 +543,7 @@ export default function CheckoutPage() {
           <div className="mt-4 flex items-start gap-3 bg-purple-900/10 border border-purple-800/30 rounded-sm p-3">
             <Smartphone size={16} className="text-purple-400 flex-shrink-0 mt-0.5" />
             <p className="text-purple-300 text-xs leading-relaxed">
-              Your order will be created and you'll be redirected to pay via UPI QR or bank transfer. Verification takes 1–2 business hours.
+              Your order will be created and you&apos;ll be redirected to pay via UPI QR or bank transfer. Verification takes 1–2 business hours.
             </p>
           </div>
         )}

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Building2, MapPin, Calendar, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { GRNForm } from "@/components/admin/grn-form";
 
 const STATUS_COLORS: Record<string, string> = {

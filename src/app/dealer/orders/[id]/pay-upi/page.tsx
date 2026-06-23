@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Copy, Check, Download, Smartphone, Upload, X,
@@ -36,7 +35,6 @@ type Tab = "upi" | "bank";
 
 export default function PayUpiPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
@@ -49,7 +47,6 @@ export default function PayUpiPage() {
   const [copiedIfsc, setCopiedIfsc] = useState(false);
 
   // Upload states
-  const [screenshot, setScreenshot] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState("");
@@ -100,7 +97,6 @@ export default function PayUpiPage() {
       return;
     }
 
-    setScreenshot(file);
     setScreenshotPreview(URL.createObjectURL(file));
     setUploadedUrl("");
     setUploadedKey("");
@@ -221,7 +217,7 @@ export default function PayUpiPage() {
           </p>
         )}
         <p className="text-[var(--text-muted)] text-xs mb-6">
-          Verification typically takes 1–2 business hours. You'll receive an email once done.
+          Verification typically takes 1–2 business hours. You&apos;ll receive an email once done.
         </p>
         <Link href={`/dealer/orders/${id}`} className="inline-flex items-center gap-2 border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] font-bold py-3 px-6 rounded-xl text-sm transition-colors">
           <ArrowLeft size={14} /> Back to Order
@@ -412,7 +408,7 @@ export default function PayUpiPage() {
                 ) : null}
                 <button
                   type="button"
-                  onClick={() => { setScreenshot(null); setScreenshotPreview(null); setUploadedUrl(""); setUploadedKey(""); }}
+                  onClick={() => { setScreenshotPreview(null); setUploadedUrl(""); setUploadedKey(""); }}
                   className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300"
                 >
                   <X size={12} /> Remove

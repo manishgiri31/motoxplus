@@ -5,8 +5,6 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const amount = searchParams.get("amount") || "0";
-  const orderId = searchParams.get("orderId") || "";
-  const orderNumber = searchParams.get("orderNumber") || "";
 
   const upiIdSetting = await prisma.setting.findUnique({ where: { key: "upi_id" } });
   const upiNameSetting = await prisma.setting.findUnique({ where: { key: "upi_name" } });

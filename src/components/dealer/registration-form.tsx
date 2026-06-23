@@ -51,7 +51,7 @@ export function DealerRegistrationForm() {
       }
 
       setStatus("success");
-    } catch (err) {
+    } catch {
       setErrorMsg("Something went wrong. Please try again.");
       setStatus("error");
     }

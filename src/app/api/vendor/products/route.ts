@@ -25,7 +25,7 @@ const vendorProductSchema = z.object({
   packageHeight: z.number().optional(),
 });
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "VENDOR") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

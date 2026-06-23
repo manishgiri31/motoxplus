@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { TrackingTimeline } from "@/components/shipping/tracking-timeline";
@@ -31,7 +31,7 @@ export default function TrackingPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTracking = async (isRefresh = false) => {
+  const fetchTracking = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
@@ -54,11 +54,11 @@ export default function TrackingPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchTracking();
-  }, [id]);
+  }, [fetchTracking]);
 
   return (
     <div className="max-w-2xl mx-auto">

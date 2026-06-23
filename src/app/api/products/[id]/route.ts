@@ -63,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   // Update product fields (strip image-management keys)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { images: _images, ...productData } = data;
   const product = await prisma.product.update({
     where: { id: params.id },

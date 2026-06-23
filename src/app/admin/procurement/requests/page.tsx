@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { Plus, AlertTriangle, Clock, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { Plus, AlertTriangle, ArrowRight } from "lucide-react";
 import { PRActions } from "@/components/admin/pr-actions";
 
 const STATUS_COLORS: Record<string, string> = {

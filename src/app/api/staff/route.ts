@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session || !ADMIN_ROLES.includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
