@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { DealerProductCatalog } from "@/components/dealer/dealer-product-catalog";
+import { buildSearchWhere } from "@/lib/product-search";
 
 export default async function DealerProductsPage({
   searchParams,
@@ -8,17 +9,15 @@ export default async function DealerProductsPage({
 }) {
   const page = parseInt(searchParams.page || "1");
   const pageSize = 12;
+  const search = searchParams.search?.trim();
 
-  const where: any = { isActive: true };
-  if (searchParams.category) where.category = { slug: searchParams.category };
-  if (searchParams.search) {
-    where.OR = [
-      { name: { contains: searchParams.search, mode: "insensitive" } },
-      { partNumber: { contains: searchParams.search, mode: "insensitive" } },
-      { sku: { contains: searchParams.search, mode: "insensitive" } },
-      { oemNumber: { contains: searchParams.search, mode: "insensitive" } },
-    ];
-  }
+  const searchWhere = search ? await buildSearchWhere(search, true) : {};
+
+  const where = {
+    isActive: true,
+    ...(searchParams.category ? { category: { slug: searchParams.category } } : {}),
+    ...searchWhere,
+  };
 
   const [products, categories, total] = await Promise.all([
     prisma.product.findMany({
@@ -48,7 +47,7 @@ export default async function DealerProductsPage({
         currentPage={page}
         pageSize={pageSize}
         currentCategory={searchParams.category}
-        currentSearch={searchParams.search}
+        currentSearch={search}
       />
     </div>
   );

@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Trash2, Plus, Minus, ShoppingCart, ArrowRight } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Truck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface CartItem {
   id: string;
   quantity: number;
+  variantId: string | null;
+  variant: {
+    id: string;
+    label: string;
+    color: string | null;
+    price: number;
+    moq: number | null;
+  } | null;
   product: {
     id: string;
     name: string;
@@ -37,12 +45,12 @@ export default function CartPage() {
 
   useEffect(() => { fetchCart(); }, []);
 
-  const updateQuantity = async (itemId: string, productId: string, quantity: number) => {
+  const updateQuantity = async (itemId: string, productId: string, quantity: number, variantId: string | null) => {
     setUpdating(itemId);
     await fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, quantity }),
+      body: JSON.stringify({ productId, quantity, variantId }),
     });
     await fetchCart();
     setUpdating(null);
@@ -59,12 +67,18 @@ export default function CartPage() {
     setUpdating(null);
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const FREE_DELIVERY_THRESHOLD = 25000;
+  const itemPrice = (item: CartItem) => item.variant?.price ?? item.product.price;
+  const subtotal = items.reduce((sum, item) => sum + itemPrice(item) * item.quantity, 0);
   const gstAmount = items.reduce(
-    (sum, item) => sum + (item.product.price * item.quantity * item.product.gstRate) / 100,
+    (sum, item) => sum + (itemPrice(item) * item.quantity * item.product.gstRate) / 100,
     0
   );
-  const grandTotal = subtotal + gstAmount;
+  const orderTotal = subtotal + gstAmount;
+  const shippingCost = orderTotal >= FREE_DELIVERY_THRESHOLD ? 0 : Math.round(orderTotal * 0.05 * 100) / 100;
+  const grandTotal = orderTotal + shippingCost;
+  const freeDeliveryRemaining = Math.max(0, FREE_DELIVERY_THRESHOLD - orderTotal);
+  const freeDeliveryProgress = Math.min(100, (orderTotal / FREE_DELIVERY_THRESHOLD) * 100);
 
   if (loading) {
     return (
@@ -127,36 +141,54 @@ export default function CartPage() {
                   <div className="text-[var(--text-muted)] text-[10px] font-mono">{item.product.partNumber}</div>
                   <h3 className="text-[var(--text-primary)] font-bold text-sm truncate">{item.product.name}</h3>
                   <div className="text-[var(--text-muted)] text-xs">{item.product.category.name}</div>
+                  {item.variant && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {item.variant.color && (
+                        <span
+                          className="w-2.5 h-2.5 rounded-full border border-white/20 flex-shrink-0"
+                          style={{ backgroundColor: item.variant.color.toLowerCase() }}
+                        />
+                      )}
+                      <span className="text-red-400 text-[10px] font-semibold">{item.variant.label}</span>
+                    </div>
+                  )}
                   <div className="text-red-400 font-bold text-sm mt-1">
-                    {formatCurrency(item.product.price * (1 + item.product.gstRate / 100))} /pc
+                    {formatCurrency(itemPrice(item) * (1 + item.product.gstRate / 100))} /pc
                   </div>
                 </div>
 
                 {/* Quantity */}
                 <div className="flex items-center glass border border-[var(--border-color)] rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => updateQuantity(item.id, item.product.id, Math.max(item.product.moq, item.quantity - item.product.moq))}
-                    disabled={!!updating}
-                    className="px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
-                  >
-                    <Minus size={12} />
-                  </button>
-                  <span className="px-3 text-[var(--text-primary)] text-sm font-bold min-w-[40px] text-center">
-                    {item.quantity}
-                  </span>
-                  <button
-                    onClick={() => updateQuantity(item.id, item.product.id, item.quantity + item.product.moq)}
-                    disabled={!!updating}
-                    className="px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
-                  >
-                    <Plus size={12} />
-                  </button>
+                  {(() => {
+                    const moq = item.variant?.moq ?? item.product.moq;
+                    return (
+                      <>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.product.id, Math.max(moq, item.quantity - moq), item.variantId)}
+                          disabled={!!updating}
+                          className="px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className="px-3 text-[var(--text-primary)] text-sm font-bold min-w-[40px] text-center">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.product.id, item.quantity + moq, item.variantId)}
+                          disabled={!!updating}
+                          className="px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Total */}
                 <div className="text-right flex-shrink-0 w-24">
                   <div className="text-[var(--text-primary)] font-bold text-sm">
-                    {formatCurrency(item.product.price * item.quantity * (1 + item.product.gstRate / 100))}
+                    {formatCurrency(itemPrice(item) * item.quantity * (1 + item.product.gstRate / 100))}
                   </div>
                   <div className="text-gray-600 text-[10px]">incl. {item.product.gstRate}% GST</div>
                 </div>
@@ -178,6 +210,32 @@ export default function CartPage() {
             <div className="glass border border-[var(--border-color)] rounded-xl p-6 sticky top-4">
               <h3 className="text-[var(--text-primary)] font-bold text-lg mb-6">Order Summary</h3>
 
+              {/* Free delivery bar */}
+              {orderTotal < FREE_DELIVERY_THRESHOLD ? (
+                <div className="mb-5 glass border border-[var(--border-color)] rounded-xl p-3">
+                  <div className="flex justify-between text-xs mb-2">
+                    <span className="text-[var(--text-muted)]">
+                      Add <span className="text-[var(--text-primary)] font-semibold">{formatCurrency(freeDeliveryRemaining)}</span> for free delivery
+                    </span>
+                    <span className="text-green-500 font-bold">₹25K</span>
+                  </div>
+                  <div className="h-2 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-red-600 to-green-500 rounded-full transition-all duration-500"
+                      style={{ width: `${freeDeliveryProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-[var(--text-muted)] text-[10px] mt-1.5">
+                    Shipping: {formatCurrency(shippingCost)} (5% of order)
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-5 flex items-center gap-2 bg-green-900/10 border border-green-900/30 rounded-xl px-3 py-2.5">
+                  <Truck size={14} className="text-green-400 flex-shrink-0" />
+                  <span className="text-green-400 text-xs font-bold">Free delivery unlocked!</span>
+                </div>
+              )}
+
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--text-muted)]">Subtotal (excl. GST)</span>
@@ -186,6 +244,17 @@ export default function CartPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--text-muted)]">GST</span>
                   <span className="text-[var(--text-primary)] font-semibold">{formatCurrency(gstAmount)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--text-muted)] flex items-center gap-1">
+                    <Truck size={12} />
+                    Shipping
+                  </span>
+                  {shippingCost === 0 ? (
+                    <span className="text-green-400 font-semibold text-sm">Free</span>
+                  ) : (
+                    <span className="text-[var(--text-primary)] font-semibold">{formatCurrency(shippingCost)}</span>
+                  )}
                 </div>
                 <div className="border-t border-[var(--border-color)] pt-3 flex justify-between">
                   <span className="text-[var(--text-primary)] font-bold">Grand Total</span>

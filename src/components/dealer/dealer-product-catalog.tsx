@@ -17,6 +17,7 @@ interface Product {
   partNumber: string;
   oemNumber?: string | null;
   price: number;
+  mrp?: number | null;
   gstRate: number;
   moq: number;
   images: string[];
@@ -175,6 +176,15 @@ export function DealerProductCatalog({
                 <div>
                   <div className="text-red-400 font-black text-lg">{formatCurrency(product.price * (1 + product.gstRate / 100))}</div>
                   <div className="text-gray-600 text-[10px]">Base {formatCurrency(product.price)} + {product.gstRate}% GST • MOQ: {product.moq}</div>
+                  {product.mrp && (
+                    <div className="text-gray-500 text-[10px] mt-0.5">
+                      MRP <span className="line-through">₹{product.mrp.toLocaleString("en-IN")}</span>
+                      {" "}
+                      <span className="text-green-500 font-semibold">
+                        Save {Math.round(((product.mrp - product.price) / product.mrp) * 100)}%
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${isInStock ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
                   {isInStock ? "In Stock" : "Out of Stock"}

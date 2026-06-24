@@ -21,6 +21,7 @@ export async function GET() {
       items: {
         include: {
           product: { include: { category: true } },
+          variant: true,
         },
       },
     },
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { productId, quantity } = await req.json();
+  const { productId, quantity, variantId } = await req.json();
 
   if (!productId || !quantity || quantity < 1) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -47,10 +48,20 @@ export async function POST(req: NextRequest) {
   const product = await prisma.product.findUnique({ where: { id: productId, isActive: true } });
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
+  // Validate variant if provided, and get its MOQ
+  let effectiveMoq = product.moq;
+  if (variantId) {
+    const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
+    if (!variant || variant.productId !== productId || !variant.isActive) {
+      return NextResponse.json({ error: "Invalid variant" }, { status: 400 });
+    }
+    if ((variant as any).moq != null) effectiveMoq = (variant as any).moq;
+  }
+
   // Validate MOQ
-  if (quantity < product.moq || quantity % product.moq !== 0) {
+  if (quantity < effectiveMoq || quantity % effectiveMoq !== 0) {
     return NextResponse.json(
-      { error: `Quantity must be a multiple of MOQ (${product.moq})` },
+      { error: `Quantity must be a multiple of MOQ (${effectiveMoq})` },
       { status: 400 }
     );
   }
@@ -61,12 +72,30 @@ export async function POST(req: NextRequest) {
     cart = await prisma.cart.create({ data: { dealerId: dealer.id } });
   }
 
-  // Upsert cart item
-  await prisma.cartItem.upsert({
-    where: { cartId_productId: { cartId: cart.id, productId } },
-    update: { quantity },
-    create: { cartId: cart.id, productId, quantity },
+  // Find existing cart item for this product+variant combination
+  const existingItem = await prisma.cartItem.findFirst({
+    where: {
+      cartId: cart.id,
+      productId,
+      variantId: variantId || null,
+    },
   });
+
+  if (existingItem) {
+    await prisma.cartItem.update({
+      where: { id: existingItem.id },
+      data: { quantity },
+    });
+  } else {
+    await prisma.cartItem.create({
+      data: {
+        cartId: cart.id,
+        productId,
+        variantId: variantId || null,
+        quantity,
+      },
+    });
+  }
 
   return NextResponse.json({ success: true });
 }

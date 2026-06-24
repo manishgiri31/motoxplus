@@ -17,17 +17,24 @@ export async function generateMetadata({
 }
 
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
-  const product = await prisma.product.findUnique({
+  const product = await (prisma.product as any).findUnique({
     where: { id: params.id, isActive: true },
     include: {
       category: true,
       productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        include: {
+          images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
+        },
+      },
     },
   });
 
   if (!product) notFound();
 
-  const relatedProducts = await prisma.product.findMany({
+  const relatedProducts = await (prisma.product as any).findMany({
     where: {
       categoryId: product.categoryId,
       id: { not: product.id },

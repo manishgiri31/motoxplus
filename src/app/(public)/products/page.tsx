@@ -1,6 +1,7 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { ProductCatalog } from "@/components/products/product-catalog";
+import { buildSearchWhere } from "@/lib/product-search";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -14,22 +15,19 @@ export default async function ProductsPage({
 }) {
   const page = parseInt(searchParams.page || "1");
   const pageSize = 12;
+  const search = searchParams.search?.trim();
 
-  const [products, categories] = await Promise.all([
+  const searchWhere = search ? await buildSearchWhere(search, true) : {};
+
+  const baseWhere = {
+    isActive: true,
+    ...(searchParams.category && { category: { slug: searchParams.category } }),
+    ...searchWhere,
+  };
+
+  const [products, categories, totalProducts] = await Promise.all([
     prisma.product.findMany({
-      where: {
-        isActive: true,
-        ...(searchParams.category && {
-          category: { slug: searchParams.category },
-        }),
-        ...(searchParams.search && {
-          OR: [
-            { name: { contains: searchParams.search, mode: "insensitive" } },
-            { partNumber: { contains: searchParams.search, mode: "insensitive" } },
-            { sku: { contains: searchParams.search, mode: "insensitive" } },
-          ],
-        }),
-      },
+      where: baseWhere,
       include: {
         category: true,
         productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
@@ -42,22 +40,8 @@ export default async function ProductsPage({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
     }),
+    prisma.product.count({ where: baseWhere }),
   ]);
-
-  const totalProducts = await prisma.product.count({
-    where: {
-      isActive: true,
-      ...(searchParams.category && {
-        category: { slug: searchParams.category },
-      }),
-      ...(searchParams.search && {
-        OR: [
-          { name: { contains: searchParams.search, mode: "insensitive" } },
-          { partNumber: { contains: searchParams.search, mode: "insensitive" } },
-        ],
-      }),
-    },
-  });
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -72,7 +56,7 @@ export default async function ProductsPage({
             Premium <span className="text-gradient-red">Spare Parts.</span>
           </h1>
           <p className="text-[var(--text-muted)] mt-4 max-w-xl">
-            {totalProducts}+ products across all categories. Dealer login required to view pricing.
+            {totalProducts}+ products across all categories. Wholesale prices and MRP shown below — dealer login required to place orders.
           </p>
         </div>
       </section>
@@ -84,7 +68,7 @@ export default async function ProductsPage({
         currentPage={page}
         pageSize={pageSize}
         currentCategory={searchParams.category}
-        currentSearch={searchParams.search}
+        currentSearch={search}
       />
     </div>
   );

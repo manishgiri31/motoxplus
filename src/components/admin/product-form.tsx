@@ -18,6 +18,15 @@ const SECTION_TITLE = "text-[var(--text-secondary)] text-xs uppercase tracking-w
 const WARRANTY_OPTIONS = ["No Warranty", "3 Months", "6 Months", "12 Months"];
 const GST_OPTIONS = [0, 5, 12, 18, 28];
 
+const CATEGORY_HSN: Record<string, string> = {
+  "brake parts":       "87149400",
+  "engine parts":      "84099900",
+  "suspension parts":  "87141090",
+  "electrical parts":  "85122000",
+  "transmission parts":"87141090",
+  "body parts":        "87141090",
+};
+
 export function ProductForm({ categories, product }: Props) {
   const router = useRouter();
   const isEdit = !!product;
@@ -29,7 +38,6 @@ export function ProductForm({ categories, product }: Props) {
   const [form, setForm] = useState({
     // Basic
     name: product?.name || "",
-    sku: product?.sku || "",
     partNumber: product?.partNumber || "",
     description: product?.description || "",
     categoryId: product?.categoryId || "",
@@ -41,18 +49,12 @@ export function ProductForm({ categories, product }: Props) {
     gstRate: product?.gstRate?.toString() || "18",
     hsnCode: product?.hsnCode || "",
     // Inventory
-    moq: product?.moq?.toString() || "1",
+    moq: product?.moq?.toString() || "10",
     stock: product?.stock?.toString() || "0",
     // Product Identity
     brand: product?.brand || "MOTOXPLUS",
-    oemNumber: product?.oemNumber || "",
     warranty: product?.warranty || "No Warranty",
     countryOfOrigin: product?.countryOfOrigin || "India",
-    // Packaging
-    packageWeight: product?.packageWeight?.toString() || "",
-    packageLength: product?.packageLength?.toString() || "",
-    packageWidth: product?.packageWidth?.toString() || "",
-    packageHeight: product?.packageHeight?.toString() || "",
     // Compatibility
     compatibility: product?.compatibility?.join(", ") || "",
   });
@@ -86,7 +88,6 @@ export function ProductForm({ categories, product }: Props) {
 
     const payload = {
       name: form.name,
-      sku: form.sku,
       partNumber: form.partNumber,
       description: form.description || undefined,
       categoryId: form.categoryId,
@@ -99,13 +100,8 @@ export function ProductForm({ categories, product }: Props) {
       moq: parseInt(form.moq),
       stock: parseInt(form.stock),
       brand: form.brand,
-      oemNumber: form.oemNumber || undefined,
       warranty: form.warranty,
       countryOfOrigin: form.countryOfOrigin,
-      packageWeight: parseFloat(form.packageWeight),
-      packageLength: parseFloat(form.packageLength),
-      packageWidth: parseFloat(form.packageWidth),
-      packageHeight: parseFloat(form.packageHeight),
       compatibility: form.compatibility.split(",").map((s: string) => s.trim()).filter(Boolean),
       images: [],
       productImages,
@@ -148,14 +144,20 @@ export function ProductForm({ categories, product }: Props) {
           </div>
           <div>
             <label className={LABEL}>Category <span className="text-red-500">*</span></label>
-            <select required value={form.categoryId} onChange={(e) => set("categoryId", e.target.value)} className={INPUT}>
+            <select
+              required
+              value={form.categoryId}
+              onChange={(e) => {
+                set("categoryId", e.target.value);
+                const cat = categories.find((c) => c.id === e.target.value);
+                const hsn = CATEGORY_HSN[cat?.name.toLowerCase() ?? ""];
+                if (hsn) set("hsnCode", hsn);
+              }}
+              className={INPUT}
+            >
               <option value="">Select category</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-          </div>
-          <div>
-            <label className={LABEL}>SKU <span className="text-red-500">*</span></label>
-            <input required value={form.sku} onChange={(e) => set("sku", e.target.value)} className={INPUT} placeholder="e.g. BRK-001" />
           </div>
           <div>
             <label className={LABEL}>Part Number <span className="text-red-500">*</span></label>
@@ -234,20 +236,38 @@ export function ProductForm({ categories, product }: Props) {
           </div>
         )}
 
+        {/* Pricing banner */}
+        <div className="flex items-start gap-3 rounded-xl bg-blue-900/10 border border-blue-900/30 px-4 py-3 mb-2">
+          <span className="text-blue-400 text-xs mt-0.5">ℹ</span>
+          <p className="text-blue-300 text-xs leading-relaxed">
+            Set <strong>MRP</strong> as the public-facing retail price visible to all visitors.
+            Set <strong>Dealer Base Price</strong> (excl. GST) as the wholesale price — GST is added on top for dealers at checkout.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className={LABEL}>Base Price excl. GST (₹) <span className="text-red-500">*</span></label>
+            <label className={LABEL}>MRP — Public Retail Price (₹) <span className="text-red-500">*</span></label>
+            <input
+              required
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.mrp}
+              onChange={(e) => set("mrp", e.target.value)}
+              className={INPUT + " border-blue-900/40 focus:border-blue-500/60"}
+              placeholder="0.00"
+            />
+            <p className="text-blue-400 text-[10px] mt-1">Shown to public visitors on website</p>
+          </div>
+          <div>
+            <label className={LABEL}>Dealer Base Price excl. GST (₹) <span className="text-red-500">*</span></label>
             <input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} className={INPUT} placeholder="0.00" />
             <p className="text-[var(--text-muted)] text-[10px] mt-1">
               {form.price && form.gstRate
-                ? `Dealer pays ₹${(parseFloat(form.price) * (1 + parseFloat(form.gstRate) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST`
+                ? `Dealer pays ₹${(parseFloat(form.price) * (1 + parseFloat(form.gstRate) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. ${form.gstRate}% GST`
                 : "GST added on top at checkout"}
             </p>
-          </div>
-          <div>
-            <label className={LABEL}>MRP / Retail Price (₹)</label>
-            <input type="number" step="0.01" min="0" value={form.mrp} onChange={(e) => set("mrp", e.target.value)} className={INPUT} placeholder="0.00" />
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">Shown to public visitors</p>
           </div>
           <div>
             <label className={LABEL}>GST Rate (%) <span className="text-red-500">*</span></label>
@@ -256,17 +276,21 @@ export function ProductForm({ categories, product }: Props) {
             </select>
           </div>
           <div>
-            <label className={LABEL}>HSN Code <span className="text-red-500">*</span></label>
-            <input
-              required
-              value={form.hsnCode}
-              onChange={(e) => set("hsnCode", e.target.value.replace(/\D/g, "").slice(0, 8))}
-              className={INPUT}
-              placeholder="87141090"
-              maxLength={8}
-              pattern="\d{8}"
-              title="Exactly 8 digits required"
-            />
+            <label className={LABEL}>HSN Code</label>
+            <div className="relative">
+              <input
+                required
+                readOnly
+                value={form.hsnCode}
+                onChange={() => {}}
+                className={INPUT + " cursor-not-allowed opacity-70 select-none"}
+                placeholder="Auto-filled by category"
+              />
+              {form.hsnCode && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-green-500 uppercase tracking-wider">Auto</span>
+              )}
+            </div>
+            <p className="text-[var(--text-muted)] text-[10px] mt-1">Set automatically based on category</p>
           </div>
         </div>
       </div>
@@ -280,7 +304,7 @@ export function ProductForm({ categories, product }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={LABEL}>MOQ (Min Order Qty) <span className="text-red-500">*</span></label>
-            <input required type="number" min="1" value={form.moq} onChange={(e) => set("moq", e.target.value)} className={INPUT} placeholder="1" />
+            <input required type="number" min="10" step="10" value={form.moq} onChange={(e) => set("moq", e.target.value)} className={INPUT} placeholder="10" />
           </div>
           <div>
             <label className={LABEL}>Stock Quantity <span className="text-red-500">*</span></label>
@@ -301,10 +325,6 @@ export function ProductForm({ categories, product }: Props) {
             <input required value={form.brand} onChange={(e) => set("brand", e.target.value)} className={INPUT} placeholder="MOTOXPLUS" />
           </div>
           <div>
-            <label className={LABEL}>OEM Number</label>
-            <input value={form.oemNumber} onChange={(e) => set("oemNumber", e.target.value)} className={INPUT} placeholder="Original equipment manufacturer number" />
-          </div>
-          <div>
             <label className={LABEL}>Warranty <span className="text-red-500">*</span></label>
             <select required value={form.warranty} onChange={(e) => set("warranty", e.target.value)} className={INPUT}>
               {WARRANTY_OPTIONS.map((w) => <option key={w} value={w}>{w}</option>)}
@@ -313,32 +333,6 @@ export function ProductForm({ categories, product }: Props) {
           <div>
             <label className={LABEL}>Country of Origin <span className="text-red-500">*</span></label>
             <input required value={form.countryOfOrigin} onChange={(e) => set("countryOfOrigin", e.target.value)} className={INPUT} placeholder="India" />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Packaging ── */}
-      <div className={SECTION}>
-        <div className={SECTION_TITLE}>
-          <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
-          Packaging &amp; Dimensions
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <label className={LABEL}>Weight (kg) <span className="text-red-500">*</span></label>
-            <input required type="number" step="0.001" min="0.001" value={form.packageWeight} onChange={(e) => set("packageWeight", e.target.value)} className={INPUT} placeholder="0.500" />
-          </div>
-          <div>
-            <label className={LABEL}>Length (cm) <span className="text-red-500">*</span></label>
-            <input required type="number" step="0.1" min="0.1" value={form.packageLength} onChange={(e) => set("packageLength", e.target.value)} className={INPUT} placeholder="20.0" />
-          </div>
-          <div>
-            <label className={LABEL}>Width (cm) <span className="text-red-500">*</span></label>
-            <input required type="number" step="0.1" min="0.1" value={form.packageWidth} onChange={(e) => set("packageWidth", e.target.value)} className={INPUT} placeholder="15.0" />
-          </div>
-          <div>
-            <label className={LABEL}>Height (cm) <span className="text-red-500">*</span></label>
-            <input required type="number" step="0.1" min="0.1" value={form.packageHeight} onChange={(e) => set("packageHeight", e.target.value)} className={INPUT} placeholder="5.0" />
           </div>
         </div>
       </div>

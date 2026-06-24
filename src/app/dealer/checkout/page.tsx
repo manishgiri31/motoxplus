@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone } from "lucide-react";
@@ -21,9 +21,11 @@ interface CartItem {
     name: string;
     price: number;
     gstRate: number;
-    packageWeight?: number | null;
-    weight?: number | null;
   };
+  variant?: {
+    label: string;
+    price: number;
+  } | null;
   quantity: number;
 }
 
@@ -84,13 +86,11 @@ const ALL_PAYMENT_OPTIONS = [
   },
 ];
 
-function calculateCartWeight(items: CartItem[]): number {
-  let total = 0;
-  for (const item of items) {
-    const w = item.product.packageWeight ?? item.product.weight ?? 0.5;
-    total += w * item.quantity;
-  }
-  return Math.max(0.5, total);
+const FREE_DELIVERY_THRESHOLD = 25000;
+
+function calcShipping(orderTotal: number): number {
+  if (orderTotal >= FREE_DELIVERY_THRESHOLD) return 0;
+  return Math.round(orderTotal * 0.05 * 100) / 100;
 }
 
 export default function CheckoutPage() {
@@ -102,8 +102,6 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(true);
   const [serviceabilityResult, setServiceabilityResult] = useState<ServiceabilityResult | null>(null);
-  const [shippingCost, setShippingCost] = useState<number>(0);
-  const [shippingLoading, setShippingLoading] = useState(false);
 
   const [delivery, setDelivery] = useState<DeliveryForm>({
     name: "",
@@ -144,13 +142,14 @@ export default function CheckoutPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.items) {
+          const unitPrice = (item: any) => item.variant?.price ?? item.product.price;
           const subtotal = data.items.reduce(
-            (sum: number, item: any) => sum + item.product.price * item.quantity,
+            (sum: number, item: any) => sum + unitPrice(item) * item.quantity,
             0
           );
           const gstAmount = data.items.reduce(
             (sum: number, item: any) =>
-              sum + (item.product.price * item.quantity * item.product.gstRate) / 100,
+              sum + (unitPrice(item) * item.quantity * item.product.gstRate) / 100,
             0
           );
           setCart({ subtotal, gstAmount, items: data.items });
@@ -172,38 +171,10 @@ export default function CheckoutPage() {
     document.body.appendChild(script);
   }, []);
 
-  // Fetch shipping cost when pincode + serviceability + cart ready
-  const fetchShippingCost = useCallback(async () => {
-    if (!cart || !delivery.pincode || !serviceabilityResult?.serviceable) {
-      setShippingCost(0);
-      return;
-    }
-    setShippingLoading(true);
-    try {
-      const weightKg = calculateCartWeight(cart.items);
-      const isCOD = paymentType === "COD";
-      const res = await fetch("/api/shipping/estimate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          destinationPincode: delivery.pincode,
-          weightKg,
-          paymentMode: isCOD ? "COD" : "Prepaid",
-          codAmount: isCOD ? (cart.subtotal + cart.gstAmount) : undefined,
-        }),
-      });
-      const data = await res.json();
-      setShippingCost(data.shippingCost ?? 0);
-    } catch {
-      setShippingCost(0);
-    } finally {
-      setShippingLoading(false);
-    }
-  }, [cart, delivery.pincode, serviceabilityResult, paymentType]);
-
-  useEffect(() => {
-    fetchShippingCost();
-  }, [fetchShippingCost]);
+  const orderTotal = (cart?.subtotal ?? 0) + (cart?.gstAmount ?? 0);
+  const shippingCost = cart && serviceabilityResult?.serviceable ? calcShipping(orderTotal) : 0;
+  const freeDeliveryRemaining = Math.max(0, FREE_DELIVERY_THRESHOLD - orderTotal);
+  const freeDeliveryProgress = Math.min(100, (orderTotal / FREE_DELIVERY_THRESHOLD) * 100);
 
   const handleServiceabilityResult = (result: ServiceabilityResult | null) => {
     setServiceabilityResult(result);
@@ -212,7 +183,7 @@ export default function CheckoutPage() {
     if (result?.state && !delivery.state) updateDelivery("state", result.state);
   };
 
-  const grandTotal = (cart?.subtotal ?? 0) + (cart?.gstAmount ?? 0) + shippingCost;
+  const grandTotal = orderTotal + shippingCost;
   const amountDue =
     paymentType === "ADVANCE_20" ? grandTotal * 0.2 :
     paymentType === "DIRECT_UPI" ? grandTotal : grandTotal;
@@ -475,11 +446,24 @@ export default function CheckoutPage() {
             <span className="text-[var(--text-muted)]">GST</span>
             <span className="text-[var(--text-primary)]">{formatCurrency(cart.gstAmount)}</span>
           </div>
-          <ShippingEstimate
-            shippingCost={shippingCost}
-            estimatedDays={serviceabilityResult?.estimatedDeliveryDays ?? null}
-            loading={shippingLoading}
-          />
+          {/* Free delivery progress bar */}
+          {orderTotal < FREE_DELIVERY_THRESHOLD ? (
+            <div className="py-2 border-t border-[var(--border-color)] mt-2">
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-[var(--text-muted)]">Add <span className="text-[var(--text-primary)] font-semibold">{formatCurrency(freeDeliveryRemaining)}</span> more for free delivery</span>
+                <span className="text-green-500 font-bold">₹25K</span>
+              </div>
+              <div className="h-1.5 bg-[var(--bg-card)] rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-red-600 to-green-500 rounded-full transition-all duration-500" style={{ width: `${freeDeliveryProgress}%` }} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 py-2 border-t border-[var(--border-color)] mt-2">
+              <Truck size={13} className="text-green-400 flex-shrink-0" />
+              <span className="text-green-400 text-xs font-bold">Free delivery unlocked!</span>
+            </div>
+          )}
+          <ShippingEstimate shippingCost={shippingCost} />
           <div className="flex justify-between font-bold pt-1 border-t border-[var(--border-color)]">
             <span className="text-[var(--text-primary)]">Grand Total</span>
             <span className="text-red-500 text-lg">{formatCurrency(grandTotal)}</span>
@@ -588,7 +572,7 @@ export default function CheckoutPage() {
 
         <button
           onClick={handlePlaceOrder}
-          disabled={loading || !isDeliveryComplete || shippingLoading}
+          disabled={loading || !isDeliveryComplete}
           className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
         >
           {loading ? (

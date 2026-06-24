@@ -1,19 +1,23 @@
-﻿import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Package, Truck } from "lucide-react";
+import { Plus, Package, Truck, FileSpreadsheet, GitMerge, Search } from "lucide-react";
 import { AdminProductActions } from "@/components/admin/product-actions";
+import { buildSearchWhere } from "@/lib/product-search";
 
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; category?: string; vendor?: string };
+  searchParams: { page?: string; category?: string; vendor?: string; search?: string };
 }) {
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
+  const search = searchParams.search?.trim();
 
-  const where: any = {};
+  const searchWhere = search ? await buildSearchWhere(search, false) : {};
+
+  const where: any = { ...searchWhere };
   if (searchParams.category) where.categoryId = searchParams.category;
   if (searchParams.vendor === "pending") { where.vendorId = { not: null }; where.isActive = false; }
   else if (searchParams.vendor === "all") where.vendorId = { not: null };
@@ -39,12 +43,12 @@ export default async function AdminProductsPage({
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">Products</h1>
-          <p className="text-[var(--text-muted)] mt-1">{total} products</p>
+          <p className="text-[var(--text-muted)] mt-1">{total} products{search && ` matching "${search}"`}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {pendingVendorCount > 0 && (
             <Link
               href="/admin/products?vendor=pending"
@@ -55,6 +59,20 @@ export default async function AdminProductsPage({
             </Link>
           )}
           <Link
+            href="/admin/products/consolidate"
+            className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-4 py-2.5 rounded-xl transition-colors text-sm hover:border-purple-600/50 hover:text-purple-400"
+          >
+            <GitMerge size={14} />
+            Consolidate
+          </Link>
+          <Link
+            href="/admin/products/import"
+            className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-4 py-2.5 rounded-xl transition-colors text-sm hover:border-red-900/40"
+          >
+            <FileSpreadsheet size={14} />
+            Bulk Import
+          </Link>
+          <Link
             href="/admin/products/new"
             className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-sm uppercase tracking-wider"
           >
@@ -64,11 +82,35 @@ export default async function AdminProductsPage({
         </div>
       </div>
 
+      {/* Search bar */}
+      <form method="GET" action="/admin/products" className="mb-5">
+        {searchParams.category && <input type="hidden" name="category" value={searchParams.category} />}
+        {searchParams.vendor && <input type="hidden" name="vendor" value={searchParams.vendor} />}
+        <div className="relative max-w-md">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input
+            name="search"
+            defaultValue={search}
+            placeholder="Search by name, part number, SKU, brand, vehicle..."
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600 placeholder:text-[var(--text-muted)]"
+            autoComplete="off"
+          />
+          {search && (
+            <a
+              href="/admin/products"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-red-400 text-xs"
+            >
+              ✕
+            </a>
+          )}
+        </div>
+      </form>
+
       {/* Vendor filter tabs */}
       <div className="flex gap-2 mb-4">
-        <Link href="/admin/products" className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${!searchParams.vendor ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>All</Link>
-        <Link href="/admin/products?vendor=all" className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "all" ? "bg-amber-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>Vendor Products</Link>
-        <Link href="/admin/products?vendor=pending" className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "pending" ? "bg-yellow-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>
+        <Link href={`/admin/products${search ? `?search=${encodeURIComponent(search)}` : ""}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${!searchParams.vendor ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>All</Link>
+        <Link href={`/admin/products?vendor=all${search ? `&search=${encodeURIComponent(search)}` : ""}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "all" ? "bg-amber-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>Vendor Products</Link>
+        <Link href={`/admin/products?vendor=pending${search ? `&search=${encodeURIComponent(search)}` : ""}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "pending" ? "bg-yellow-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>
           Pending Review {pendingVendorCount > 0 && <span className="ml-1 bg-yellow-500 text-black rounded-full px-1.5 text-[9px]">{pendingVendorCount}</span>}
         </Link>
       </div>
@@ -76,7 +118,7 @@ export default async function AdminProductsPage({
       {/* Category filter */}
       <div className="flex flex-wrap gap-2 mb-6">
         <Link
-          href="/admin/products"
+          href={`/admin/products${search ? `?search=${encodeURIComponent(search)}` : ""}`}
           className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${!searchParams.category ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
         >
           All
@@ -84,7 +126,7 @@ export default async function AdminProductsPage({
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/admin/products?category=${cat.id}`}
+            href={`/admin/products?category=${cat.id}${search ? `&search=${encodeURIComponent(search)}` : ""}`}
             className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${searchParams.category === cat.id ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
           >
             {cat.name}
@@ -106,7 +148,13 @@ export default async function AdminProductsPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {products.map((product) => (
+            {products.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-16 text-center text-[var(--text-muted)]">
+                  {search ? `No products found matching "${search}"` : "No products found"}
+                </td>
+              </tr>
+            ) : products.map((product) => (
               <tr key={product.id} className="hover:bg-white/2 transition-colors">
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
@@ -166,10 +214,10 @@ export default async function AdminProductsPage({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-8">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((p) => (
             <Link
               key={p}
-              href={`/admin/products?page=${p}${searchParams.category ? `&category=${searchParams.category}` : ""}`}
+              href={`/admin/products?page=${p}${searchParams.category ? `&category=${searchParams.category}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`}
               className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
             >
               {p}

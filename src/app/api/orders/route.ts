@@ -3,9 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateOrderNumber, generateInvoiceNumber } from "@/lib/utils";
-import { calculateShippingRate, calculateOrderWeight, createDelhiveryShipment } from "@/lib/delhivery";
+import { createDelhiveryShipment } from "@/lib/delhivery";
 
-const ORIGIN_PINCODE = process.env.DELHIVERY_ORIGIN_PINCODE || "110046";
+const FREE_DELIVERY_THRESHOLD = 25000;
+
+function calcShipping(orderTotal: number): number {
+  if (orderTotal >= FREE_DELIVERY_THRESHOLD) return 0;
+  return Math.round(orderTotal * 0.05 * 100) / 100;
+}
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -86,7 +91,7 @@ export async function POST(req: NextRequest) {
 
   const cart = await prisma.cart.findUnique({
     where: { dealerId: dealer.id },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true, variant: true } } },
   });
 
   if (!cart || cart.items.length === 0) {
@@ -97,30 +102,15 @@ export async function POST(req: NextRequest) {
   let gstAmount = 0;
 
   for (const item of cart.items) {
-    const itemSubtotal = item.product.price * item.quantity;
+    const unitPrice = item.variant?.price ?? item.product.price;
+    const itemSubtotal = unitPrice * item.quantity;
     const itemGST = (itemSubtotal * item.product.gstRate) / 100;
     subtotal += itemSubtotal;
     gstAmount += itemGST;
   }
 
-  // Use client-provided shipping cost if supplied (matches what the dealer saw at checkout).
-  // For COD, always recalculate server-side since COD surcharge must be accurate.
   const isCOD = paymentType === "COD";
-  let shippingCost: number;
-
-  if (!isCOD && typeof clientShippingCost === "number" && clientShippingCost >= 0) {
-    shippingCost = clientShippingCost;
-  } else {
-    const weightKg = calculateOrderWeight(cart.items);
-    const shippingResult = await calculateShippingRate({
-      originPincode: ORIGIN_PINCODE,
-      destinationPincode: deliveryPincode,
-      weightKg,
-      paymentMode: isCOD ? "COD" : "Prepaid",
-      codAmount: isCOD ? subtotal + gstAmount : undefined,
-    }).catch(() => ({ shippingCost: 0, source: "default" as const }));
-    shippingCost = shippingResult.shippingCost;
-  }
+  const shippingCost = calcShipping(subtotal + gstAmount);
 
   const grandTotal = subtotal + gstAmount + shippingCost;
 
@@ -150,14 +140,20 @@ export async function POST(req: NextRequest) {
       deliveryState: deliveryState || dealer.state,
       deliveryPincode,
       items: {
-        create: cart.items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: item.product.price,
-          gstRate: item.product.gstRate,
-          gstAmount: (item.product.price * item.quantity * item.product.gstRate) / 100,
-          total: item.product.price * item.quantity * (1 + item.product.gstRate / 100),
-        })),
+        create: cart.items.map((item) => {
+          const unitPrice = item.variant?.price ?? item.product.price;
+          return {
+            productId: item.productId,
+            variantId: item.variantId ?? null,
+            variantLabel: item.variant?.label ?? null,
+            variantSku: (item.variant as any)?.sku ?? null,
+            quantity: item.quantity,
+            unitPrice,
+            gstRate: item.product.gstRate,
+            gstAmount: (unitPrice * item.quantity * item.product.gstRate) / 100,
+            total: unitPrice * item.quantity * (1 + item.product.gstRate / 100),
+          };
+        }),
       },
     },
   });

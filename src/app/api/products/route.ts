@@ -3,10 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { buildSearchWhere } from "@/lib/product-search";
+
+function autoSku(partNumber: string): string {
+  const base = partNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 14);
+  const suffix = Date.now().toString(36).slice(-4).toUpperCase();
+  return `${base}-${suffix}`;
+}
 
 const productSchema = z.object({
   name: z.string().min(2),
-  sku: z.string().min(2),
+  sku: z.string().min(2).optional(),
   partNumber: z.string().min(2),
   description: z.string().optional(),
   categoryId: z.string(),
@@ -22,12 +29,6 @@ const productSchema = z.object({
   oemNumber: z.string().optional(),
   warranty: z.string().default("No Warranty"),
   countryOfOrigin: z.string().default("India"),
-  // Physical
-  weight: z.number().optional(),
-  packageWeight: z.number().gt(0, "Package weight must be > 0"),
-  packageLength: z.number().gt(0, "Length must be > 0"),
-  packageWidth: z.number().gt(0, "Width must be > 0"),
-  packageHeight: z.number().gt(0, "Height must be > 0"),
   // Compat
   compatibility: z.array(z.string()).default([]),
   isActive: z.boolean().default(true),
@@ -49,16 +50,13 @@ export async function GET(req: NextRequest) {
   const pageSize = parseInt(searchParams.get("pageSize") || "12");
   const adminAll = searchParams.get("adminAll") === "1";
 
-  const where: any = adminAll ? {} : { isActive: true };
-  if (category) where.category = { slug: category };
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { partNumber: { contains: search, mode: "insensitive" } },
-      { sku: { contains: search, mode: "insensitive" } },
-      { oemNumber: { contains: search, mode: "insensitive" } },
-    ];
-  }
+  const searchWhere = search ? await buildSearchWhere(search, !adminAll) : {};
+
+  const where: any = {
+    ...(adminAll ? {} : { isActive: true }),
+    ...(category ? { category: { slug: category } } : {}),
+    ...searchWhere,
+  };
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -85,11 +83,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { productImages, ...data } = productSchema.parse(body);
+    const { productImages, sku: skuInput, ...data } = productSchema.parse(body);
+    const sku = skuInput || autoSku(data.partNumber);
 
     const product = await prisma.product.create({
       data: {
         ...data,
+        sku,
         productImages: productImages.length > 0 ? {
           create: productImages.map((img, i) => ({
             imageUrl: img.url,

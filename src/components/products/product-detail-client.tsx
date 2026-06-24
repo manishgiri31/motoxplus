@@ -1,14 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Lock, Plus, Minus, CheckCircle, ChevronLeft, ChevronRight, Shield, Tag, PackageOpen } from "lucide-react";
+import {
+  ShoppingCart, Lock, Plus, Minus, CheckCircle, ChevronLeft, ChevronRight,
+  Shield, Tag, PackageOpen, AlertTriangle,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface ProductImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
+interface VariantImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
+
+interface ProductVariant {
+  id: string;
+  label: string;
+  sku: string | null;
+  partNumber: string | null;
+  color: string | null;
+  vehicleModel: string | null;
+  finish: string | null;
+  size: string | null;
+  extra: string | null;
+  price: number;
+  mrp: number | null;
+  stock: number;
+  moq: number | null;
+  isActive: boolean;
+  imageUrl: string | null;
+  images?: VariantImage[];
+}
 
 interface Product {
   id: string;
@@ -18,6 +41,7 @@ interface Product {
   description: string | null;
   images: string[];
   productImages?: ProductImage[];
+  variants?: ProductVariant[];
   compatibility: string[];
   price: number;
   mrp?: number | null;
@@ -36,42 +60,147 @@ interface Product {
   category: { name: string; slug: string };
 }
 
-interface Props {
-  product: Product;
-  relatedProducts: Product[];
+interface Props { product: Product; relatedProducts: Product[]; }
+
+// Attribute dimensions for Amazon-style selection
+const DIMS = ["color", "vehicleModel", "finish", "size", "extra"] as const;
+type Dim = (typeof DIMS)[number];
+const DIM_LABELS: Record<Dim, string> = {
+  color: "Color",
+  vehicleModel: "Vehicle Model",
+  finish: "Finish",
+  size: "Size",
+  extra: "Option",
+};
+
+function isCssColor(str: string): boolean {
+  const s = new Option().style;
+  s.color = str;
+  return s.color !== "";
 }
 
 export function ProductDetailClient({ product, relatedProducts }: Props) {
   const { data: session } = useSession();
   const router = useRouter();
 
-  // Build gallery from productImages (preferred) or legacy images array
-  const gallery: string[] =
+  const allVariants: ProductVariant[] = product.variants ?? [];
+  const activeVariants = allVariants.filter((v) => v.isActive);
+  const hasVariants = activeVariants.length > 0;
+
+  // Detect which dimensions are used
+  const activeDims = DIMS.filter((d) =>
+    activeVariants.some((v) => v[d as keyof ProductVariant])
+  );
+
+  // Collect unique values per dimension
+  const dimOptions: Partial<Record<Dim, string[]>> = {};
+  for (const dim of activeDims) {
+    const vals = Array.from(
+      new Set(activeVariants.filter((v) => v[dim]).map((v) => v[dim] as string))
+    );
+    if (vals.length) dimOptions[dim] = vals;
+  }
+
+  // Amazon-style attribute selection state
+  const [selectedAttrs, setSelectedAttrs] = useState<Partial<Record<Dim, string>>>(() => {
+    // Pre-select first variant's values
+    if (activeVariants.length > 0) {
+      const first = activeVariants[0];
+      const init: Partial<Record<Dim, string>> = {};
+      for (const d of activeDims) {
+        if (first[d as keyof ProductVariant]) init[d] = first[d as keyof ProductVariant] as string;
+      }
+      return init;
+    }
+    return {};
+  });
+
+  // Resolve which variant matches the selected combination
+  const resolvedVariant: ProductVariant | null = (() => {
+    if (!hasVariants) return null;
+    if (activeDims.length === 0) return null;
+    return (
+      activeVariants.find((v) =>
+        activeDims.every((d) => !selectedAttrs[d] || v[d as keyof ProductVariant] === selectedAttrs[d])
+      ) ?? null
+    );
+  })();
+
+  const activePrice = resolvedVariant ? resolvedVariant.price : product.price;
+  const activeMrp = resolvedVariant ? (resolvedVariant.mrp ?? product.mrp) : product.mrp;
+  const activeMoq = resolvedVariant?.moq ?? product.moq;
+  const activeSku = resolvedVariant?.sku ?? product.sku;
+  const activePartNumber = resolvedVariant?.partNumber ?? product.partNumber;
+  const activeStock = resolvedVariant?.stock ?? 0;
+  const priceWithGST = activePrice * (1 + product.gstRate / 100);
+  const outOfStock = hasVariants && resolvedVariant && resolvedVariant.stock === 0;
+
+  // Check if a value is available given current other-dimension selections
+  const isValueAvailable = (dim: Dim, val: string): boolean => {
+    const testAttrs = { ...selectedAttrs, [dim]: val };
+    return activeVariants.some((v) =>
+      activeDims.every((d) => !testAttrs[d] || v[d as keyof ProductVariant] === testAttrs[d])
+    );
+  };
+
+  // Gallery: use variant images → variant.imageUrl → product images → legacy
+  const baseGallery: string[] =
     product.productImages && product.productImages.length > 0
       ? product.productImages
           .sort((a, b) => (a.isPrimary ? -1 : b.isPrimary ? 1 : a.sortOrder - b.sortOrder))
           .map((img) => img.imageUrl)
       : product.images;
 
+  const variantGallery: string[] = (() => {
+    if (!resolvedVariant) return [];
+    if (resolvedVariant.images && resolvedVariant.images.length > 0) {
+      return resolvedVariant.images
+        .sort((a, b) => (a.isPrimary ? -1 : b.isPrimary ? 1 : a.sortOrder - b.sortOrder))
+        .map((i) => i.imageUrl);
+    }
+    if (resolvedVariant.imageUrl) return [resolvedVariant.imageUrl];
+    return [];
+  })();
+
+  const gallery = variantGallery.length > 0
+    ? [...variantGallery, ...baseGallery.filter((u) => !variantGallery.includes(u))]
+    : baseGallery;
+
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [quantity, setQuantity] = useState(product.moq);
+  const [quantity, setQuantity] = useState(activeMoq);
   const [addedToCart, setAddedToCart] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Reset gallery index when variant changes
+  useEffect(() => { setSelectedIdx(0); }, [resolvedVariant?.id]);
+  // Clamp quantity to new MOQ
+  useEffect(() => {
+    setQuantity((q) => Math.max(activeMoq, Math.round(q / activeMoq) * activeMoq || activeMoq));
+  }, [activeMoq]);
+
   const isDealer = session?.user?.role === "DEALER";
-  const priceWithGST = product.price * (1 + product.gstRate / 100);
+
+  const selectAttr = (dim: Dim, val: string) => {
+    setSelectedAttrs((prev) => ({ ...prev, [dim]: val }));
+    setAddedToCart(false);
+  };
 
   const prev = () => setSelectedIdx((i) => (i - 1 + gallery.length) % gallery.length);
   const next = () => setSelectedIdx((i) => (i + 1) % gallery.length);
 
   const handleAddToCart = async () => {
     if (!isDealer) { router.push("/login"); return; }
+    if (hasVariants && !resolvedVariant) return;
     setLoading(true);
     try {
       const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, quantity }),
+        body: JSON.stringify({
+          productId: product.id,
+          quantity,
+          variantId: resolvedVariant?.id ?? null,
+        }),
       });
       if (res.ok) {
         setAddedToCart(true);
@@ -134,7 +263,6 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
             )}
           </div>
 
-          {/* Thumbnail strip */}
           {gallery.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {gallery.map((img, i) => (
@@ -154,7 +282,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
 
         {/* ── Details ── */}
         <div>
-          {/* Category + Brand */}
+          {/* Category + Brand + Warranty badges */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <span className="glass border border-red-900/30 text-red-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl">
               {product.category.name}
@@ -174,15 +302,19 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
 
           <h1 className="text-3xl md:text-4xl font-black text-[var(--text-primary)] tracking-tight mb-4">
             {product.name}
+            {resolvedVariant && (
+              <span className="block text-lg font-semibold text-red-400 mt-1">{resolvedVariant.label}</span>
+            )}
           </h1>
 
-          {/* Part info grid */}
+          {/* Part info grid — updates with selected variant */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             {[
-              { label: "Part Number", value: product.partNumber, mono: true },
-              { label: "SKU", value: product.sku, mono: true },
+              { label: "Part Number", value: activePartNumber, mono: true },
+              { label: "SKU", value: activeSku, mono: true },
               ...(product.oemNumber ? [{ label: "OEM Number", value: product.oemNumber, mono: true }] : []),
-              { label: "MOQ", value: `${product.moq} pcs` },
+              { label: "MOQ", value: `${activeMoq} pcs` },
+              ...(hasVariants && resolvedVariant ? [{ label: "Stock", value: `${activeStock} pcs` }] : []),
               { label: "GST Rate", value: `${product.gstRate}%` },
               ...(product.hsnCode ? [{ label: "HSN Code", value: product.hsnCode, mono: true }] : []),
               ...(product.countryOfOrigin ? [{ label: "Country of Origin", value: product.countryOfOrigin }] : []),
@@ -214,12 +346,10 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
             </div>
           )}
 
-          {/* Description */}
           {product.description && (
             <p className="text-[var(--text-muted)] text-sm leading-relaxed mb-6">{product.description}</p>
           )}
 
-          {/* Compatibility */}
           {product.compatibility.length > 0 && (
             <div className="mb-6">
               <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Compatible With</div>
@@ -233,67 +363,161 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
             </div>
           )}
 
-          {/* Pricing */}
-          {isDealer ? (
-            <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-6">
-              <div className="flex items-baseline gap-6 mb-3">
-                <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Dealer Price (excl. GST)</div>
-                  <div className="text-3xl font-black text-[var(--text-primary)]">{formatCurrency(product.price)}</div>
-                </div>
-                <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Incl. GST ({product.gstRate}%)</div>
-                  <div className="text-xl font-bold text-red-400">{formatCurrency(priceWithGST)}</div>
-                </div>
-              </div>
-              {product.mrp && (
-                <div className="flex items-center gap-2 mb-2">
-                  <Tag size={12} className="text-[var(--text-muted)]" />
-                  <span className="text-[var(--text-muted)] text-xs">MRP: <span className="line-through">{formatCurrency(product.mrp)}</span></span>
+          {/* ── Amazon-style Variant Selector ── */}
+          {hasVariants && activeDims.length > 0 && (
+            <div className="mb-6 space-y-4">
+              {activeDims.map((dim) => {
+                const options = dimOptions[dim] ?? [];
+                const selectedVal = selectedAttrs[dim];
+                return (
+                  <div key={dim}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[var(--text-muted)] text-xs uppercase tracking-widest">{DIM_LABELS[dim]}</span>
+                      {selectedVal && (
+                        <span className="text-[var(--text-primary)] text-xs font-semibold">— {selectedVal}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {options.map((val) => {
+                        const isSelected = selectedVal === val;
+                        const available = isValueAvailable(dim, val);
+                        const isColor = dim === "color" && isCssColor(val);
+                        return (
+                          <button
+                            key={val}
+                            onClick={() => available && selectAttr(dim, val)}
+                            disabled={!available}
+                            className={`relative px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                              isSelected
+                                ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-900/30"
+                                : available
+                                ? "glass border-[var(--border-color)] text-[var(--text-secondary)] hover:border-red-700/50 hover:text-[var(--text-primary)]"
+                                : "glass border-[var(--border-color)] text-gray-700 cursor-not-allowed opacity-50"
+                            }`}
+                          >
+                            <span className="flex items-center gap-2">
+                              {isColor && (
+                                <span
+                                  className="w-3.5 h-3.5 rounded-full border border-white/20 flex-shrink-0"
+                                  style={{ backgroundColor: val.toLowerCase() }}
+                                />
+                              )}
+                              {val}
+                            </span>
+                            {/* Strike-through for unavailable */}
+                            {!available && (
+                              <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span className="w-full h-px bg-gray-700 rotate-[20deg] absolute" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* No match / out of stock notice */}
+              {!resolvedVariant && (
+                <div className="flex items-center gap-2 text-amber-400 text-xs bg-amber-900/10 border border-amber-900/30 rounded-xl px-3 py-2">
+                  <AlertTriangle size={12} />
+                  This combination is unavailable. Please select a different option.
                 </div>
               )}
-              <div className="text-[var(--text-muted)] text-xs">
-                Total for {quantity} pcs: {formatCurrency(product.price * quantity)}
-              </div>
-            </div>
-          ) : product.mrp ? (
-            <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-6">
-              <div className="flex items-baseline gap-6 mb-3">
-                <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">MRP (incl. GST)</div>
-                  <div className="text-3xl font-black text-[var(--text-primary)]">{formatCurrency(product.mrp)}</div>
+              {outOfStock && resolvedVariant && (
+                <div className="flex items-center gap-2 text-amber-400 text-xs bg-amber-900/10 border border-amber-900/30 rounded-xl px-3 py-2">
+                  <AlertTriangle size={12} />
+                  This variant is currently out of stock.
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Pricing ── */}
+          {isDealer ? (
+            <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-6">
+              <div className="flex items-baseline gap-6 mb-3 flex-wrap">
+                <div>
+                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Wholesale Price (excl. GST)</div>
+                  <div className="text-3xl font-black text-red-400">{formatCurrency(activePrice)}</div>
+                </div>
+                <div>
+                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Incl. {product.gstRate}% GST</div>
+                  <div className="text-xl font-bold text-[var(--text-primary)]">{formatCurrency(priceWithGST)}</div>
+                </div>
+                {activeMrp && activeMrp > activePrice && (
+                  <div>
+                    <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
+                    <div className="text-lg font-bold text-gray-500 line-through">{formatCurrency(activeMrp)}</div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2 mt-2 glass border border-red-900/25 rounded-xl px-3 py-2 w-fit">
-                <Lock size={12} className="text-red-500 flex-shrink-0" />
-                <span className="text-red-400 text-xs font-semibold">Login as Dealer for exclusive wholesale pricing</span>
+              {activeMrp && activeMrp > activePrice && (
+                <div className="flex items-center gap-2 mb-3 bg-green-900/10 border border-green-900/30 rounded-xl px-3 py-1.5 w-fit">
+                  <Tag size={11} className="text-green-400" />
+                  <span className="text-green-400 text-xs font-semibold">
+                    You save {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% vs MRP
+                  </span>
+                </div>
+              )}
+              <div className="border-t border-[var(--border-color)] pt-3 mt-1 space-y-1">
+                <div className="flex justify-between text-xs text-[var(--text-muted)]">
+                  <span>Base × {quantity} pcs</span>
+                  <span>{formatCurrency(activePrice * quantity)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-[var(--text-muted)]">
+                  <span>GST ({product.gstRate}%)</span>
+                  <span>{formatCurrency(activePrice * quantity * product.gstRate / 100)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold text-[var(--text-primary)] pt-1 border-t border-[var(--border-color)]">
+                  <span>Total for {quantity} pcs (excl. shipping)</span>
+                  <span className="text-red-400">{formatCurrency(priceWithGST * quantity)}</span>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="glass border border-red-900/30 rounded-2xl p-6 mb-6 flex items-center gap-4">
-              <div className="w-10 h-10 bg-red-900/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Lock size={18} className="text-red-600" />
+            <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-6">
+              <div className="flex items-baseline gap-6 mb-3 flex-wrap">
+                <div>
+                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Wholesale Price</div>
+                  <div className="text-3xl font-black text-red-400">{formatCurrency(activePrice)}</div>
+                </div>
+                {activeMrp && activeMrp > activePrice && (
+                  <div>
+                    <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
+                    <div className="text-xl font-bold text-gray-500 line-through">{formatCurrency(activeMrp)}</div>
+                  </div>
+                )}
               </div>
-              <div>
-                <div className="text-[var(--text-primary)] font-bold mb-1">Dealer Pricing</div>
-                <div className="text-[var(--text-muted)] text-sm">Login as an approved dealer to view pricing and add to cart.</div>
+              {activeMrp && activeMrp > activePrice && (
+                <div className="flex items-center gap-2 mb-3 bg-green-900/10 border border-green-900/30 rounded-xl px-3 py-1.5 w-fit">
+                  <Tag size={11} className="text-green-400" />
+                  <span className="text-green-400 text-xs font-semibold">
+                    {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 mt-3 glass border border-red-900/25 rounded-xl px-3 py-2 w-fit">
+                <Lock size={12} className="text-red-500 flex-shrink-0" />
+                <span className="text-red-400 text-xs font-semibold">Login as Dealer to place orders</span>
               </div>
             </div>
           )}
 
-          {/* Add to Cart */}
+          {/* ── Quantity + Add to Cart ── */}
           {isDealer && (
             <div className="flex items-center gap-4">
               <div className="flex items-center glass border border-[var(--border-color)] rounded-xl overflow-hidden">
                 <button
-                  onClick={() => setQuantity(Math.max(product.moq, quantity - product.moq))}
+                  onClick={() => setQuantity(Math.max(activeMoq, quantity - activeMoq))}
                   className="px-4 py-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
                 >
                   <Minus size={14} />
                 </button>
                 <span className="px-4 text-[var(--text-primary)] font-bold min-w-[60px] text-center">{quantity}</span>
                 <button
-                  onClick={() => setQuantity(quantity + product.moq)}
+                  onClick={() => setQuantity(quantity + activeMoq)}
                   className="px-4 py-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
                 >
                   <Plus size={14} />
@@ -301,14 +525,20 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
               </div>
               <button
                 onClick={handleAddToCart}
-                disabled={loading || addedToCart}
+                disabled={loading || addedToCart || (hasVariants && !resolvedVariant) || !!outOfStock}
                 className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-xl transition-all text-sm uppercase tracking-wider ${
-                  addedToCart ? "bg-green-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
+                  addedToCart
+                    ? "bg-green-700 text-white"
+                    : outOfStock
+                    ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    : hasVariants && !resolvedVariant
+                    ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700 text-white"
                 }`}
               >
                 {addedToCart ? (
                   <><CheckCircle size={16} /> Added to Cart</>
-                ) : loading ? "Adding..." : (
+                ) : loading ? "Adding..." : outOfStock ? "Out of Stock" : (
                   <><ShoppingCart size={16} /> Add to Cart</>
                 )}
               </button>
