@@ -240,8 +240,7 @@ export function ProductForm({ categories, product }: Props) {
         <div className="flex items-start gap-3 rounded-xl bg-blue-900/10 border border-blue-900/30 px-4 py-3 mb-2">
           <span className="text-blue-400 text-xs mt-0.5">ℹ</span>
           <p className="text-blue-300 text-xs leading-relaxed">
-            Set <strong>MRP</strong> as the public-facing retail price visible to all visitors.
-            Set <strong>Dealer Base Price</strong> (excl. GST) as the wholesale price — GST is added on top for dealers at checkout.
+            Enter <strong>MRP</strong> (public retail price). Wholesale price is <strong>auto-calculated as 70% off MRP</strong> (dealer pays 30% of MRP). GST is added on top at checkout.
           </p>
         </div>
 
@@ -254,19 +253,24 @@ export function ProductForm({ categories, product }: Props) {
               step="0.01"
               min="0"
               value={form.mrp}
-              onChange={(e) => set("mrp", e.target.value)}
+              onChange={(e) => {
+                set("mrp", e.target.value);
+                if (e.target.value) {
+                  set("price", (parseFloat(e.target.value) * 0.30).toFixed(2));
+                }
+              }}
               className={INPUT + " border-blue-900/40 focus:border-blue-500/60"}
               placeholder="0.00"
             />
             <p className="text-blue-400 text-[10px] mt-1">Shown to public visitors on website</p>
           </div>
           <div>
-            <label className={LABEL}>Dealer Base Price excl. GST (₹) <span className="text-red-500">*</span></label>
-            <input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} className={INPUT} placeholder="0.00" />
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">
-              {form.price && form.gstRate
-                ? `Dealer pays ₹${(parseFloat(form.price) * (1 + parseFloat(form.gstRate) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. ${form.gstRate}% GST`
-                : "GST added on top at checkout"}
+            <label className={LABEL}>Wholesale Price excl. GST (₹) — 70% off MRP</label>
+            <input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} className={INPUT + " border-green-900/40 focus:border-green-500/60"} placeholder="Auto from MRP" />
+            <p className="text-green-500 text-[10px] mt-1">
+              {form.mrp
+                ? `= ₹${(parseFloat(form.mrp) * 0.30).toLocaleString("en-IN", { maximumFractionDigits: 2 })} (30% of MRP)`
+                : "Auto-filled when MRP is set"}
             </p>
           </div>
           <div>

@@ -181,17 +181,19 @@ export function DealerProductCatalog({
 
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <div className="text-red-500 font-black text-lg">{formatCurrency(product.price * (1 + product.gstRate / 100))}</div>
-                  <div className="text-[var(--text-muted)] text-[10px]">Base {formatCurrency(product.price)} + {product.gstRate}% GST • MOQ: {product.moq}</div>
+                  <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider mb-0.5">Wholesale Price</div>
+                  <div className="text-red-500 font-black text-lg">{formatCurrency(product.price)}</div>
                   {product.mrp && (
-                    <div className="text-[var(--text-muted)] text-[10px] mt-0.5">
-                      MRP <span className="line-through">₹{product.mrp.toLocaleString("en-IN")}</span>
-                      {" "}
-                      <span className="text-green-600 font-semibold">
-                        Save {Math.round(((product.mrp - product.price) / product.mrp) * 100)}%
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-green-600 text-[10px] font-bold bg-green-500/10 px-1.5 py-0.5 rounded-full">
+                        70% OFF
+                      </span>
+                      <span className="text-[var(--text-muted)] text-[10px]">
+                        MRP <span className="line-through">₹{product.mrp.toLocaleString("en-IN")}</span>
                       </span>
                     </div>
                   )}
+                  <div className="text-[var(--text-muted)] text-[10px] mt-0.5">+ {product.gstRate}% GST • MOQ: {product.moq}</div>
                 </div>
                 {!hasVariants && (
                   <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${isInStock ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-500"}`}>

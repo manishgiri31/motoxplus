@@ -638,7 +638,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
                 <div className="flex items-center gap-2 mb-3 bg-green-900/10 border border-green-900/30 rounded-xl px-3 py-1.5 w-fit">
                   <Tag size={11} className="text-green-400" />
                   <span className="text-green-400 text-xs font-semibold">
-                    You save {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% vs MRP
+                    {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP — Exclusive wholesale price
                   </span>
                 </div>
               )}
@@ -675,7 +675,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
                 <div className="flex items-center gap-2 mb-3 bg-green-900/10 border border-green-900/30 rounded-xl px-3 py-1.5 w-fit">
                   <Tag size={11} className="text-green-400" />
                   <span className="text-green-400 text-xs font-semibold">
-                    {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP
+                    {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP — Exclusive wholesale price
                   </span>
                 </div>
               )}

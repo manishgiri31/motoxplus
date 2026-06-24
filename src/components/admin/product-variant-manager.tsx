@@ -229,14 +229,19 @@ export function ProductVariantManager({ productId }: { productId: string }) {
           <p className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-2">Pricing & Inventory</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             <div>
-              <label className="block text-[var(--text-muted)] text-xs mb-1.5">Price (excl. GST) <span className="text-red-500">*</span></label>
-              <input type="number" min="0" step="0.01" value={form.price} onChange={(e) => set("price", e.target.value)}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-red-600" />
+              <label className="block text-[var(--text-muted)] text-xs mb-1.5">MRP (₹) <span className="text-red-500">*</span></label>
+              <input type="number" min="0" step="0.01" value={form.mrp}
+                onChange={(e) => {
+                  set("mrp", e.target.value);
+                  if (e.target.value) set("price", (parseFloat(e.target.value) * 0.30).toFixed(2));
+                }}
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-blue-500" />
             </div>
             <div>
-              <label className="block text-[var(--text-muted)] text-xs mb-1.5">MRP</label>
-              <input type="number" min="0" step="0.01" value={form.mrp} onChange={(e) => set("mrp", e.target.value)}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-red-600" />
+              <label className="block text-[var(--text-muted)] text-xs mb-1.5">Wholesale Price — 70% off MRP</label>
+              <input type="number" min="0" step="0.01" value={form.price} onChange={(e) => set("price", e.target.value)}
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-green-400 text-sm font-bold focus:outline-none focus:border-green-600" />
+              {form.mrp && <p className="text-green-600 text-[10px] mt-0.5">= 30% of ₹{form.mrp}</p>}
             </div>
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Stock</label>
