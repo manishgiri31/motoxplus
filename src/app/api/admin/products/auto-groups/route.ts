@@ -26,8 +26,6 @@ interface ProductRow {
   price: number;
   mrp: number | null;
   stock: number;
-  isActive: boolean;
-  imageUrl: string | null;
 }
 
 interface Group {
@@ -36,9 +34,9 @@ interface Group {
 }
 
 function autoGroupProducts(products: ProductRow[], minWords: number): Group[] {
-  // Sort alphabetically so similar names are adjacent
-  const sorted = [...products].sort((a, b) => a.name.localeCompare(b.name));
+  const MIN_PREFIX_CHARS = 8; // prefix must be at least 8 chars to avoid "H" type nonsense
 
+  const sorted = [...products].sort((a, b) => a.name.localeCompare(b.name));
   const groups: Group[] = [];
 
   for (const p of sorted) {
@@ -49,7 +47,8 @@ function autoGroupProducts(products: ProductRow[], minWords: number): Group[] {
       const g = groups[i];
       const cp = commonPrefix([g.prefix, p.name]);
       const wc = wordCount(cp);
-      if (wc > bestLen) {
+      // Must meet both word count AND minimum character length
+      if (wc > bestLen && cp.length >= MIN_PREFIX_CHARS) {
         bestLen = wc;
         bestMatch = i;
       }
@@ -81,9 +80,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "search param required" }, { status: 400 });
   }
 
-  // Fetch all products matching the search (up to 500)
-  const products = await prisma.product.findMany({
+  // Fetch all active products matching the search, EXCLUDING those that already
+  // have variants (they are already consolidated master products)
+  const products = await (prisma.product as any).findMany({
     where: {
+      isActive: true,
+      variants: { none: {} }, // skip already-consolidated products
       OR: [
         { name: { contains: search, mode: "insensitive" } },
         { partNumber: { contains: search, mode: "insensitive" } },
@@ -97,35 +99,25 @@ export async function GET(req: NextRequest) {
       price: true,
       mrp: true,
       stock: true,
-      isActive: true,
-      productImages: {
-        where: { isPrimary: true },
-        take: 1,
-        select: { imageUrl: true },
-      },
     },
     orderBy: { name: "asc" },
     take: 500,
   });
 
-  const rows: ProductRow[] = products.map((p) => ({
+  const rows: ProductRow[] = products.map((p: any) => ({
     id: p.id,
     name: p.name,
     partNumber: p.partNumber,
     price: p.price,
     mrp: p.mrp,
     stock: p.stock,
-    isActive: p.isActive,
-    imageUrl: (p as any).productImages?.[0]?.imageUrl ?? null,
   }));
 
-  // Only group active products (exclude already-deactivated ones)
-  const active = rows.filter((p) => p.isActive);
-  const groups = autoGroupProducts(active, minWords);
+  const groups = autoGroupProducts(rows, minWords);
 
   return NextResponse.json({
     totalFound: products.length,
-    activeCount: active.length,
+    activeCount: products.length,
     groups: groups.map((g) => ({
       prefix: g.prefix,
       count: g.products.length,
@@ -136,7 +128,6 @@ export async function GET(req: NextRequest) {
         price: p.price,
         stock: p.stock,
       })),
-      // First product is suggested parent
       suggestedParentId: g.products[0].id,
     })),
   });

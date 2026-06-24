@@ -59,7 +59,6 @@ export async function POST(req: NextRequest) {
       label: provided?.label ?? autoLabel,
       partNumber: provided?.partNumber ?? p.partNumber,
       color: provided?.color ?? null,
-      sticker: provided?.sticker ?? null,
       price: provided?.price ?? p.price,
       mrp: provided?.mrp ?? p.mrp,
       stock: provided?.stock ?? p.stock,
@@ -96,8 +95,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Update parent product name to the common prefix (the group display name)
-    const newName = prefix.trim() || parent.name;
+    // Update parent product name to the common prefix — only if it's meaningful
+    const newName = (prefix.trim().length >= 8) ? prefix.trim() : parent.name;
     await tx.product.update({
       where: { id: parentProductId },
       data: { name: newName, isActive: true },
