@@ -25,6 +25,7 @@ export default async function DealerProductsPage({
       include: {
         category: true,
         productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
+        _count: { select: { variants: { where: { isActive: true } } } },
       },
       skip: (page - 1) * pageSize,
       take: pageSize,

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Search, ShoppingCart, CheckCircle, Plus, Minus } from "lucide-react";
+import { Search, ShoppingCart, CheckCircle, Plus, Minus, ChevronRight } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { formatCurrency } from "@/lib/utils";
 
@@ -25,6 +25,7 @@ interface Product {
   stock: number;
   vendorId?: string | null;
   category: { name: string };
+  _count?: { variants: number };
 }
 
 interface Props {
@@ -141,7 +142,8 @@ export function DealerProductCatalog({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map((product) => {
-          const isInStock = product.vendorId ? true : product.stock > 0;
+          const hasVariants = (product._count?.variants ?? 0) > 0;
+          const isInStock = hasVariants ? true : (product.vendorId ? true : product.stock > 0);
           const thumb =
             product.productImages && product.productImages.length > 0
               ? (product.productImages.find((i) => i.isPrimary) || product.productImages[0]).imageUrl
@@ -150,12 +152,17 @@ export function DealerProductCatalog({
           <div key={product.id} className="glass border border-[var(--border-color)] hover:border-red-900/30 rounded-sm overflow-hidden transition-all">
             {/* Image */}
             <Link href={`/products/${product.id}`}>
-              <div className="relative h-36 bg-gradient-to-br from-zinc-900 to-black overflow-hidden">
+              <div className="relative h-36 bg-[var(--bg-secondary)] overflow-hidden">
                 {thumb ? (
                   <Image src={thumb} alt={product.name} fill className="object-cover hover:scale-105 transition-transform" sizes="300px" unoptimized />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-4xl text-red-900/20 font-black">◈</div>
+                    <div className="text-4xl text-red-500/20 font-black">◈</div>
+                  </div>
+                )}
+                {hasVariants && (
+                  <div className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                    {product._count!.variants} options
                   </div>
                 )}
               </div>
@@ -166,7 +173,7 @@ export function DealerProductCatalog({
                 {product.partNumber}{product.oemNumber ? ` • OEM: ${product.oemNumber}` : ""}
               </div>
               <Link href={`/products/${product.id}`}>
-                <h3 className="text-[var(--text-primary)] font-bold text-sm hover:text-red-100 transition-colors line-clamp-2 mb-2">
+                <h3 className="text-[var(--text-primary)] font-bold text-sm hover:text-red-600 transition-colors line-clamp-2 mb-2">
                   {product.name}
                 </h3>
               </Link>
@@ -174,24 +181,36 @@ export function DealerProductCatalog({
 
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <div className="text-red-400 font-black text-lg">{formatCurrency(product.price * (1 + product.gstRate / 100))}</div>
-                  <div className="text-gray-600 text-[10px]">Base {formatCurrency(product.price)} + {product.gstRate}% GST • MOQ: {product.moq}</div>
+                  <div className="text-red-500 font-black text-lg">{formatCurrency(product.price * (1 + product.gstRate / 100))}</div>
+                  <div className="text-[var(--text-muted)] text-[10px]">Base {formatCurrency(product.price)} + {product.gstRate}% GST • MOQ: {product.moq}</div>
                   {product.mrp && (
-                    <div className="text-gray-500 text-[10px] mt-0.5">
+                    <div className="text-[var(--text-muted)] text-[10px] mt-0.5">
                       MRP <span className="line-through">₹{product.mrp.toLocaleString("en-IN")}</span>
                       {" "}
-                      <span className="text-green-500 font-semibold">
+                      <span className="text-green-600 font-semibold">
                         Save {Math.round(((product.mrp - product.price) / product.mrp) * 100)}%
                       </span>
                     </div>
                   )}
                 </div>
-                <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${isInStock ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
-                  {isInStock ? "In Stock" : "Out of Stock"}
-                </div>
+                {!hasVariants && (
+                  <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${isInStock ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-500"}`}>
+                    {isInStock ? "In Stock" : "Out of Stock"}
+                  </div>
+                )}
               </div>
 
-              {/* Quantity selector */}
+              {/* Variant product: go to detail page to choose options */}
+              {hasVariants ? (
+                <Link
+                  href={`/products/${product.id}`}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-sm text-xs font-bold uppercase tracking-wider bg-red-600 hover:bg-red-700 text-white transition-colors"
+                >
+                  Select Model &amp; Color
+                  <ChevronRight size={13} />
+                </Link>
+              ) : (
+              /* Simple product: add to cart directly */
               <div className="flex items-center gap-2">
                 <div className="flex items-center glass border border-[var(--border-color)] rounded-sm overflow-hidden">
                   <button
@@ -213,7 +232,7 @@ export function DealerProductCatalog({
                   disabled={addingToCart === product.id || !isInStock}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${
                     addedIds.includes(product.id)
-                      ? "bg-green-700 text-[var(--text-primary)]"
+                      ? "bg-green-700 text-white"
                       : "bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
                   }`}
                 >
@@ -226,6 +245,7 @@ export function DealerProductCatalog({
                   )}
                 </button>
               </div>
+              )}
             </div>
           </div>
           );

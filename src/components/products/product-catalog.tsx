@@ -435,9 +435,9 @@ export function ProductCatalog({
           )}
         </span>
         {currentSearch && (
-          <div className="flex items-center gap-2 glass border border-red-900/30 rounded-full px-3 py-1">
-            <Zap size={10} className="text-red-400" />
-            <span className="text-red-300 text-xs font-semibold">&quot;{currentSearch}&quot;</span>
+          <div className="flex items-center gap-2 glass border border-red-500/30 rounded-full px-3 py-1">
+            <Zap size={10} className="text-red-500" />
+            <span className="text-red-500 text-xs font-semibold">&quot;{currentSearch}&quot;</span>
             <button
               onClick={handleClear}
               className="text-[var(--text-muted)] hover:text-red-400 transition-colors ml-1"
@@ -488,7 +488,7 @@ export function ProductCatalog({
                 className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden transition-all duration-300 card-hover"
               >
                 {/* Image */}
-                <div className="relative h-48 bg-gradient-to-br from-zinc-900 to-black flex items-center justify-center overflow-hidden">
+                <div className="relative h-48 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
                   {thumb ? (
                     <Image
                       src={thumb}
@@ -499,11 +499,11 @@ export function ProductCatalog({
                       unoptimized
                     />
                   ) : (
-                    <div className="text-6xl text-red-900/20 font-black">◈</div>
+                    <div className="text-6xl text-red-500/20 font-black">◈</div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="absolute top-3 left-3">
-                    <span className="bg-black/70 backdrop-blur-sm text-red-400 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                    <span className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
                       {product.category.name}
                     </span>
                   </div>
@@ -514,7 +514,7 @@ export function ProductCatalog({
                   <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">
                     {currentSearch ? highlight(product.partNumber, currentSearch) : product.partNumber}
                   </div>
-                  <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-100 transition-colors">
+                  <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
                     {currentSearch ? highlight(product.name, currentSearch) : product.name}
                   </h3>
                   {product.compatibility.length > 0 && (
@@ -526,13 +526,13 @@ export function ProductCatalog({
                   <div className="pt-3 border-t border-[var(--border-color)]">
                     <div className="flex items-end justify-between">
                       <div>
-                        <div className="text-red-400 font-black text-base leading-tight">
+                        <div className="text-red-500 font-black text-base leading-tight">
                           ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                         </div>
                         {product.mrp && product.mrp > product.price && (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-gray-500 text-[10px] line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
-                            <span className="text-green-500 text-[10px] font-bold">
+                            <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
+                            <span className="text-green-600 text-[10px] font-bold">
                               {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% off
                             </span>
                           </div>
@@ -541,7 +541,7 @@ export function ProductCatalog({
                       <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide font-semibold">MOQ: {product.moq}</div>
                     </div>
                     {!isDealer && (
-                      <div className="mt-2 flex items-center gap-1.5 glass border border-red-900/20 rounded-full px-2.5 py-1 w-fit">
+                      <div className="mt-2 flex items-center gap-1.5 glass border border-red-500/20 rounded-full px-2.5 py-1 w-fit">
                         <Lock size={9} className="text-red-500" />
                         <span className="text-red-500 text-[9px] font-bold">Login to Order</span>
                       </div>

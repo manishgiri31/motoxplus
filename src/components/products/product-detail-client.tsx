@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -70,7 +70,7 @@ const DIM_LABELS: Record<Dim, string> = {
   vehicleModel: "Vehicle Model",
   finish: "Finish",
   size: "Size",
-  extra: "Option",
+  extra: "Color / Type",
 };
 
 function isCssColor(str: string): boolean {
@@ -79,9 +79,40 @@ function isCssColor(str: string): boolean {
   return s.color !== "";
 }
 
+function getModelBadge(model: string): { label: string; cls: string } | null {
+  if (/\bN\/M\b/.test(model)) return { label: "NEW", cls: "bg-green-500/15 text-green-500 border border-green-500/30" };
+  if (/\bO\/M\b/.test(model)) return { label: "OLD", cls: "bg-amber-500/15 text-amber-500 border border-amber-500/30" };
+  return null;
+}
+
+// Maps an `extra` / `color` value to a CSS background color for the image placeholder
+const COLOR_MAP: Record<string, string> = {
+  BLACK: "#1c1c1e", RED: "#b91c1c", SILVER: "#94a3b8", BLUE: "#2563eb",
+  GREEN: "#16a34a", GREY: "#71717a", GRAY: "#71717a", PURPLE: "#7c3aed",
+  ORANGE: "#ea580c", YELLOW: "#ca8a04", WHITE: "#e2e8f0", MAROON: "#7f1d1d",
+  WINE: "#881337", GOLD: "#b45309", "M.BLUE": "#3b82f6", "T.BLUE": "#0ea5e9",
+  "SKY BLUE": "#0ea5e9", "SKY BLACK": "#1c2526", TURQUOISE: "#0d9488",
+  "SPORTS RED": "#991b1b", "SPORT RED": "#991b1b", "WIN RED": "#dc2626",
+  "WINE RED": "#9f1239", "WINE BLACK": "#1c0a0e", "S.RED": "#b91c1c",
+  "W.BLUE": "#1d4ed8", "W.RED": "#b91c1c", "METALLIC GREY": "#64748b",
+  "SPRING GREEN": "#4ade80", "GENY GREY": "#6b7280", "MONSOON GREY": "#78716c",
+};
+
+function getExtraColor(val: string | null | undefined): string | null {
+  if (!val) return null;
+  const upper = val.toUpperCase();
+  // Try longest match first
+  for (const [key, hex] of Object.entries(COLOR_MAP).sort((a, b) => b[0].length - a[0].length)) {
+    if (upper.startsWith(key)) return hex;
+  }
+  return null;
+}
+
 export function ProductDetailClient({ product, relatedProducts }: Props) {
   const { data: session } = useSession();
   const router = useRouter();
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
 
   const allVariants: ProductVariant[] = product.variants ?? [];
   const activeVariants = allVariants.filter((v) => v.isActive);
@@ -137,6 +168,8 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
 
   // Check if a value is available given current other-dimension selections
   const isValueAvailable = (dim: Dim, val: string): boolean => {
+    // Vehicle model is always selectable — choosing it resets the colour automatically
+    if (dim === "vehicleModel") return activeVariants.some((v) => v.vehicleModel === val);
     const testAttrs = { ...selectedAttrs, [dim]: val };
     return activeVariants.some((v) =>
       activeDims.every((d) => !testAttrs[d] || v[d as keyof ProductVariant] === testAttrs[d])
@@ -166,6 +199,11 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
     ? [...variantGallery, ...baseGallery.filter((u) => !variantGallery.includes(u))]
     : baseGallery;
 
+  // Color to show in image area when no photo is available
+  const activeColorBg: string | null =
+    getExtraColor(resolvedVariant?.extra) ??
+    (resolvedVariant?.color && isCssColor(resolvedVariant.color) ? resolvedVariant.color : null);
+
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [quantity, setQuantity] = useState(activeMoq);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -173,6 +211,15 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
 
   // Reset gallery index when variant changes
   useEffect(() => { setSelectedIdx(0); }, [resolvedVariant?.id]);
+  useEffect(() => {
+    if (!modelDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node))
+        setModelDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [modelDropdownOpen]);
   // Clamp quantity to new MOQ
   useEffect(() => {
     setQuantity((q) => Math.max(activeMoq, Math.round(q / activeMoq) * activeMoq || activeMoq));
@@ -181,7 +228,28 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
   const isDealer = session?.user?.role === "DEALER";
 
   const selectAttr = (dim: Dim, val: string) => {
-    setSelectedAttrs((prev) => ({ ...prev, [dim]: val }));
+    setSelectedAttrs((prev) => {
+      const updated = { ...prev, [dim]: val };
+      const dimIndex = activeDims.indexOf(dim);
+      // For each downstream dim, keep value if still valid, else auto-pick first available
+      for (let i = dimIndex + 1; i < activeDims.length; i++) {
+        const downDim = activeDims[i];
+        const downVal = updated[downDim];
+        const stillValid = downVal && activeVariants.some((v) =>
+          activeDims.slice(0, i + 1).every((d) => !updated[d] || v[d as keyof ProductVariant] === updated[d])
+        );
+        if (!stillValid) {
+          // Auto-select the first available value for this downstream dim
+          const firstAvailable = activeVariants.find((v) =>
+            activeDims.slice(0, i).every((d) => !updated[d] || v[d as keyof ProductVariant] === updated[d]) &&
+            v[downDim as keyof ProductVariant]
+          )?.[downDim as keyof ProductVariant] as string | undefined;
+          if (firstAvailable) updated[downDim] = firstAvailable;
+          else delete updated[downDim];
+        }
+      }
+      return updated;
+    });
     setAddedToCart(false);
   };
 
@@ -203,8 +271,7 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
         }),
       });
       if (res.ok) {
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 3000);
+        router.push("/dealer/cart");
       }
     } catch { /* ignore */ } finally { setLoading(false); }
   };
@@ -220,7 +287,10 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
 
         {/* ── Gallery ── */}
         <div>
-          <div className="relative aspect-square bg-gradient-to-br from-zinc-900 to-black rounded-xl overflow-hidden mb-4">
+          <div
+            className="relative aspect-square rounded-xl overflow-hidden mb-4 transition-[background-color] duration-500"
+            style={{ background: !gallery[selectedIdx] && activeColorBg ? activeColorBg : "var(--bg-secondary)" }}
+          >
             {gallery[selectedIdx] ? (
               <Image
                 src={gallery[selectedIdx]}
@@ -231,8 +301,20 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
                 unoptimized
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-8xl text-red-900/20 font-black">◈</div>
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                {activeColorBg ? (
+                  <>
+                    <div
+                      className="w-24 h-24 rounded-full border-4 border-white/25 shadow-2xl"
+                      style={{ background: activeColorBg, filter: "brightness(1.2) saturate(1.3)" }}
+                    />
+                    <span className="text-white/70 text-xs font-bold uppercase tracking-widest drop-shadow">
+                      {resolvedVariant?.extra}
+                    </span>
+                  </>
+                ) : (
+                  <div className="text-8xl text-[var(--text-muted)] opacity-10 font-black select-none">◈</div>
+                )}
               </div>
             )}
 
@@ -367,53 +449,152 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
           {hasVariants && activeDims.length > 0 && (
             <div className="mb-6 space-y-4">
               {activeDims.map((dim) => {
-                const options = dimOptions[dim] ?? [];
+                // For secondary dims (not the first), filter options based on other-dim selections
+                const otherDimAttrs = Object.fromEntries(
+                  activeDims.filter((d) => d !== dim).map((d) => [d, selectedAttrs[d]])
+                );
+                const hasOtherSelections = Object.values(otherDimAttrs).some(Boolean);
+                const options = hasOtherSelections
+                  ? Array.from(
+                      new Set(
+                        activeVariants
+                          .filter(
+                            (v) =>
+                              v[dim] &&
+                              activeDims
+                                .filter((d) => d !== dim)
+                                .every(
+                                  (d) => !otherDimAttrs[d] || v[d as keyof ProductVariant] === otherDimAttrs[d]
+                                )
+                          )
+                          .map((v) => v[dim] as string)
+                      )
+                    )
+                  : (dimOptions[dim] ?? []);
                 const selectedVal = selectedAttrs[dim];
+                // Use custom dropdown for vehicleModel (needs NEW/OLD badges); native select for other large sets
+                const isModelDim = dim === "vehicleModel";
+                const useDropdown = options.length > 8 || isModelDim;
                 return (
                   <div key={dim}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[var(--text-muted)] text-xs uppercase tracking-widest">{DIM_LABELS[dim]}</span>
-                      {selectedVal && (
+                      {selectedVal && !useDropdown && (
                         <span className="text-[var(--text-primary)] text-xs font-semibold">— {selectedVal}</span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {options.map((val) => {
-                        const isSelected = selectedVal === val;
-                        const available = isValueAvailable(dim, val);
-                        const isColor = dim === "color" && isCssColor(val);
-                        return (
-                          <button
-                            key={val}
-                            onClick={() => available && selectAttr(dim, val)}
-                            disabled={!available}
-                            className={`relative px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                              isSelected
-                                ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-900/30"
-                                : available
-                                ? "glass border-[var(--border-color)] text-[var(--text-secondary)] hover:border-red-700/50 hover:text-[var(--text-primary)]"
-                                : "glass border-[var(--border-color)] text-gray-700 cursor-not-allowed opacity-50"
-                            }`}
-                          >
-                            <span className="flex items-center gap-2">
-                              {isColor && (
-                                <span
-                                  className="w-3.5 h-3.5 rounded-full border border-white/20 flex-shrink-0"
-                                  style={{ backgroundColor: val.toLowerCase() }}
-                                />
-                              )}
-                              {val}
-                            </span>
-                            {/* Strike-through for unavailable */}
-                            {!available && (
-                              <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <span className="w-full h-px bg-gray-700 rotate-[20deg] absolute" />
-                              </span>
+                    {isModelDim ? (
+                      /* Custom dropdown for Vehicle Model — supports NEW/OLD badges */
+                      <div ref={modelDropdownRef} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setModelDropdownOpen((o) => !o)}
+                          className="w-full glass border border-[var(--border-color)] rounded-xl px-4 py-3 text-sm text-left flex items-center justify-between gap-2 hover:border-red-600/50 transition-colors focus:outline-none focus:border-red-600"
+                        >
+                          <span className="flex items-center gap-2 min-w-0">
+                            {selectedVal ? (
+                              <>
+                                <span className="text-[var(--text-primary)] truncate">{selectedVal}</span>
+                                {getModelBadge(selectedVal) && (
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${getModelBadge(selectedVal)!.cls}`}>
+                                    {getModelBadge(selectedVal)!.label}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-[var(--text-muted)]">Select Vehicle Model...</span>
                             )}
-                          </button>
-                        );
-                      })}
-                    </div>
+                          </span>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-[var(--text-muted)] flex-shrink-0 transition-transform ${modelDropdownOpen ? "rotate-180" : ""}`}>
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
+                        {modelDropdownOpen && (
+                          <div className="absolute z-50 top-full mt-1 w-full glass border border-[var(--border-color)] rounded-xl shadow-xl overflow-hidden">
+                            <div className="max-h-64 overflow-y-auto">
+                              {/* Show ALL vehicle models as selectable — picking one resets the color */}
+                              {(dimOptions["vehicleModel"] ?? options).map((val) => {
+                                const badge = getModelBadge(val);
+                                const isSelected = selectedVal === val;
+                                return (
+                                  <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => { selectAttr(dim, val); setModelDropdownOpen(false); }}
+                                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors ${
+                                      isSelected
+                                        ? "bg-red-600/20 text-red-400"
+                                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
+                                    }`}
+                                  >
+                                    <span className="truncate">{val}</span>
+                                    {badge && (
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${badge.cls}`}>
+                                        {badge.label}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : useDropdown ? (
+                      <select
+                        value={selectedVal ?? ""}
+                        onChange={(e) => e.target.value && selectAttr(dim, e.target.value)}
+                        className="w-full glass border border-[var(--border-color)] rounded-xl px-4 py-3 text-sm text-[var(--text-primary)] bg-[var(--bg-secondary)] appearance-none cursor-pointer focus:outline-none focus:border-red-600 transition-colors"
+                        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 1rem center" }}
+                      >
+                        <option value="">Select {DIM_LABELS[dim]}...</option>
+                        {options.map((val) => {
+                          const available = isValueAvailable(dim, val);
+                          return (
+                            <option key={val} value={val} disabled={!available}>
+                              {val}{!available ? " (unavailable)" : ""}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {options.map((val) => {
+                          const isSelected = selectedVal === val;
+                          const available = isValueAvailable(dim, val);
+                          const isColor = dim === "color" && isCssColor(val);
+                          return (
+                            <button
+                              key={val}
+                              onClick={() => available && selectAttr(dim, val)}
+                              disabled={!available}
+                              className={`relative px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                                isSelected
+                                  ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-900/30"
+                                  : available
+                                  ? "glass border-[var(--border-color)] text-[var(--text-secondary)] hover:border-red-700/50 hover:text-[var(--text-primary)]"
+                                  : "glass border-[var(--border-color)] text-gray-700 cursor-not-allowed opacity-50"
+                              }`}
+                            >
+                              <span className="flex items-center gap-2">
+                                {isColor && (
+                                  <span
+                                    className="w-3.5 h-3.5 rounded-full border border-white/20 flex-shrink-0"
+                                    style={{ backgroundColor: val.toLowerCase() }}
+                                  />
+                                )}
+                                {val}
+                              </span>
+                              {!available && (
+                                <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <span className="w-full h-px bg-gray-700 rotate-[20deg] absolute" />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -515,7 +696,24 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
                 >
                   <Minus size={14} />
                 </button>
-                <span className="px-4 text-[var(--text-primary)] font-bold min-w-[60px] text-center">{quantity}</span>
+                <input
+                  type="number"
+                  value={quantity}
+                  min={activeMoq}
+                  step={activeMoq}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v > 0) setQuantity(v);
+                  }}
+                  onBlur={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (isNaN(v) || v <= 0) { setQuantity(activeMoq); return; }
+                    // Snap to nearest multiple of MOQ, minimum 1× MOQ
+                    const snapped = Math.max(activeMoq, Math.round(v / activeMoq) * activeMoq);
+                    setQuantity(snapped);
+                  }}
+                  className="w-16 text-center text-[var(--text-primary)] font-bold bg-transparent focus:outline-none py-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
                 <button
                   onClick={() => setQuantity(quantity + activeMoq)}
                   className="px-4 py-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"

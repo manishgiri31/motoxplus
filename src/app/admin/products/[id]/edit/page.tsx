@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/admin/product-form";
 import { ProductVariantManager } from "@/components/admin/product-variant-manager";
+import { ModelImageManager } from "@/components/admin/model-image-manager";
 
 export default async function EditProductPage({ params }: { params: { id: string } }) {
   const [product, categories] = await Promise.all([
@@ -25,6 +26,7 @@ export default async function EditProductPage({ params }: { params: { id: string
         product={JSON.parse(JSON.stringify(product))}
       />
       <ProductVariantManager productId={params.id} />
+      <ModelImageManager productId={params.id} />
     </div>
   );
 }
