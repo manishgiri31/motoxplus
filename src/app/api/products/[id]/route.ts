@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -71,6 +72,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     include: INCLUDE_IMAGES,
   });
 
+  revalidatePath(`/products/${params.id}`);
+  revalidatePath("/products");
+
   return NextResponse.json(product);
 }
 
@@ -84,6 +88,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     where: { id: params.id },
     data: { isActive: false },
   });
+
+  revalidatePath(`/products/${params.id}`);
+  revalidatePath("/products");
 
   return NextResponse.json({ success: true });
 }
