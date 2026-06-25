@@ -125,8 +125,8 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
     const mrp = toNum(row, "MRP");
     if (mrp === null || mrp < 0) errors.push("MRP required and must be >= 0");
 
-    const price = toNum(row, "Wholesale Price", "Dealer Base Price");
-    if (price === null || price < 0) errors.push("Wholesale Price required and must be >= 0");
+    // Wholesale price is always 70% off MRP (auto-calculated)
+    const price = mrp !== null ? parseFloat((mrp * 0.30).toFixed(2)) : null;
 
     const gstRate = toNum(row, "GST Rate");
     if (gstRate === null) errors.push("GST Rate required");
@@ -246,7 +246,6 @@ export function generateTemplate(): Buffer {
     "Part Number",
     "Description",
     "MRP",
-    "Wholesale Price",
     "GST Rate",
     "HSN Code",
     "MOQ",
@@ -265,7 +264,6 @@ export function generateTemplate(): Buffer {
     "BRK-FP-001-PN",
     "High-performance front brake pad set for Honda Activa",
     "850",
-    "520",
     "18",
     "87149400",
     "10",

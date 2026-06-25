@@ -215,7 +215,6 @@ export default function ProductImportPage() {
                 "SKU",
                 "Part Number",
                 "MRP",
-                "Wholesale Price",
                 "GST Rate",
                 "HSN Code",
                 "MOQ",
