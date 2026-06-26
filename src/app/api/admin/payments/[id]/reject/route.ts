@@ -63,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         </table>
       </div>
       <p class="text">Please resubmit your payment details from your dealer portal. If you believe this is an error, contact us at accounts@motoxplus.in</p>
-      <a href="${process.env.NEXTAUTH_URL || "https://motoxplus.vercel.app"}/dealer/orders/${submission.orderId}" class="btn" style="text-decoration:none;display:inline-block;margin-top:16px;">Go to Order</a>
+      <a href="${process.env.NEXTAUTH_URL || "https://motoxplus.com"}/dealer/orders/${submission.orderId}" class="btn" style="text-decoration:none;display:inline-block;margin-top:16px;">Go to Order</a>
     `),
   }).catch(() => {});
 

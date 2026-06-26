@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
           <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Method</td><td style="color:#fff;font-size:13px;text-align:right;">${paymentMethod === "UPI" ? "Direct UPI" : "Bank Transfer"}</td></tr>
         </table>
       </div>
-      <a href="${process.env.NEXTAUTH_URL || "https://motoxplus.vercel.app"}/admin/payments" class="btn" style="text-decoration:none;display:inline-block;margin-top:16px;">Review in Dashboard</a>
+      <a href="${process.env.NEXTAUTH_URL || "https://motoxplus.com"}/admin/payments" class="btn" style="text-decoration:none;display:inline-block;margin-top:16px;">Review in Dashboard</a>
     `),
   }).catch(() => {});
 

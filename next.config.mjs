@@ -8,7 +8,15 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'pub-966fa80d99d64e388b250232523a507f.r2.dev',
+      },
+      {
+        protocol: 'https',
         hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'motoxplus.com',
       },
     ],
   },
