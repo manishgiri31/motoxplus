@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { buildSearchWhere } from "@/lib/product-search";
+import { Prisma } from "@prisma/client";
 
 function autoSku(partNumber: string): string {
   const base = partNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 14);
@@ -86,6 +87,20 @@ export async function POST(req: NextRequest) {
     const { productImages, sku: skuInput, ...data } = productSchema.parse(body);
     const sku = skuInput || autoSku(data.partNumber);
 
+    // Check for duplicates before hitting DB constraint
+    const conflict = await prisma.product.findFirst({
+      where: { OR: [{ sku }, { partNumber: data.partNumber }] },
+      select: { sku: true, partNumber: true },
+    });
+    if (conflict) {
+      const field = conflict.sku === sku ? "SKU" : "Part Number";
+      const value = conflict.sku === sku ? sku : data.partNumber;
+      return NextResponse.json(
+        { error: `Duplicate ${field}: a product with ${field} "${value}" already exists` },
+        { status: 409 }
+      );
+    }
+
     const product = await prisma.product.create({
       data: {
         ...data,
@@ -109,6 +124,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Validation failed", details: error.issues }, { status: 400 });
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const fields = (error.meta?.target as string[]) ?? [];
+      const field = fields.includes("partNumber") ? "Part Number" : "SKU";
+      return NextResponse.json({ error: `Duplicate ${field}: another product uses the same value` }, { status: 409 });
     }
     console.error("Product create error:", error);
     return NextResponse.json({ error: "Failed to create product" }, { status: 500 });

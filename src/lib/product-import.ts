@@ -180,8 +180,40 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
 
   if (validRows.length === 0) return report;
 
+  // ── Phase 3b: Detect duplicates within the batch itself ───────────────
+  const batchSkuSeen = new Map<string, number>();
+  const batchPartSeen = new Map<string, number>();
+  const dedupedRows: ValidatedRow[] = [];
+  for (const row of validRows) {
+    const skuConflict = batchSkuSeen.get(row.sku);
+    const partConflict = batchPartSeen.get(row.partNumber);
+    if (skuConflict !== undefined) {
+      report.failed++;
+      report.failedRows.push({
+        rowNumber: row.rowNum,
+        sku: row.sku,
+        productName: row.productName,
+        error: `Duplicate SKU in this file: "${row.sku}" first appeared on row ${skuConflict}`,
+      });
+    } else if (partConflict !== undefined) {
+      report.failed++;
+      report.failedRows.push({
+        rowNumber: row.rowNum,
+        sku: row.sku,
+        productName: row.productName,
+        error: `Duplicate Part Number in this file: "${row.partNumber}" first appeared on row ${partConflict}`,
+      });
+    } else {
+      batchSkuSeen.set(row.sku, row.rowNum);
+      batchPartSeen.set(row.partNumber, row.rowNum);
+      dedupedRows.push(row);
+    }
+  }
+
+  if (dedupedRows.length === 0) return report;
+
   // ── Phase 4: One DB call — fetch all existing SKUs at once ────────────
-  const allSkus = validRows.map((r) => r.sku);
+  const allSkus = dedupedRows.map((r) => r.sku);
   const existingProducts = await prisma.product.findMany({
     where: { sku: { in: allSkus } },
     select: { id: true, sku: true },
@@ -189,7 +221,7 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
   const existingMap = new Map(existingProducts.map((p) => [p.sku, p.id]));
 
   // ── Phase 5: Process creates and updates sequentially ─────────────────
-  for (const row of validRows) {
+  for (const row of dedupedRows) {
     try {
       const existingId = existingMap.get(row.sku);
 
@@ -223,14 +255,21 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
       }
     } catch (err: unknown) {
       report.failed++;
-      const msg = err instanceof Error ? err.message : "Unknown error";
+      let msg = err instanceof Error ? err.message : "Unknown error";
+      if (msg.includes("Unique constraint") || msg.includes("P2002")) {
+        if (msg.toLowerCase().includes("partnumber") || msg.toLowerCase().includes("part_number")) {
+          msg = `Duplicate Part Number: "${row.partNumber}" is already used by another product`;
+        } else if (msg.toLowerCase().includes("sku")) {
+          msg = `Duplicate SKU: "${row.sku}" is already used by another product`;
+        } else {
+          msg = `Duplicate value: SKU "${row.sku}" or Part Number "${row.partNumber}" already exists`;
+        }
+      }
       report.failedRows.push({
         rowNumber: row.rowNum,
         sku: row.sku,
         productName: row.productName,
-        error: msg.includes("Unique constraint")
-          ? `Duplicate Part Number: "${row.partNumber}"`
-          : msg,
+        error: msg,
       });
     }
   }

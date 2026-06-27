@@ -204,7 +204,7 @@ export default async function AdminProductsPage({
                   </span>
                 </td>
                 <td className="px-4 py-4">
-                  <AdminProductActions productId={product.id} isActive={product.isActive} />
+                  <AdminProductActions productId={product.id} productName={product.name} isActive={product.isActive} />
                 </td>
               </tr>
             ))}
