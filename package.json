@@ -12,6 +12,7 @@
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:seed-mudguard": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"node\\\",\\\"target\\\":\\\"ES2017\\\"}\" prisma/seed-mudguard.ts",
     "db:copy-mudguard-images": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"node\\\",\\\"target\\\":\\\"ES2017\\\"}\" prisma/copy-mudguard-images.ts",
+    "db:seed-descriptions": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed-descriptions.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },
