@@ -518,6 +518,11 @@ export function ProductCatalog({
                   <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
                     {currentSearch ? highlight(product.name, currentSearch) : product.name}
                   </h3>
+                  {product.description && (
+                    <p className="text-[var(--text-muted)] text-xs leading-relaxed mb-2 line-clamp-2">
+                      {product.description}
+                    </p>
+                  )}
                   {product.compatibility.length > 0 && (
                     <div className="text-[var(--text-muted)] text-xs mb-3 opacity-70">
                       Fits: {product.compatibility.slice(0, 2).join(", ")}
