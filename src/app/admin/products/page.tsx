@@ -6,14 +6,24 @@ import { Plus, Package, Truck, FileSpreadsheet, GitMerge, Search } from "lucide-
 import { AdminProductActions } from "@/components/admin/product-actions";
 import { buildSearchWhere } from "@/lib/product-search";
 
+const SORT_OPTIONS = [
+  { value: "newest",   label: "Newest First",    orderBy: { createdAt: "desc" as const } },
+  { value: "part_asc", label: "Part No. A→Z",    orderBy: { partNumber: "asc"  as const } },
+  { value: "part_desc",label: "Part No. Z→A",    orderBy: { partNumber: "desc" as const } },
+  { value: "sku_asc",  label: "SKU A→Z",         orderBy: { sku: "asc"  as const } },
+  { value: "sku_desc", label: "SKU Z→A",         orderBy: { sku: "desc" as const } },
+];
+
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; category?: string; vendor?: string; search?: string };
+  searchParams: { page?: string; category?: string; vendor?: string; search?: string; sort?: string };
 }) {
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
   const search = searchParams.search?.trim();
+  const sortKey = searchParams.sort || "newest";
+  const sortOption = SORT_OPTIONS.find(s => s.value === sortKey) ?? SORT_OPTIONS[0];
 
   const searchWhere = search ? await buildSearchWhere(search, false) : {};
 
@@ -30,7 +40,7 @@ export default async function AdminProductsPage({
         productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
         vendor: { select: { companyName: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: sortOption.orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
@@ -86,6 +96,7 @@ export default async function AdminProductsPage({
       <form method="GET" action="/admin/products" className="mb-5">
         {searchParams.category && <input type="hidden" name="category" value={searchParams.category} />}
         {searchParams.vendor && <input type="hidden" name="vendor" value={searchParams.vendor} />}
+        {sortKey !== "newest" && <input type="hidden" name="sort" value={sortKey} />}
         <div className="relative max-w-md">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
@@ -108,17 +119,17 @@ export default async function AdminProductsPage({
 
       {/* Vendor filter tabs */}
       <div className="flex gap-2 mb-4">
-        <Link href={`/admin/products${search ? `?search=${encodeURIComponent(search)}` : ""}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${!searchParams.vendor ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>All</Link>
-        <Link href={`/admin/products?vendor=all${search ? `&search=${encodeURIComponent(search)}` : ""}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "all" ? "bg-amber-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>Vendor Products</Link>
-        <Link href={`/admin/products?vendor=pending${search ? `&search=${encodeURIComponent(search)}` : ""}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "pending" ? "bg-yellow-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>
+        <Link href={`/admin/products?${new URLSearchParams({ ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${!searchParams.vendor ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>All</Link>
+        <Link href={`/admin/products?${new URLSearchParams({ vendor: "all", ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "all" ? "bg-amber-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>Vendor Products</Link>
+        <Link href={`/admin/products?${new URLSearchParams({ vendor: "pending", ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "pending" ? "bg-yellow-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>
           Pending Review {pendingVendorCount > 0 && <span className="ml-1 bg-yellow-500 text-black rounded-full px-1.5 text-[9px]">{pendingVendorCount}</span>}
         </Link>
       </div>
 
       {/* Category filter */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4">
         <Link
-          href={`/admin/products${search ? `?search=${encodeURIComponent(search)}` : ""}`}
+          href={`/admin/products?${new URLSearchParams({ ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
           className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${!searchParams.category ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
         >
           All
@@ -126,10 +137,24 @@ export default async function AdminProductsPage({
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/admin/products?category=${cat.id}${search ? `&search=${encodeURIComponent(search)}` : ""}`}
+            href={`/admin/products?${new URLSearchParams({ category: cat.id, ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
             className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${searchParams.category === cat.id ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
           >
             {cat.name}
+          </Link>
+        ))}
+      </div>
+
+      {/* Sort selector */}
+      <div className="flex items-center gap-2 mb-6">
+        <span className="text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold">Sort:</span>
+        {SORT_OPTIONS.map((opt) => (
+          <Link
+            key={opt.value}
+            href={`/admin/products?${new URLSearchParams({ ...(searchParams.category && { category: searchParams.category }), ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(opt.value !== "newest" && { sort: opt.value }) }).toString()}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${sortKey === opt.value ? "bg-zinc-700 text-white border border-zinc-500" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-zinc-500"}`}
+          >
+            {opt.label}
           </Link>
         ))}
       </div>
@@ -217,7 +242,7 @@ export default async function AdminProductsPage({
           {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((p) => (
             <Link
               key={p}
-              href={`/admin/products?page=${p}${searchParams.category ? `&category=${searchParams.category}` : ""}${search ? `&search=${encodeURIComponent(search)}` : ""}`}
+              href={`/admin/products?${new URLSearchParams({ page: String(p), ...(searchParams.category && { category: searchParams.category }), ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
               className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
             >
               {p}

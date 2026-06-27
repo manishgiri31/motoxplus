@@ -19,12 +19,21 @@ const WARRANTY_OPTIONS = ["No Warranty", "3 Months", "6 Months", "12 Months"];
 const GST_OPTIONS = [0, 5, 12, 18, 28];
 
 const CATEGORY_HSN: Record<string, string> = {
-  "brake parts":       "87149400",
-  "engine parts":      "84099900",
-  "suspension parts":  "87141090",
-  "electrical parts":  "85122000",
-  "transmission parts":"87141090",
-  "body parts":        "87141090",
+  "brake parts":        "87149400",
+  "engine parts":       "84099900",
+  "suspension parts":   "87141090",
+  "electrical parts":   "85122000",
+  "transmission parts": "87141090",
+  "body parts":         "87141090",
+  "bearings":           "84821000",
+  "brake shoes":        "87149400",
+  "clutch plates":      "87141090",
+  "halogen bulbs":      "85392200",
+  "horns":              "85122000",
+  "indicators":         "85122000",
+  "ball racer":         "84821000",
+  "mudguard":           "87149090",
+  "head light visor":   "87149090",
 };
 
 export function ProductForm({ categories, product }: Props) {
@@ -38,6 +47,7 @@ export function ProductForm({ categories, product }: Props) {
   const [form, setForm] = useState({
     // Basic
     name: product?.name || "",
+    sku: product?.sku || "",
     partNumber: product?.partNumber || "",
     description: product?.description || "",
     categoryId: product?.categoryId || "",
@@ -88,6 +98,7 @@ export function ProductForm({ categories, product }: Props) {
 
     const payload = {
       name: form.name,
+      sku: form.sku || undefined,
       partNumber: form.partNumber,
       description: form.description || undefined,
       categoryId: form.categoryId,
@@ -161,7 +172,30 @@ export function ProductForm({ categories, product }: Props) {
           </div>
           <div>
             <label className={LABEL}>Part Number <span className="text-red-500">*</span></label>
-            <input required value={form.partNumber} onChange={(e) => set("partNumber", e.target.value)} className={INPUT} placeholder="OEM Part Number" />
+            <input
+              required
+              value={form.partNumber}
+              onChange={(e) => {
+                set("partNumber", e.target.value);
+                if (!form.sku) set("sku", e.target.value);
+              }}
+              className={INPUT}
+              placeholder="e.g. MX-710"
+            />
+          </div>
+          <div>
+            <label className={LABEL}>SKU</label>
+            <input
+              value={form.sku}
+              onChange={(e) => set("sku", e.target.value)}
+              className={INPUT}
+              placeholder={isEdit ? product?.sku : "Auto-generated from Part Number"}
+              readOnly={isEdit}
+              style={isEdit ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
+            />
+            <p className="text-[var(--text-muted)] text-[10px] mt-1">
+              {isEdit ? "SKU cannot be changed after creation" : "Leave blank to auto-generate from Part Number"}
+            </p>
           </div>
         </div>
         <div>

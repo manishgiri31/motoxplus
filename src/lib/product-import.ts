@@ -11,6 +11,15 @@ const CATEGORY_HSN: Record<string, string> = {
   "electrical parts":   "85122000",
   "transmission parts": "87141090",
   "body parts":         "87141090",
+  "bearings":           "84821000",
+  "brake shoes":        "87149400",
+  "clutch plates":      "87141090",
+  "halogen bulbs":      "85392200",
+  "horns":              "85122000",
+  "indicators":         "85122000",
+  "ball racer":         "84821000",
+  "mudguard":           "87149090",
+  "head light visor":   "87149090",
 };
 
 export interface FailedRow {

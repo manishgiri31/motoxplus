@@ -14,6 +14,15 @@ async function main() {
     { name: "Electrical Parts", slug: "electrical-parts", description: "Stators, CDI, switches, wiring harnesses", sortOrder: 4 },
     { name: "Transmission Parts", slug: "transmission-parts", description: "Gear sets, clutch plates, chains", sortOrder: 5 },
     { name: "Body Parts", slug: "body-parts", description: "Panels, fairings, headlights, mirrors", sortOrder: 6 },
+    { name: "Bearings",     slug: "bearings",     description: "Wheel bearings, steering bearings, engine bearings", sortOrder: 7 },
+    { name: "Brake Shoes",  slug: "brake-shoes",  description: "Drum brake shoes for motorcycles and scooters",       sortOrder: 8 },
+    { name: "Clutch Plates",slug: "clutch-plates",description: "Clutch friction and steel plates",                    sortOrder: 9 },
+    { name: "Halogen Bulbs",slug: "halogen-bulbs",description: "Headlight and indicator halogen bulbs",               sortOrder: 10 },
+    { name: "Horns",        slug: "horns",        description: "Electric horns and pressure horns",                   sortOrder: 11 },
+    { name: "Indicators",   slug: "indicators",   description: "Indicator assemblies and turn signal lamps",          sortOrder: 12 },
+    { name: "Ball Racer",       slug: "ball-racer",       description: "Ball racer sets for steering and wheels",             sortOrder: 13 },
+    { name: "Mudguard",         slug: "mudguard",         description: "Front and rear mudguards for motorcycles and scooters", sortOrder: 14 },
+    { name: "Head Light Visor", slug: "head-light-visor", description: "Headlight visors and visor assemblies",                 sortOrder: 15 },
   ];
 
   for (const cat of categories) {
@@ -24,62 +33,7 @@ async function main() {
     });
   }
 
-  console.log("✓ Categories created");
-
-  const brakeCategory = await prisma.category.findUnique({ where: { slug: "brake-parts" } });
-  const engineCategory = await prisma.category.findUnique({ where: { slug: "engine-parts" } });
-
-  // Sample products
-  const products = [
-    {
-      name: "Disc Brake Pad Set - Honda Activa 5G",
-      sku: "BRK-PAD-001",
-      partNumber: "MXP-BRK-001",
-      description: "OEM-compatible semi-metallic brake pads for Honda Activa 5G. High thermal resistance, low dust.",
-      categoryId: brakeCategory!.id,
-      price: 245,
-      gstRate: 18,
-      moq: 10,
-      stock: 500,
-      compatibility: ["Honda Activa 5G", "Honda Activa 6G"],
-      images: [],
-    },
-    {
-      name: "Front Drum Brake Assembly - TVS Jupiter",
-      sku: "BRK-DRUM-002",
-      partNumber: "MXP-BRK-002",
-      description: "Complete front drum brake assembly. Direct OEM replacement.",
-      categoryId: brakeCategory!.id,
-      price: 890,
-      gstRate: 18,
-      moq: 5,
-      stock: 150,
-      compatibility: ["TVS Jupiter", "TVS Jupiter Classic"],
-      images: [],
-    },
-    {
-      name: "Engine Top Gasket Set - Hero Splendor Plus",
-      sku: "ENG-GAS-001",
-      partNumber: "MXP-ENG-001",
-      description: "Complete top end gasket kit. High-temp silicone compound, multi-layer construction.",
-      categoryId: engineCategory!.id,
-      price: 320,
-      gstRate: 18,
-      moq: 10,
-      stock: 800,
-      compatibility: ["Hero Splendor Plus", "Hero Splendor iSmart"],
-      images: [],
-    },
-  ];
-
-  for (const product of products) {
-    const existing = await prisma.product.findUnique({ where: { sku: product.sku } });
-    if (!existing) {
-      await prisma.product.create({ data: product });
-    }
-  }
-
-  console.log("✓ Sample products created");
+  console.log("✓ Categories seeded");
 
   // Super Admin
   const superAdminEmail = "superadmin@motoxplus.in";
