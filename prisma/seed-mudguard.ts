@@ -153,7 +153,7 @@ async function main() {
       name: MASTER_NAME,
       sku: MASTER_SKU,
       partNumber: MASTER_SKU,
-      description: "Front mudguards for Hero and Honda motorcycles — available in multiple models and colors",
+      description: "MOTOXPLUS Front Mudguard is an OEM-compatible replacement body part precision-engineered for Hero and Honda motorcycles. Manufactured from high-impact ABS plastic with UV-resistant, colour-stable pigments for superior durability and long-lasting finish. Designed to match original OEM contours for a perfect bolt-on installation with no drilling or modifications required. Each mudguard undergoes multi-point dimensional inspection to ensure exact fitment with original mounting brackets. Available across all major models — Splendor, Passion Plus, Glamour, CBZ, Unicorn, CB Shine, Maestro — in a complete range of factory-matched colours. ISO-quality assured. Made in India.",
       categoryId: category.id,
       price: masterPrice,
       mrp: minMrp,

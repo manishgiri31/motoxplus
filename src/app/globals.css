@@ -65,34 +65,33 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #B91C1C; }
 
-/* ─── GLASS — 3D depth version ─── */
+/* ─── GLASS — light-first ─── */
 .glass {
-  background: rgba(255,255,255,0.035);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.2);
-}
-
-.glass-dark {
-  background: rgba(0,0,0,0.7);
+  background: rgba(255,255,255,0.95);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
-}
-
-/* Light mode glass */
-.light .glass {
-  background: rgba(255,255,255,0.95);
   border: 1px solid rgba(0,0,0,0.08);
   box-shadow: 0 1px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.02);
 }
 
-/* Light mode glass-dark */
-.light .glass-dark {
+.glass-dark {
   background: rgba(0,0,0,0.05);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border: 1px solid rgba(0,0,0,0.09);
+}
+
+/* Dark mode glass */
+.dark .glass {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+.dark .glass-dark {
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 /* ─── GLOW — 3D version ─── */
@@ -116,10 +115,10 @@ body {
 }
 .card-hover:hover {
   transform: translateY(-6px) translateZ(8px);
-  box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(220,38,38,0.2), 0 0 40px rgba(220,38,38,0.08);
-}
-.light .card-hover:hover {
   box-shadow: 0 24px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(220,38,38,0.15);
+}
+.dark .card-hover:hover {
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(220,38,38,0.2), 0 0 40px rgba(220,38,38,0.08);
 }
 
 /* ─── 3D SECTION DEPTH ─── */

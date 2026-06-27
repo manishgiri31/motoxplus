@@ -11,3 +11,210 @@
  ✓ Ready in 3.2s
  ○ Compiling / ...
  ✓ Compiled / in 7.8s (855 modules)
+ ✓ Compiled in 676ms (396 modules)
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../typescript/lib/typescript' in e:\motoxplus\node_modules\next\dist\build for build dependencies doesn't lead to expected result 'E:\motoxplus\node_modules\typescript\lib\typescript.js', but to 'e:\motoxplus\node_modules\typescript\lib\typescript.js' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../typescript/lib/typescript (expected E:\motoxplus\node_modules\typescript\lib\typescript.js)
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\webpack-config.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\webpack-config.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\handle-externals.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\handle-externals.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at resolve commonjs e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../typescript/lib/typescript' in e:\motoxplus\node_modules\next\dist\build for build dependencies doesn't lead to expected result 'E:\motoxplus\node_modules\typescript\lib\typescript.js', but to 'e:\motoxplus\node_modules\typescript\lib\typescript.js' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../typescript/lib/typescript (expected E:\motoxplus\node_modules\typescript\lib\typescript.js)
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\load-jsconfig.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\webpack-config.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\webpack-config.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+<w>  at resolve commonjs e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-swc-loader.js
+ GET / 200 in 12834ms
+ GET / 200 in 707ms
+ GET / 200 in 1359ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 1606ms (763 modules)
+ GET /api/auth/session 200 in 3573ms
+ GET /api/auth/session 200 in 167ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 824ms (840 modules)
+ GET / 404 in 1777ms
+ GET /_next/static/css/app/layout.css?v=1782544140083 404 in 55ms
+ GET /_next/static/chunks/main-app.js?v=1782544140083 404 in 52ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 47ms
+prisma:error 
+Invalid `prisma.category.findMany()` invocation:
+
+
+Can't reach database server at `thomas.proxy.rlwy.net:50128`
+
+Please make sure your database server is running at `thomas.proxy.rlwy.net:50128`.
+prisma:error 
+Invalid `prisma.product.count()` invocation:
+
+
+Can't reach database server at `thomas.proxy.rlwy.net:50128`
+
+Please make sure your database server is running at `thomas.proxy.rlwy.net:50128`.
+prisma:error 
+Invalid `prisma.category.count()` invocation:
+
+
+Can't reach database server at `thomas.proxy.rlwy.net:50128`
+
+Please make sure your database server is running at `thomas.proxy.rlwy.net:50128`.
+ ⨯ PrismaClientKnownRequestError: 
+Invalid `prisma.category.findMany()` invocation:
+
+
+Can't reach database server at `thomas.proxy.rlwy.net:50128`
+
+Please make sure your database server is running at `thomas.proxy.rlwy.net:50128`.
+    at async Promise.all (index 2)
+    at async HomePage (./src/app/page.tsx:29:58)
+digest: "3148548800"
+ ⨯ PrismaClientKnownRequestError: 
+Invalid `prisma.category.findMany()` invocation:
+
+
+Can't reach database server at `thomas.proxy.rlwy.net:50128`
+
+Please make sure your database server is running at `thomas.proxy.rlwy.net:50128`.
+    at async Promise.all (index 2)
+    at async HomePage (./src/app/page.tsx:29:58)
+digest: "3148548800"
+ GET / 500 in 5148ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 62ms
+ GET /_next/static/chunks/main-app.js 404 in 61ms
+ ○ Compiling /icon.png ...
+ ✓ Compiled /icon.png in 658ms (474 modules)
+ GET /icon.png?6fbe268c8348ffed 200 in 1724ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 2.4s (1084 modules)
+ GET / 404 in 2910ms
+ GET / 200 in 6043ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, lstat 'e:\motoxplus\.next\server\vendor-chunks\clsx.js'
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/clsx' in e:\motoxplus\.next\server for build dependencies doesn't lead to expected result 'e:\motoxplus\.next\server\vendor-chunks\clsx.js', but to 'Error: Can't resolve './vendor-chunks/clsx' in 'e:\motoxplus\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/clsx (expected e:\motoxplus\.next\server\vendor-chunks\clsx.js)
+<w>  at file dependencies e:\motoxplus\.next\server\webpack-runtime.js
+<w>  at file e:\motoxplus\.next\server\webpack-runtime.js
+<w>  at file dependencies e:\motoxplus\.next\server\app\page.js
+<w>  at file e:\motoxplus\.next\server\app\page.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\server\require.js
+<w>  at file e:\motoxplus\node_modules\next\dist\server\require.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\server\load-components.js
+<w>  at file e:\motoxplus\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\utils.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\utils.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at resolve commonjs e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/tailwind-merge' in e:\motoxplus\.next\server for build dependencies doesn't lead to expected result 'e:\motoxplus\.next\server\vendor-chunks\tailwind-merge.js', but to 'Error: Can't resolve './vendor-chunks/tailwind-merge' in 'e:\motoxplus\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/tailwind-merge (expected e:\motoxplus\.next\server\vendor-chunks\tailwind-merge.js)
+<w>  at file dependencies e:\motoxplus\.next\server\webpack-runtime.js
+<w>  at file e:\motoxplus\.next\server\webpack-runtime.js
+<w>  at file dependencies e:\motoxplus\.next\server\app\page.js
+<w>  at file e:\motoxplus\.next\server\app\page.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\server\require.js
+<w>  at file e:\motoxplus\node_modules\next\dist\server\require.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\server\load-components.js
+<w>  at file e:\motoxplus\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\utils.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\utils.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at resolve commonjs e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/lucide-react' in e:\motoxplus\.next\server for build dependencies doesn't lead to expected result 'e:\motoxplus\.next\server\vendor-chunks\lucide-react.js', but to 'Error: Can't resolve './vendor-chunks/lucide-react' in 'e:\motoxplus\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/lucide-react (expected e:\motoxplus\.next\server\vendor-chunks\lucide-react.js)
+<w>  at file dependencies e:\motoxplus\.next\server\webpack-runtime.js
+<w>  at file e:\motoxplus\.next\server\webpack-runtime.js
+<w>  at file dependencies e:\motoxplus\.next\server\app\page.js
+<w>  at file e:\motoxplus\.next\server\app\page.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\server\require.js
+<w>  at file e:\motoxplus\node_modules\next\dist\server\require.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\server\load-components.js
+<w>  at file e:\motoxplus\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\utils.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\utils.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at resolve commonjs e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/object-assign' in e:\motoxplus\.next\server for build dependencies doesn't lead to expected result 'e:\motoxplus\.next\server\vendor-chunks\object-assign.js', but to 'Error: Can't resolve './vendor-chunks/object-assign' in 'e:\motoxplus\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/object-assign (expected e:\motoxplus\.next\server\vendor-chunks\object-assign.js)
+<w>  at file dependencies e:\motoxplus\.next\server\webpack-runtime.js
+<w>  at file e:\motoxplus\.next\server\webpack-runtime.js
+<w>  at file dependencies e:\motoxplus\.next\server\app\page.js
+<w>  at file e:\motoxplus\.next\server\app\page.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\server\require.js
+<w>  at file e:\motoxplus\node_modules\next\dist\server\require.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\server\load-components.js
+<w>  at file e:\motoxplus\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\utils.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\utils.js
+<w>  at file dependencies e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at resolve commonjs e:\motoxplus\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+ GET / 404 in 261ms
+ GET / 404 in 281ms
+ GET / 404 in 264ms
+ GET / 404 in 264ms
+ GET / 404 in 259ms
+ GET / 404 in 267ms
+ GET / 404 in 251ms
+ GET / 404 in 253ms
+ GET / 404 in 262ms
+ GET / 404 in 256ms
+ GET / 404 in 258ms
+ GET / 404 in 253ms
+ GET / 404 in 249ms
+ GET / 404 in 256ms
+ GET / 404 in 258ms
+ GET / 404 in 275ms
+ GET / 404 in 245ms
+ GET / 404 in 255ms
+ GET / 404 in 247ms
+ GET / 404 in 263ms
+ GET / 404 in 242ms
+ GET / 404 in 251ms
+ GET / 404 in 248ms
+ GET / 404 in 259ms
+ GET / 404 in 244ms
+ GET / 404 in 243ms
+ GET / 404 in 249ms
+ GET / 404 in 247ms
+ GET / 404 in 250ms
+ GET / 404 in 250ms
+ GET / 404 in 256ms
+ GET / 404 in 245ms
+ GET / 404 in 245ms
+ GET / 404 in 252ms
+ GET / 404 in 261ms
+ GET / 404 in 249ms
+ GET / 404 in 242ms
+ GET / 404 in 270ms
+ GET / 404 in 253ms
+ GET / 404 in 264ms
+ GET / 404 in 260ms
+ GET / 404 in 259ms
+ GET / 404 in 255ms
+ GET / 404 in 261ms
+ GET / 404 in 289ms
+ GET / 404 in 270ms
+ GET / 404 in 267ms
+ GET / 404 in 270ms
+ GET / 404 in 246ms
+ GET / 404 in 256ms
+ GET / 404 in 283ms
+ GET / 404 in 275ms
+ GET / 404 in 267ms
+ GET / 404 in 254ms
+ GET / 404 in 248ms
+ GET / 404 in 309ms
+ GET / 404 in 258ms
+ GET / 404 in 297ms
+ GET / 404 in 275ms
+ GET / 404 in 254ms
+ GET / 404 in 275ms

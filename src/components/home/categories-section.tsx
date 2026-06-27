@@ -10,36 +10,32 @@ const CATEGORIES = [
     slug: "head-light-visor",
     description: "Headlight visors and visor assemblies for all major two-wheeler models.",
     Icon: Eye,
-    gradientDark: "from-zinc-900/70 via-zinc-900/30 to-black/80",
-    iconBg: "bg-zinc-800/40 group-hover:bg-red-900/25",
-    iconColor: "text-zinc-400 group-hover:text-red-400",
+    iconBg: "bg-slate-50 group-hover:bg-slate-100 border-slate-200",
+    iconColor: "text-slate-500 group-hover:text-slate-700",
   },
   {
     name: "Mudguard",
     slug: "mudguard",
     description: "Front and rear mudguards engineered for precise OEM fitment and durability.",
     Icon: Shield,
-    gradientDark: "from-red-950/50 via-red-950/20 to-black/80",
-    iconBg: "bg-red-900/20 group-hover:bg-red-900/35",
-    iconColor: "text-red-600 group-hover:text-red-400",
+    iconBg: "bg-red-50 group-hover:bg-red-100 border-red-100",
+    iconColor: "text-red-500 group-hover:text-red-600",
   },
   {
     name: "Indicators",
     slug: "indicators",
     description: "Indicator assemblies and turn signal lamps for safe and compliant riding.",
     Icon: Radio,
-    gradientDark: "from-red-950/40 via-red-950/15 to-black/80",
-    iconBg: "bg-red-900/15 group-hover:bg-red-900/30",
-    iconColor: "text-red-700 group-hover:text-red-400",
+    iconBg: "bg-orange-50 group-hover:bg-orange-100 border-orange-100",
+    iconColor: "text-orange-500 group-hover:text-orange-600",
   },
   {
     name: "Brake Parts",
     slug: "brake-parts",
     description: "Disc brakes, drum brakes, brake pads, and caliper assemblies for maximum stopping power.",
     Icon: Disc2,
-    gradientDark: "from-zinc-900/60 via-zinc-900/25 to-black/80",
-    iconBg: "bg-zinc-800/40 group-hover:bg-red-900/25",
-    iconColor: "text-zinc-400 group-hover:text-red-400",
+    iconBg: "bg-slate-50 group-hover:bg-red-50 border-slate-200 group-hover:border-red-100",
+    iconColor: "text-slate-500 group-hover:text-red-500",
   },
 ];
 
@@ -67,7 +63,7 @@ export function CategoriesSection({ categoryCounts = {} }: Props) {
           </div>
           <Link
             href="/products"
-            className="mt-6 md:mt-0 group flex items-center gap-2 text-red-400 hover:text-red-300 font-semibold text-sm uppercase tracking-wider transition-colors"
+            className="mt-6 md:mt-0 group flex items-center gap-2 text-red-500 hover:text-red-600 font-semibold text-sm uppercase tracking-wider transition-colors"
           >
             View All Products
             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -79,47 +75,35 @@ export function CategoriesSection({ categoryCounts = {} }: Props) {
           {CATEGORIES.map((cat) => {
             const count = categoryCounts[cat.slug] ?? 0;
             return (
-              <TiltCard key={cat.slug} intensity={10}>
+              <TiltCard key={cat.slug} intensity={8}>
                 <Link
                   href={`/products?category=${cat.slug}`}
-                  className="group relative overflow-hidden rounded-2xl block"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(20,20,20,0.95) 0%, rgba(10,10,10,0.98) 100%)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: "0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
-                  }}
+                  className="group relative overflow-hidden rounded-2xl block bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:border-red-200/80 hover:-translate-y-0.5 transition-all duration-300"
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradientDark} opacity-70`} />
-                  <div className="absolute top-0 right-0 w-56 h-56 bg-red-900/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                  {/* Metallic top edge */}
-                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  {/* Hover tint */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-50/0 to-red-50/0 group-hover:from-red-50/60 group-hover:to-white transition-all duration-500 rounded-2xl" />
+                  {/* Top accent line */}
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
 
                   <div className="relative z-10 p-7 flex gap-6 items-start">
                     <div
-                      className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${cat.iconBg}`}
-                      style={{
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
-                      }}
+                      className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 border ${cat.iconBg}`}
                     >
                       <cat.Icon size={26} className={`transition-colors duration-300 ${cat.iconColor}`} />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xl font-bold text-white">{cat.name}</h3>
-                        <ChevronRight size={18} className="text-white/30 group-hover:text-red-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                        <h3 className="text-xl font-bold text-gray-900">{cat.name}</h3>
+                        <ChevronRight size={18} className="text-gray-300 group-hover:text-red-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                       </div>
-                      <p className="text-white/50 group-hover:text-white/65 text-sm leading-relaxed mb-5 transition-colors">
+                      <p className="text-gray-500 group-hover:text-gray-600 text-sm leading-relaxed mb-5 transition-colors">
                         {cat.description}
                       </p>
                       {count > 0 && (
-                        <div
-                          className="inline-flex items-center gap-2 rounded-full px-3 py-1"
-                          style={{ background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.25)" }}
-                        >
-                          <span className="text-red-400 font-black text-base">{count}+</span>
-                          <span className="text-white/40 text-[10px] uppercase tracking-widest">Products</span>
+                        <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-red-50 border border-red-100">
+                          <span className="text-red-600 font-black text-base">{count}+</span>
+                          <span className="text-red-400 text-[10px] uppercase tracking-widest">Products</span>
                         </div>
                       )}
                     </div>

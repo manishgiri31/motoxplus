@@ -91,7 +91,7 @@ export function ManufacturingSection() {
 
         {/* Bottom CTA */}
         <div className="mt-16 glass border border-[var(--border-color)] rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-red-900/10 rounded-full blur-[80px] pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-red-100/50 rounded-full blur-[80px] pointer-events-none" />
           <div className="relative z-10">
             <h3 className="text-2xl md:text-3xl font-black text-[var(--text-primary)] mb-2">
               Interested in our manufacturing capabilities?

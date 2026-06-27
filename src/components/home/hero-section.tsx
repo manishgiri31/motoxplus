@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useState, Suspense, lazy } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronDown } from "lucide-react";
-
-const HeroScene = lazy(() =>
-  import("@/components/3d/hero-scene").then((m) => ({ default: m.HeroScene }))
-);
 
 const headlines: [string, string][] = [
   ["Engineered For", "Reliability."],
@@ -22,11 +18,9 @@ interface Props {
 export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
   const [currentHeadline, setCurrentHeadline] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
-    setMounted(true);
     const interval = setInterval(() => {
       setCurrentHeadline((prev) => (prev + 1) % headlines.length);
     }, 4000);
@@ -34,63 +28,58 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
-      {/* 3D Canvas Background */}
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-white">
+      {/* Background */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#020202] via-[#080202] to-[#050505]" />
-        {mounted && (
-          <Suspense fallback={null}>
-            <div className="absolute inset-0">
-              <HeroScene />
-            </div>
-          </Suspense>
-        )}
-        {/* Radial fade to blend 3D into page */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,#050505_80%)]" />
-        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
+        {/* Dot grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.055]"
+          style={{
+            backgroundImage: `radial-gradient(circle, #000 1px, transparent 1px)`,
+            backgroundSize: "32px 32px",
+          }}
+        />
+        {/* Red glow blob top-right */}
+        <div className="absolute -top-32 -right-32 w-[700px] h-[700px] bg-red-100/60 rounded-full blur-[120px]" />
+        {/* Soft accent bottom-left */}
+        <div className="absolute -bottom-20 -left-20 w-[500px] h-[500px] bg-slate-100 rounded-full blur-[100px]" />
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-gray-50/80 to-transparent" />
       </div>
 
-      {/* Noise grain texture */}
-      <div
-        className="absolute inset-0 z-[1] pointer-events-none opacity-[0.035]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          backgroundSize: "180px",
-        }}
-      />
+      {/* Decorative vertical lines */}
+      <div className="absolute left-8 md:left-16 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-2 opacity-15">
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="w-px bg-gray-500 rounded-full"
+            style={{ height: `${12 + i * 4}px` }}
+          />
+        ))}
+      </div>
 
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8 text-center">
         {/* Badge */}
         <div
-          className={`inline-flex items-center gap-2.5 border border-red-900/50 rounded-full px-5 py-2 mb-10 transition-all duration-1000 ${
+          className={`inline-flex items-center gap-2.5 border border-red-200 bg-red-50 rounded-full px-5 py-2 mb-10 transition-all duration-1000 ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
-          style={{ background: "rgba(220,38,38,0.08)", backdropFilter: "blur(12px)" }}
         >
           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-          <span className="text-red-400 text-xs font-semibold uppercase tracking-widest">
+          <span className="text-red-600 text-xs font-semibold uppercase tracking-widest">
             Premium Automotive Parts Manufacturer
           </span>
         </div>
 
-        {/* Headline with 3D text depth */}
+        {/* Headline */}
         <div
           className={`transition-all duration-1000 delay-200 ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
-          style={{ perspective: "600px" }}
         >
-          <h1
-            className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.95] mb-6"
-            style={{
-              textShadow: "0 2px 0 rgba(220,38,38,0.08), 0 4px 0 rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.5)",
-            }}
-          >
-            <span
-              className="block text-white"
-              style={{ textShadow: "0 1px 0 #ccc, 0 2px 0 #aaa, 0 3px 0 #888, 0 8px 16px rgba(0,0,0,0.7)" }}
-            >
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.95] mb-6">
+            <span className="block text-gray-900">
               {headlines[currentHeadline][0]}
             </span>
             <span className="block text-gradient-red">
@@ -101,7 +90,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
 
         {/* Subheadline */}
         <p
-          className={`text-[var(--text-secondary)] text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed transition-all duration-1000 delay-400 ${
+          className={`text-gray-500 text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed transition-all duration-1000 delay-400 ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
@@ -117,23 +106,21 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
         >
           <Link
             href="/become-dealer"
-            className="group flex items-center gap-2.5 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-xl transition-all duration-200 text-sm uppercase tracking-wider"
-            style={{ boxShadow: "0 0 32px rgba(220,38,38,0.45), 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)" }}
+            className="group flex items-center gap-2.5 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-xl transition-all duration-200 text-sm uppercase tracking-wider shadow-xl shadow-red-600/25"
           >
             Become a Dealer
             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
             href="/products"
-            className="group flex items-center gap-2.5 border border-white/20 hover:border-red-600/50 text-white font-bold px-8 py-4 rounded-xl transition-all duration-200 text-sm uppercase tracking-wider"
-            style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(10px)" }}
+            className="group flex items-center gap-2.5 border-2 border-gray-200 hover:border-red-300 text-gray-700 hover:text-red-600 font-bold px-8 py-4 rounded-xl transition-all duration-200 text-sm uppercase tracking-wider bg-white hover:bg-red-50"
           >
             Explore Products
             <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
           </Link>
         </div>
 
-        {/* Stats — 3D floating cards */}
+        {/* Stats */}
         <div
           className={`mt-20 flex flex-row items-stretch justify-center gap-4 max-w-lg mx-auto transition-all duration-1000 delay-700 ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
@@ -143,23 +130,15 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
             { value: `${productCount}+`, label: "Products" },
             { value: `${categoryCount}+`, label: "Categories" },
             { value: "10K+", label: "Units / Month" },
-          ].map((stat, i) => (
+          ].map((stat) => (
             <div
               key={stat.label}
-              className="flex-1 rounded-xl px-4 py-3 text-center"
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                backdropFilter: "blur(12px)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
-              }}
+              className="flex-1 rounded-xl px-4 py-4 text-center bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-100 transition-all duration-200"
             >
-              <div className="text-3xl md:text-4xl font-black text-white mb-1"
-                style={{ textShadow: "0 0 20px rgba(220,38,38,0.4)" }}
-              >
+              <div className="text-3xl md:text-4xl font-black text-gray-900 mb-1">
                 {stat.value}
               </div>
-              <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">{stat.label}</div>
+              <div className="text-gray-400 text-[10px] uppercase tracking-widest">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -167,8 +146,8 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce z-10">
-        <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Scroll</span>
-        <ChevronDown size={14} className="text-red-600" />
+        <span className="text-gray-400 text-[10px] uppercase tracking-widest">Scroll</span>
+        <ChevronDown size={14} className="text-red-500" />
       </div>
 
       {/* Headline dots */}
@@ -178,7 +157,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
             key={i}
             onClick={() => setCurrentHeadline(i)}
             className={`h-[2px] transition-all duration-300 rounded-full ${
-              i === currentHeadline ? "w-8 bg-red-600" : "w-3 bg-white/20"
+              i === currentHeadline ? "w-8 bg-red-600" : "w-3 bg-gray-300"
             }`}
           />
         ))}

@@ -10,18 +10,28 @@ import { ContactSection } from "@/components/home/contact-section";
 import { prisma } from "@/lib/prisma";
 
 export default async function HomePage() {
-  const [productCount, categoryCount, topCategories] = await Promise.all([
-    prisma.product.count({ where: { isActive: true } }),
-    prisma.category.count({ where: { isActive: true } }),
-    prisma.category.findMany({
-      where: { isActive: true },
-      select: { slug: true, _count: { select: { products: { where: { isActive: true } } } } },
-    }),
-  ]);
+  let productCount = 0;
+  let categoryCount = 0;
+  let categoryCounts: Record<string, number> = {};
 
-  const categoryCounts = Object.fromEntries(
-    topCategories.map((c) => [c.slug, c._count.products])
-  );
+  try {
+    const [products, categories, topCategories] = await Promise.all([
+      prisma.product.count({ where: { isActive: true } }),
+      prisma.category.count({ where: { isActive: true } }),
+      prisma.category.findMany({
+        where: { isActive: true },
+        select: { slug: true, _count: { select: { products: { where: { isActive: true } } } } },
+      }),
+    ]);
+
+    productCount = products;
+    categoryCount = categories;
+    categoryCounts = Object.fromEntries(
+      topCategories.map((c) => [c.slug, c._count.products])
+    );
+  } catch {
+    // DB unreachable — render page with zero counts
+  }
 
   return (
     <>

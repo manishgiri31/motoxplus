@@ -8,21 +8,66 @@ async function main() {
 
   // Categories
   const categories = [
-    { name: "Brake Parts", slug: "brake-parts", description: "Disc brakes, drum brakes, brake pads, calipers", sortOrder: 1 },
-    { name: "Engine Parts", slug: "engine-parts", description: "Pistons, gaskets, bearings, engine internals", sortOrder: 2 },
-    { name: "Suspension Parts", slug: "suspension-parts", description: "Shock absorbers, springs, fork seals", sortOrder: 3 },
-    { name: "Electrical Parts", slug: "electrical-parts", description: "Stators, CDI, switches, wiring harnesses", sortOrder: 4 },
-    { name: "Transmission Parts", slug: "transmission-parts", description: "Gear sets, clutch plates, chains", sortOrder: 5 },
-    { name: "Body Parts", slug: "body-parts", description: "Panels, fairings, headlights, mirrors", sortOrder: 6 },
-    { name: "Bearings",     slug: "bearings",     description: "Wheel bearings, steering bearings, engine bearings", sortOrder: 7 },
-    { name: "Brake Shoes",  slug: "brake-shoes",  description: "Drum brake shoes for motorcycles and scooters",       sortOrder: 8 },
-    { name: "Clutch Plates",slug: "clutch-plates",description: "Clutch friction and steel plates",                    sortOrder: 9 },
-    { name: "Halogen Bulbs",slug: "halogen-bulbs",description: "Headlight and indicator halogen bulbs",               sortOrder: 10 },
-    { name: "Horns",        slug: "horns",        description: "Electric horns and pressure horns",                   sortOrder: 11 },
-    { name: "Indicators",   slug: "indicators",   description: "Indicator assemblies and turn signal lamps",          sortOrder: 12 },
-    { name: "Ball Racer",       slug: "ball-racer",       description: "Ball racer sets for steering and wheels",             sortOrder: 13 },
-    { name: "Mudguard",         slug: "mudguard",         description: "Front and rear mudguards for motorcycles and scooters", sortOrder: 14 },
-    { name: "Head Light Visor", slug: "head-light-visor", description: "Headlight visors and visor assemblies",                 sortOrder: 15 },
+    {
+      name: "Brake Parts", slug: "brake-parts", sortOrder: 1,
+      description: "OEM-compatible braking components including disc brake assemblies, drum brake kits, brake pads, calipers, brake shoes, and master cylinders. Engineered for precise stopping power and long-lasting performance on all major two-wheeler models.",
+    },
+    {
+      name: "Engine Parts", slug: "engine-parts", sortOrder: 2,
+      description: "High-precision engine components including pistons, piston rings, cylinder gaskets, engine bearings, cam chains, tappets, and rocker arms. Manufactured to OEM tolerances for reliable performance and engine longevity.",
+    },
+    {
+      name: "Suspension Parts", slug: "suspension-parts", sortOrder: 3,
+      description: "Complete suspension components covering front fork assemblies, shock absorbers, fork seals, dust seals, bushings, and suspension springs. Designed to restore original ride comfort and road handling on motorcycles and scooters.",
+    },
+    {
+      name: "Electrical Parts", slug: "electrical-parts", sortOrder: 4,
+      description: "Certified electrical components including CDI units, stators, regulators, ignition coils, switches, horn buttons, self-start motors, and complete wiring harnesses. Tested for voltage compliance and long-term reliability.",
+    },
+    {
+      name: "Transmission Parts", slug: "transmission-parts", sortOrder: 5,
+      description: "Transmission and drivetrain components including gear sets, clutch plates, pressure plates, final drive chains, sprockets, and gear shift forks. Precision-machined for smooth gear engagement and extended drivetrain life.",
+    },
+    {
+      name: "Body Parts", slug: "body-parts", sortOrder: 6,
+      description: "Exterior body panels and trim components including front mudguards, rear mudguards, headlight visors, side panels, tank covers, seat covers, and mirrors. Made from high-grade ABS plastic with UV-resistant finish for colour retention and durability.",
+    },
+    {
+      name: "Bearings", slug: "bearings", sortOrder: 7,
+      description: "High-quality ball bearings and roller bearings for wheel hubs, steering heads, swingarms, and engine internals. Each bearing is sealed and pre-greased for smooth operation, corrosion resistance, and minimal maintenance.",
+    },
+    {
+      name: "Brake Shoes", slug: "brake-shoes", sortOrder: 8,
+      description: "Drum brake shoes formulated with friction compounds that deliver consistent braking performance across temperature ranges. Available for front and rear drums on all major Hero, Honda, TVS, and Bajaj two-wheelers.",
+    },
+    {
+      name: "Clutch Plates", slug: "clutch-plates", sortOrder: 9,
+      description: "Complete clutch plate sets including friction plates and steel drive plates. Manufactured with wear-resistant friction material for precise clutch engagement, smooth power delivery, and extended clutch life.",
+    },
+    {
+      name: "Halogen Bulbs", slug: "halogen-bulbs", sortOrder: 10,
+      description: "Premium halogen bulbs for headlights, tail lights, and indicators. Available in standard and high-lumen variants with P15D, BA20D, and T10 base types. Designed for direct OEM socket fit on all popular two-wheeler models.",
+    },
+    {
+      name: "Horns", slug: "horns", sortOrder: 11,
+      description: "Electric and air-pressure horns meeting CMVR sound level regulations. Compact disc-type and shell-type designs available for motorcycles and scooters with direct OEM connector compatibility and weatherproof construction.",
+    },
+    {
+      name: "Indicators", slug: "indicators", sortOrder: 12,
+      description: "Complete indicator assemblies including turn signal lamps, lens housings, and bulb holders for front and rear fitment. Manufactured with polycarbonate lenses for impact resistance and OEM-grade electrical connectors.",
+    },
+    {
+      name: "Ball Racer", slug: "ball-racer", sortOrder: 13,
+      description: "Steering head ball racer sets containing upper and lower caged ball bearings and race cups. Precision-ground races ensure smooth, play-free steering. Compatible with all major Hero, Honda, TVS, and Bajaj steering columns.",
+    },
+    {
+      name: "Mudguard", slug: "mudguard", sortOrder: 14,
+      description: "Front and rear mudguards manufactured from high-impact ABS plastic with UV-stabilised colour pigments. Engineered to match OEM contours for direct bolt-on installation. Available for all major Hero and Honda motorcycle models in factory-matched colours.",
+    },
+    {
+      name: "Head Light Visor", slug: "head-light-visor", sortOrder: 15,
+      description: "Headlight visor and nacelle assemblies providing a clean, OEM-matched replacement for broken or faded headlight surrounds. Made from durable ABS plastic with chrome or painted finish options for motorcycles and scooters.",
+    },
   ];
 
   for (const cat of categories) {

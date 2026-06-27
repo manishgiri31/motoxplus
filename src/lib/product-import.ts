@@ -310,7 +310,7 @@ export function generateTemplate(): Buffer {
     "Brake Parts",
     "BRK-FP-001",
     "BRK-FP-001-PN",
-    "High-performance front brake pad set for Honda Activa",
+    "OEM-compatible front brake pad set engineered for reliable stopping power on Honda Activa scooters. Friction compound formulated for consistent performance across temperature ranges. Direct bolt-on fitment, no modifications required.",
     "850",
     "18",
     "87149400",
