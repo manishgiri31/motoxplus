@@ -1,5 +1,7 @@
 "use client";
 
+import { TiltCard } from "@/components/3d/tilt-card";
+
 const processes = [
   {
     step: "01",
@@ -59,9 +61,9 @@ export function ManufacturingSection() {
         {/* Process grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {processes.map((process) => (
+            <TiltCard key={process.step} intensity={9}>
             <div
-              key={process.step}
-              className="group relative glass border border-[var(--border-color)] hover:border-red-900/45 rounded-2xl p-7 transition-all duration-300 card-hover overflow-hidden"
+              className="group relative glass border border-[var(--border-color)] hover:border-red-900/45 rounded-2xl p-7 transition-all duration-300 overflow-hidden"
             >
               {/* Step number watermark */}
               <div className="absolute top-3 right-4 text-7xl font-black text-[var(--text-primary)]/[0.04] group-hover:text-red-900/15 transition-colors leading-none select-none pointer-events-none">
@@ -83,6 +85,7 @@ export function ManufacturingSection() {
               {/* Bottom sweep */}
               <div className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-red-600 to-transparent transition-all duration-500 rounded-b-2xl" />
             </div>
+            </TiltCard>
           ))}
         </div>
 

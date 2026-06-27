@@ -1,6 +1,7 @@
 "use client";
 
 import { ShieldCheck, Microscope, Award, Network } from "lucide-react";
+import { TiltCard } from "@/components/3d/tilt-card";
 
 const features = [
   {
@@ -78,24 +79,25 @@ export function WhyMotoXPlus() {
           {/* Right grid */}
           <div className="grid grid-cols-2 gap-4">
             {features.map((feature) => (
-              <div
-                key={feature.title}
-                className={`group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl p-6 transition-all duration-300 card-hover relative overflow-hidden`}
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl`} />
+              <TiltCard key={feature.title} intensity={10}>
+                <div
+                  className={`group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl p-6 transition-all duration-300 relative overflow-hidden`}
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl`} />
 
-                {/* Icon */}
-                <div className="relative z-10 w-11 h-11 rounded-xl bg-red-900/20 group-hover:bg-red-900/30 flex items-center justify-center mb-5 transition-colors">
-                  <feature.Icon size={20} className="text-red-500 group-hover:text-red-400 transition-colors" />
-                </div>
+                  {/* Icon */}
+                  <div className="relative z-10 w-11 h-11 rounded-xl bg-red-900/20 group-hover:bg-red-900/30 flex items-center justify-center mb-5 transition-colors">
+                    <feature.Icon size={20} className="text-red-500 group-hover:text-red-400 transition-colors" />
+                  </div>
 
-                <div className="relative z-10 flex items-baseline gap-1 mb-1.5">
-                  <span className="text-2xl font-black text-[var(--text-primary)]">{feature.stat}</span>
-                  <span className="text-red-500 text-[10px] font-bold uppercase tracking-wider">{feature.statLabel}</span>
+                  <div className="relative z-10 flex items-baseline gap-1 mb-1.5">
+                    <span className="text-2xl font-black text-[var(--text-primary)]">{feature.stat}</span>
+                    <span className="text-red-500 text-[10px] font-bold uppercase tracking-wider">{feature.statLabel}</span>
+                  </div>
+                  <h3 className="relative z-10 text-[var(--text-primary)] font-bold mb-2 text-sm">{feature.title}</h3>
+                  <p className="relative z-10 text-[var(--text-muted)] text-xs leading-relaxed">{feature.description}</p>
                 </div>
-                <h3 className="relative z-10 text-[var(--text-primary)] font-bold mb-2 text-sm">{feature.title}</h3>
-                <p className="relative z-10 text-[var(--text-muted)] text-xs leading-relaxed">{feature.description}</p>
-              </div>
+              </TiltCard>
             ))}
           </div>
         </div>

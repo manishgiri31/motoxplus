@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { TiltCard } from "@/components/3d/tilt-card";
 
 const benefits = [
   "Exclusive dealer pricing and margin protection",
@@ -72,6 +73,7 @@ export function DealerProgram() {
 
           {/* Right — Stats card */}
           <div className="relative">
+            <TiltCard intensity={7}>
             <div className="glass border border-[var(--border-color)] rounded-2xl p-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-red-900/10 rounded-full blur-[60px] pointer-events-none" />
 
@@ -93,6 +95,7 @@ export function DealerProgram() {
                 ))}
               </div>
             </div>
+            </TiltCard>
 
             {/* Decorative corners */}
             <div className="absolute -top-3 -right-3 w-20 h-20 border-t-2 border-r-2 border-red-600/35 rounded-tr-lg" />

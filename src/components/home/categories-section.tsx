@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Disc2, Wrench, SlidersVertical, Zap, Eye, Shield, Radio, Lightbulb, ChevronRight } from "lucide-react";
+import { ArrowRight, Eye, Shield, Radio, Disc2, ChevronRight } from "lucide-react";
+import { TiltCard } from "@/components/3d/tilt-card";
 
 const CATEGORIES = [
   {
@@ -78,39 +79,55 @@ export function CategoriesSection({ categoryCounts = {} }: Props) {
           {CATEGORIES.map((cat) => {
             const count = categoryCounts[cat.slug] ?? 0;
             return (
-              <Link
-                key={cat.slug}
-                href={`/products?category=${cat.slug}`}
-                className="group relative overflow-hidden rounded-2xl border border-[var(--border-color)] hover:border-red-700/50 transition-all duration-300 card-hover"
-                style={{ background: "linear-gradient(135deg, var(--bg-card) 0%, transparent 100%)" }}
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradientDark} opacity-80 transition-opacity`} />
-                <div className="absolute top-0 right-0 w-56 h-56 bg-red-900/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <TiltCard key={cat.slug} intensity={10}>
+                <Link
+                  href={`/products?category=${cat.slug}`}
+                  className="group relative overflow-hidden rounded-2xl block"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(20,20,20,0.95) 0%, rgba(10,10,10,0.98) 100%)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${cat.gradientDark} opacity-70`} />
+                  <div className="absolute top-0 right-0 w-56 h-56 bg-red-900/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                  {/* Metallic top edge */}
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-                <div className="relative z-10 p-7 flex gap-6 items-start">
-                  <div className={`flex-shrink-0 w-14 h-14 rounded-xl border border-white/10 flex items-center justify-center transition-colors duration-300 ${cat.iconBg}`}>
-                    <cat.Icon size={26} className={`transition-colors duration-300 ${cat.iconColor}`} />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xl font-bold text-white">{cat.name}</h3>
-                      <ChevronRight size={18} className="text-white/30 group-hover:text-red-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                  <div className="relative z-10 p-7 flex gap-6 items-start">
+                    <div
+                      className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 ${cat.iconBg}`}
+                      style={{
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <cat.Icon size={26} className={`transition-colors duration-300 ${cat.iconColor}`} />
                     </div>
-                    <p className="text-white/50 group-hover:text-white/65 text-sm leading-relaxed mb-5 transition-colors">
-                      {cat.description}
-                    </p>
-                    {count > 0 && (
-                      <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1 border border-white/10">
-                        <span className="text-red-400 font-black text-base">{count}+</span>
-                        <span className="text-white/40 text-[10px] uppercase tracking-widest">Products</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                <div className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-red-600 via-red-400 to-transparent transition-all duration-500 rounded-b-2xl" />
-              </Link>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-bold text-white">{cat.name}</h3>
+                        <ChevronRight size={18} className="text-white/30 group-hover:text-red-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                      </div>
+                      <p className="text-white/50 group-hover:text-white/65 text-sm leading-relaxed mb-5 transition-colors">
+                        {cat.description}
+                      </p>
+                      {count > 0 && (
+                        <div
+                          className="inline-flex items-center gap-2 rounded-full px-3 py-1"
+                          style={{ background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.25)" }}
+                        >
+                          <span className="text-red-400 font-black text-base">{count}+</span>
+                          <span className="text-white/40 text-[10px] uppercase tracking-widest">Products</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-red-600 via-red-400 to-transparent transition-all duration-500 rounded-b-2xl" />
+                </Link>
+              </TiltCard>
             );
           })}
         </div>

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Search, Lock, Package, ChevronLeft, ChevronRight, X, Clock, Zap } from "lucide-react";
+import { TiltCard } from "@/components/3d/tilt-card";
 
 const RECENT_KEY = "motox_recent_searches";
 const MAX_RECENT = 5;
@@ -482,10 +483,10 @@ export function ProductCatalog({
                 ? (product.productImages.find((i) => i.isPrimary) || product.productImages[0]).imageUrl
                 : product.images[0];
             return (
+              <TiltCard key={product.id} intensity={8}>
               <Link
-                key={product.id}
                 href={`/products/${product.id}`}
-                className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden transition-all duration-300 card-hover"
+                className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden transition-all duration-300 block"
               >
                 {/* Image */}
                 <div className="relative h-48 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
@@ -549,6 +550,7 @@ export function ProductCatalog({
                   </div>
                 </div>
               </Link>
+              </TiltCard>
             );
           })}
         </div>
