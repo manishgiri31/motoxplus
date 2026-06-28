@@ -382,7 +382,7 @@ function AutoMode() {
           {groups.length === 0 ? (
             <div className="text-center py-12 glass border border-[var(--border-color)] rounded-xl">
               <GitMerge size={32} className="text-gray-700 mx-auto mb-3" />
-              <p className="text-[var(--text-muted)] text-sm">No groups found. Try reducing "Min. shared words" or a broader keyword.</p>
+              <p className="text-[var(--text-muted)] text-sm">No groups found. Try reducing &quot;Min. shared words&quot; or a broader keyword.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -635,7 +635,7 @@ function ManualMode() {
               onChange={(e) => setGroupName(e.target.value)}
               className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-purple-600 rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none"
             />
-            <p className="text-[var(--text-muted)] text-xs mt-1.5">Auto-detected: <span className="font-mono text-[var(--text-secondary)]">"{detectedPrefix}"</span></p>
+            <p className="text-[var(--text-muted)] text-xs mt-1.5">Auto-detected: <span className="font-mono text-[var(--text-secondary)]">&quot;{detectedPrefix}&quot;</span></p>
           </div>
 
           <div className="glass border border-[var(--border-color)] rounded-xl overflow-hidden mb-5">
@@ -695,7 +695,7 @@ function ManualMode() {
                 <p className="text-yellow-300 font-semibold mb-1">What will happen:</p>
                 <p>• <strong className="text-[var(--text-primary)]">{variantIds.length}</strong> products deactivated (data preserved)</p>
                 <p>• <strong className="text-[var(--text-primary)]">{variantIds.length}</strong> variants added to the parent</p>
-                <p>• Parent renamed to: <span className="font-mono text-[var(--text-primary)]">"{groupName || detectedPrefix}"</span></p>
+                <p>• Parent renamed to: <span className="font-mono text-[var(--text-primary)]">&quot;{groupName || detectedPrefix}&quot;</span></p>
               </div>
             </div>
           </div>
@@ -718,7 +718,7 @@ function ManualMode() {
           </div>
           <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">Done!</h2>
           <p className="text-[var(--text-muted)] text-sm mb-6">
-            <span className="text-[var(--text-primary)] font-semibold">"{result.newProductName}"</span> now has {result.variantsCreated} variants.
+            <span className="text-[var(--text-primary)] font-semibold">&quot;{result.newProductName}&quot;</span> now has {result.variantsCreated} variants.
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link href={`/admin/products/${result.parentProductId}/edit`} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-3 rounded-xl transition-colors text-sm">
