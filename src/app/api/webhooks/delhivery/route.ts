@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { processDelhiveryWebhook } from "@/lib/delhivery";
 import type { DelhiveryWebhookPayload } from "@/lib/delhivery/types";
 
-const WEBHOOK_SECRET = process.env.DELHIVERY_WEBHOOK_SECRET || "";
+const WEBHOOK_SECRET = process.env.DELHIVERY_WEBHOOK_SECRET;
 
 export async function POST(req: NextRequest) {
-  // Verify secret token from URL query param
   const token = req.nextUrl.searchParams.get("token");
-  if (WEBHOOK_SECRET && token !== WEBHOOK_SECRET) {
+
+  // Fail closed: if secret is not configured in production, reject all webhook calls
+  if (!WEBHOOK_SECRET) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[Delhivery Webhook] DELHIVERY_WEBHOOK_SECRET is not set — rejecting request");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+    }
+    // Allow in development without a secret
+    console.warn("[Delhivery Webhook] Secret not set — skipping verification (dev only)");
+  } else if (token !== WEBHOOK_SECRET) {
     console.warn("[Delhivery Webhook] Invalid token");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -41,7 +49,7 @@ export async function POST(req: NextRequest) {
 // Delhivery may send GET to verify the endpoint
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
-  if (WEBHOOK_SECRET && token !== WEBHOOK_SECRET) {
+  if (!WEBHOOK_SECRET || token !== WEBHOOK_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return NextResponse.json({ ok: true, service: "MotoXPlus Delhivery Webhook" });

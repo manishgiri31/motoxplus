@@ -46,8 +46,17 @@ export async function isAccountLocked(userId: string): Promise<{ locked: boolean
   return { locked: false };
 }
 
-// Simple in-memory rate limiter for IP-based requests (augment with Redis in production)
+// In-memory IP rate limiter — effective on single-instance servers (Railway).
+// For multi-instance deployments, replace with a Redis-backed implementation.
 const ipStore = new Map<string, { count: number; resetAt: number }>();
+
+// Purge expired entries every 5 minutes to prevent unbounded memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of ipStore) {
+    if (entry.resetAt < now) ipStore.delete(key);
+  }
+}, 5 * 60 * 1000);
 
 export function checkIPRateLimit(ip: string, maxRequests = 10, windowSeconds = 60): boolean {
   const now = Date.now();

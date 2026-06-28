@@ -49,7 +49,13 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("search");
   const page = parseInt(searchParams.get("page") || "1");
   const pageSize = parseInt(searchParams.get("pageSize") || "12");
-  const adminAll = searchParams.get("adminAll") === "1";
+  const adminAllParam = searchParams.get("adminAll") === "1";
+  // Only admins may bypass the isActive filter
+  let adminAll = false;
+  if (adminAllParam) {
+    const session = await getServerSession(authOptions);
+    adminAll = !!session && ["ADMIN", "SUPER_ADMIN"].includes(session.user.role);
+  }
 
   const searchWhere = search ? await buildSearchWhere(search, !adminAll) : {};
 

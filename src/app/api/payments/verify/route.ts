@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
 
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
+  // Ensure the order belongs to the requesting dealer
+  if (order.dealerId !== session.user.dealerId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   // Update payment
   await prisma.payment.updateMany({
     where: { orderId, razorpayOrderId },
