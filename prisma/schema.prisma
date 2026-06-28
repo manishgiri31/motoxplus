@@ -46,6 +46,9 @@ model OtpCode {
   attempts  Int      @default(0)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, used])
+  @@index([expiresAt])
 }
 
 model UserSession {
@@ -60,6 +63,9 @@ model UserSession {
   lastUsedAt   DateTime @default(now())
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([expiresAt])
 }
 
 model Account {
@@ -177,6 +183,11 @@ model Product {
   productImages   ProductImage[]
   vendor          Vendor?          @relation(fields: [vendorId], references: [id])
   variants        ProductVariant[]
+
+  @@index([categoryId, isActive])
+  @@index([isActive, createdAt])
+  @@index([vendorId])
+  @@index([stock])
 }
 
 model ProductVariant {
@@ -275,6 +286,8 @@ model Cart {
   updatedAt DateTime   @updatedAt
   dealer    Dealer     @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   items     CartItem[]
+
+  @@index([updatedAt])
 }
 
 model CartItem {
@@ -288,6 +301,9 @@ model CartItem {
   cart      Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([cartId])
+  @@index([productId])
 }
 
 model Order {
@@ -318,6 +334,12 @@ model Order {
   items               OrderItem[]
   payments            Payment[]
   paymentSubmissions  PaymentSubmission[]
+
+  @@index([dealerId, status])
+  @@index([dealerId, createdAt])
+  @@index([status, createdAt])
+  @@index([paymentStatus])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -351,6 +373,10 @@ model Payment {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+  @@index([razorpayOrderId])
 }
 
 model Invoice {
@@ -584,6 +610,11 @@ model Lead {
   pincode        String?
   activities     LeadActivity[]
   notes          LeadNote[]
+
+  @@index([status, createdAt])
+  @@index([assignedToId, status])
+  @@index([nextFollowUp])
+  @@index([priority, status])
 }
 
 model LeadActivity {
@@ -866,4 +897,7 @@ model PaymentSubmission {
   dealer          Dealer              @relation(fields: [dealerId], references: [id])
 
   @@unique([utrNumber])
+  @@index([status, createdAt])
+  @@index([dealerId])
+  @@index([orderId])
 }

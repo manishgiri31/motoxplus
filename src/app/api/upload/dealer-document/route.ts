@@ -75,16 +75,17 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ id: doc.id, url, key, documentType });
-  } catch (err: any) {
-    console.error("[upload/dealer-document]", err?.message ?? err);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
 
-    if (err?.message?.includes("Missing or placeholder")) {
+    if (msg.includes("Missing or placeholder")) {
       return NextResponse.json(
         { error: "Storage not configured. Set R2 credentials in .env." },
         { status: 503 }
       );
     }
 
+    console.error("[upload/dealer-document]", msg);
     return NextResponse.json({ error: "Upload failed." }, { status: 500 });
   }
 }

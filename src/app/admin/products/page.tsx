@@ -27,7 +27,7 @@ export default async function AdminProductsPage({
 
   const searchWhere = search ? await buildSearchWhere(search, false) : {};
 
-  const where: any = { ...searchWhere };
+  const where: Record<string, unknown> = { ...searchWhere };
   if (searchParams.category) where.categoryId = searchParams.category;
   if (searchParams.vendor === "pending") { where.vendorId = { not: null }; where.isActive = false; }
   else if (searchParams.vendor === "all") where.vendorId = { not: null };
@@ -239,15 +239,36 @@ export default async function AdminProductsPage({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-8">
-          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((p) => (
+          {page > 1 && (
             <Link
-              key={p}
-              href={`/admin/products?${new URLSearchParams({ page: String(p), ...(searchParams.category && { category: searchParams.category }), ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
+              href={`/admin/products?${new URLSearchParams({ page: String(page - 1), ...(searchParams.category && { category: searchParams.category }), ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
+              className="w-10 h-10 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-white transition-colors"
             >
-              {p}
+              ‹
             </Link>
-          ))}
+          )}
+          {(() => {
+            const delta = 3;
+            const start = Math.max(1, Math.min(page - delta, totalPages - delta * 2));
+            const end = Math.min(totalPages, start + delta * 2);
+            return Array.from({ length: end - start + 1 }, (_, i) => start + i).map((p) => (
+              <Link
+                key={p}
+                href={`/admin/products?${new URLSearchParams({ page: String(p), ...(searchParams.category && { category: searchParams.category }), ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
+                className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-white"}`}
+              >
+                {p}
+              </Link>
+            ));
+          })()}
+          {page < totalPages && (
+            <Link
+              href={`/admin/products?${new URLSearchParams({ page: String(page + 1), ...(searchParams.category && { category: searchParams.category }), ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
+              className="w-10 h-10 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-white transition-colors"
+            >
+              ›
+            </Link>
+          )}
         </div>
       )}
     </div>

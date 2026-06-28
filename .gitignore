@@ -41,3 +41,22 @@ next-env.d.ts
 # environment variables
 .env
 .env*.local
+
+# logs
+*.log
+dev.log
+logs/
+
+# backup files
+*.sql
+*.sql.gz
+*.dump
+
+# OS
+Thumbs.db
+ehthumbs.db
+
+# Editor
+.idea/
+*.swp
+*.swo

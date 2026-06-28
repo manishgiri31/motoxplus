@@ -65,16 +65,17 @@ export async function POST(req: NextRequest) {
       fileSize: original.size,
       mimeType: "image/webp",
     });
-  } catch (err: any) {
-    console.error("[upload/product-image]", err?.message ?? err);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
 
-    if (err?.message?.includes("Missing or placeholder")) {
+    if (msg.includes("Missing or placeholder")) {
       return NextResponse.json(
         { error: "Storage not configured. Set R2 credentials in .env and restart the server." },
         { status: 503 }
       );
     }
 
+    console.error("[upload/product-image]", msg);
     return NextResponse.json(
       { error: "Upload failed. Check server logs." },
       { status: 500 }

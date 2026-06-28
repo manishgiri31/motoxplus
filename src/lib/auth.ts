@@ -3,13 +3,17 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+import { UserRole, StaffDepartment } from "@prisma/client";
+import type { Adapter } from "next-auth/adapters";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: PrismaAdapter(prisma) as Adapter,
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    // 8 hours in production; 30 days in dev for convenience
+    maxAge: process.env.NODE_ENV === "production" ? 8 * 60 * 60 : 30 * 24 * 60 * 60,
+    updateAge: 60 * 60, // refresh token every hour
   },
   pages: {
     signIn: "/login",
@@ -28,7 +32,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.toLowerCase().trim() },
           include: { dealer: true, admin: true, vendor: true },
         });
 
@@ -84,9 +88,9 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-          dealerId: user.dealer?.id,
-          isSuperAdmin: user.admin?.isSuperAdmin,
-          vendorId: user.vendor?.id,
+          dealerId: user.dealer?.id ?? undefined,
+          isSuperAdmin: user.admin?.isSuperAdmin ?? false,
+          vendorId: user.vendor?.id ?? undefined,
           department: user.department ?? undefined,
         };
       },
@@ -96,11 +100,11 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
-        token.dealerId = (user as any).dealerId;
-        token.isSuperAdmin = (user as any).isSuperAdmin;
-        token.vendorId = (user as any).vendorId;
-        token.department = (user as any).department;
+        token.role = (user as { role: UserRole }).role;
+        token.dealerId = (user as { dealerId?: string }).dealerId;
+        token.isSuperAdmin = (user as { isSuperAdmin?: boolean }).isSuperAdmin ?? false;
+        token.vendorId = (user as { vendorId?: string }).vendorId;
+        token.department = (user as { department?: StaffDepartment }).department;
       }
       return token;
     },
@@ -111,9 +115,21 @@ export const authOptions: NextAuthOptions = {
         session.user.dealerId = token.dealerId as string | undefined;
         session.user.isSuperAdmin = token.isSuperAdmin as boolean | undefined;
         session.user.vendorId = token.vendorId as string | undefined;
-        session.user.department = token.department as any;
+        session.user.department = token.department as StaffDepartment | undefined;
       }
       return session;
+    },
+  },
+  // Cookie hardening
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
     },
   },
 };

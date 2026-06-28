@@ -1,0 +1,133 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: "Skip tests (emergency deploy only)"
+        required: false
+        default: "false"
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false  # never cancel an in-progress deploy
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # CI — lint, typecheck, build
+  # ---------------------------------------------------------------------------
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/motoxplus_test"
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_COMPANY_NAME: ${{ secrets.NEXT_PUBLIC_COMPANY_NAME }}
+
+  # ---------------------------------------------------------------------------
+  # Deploy — SSH into VPS, pull, build, migrate, reload PM2
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          timeout: "10m"
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/var/www/motoxplus"
+            PM2_APP="motoxplus"
+
+            echo "=== Pull latest code ==="
+            cd "$APP_DIR"
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== Install dependencies ==="
+            npm ci --ignore-scripts
+
+            echo "=== Generate Prisma client ==="
+            npx prisma generate
+
+            echo "=== Run database migrations ==="
+            npx prisma migrate deploy
+
+            echo "=== Build Next.js ==="
+            npm run build
+
+            echo "=== Reload PM2 (zero-downtime) ==="
+            pm2 reload ecosystem.config.js --env production --update-env
+
+            echo "=== Wait for readiness ==="
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:3000/api/health/ready > /dev/null; then
+                echo "App is ready."
+                break
+              fi
+              echo "Waiting... ($i/30)"
+              sleep 2
+            done
+
+            echo "=== Health check ==="
+            curl -sf http://localhost:3000/api/health | python3 -m json.tool
+
+            echo "=== Deployment complete ==="
+            pm2 list
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Deployment failed! Check VPS logs: pm2 logs motoxplus"

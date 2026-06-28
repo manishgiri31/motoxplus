@@ -28,11 +28,23 @@ export async function GET() {
     }),
   ]);
 
-  // Recent orders
+  // Minimal recent order data — avoid leaking sensitive user fields
   const recentOrders = await prisma.order.findMany({
     take: 5,
     orderBy: { createdAt: "desc" },
-    include: { dealer: { include: { user: true } } },
+    select: {
+      id: true,
+      orderNumber: true,
+      grandTotal: true,
+      status: true,
+      createdAt: true,
+      dealer: {
+        select: {
+          companyName: true,
+          user: { select: { name: true, email: true } },
+        },
+      },
+    },
   });
 
   return NextResponse.json({
@@ -41,7 +53,7 @@ export async function GET() {
     totalOrders,
     pendingOrders,
     totalProducts,
-    totalRevenue: totalRevenue._sum.amount || 0,
+    totalRevenue: totalRevenue._sum.amount ?? 0,
     recentOrders,
   });
 }
