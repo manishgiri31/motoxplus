@@ -53,9 +53,9 @@ const ipStore = new Map<string, { count: number; resetAt: number }>();
 // Purge expired entries every 5 minutes to prevent unbounded memory growth
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of ipStore) {
+  ipStore.forEach((entry, key) => {
     if (entry.resetAt < now) ipStore.delete(key);
-  }
+  });
 }, 5 * 60 * 1000);
 
 export function checkIPRateLimit(ip: string, maxRequests = 10, windowSeconds = 60): boolean {
