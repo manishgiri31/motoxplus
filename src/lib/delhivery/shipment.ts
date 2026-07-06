@@ -33,6 +33,10 @@ export async function createDelhiveryShipment(orderId: string): Promise<{
   const destName = order.deliveryName || order.dealer.ownerName;
   const destPhone = order.deliveryPhone || order.dealer.phone;
 
+  if (!destAddress || !destPincode) {
+    throw new Error(`Order ${orderId} has no shipping address/pincode and dealer has none on file — cannot create shipment`);
+  }
+
   const totalWeight = order.items.reduce((sum, item) => {
     const w = item.product.packageWeight ?? item.product.weight ?? 0.5;
     return sum + w * item.quantity;

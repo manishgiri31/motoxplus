@@ -26,13 +26,13 @@ export function AdminDealerActions({ dealerId, currentStatus }: Props) {
 
   return (
     <div className="flex gap-2">
-      {currentStatus !== "APPROVED" && (
+      {currentStatus !== "ACTIVE" && (
         <button
-          onClick={() => updateStatus("APPROVED")}
+          onClick={() => updateStatus("ACTIVE")}
           disabled={!!loadingStatus}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
         >
-          {loadingStatus === "APPROVED" ? <Spinner size={12} /> : null}
+          {loadingStatus === "ACTIVE" ? <Spinner size={12} /> : null}
           Approve
         </button>
       )}

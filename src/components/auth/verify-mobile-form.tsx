@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { OtpInput } from "./otp-input";
 import { Spinner } from "@/components/ui/spinner";
 import { CountdownTimer } from "./countdown-timer";
 
 export function VerifyMobileForm() {
   const router = useRouter();
+  const { data: session, update } = useSession();
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"enter-mobile" | "enter-otp" | "success">("enter-mobile");
@@ -42,6 +44,9 @@ export function VerifyMobileForm() {
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Verification failed"); setStatus("error"); return; }
     setStep("success");
+    if (session) {
+      await update();
+    }
   }
 
   async function handleResend() {
@@ -67,7 +72,15 @@ export function VerifyMobileForm() {
         </div>
         <h2 className="text-xl font-black text-[var(--text-primary)] mb-2">Mobile Verified!</h2>
         <p className="text-[var(--text-muted)] text-sm mb-6">Your mobile number has been verified successfully.</p>
-        <button onClick={() => router.back()} className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-sm transition-colors uppercase tracking-wider text-sm">
+        <button
+          onClick={() => {
+            const role = session?.user?.role;
+            const dest = role === "VENDOR" ? "/vendor/dashboard" : role === "DEALER" ? "/dealer/dashboard" : "/login";
+            router.push(dest);
+            router.refresh();
+          }}
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-sm transition-colors uppercase tracking-wider text-sm"
+        >
           Continue
         </button>
       </div>

@@ -1,15 +1,16 @@
 import { baseTemplate } from "./base";
 
-export function welcomeTemplate(name: string, email: string) {
+export function welcomeTemplate(name: string, email: string, accountType: "dealer" | "vendor" = "dealer") {
   const content = `
     <div class="title">Welcome to MOTOXPLUS</div>
     <p class="text">Hi ${name || "there"},</p>
-    <p class="text">Your dealer account has been created successfully. Our team will review your application and approve it within 2-3 business days.</p>
+    <p class="text">Your ${accountType} account has been created successfully. Our team will review your application and approve it within 2-3 business days.</p>
     <p class="text">Here's what happens next:</p>
     <ul style="color:#9ca3af;font-size:14px;line-height:2;padding-left:20px;margin-bottom:16px;">
+      <li>Verify your email and mobile number to activate your account</li>
       <li>Our team reviews your application and documents</li>
-      <li>You'll receive an approval email with your dealer credentials</li>
-      <li>Once approved, you can access the dealer portal and start placing orders</li>
+      <li>You'll receive an approval email once your ${accountType} account is active</li>
+      <li>Once approved, you can access the ${accountType} portal</li>
     </ul>
     <hr class="divider" />
     <p class="small">Account Email: <span style="color:#e5e5e5;">${email}</span></p>

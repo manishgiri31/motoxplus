@@ -117,24 +117,32 @@ export function ProductCatalog({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
 
   // Load recent searches on mount
   useEffect(() => {
     setRecentSearches(getRecentSearches());
   }, []);
 
-  // Fetch autocomplete suggestions
+  // Fetch autocomplete suggestions. Guards against out-of-order responses
+  // (a slower earlier request resolving after a faster later one) by only
+  // applying the result if it's still the most recent request in flight.
   const fetchSuggestions = useCallback(async (q: string) => {
     if (q.length < 2) { setSuggestions([]); return; }
+    const requestId = ++requestIdRef.current;
     setSuggestionsLoading(true);
     try {
       const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}`);
+      if (requestId !== requestIdRef.current) return;
       if (res.ok) {
         const data = await res.json();
+        if (requestId !== requestIdRef.current) return;
         setSuggestions(data.suggestions || []);
       }
     } catch { /* ignore */ }
-    finally { setSuggestionsLoading(false); }
+    finally {
+      if (requestId === requestIdRef.current) setSuggestionsLoading(false);
+    }
   }, []);
 
   // Debounce autocomplete fetch
@@ -168,10 +176,12 @@ export function ProductCatalog({
   };
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setSuggestions([]);
     setInputFocused(false);
     setSearch(suggestion.name);
-    doSearch(suggestion.name);
+    saveRecentSearch(suggestion.name);
+    setRecentSearches(getRecentSearches());
     router.push(`/products/${suggestion.id}`);
   };
 
@@ -195,18 +205,22 @@ export function ProductCatalog({
     inputRef.current?.focus();
   };
 
+  const showingRecent = search.length === 0 && recentSearches.length > 0;
+  const navigableCount = suggestions.length > 0 ? suggestions.length : showingRecent ? recentSearches.length : 0;
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const items = suggestions.length > 0 ? suggestions : [];
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveSuggestion((i) => Math.min(i + 1, items.length - 1));
+      setActiveSuggestion((i) => Math.min(i + 1, navigableCount - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveSuggestion((i) => Math.max(i - 1, -1));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (activeSuggestion >= 0 && suggestions[activeSuggestion]) {
+      if (suggestions.length > 0 && activeSuggestion >= 0 && suggestions[activeSuggestion]) {
         handleSuggestionClick(suggestions[activeSuggestion]);
+      } else if (showingRecent && activeSuggestion >= 0 && recentSearches[activeSuggestion]) {
+        handleRecentClick(recentSearches[activeSuggestion]);
       } else {
         if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
         doSearch(search);
@@ -226,6 +240,20 @@ export function ProductCatalog({
     if (search) params.set("search", search);
     router.push(`/products?${params.toString()}`);
   };
+
+  // "/" focuses the search input, unless the user is already typing somewhere
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "/") return;
+      const target = e.target as HTMLElement;
+      const isTyping = ["INPUT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable;
+      if (isTyping) return;
+      e.preventDefault();
+      inputRef.current?.focus();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -253,10 +281,10 @@ export function ProductCatalog({
       {/* Filters */}
       <div className="flex flex-col lg:flex-row gap-4 mb-8">
         {/* Search */}
-        <div className="flex-1 relative">
+        <div className="w-full lg:w-[380px] lg:flex-shrink-0 relative">
           <div className="relative">
             <Search
-              size={15}
+              size={16}
               className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
                 inputFocused ? "text-red-400" : "text-[var(--text-muted)]"
               }`}
@@ -266,24 +294,36 @@ export function ProductCatalog({
               type="text"
               value={search}
               onChange={(e) => handleInputChange(e.target.value)}
-              onFocus={() => setInputFocused(true)}
+              onFocus={() => { setInputFocused(true); setActiveSuggestion(-1); }}
               onKeyDown={handleKeyDown}
               placeholder="Search by name, part number, vehicle (e.g. Hero Glamour)..."
-              className={`w-full themed-input border rounded-xl pl-11 pr-10 py-3 text-sm transition-all ${
+              className={`w-full themed-input border rounded-xl pl-11 pr-11 py-3.5 text-sm transition-all duration-200 ${
                 inputFocused
                   ? "border-red-600/60 shadow-[0_0_0_3px_rgba(220,38,38,0.08)]"
                   : ""
               }`}
               autoComplete="off"
               spellCheck={false}
+              role="combobox"
+              aria-expanded={showDropdown}
+              aria-autocomplete="list"
+              aria-controls="product-search-listbox"
+              aria-activedescendant={activeSuggestion >= 0 ? `product-search-option-${activeSuggestion}` : undefined}
             />
-            {search && (
+            {search ? (
               <button
                 onClick={handleClear}
+                aria-label="Clear search"
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
               >
                 <X size={12} />
               </button>
+            ) : (
+              !inputFocused && (
+                <kbd className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 items-center justify-center w-5 h-5 rounded-md border border-[var(--border-color)] text-[var(--text-muted)] text-[10px] font-mono bg-[var(--bg-card)] pointer-events-none">
+                  /
+                </kbd>
+              )
             )}
           </div>
 
@@ -291,25 +331,40 @@ export function ProductCatalog({
           {showDropdown && (
             <div
               ref={dropdownRef}
-              className="absolute top-full left-0 right-0 mt-1.5 glass border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-hidden"
+              id="product-search-listbox"
+              role="listbox"
+              className="absolute top-full left-0 right-0 mt-1.5 glass border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-x-hidden overflow-y-auto animate-dropdown-in max-h-[70vh]"
             >
               {/* Loading */}
-              {suggestionsLoading && search.length >= 2 && (
-                <div className="px-4 py-3 text-[var(--text-muted)] text-xs flex items-center gap-2">
-                  <div className="w-3 h-3 border border-[var(--text-muted)] border-t-red-400 rounded-full animate-spin" />
-                  Searching...
+              {suggestionsLoading && suggestions.length === 0 && search.length >= 2 && (
+                <div className="py-2">
+                  {Array.from({ length: 3 }, (_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                      <div className="skeleton w-8 h-8 rounded-lg flex-shrink-0" />
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="skeleton h-3 w-3/5 rounded" />
+                        <div className="skeleton h-2.5 w-1/4 rounded" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              {/* Suggestions */}
-              {!suggestionsLoading && suggestions.length > 0 && (
+              {/* Suggestions (kept visible, stale-while-revalidate, during background refetch) */}
+              {suggestions.length > 0 && (
                 <div>
-                  <div className="px-4 pt-3 pb-1.5 text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">
+                  <div className="px-4 pt-3 pb-1.5 flex items-center gap-2 text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">
                     Products
+                    {suggestionsLoading && (
+                      <div className="w-2.5 h-2.5 border border-[var(--text-muted)] border-t-red-400 rounded-full animate-spin" />
+                    )}
                   </div>
                   {suggestions.map((s, i) => (
                     <button
                       key={s.id}
+                      id={`product-search-option-${i}`}
+                      role="option"
+                      aria-selected={i === activeSuggestion}
                       onClick={() => handleSuggestionClick(s)}
                       onMouseEnter={() => setActiveSuggestion(i)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
@@ -358,8 +413,11 @@ export function ProductCatalog({
 
               {/* No suggestions */}
               {!suggestionsLoading && suggestions.length === 0 && search.length >= 2 && (
-                <div className="px-4 py-4 text-center">
-                  <p className="text-[var(--text-muted)] text-sm">No matches for &ldquo;{search}&rdquo;</p>
+                <div className="px-4 py-6 text-center">
+                  <div className="w-9 h-9 bg-[var(--bg-card)] rounded-xl flex items-center justify-center mx-auto mb-2.5">
+                    <Search size={15} className="text-[var(--text-muted)]" />
+                  </div>
+                  <p className="text-[var(--text-primary)] text-sm font-semibold">No matches for &ldquo;{search}&rdquo;</p>
                   <p className="text-[var(--text-muted)] text-xs mt-1">Try a vehicle name, part number, or category</p>
                 </div>
               )}
@@ -376,11 +434,19 @@ export function ProductCatalog({
                       Clear all
                     </button>
                   </div>
-                  {recentSearches.map((term) => (
+                  {recentSearches.map((term, i) => (
                     <button
                       key={term}
+                      id={`product-search-option-${i}`}
+                      role="option"
+                      aria-selected={i === activeSuggestion}
                       onClick={() => handleRecentClick(term)}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-[var(--bg-card-hover)] transition-colors group"
+                      onMouseEnter={() => setActiveSuggestion(i)}
+                      className={`w-full flex items-center gap-3 px-4 py-2 text-left transition-colors group ${
+                        i === activeSuggestion
+                          ? "bg-red-600/10"
+                          : "hover:bg-[var(--bg-card-hover)]"
+                      }`}
                     >
                       <Clock size={13} className="text-[var(--text-muted)] flex-shrink-0" />
                       <span className="flex-1 text-[var(--text-secondary)] text-sm">{term}</span>
@@ -399,7 +465,7 @@ export function ProductCatalog({
         </div>
 
         {/* Category pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 lg:flex-1 lg:min-w-0">
           <button
             onClick={() => handleCategory(null)}
             className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 ${

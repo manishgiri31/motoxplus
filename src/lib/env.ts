@@ -19,6 +19,7 @@ const REQUIRED_SERVER: string[] = [
   "JWT_SECRET",
   "RESEND_API_KEY",
   "EMAIL_FROM",
+  "ENCRYPTION_KEY",
 ];
 
 const REQUIRED_PUBLIC: string[] = [
@@ -79,6 +80,7 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET!,
   RESEND_API_KEY: process.env.RESEND_API_KEY!,
   EMAIL_FROM: process.env.EMAIL_FROM!,
+  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY!,
   REDIS_URL: process.env.REDIS_URL,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "https://motoxplus.com",
   NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,

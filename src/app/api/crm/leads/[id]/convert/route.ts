@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           city: lead.city,
           address,
           pincode,
-          status: "APPROVED",
+          status: "ACTIVE",
           creditLimit: creditLimit ? parseFloat(creditLimit) : 0,
         },
       },

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { Building2, MapPin, Phone, Mail, Globe, CreditCard } from "lucide-react";
+import { VerificationStatusCard } from "@/components/auth/verification-status-card";
 
 const CATEGORY_LABELS: Record<string, string> = {
   RAW_MATERIALS: "Raw Materials",
@@ -21,7 +22,7 @@ export default async function VendorProfilePage() {
 
   const vendor = await prisma.vendor.findUnique({
     where: { userId: session.user.id },
-    include: { contacts: true },
+    include: { contacts: true, user: true },
   });
 
   if (!vendor) redirect("/login");
@@ -34,6 +35,15 @@ export default async function VendorProfilePage() {
       </div>
 
       <div className="space-y-6">
+        <VerificationStatusCard
+          email={vendor.user?.email || vendor.email}
+          emailVerified={!!vendor.user?.emailVerified}
+          mobileVerified={vendor.user?.mobileVerified || false}
+          gstNumber={vendor.gstNumber}
+          gstVerified={vendor.gstVerified}
+          accountStatus={vendor.status}
+        />
+
         {/* Company Info */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
           <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">

@@ -19,6 +19,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
   }
 
+  let normalizedMobile: string | undefined;
+  if (phone) {
+    normalizedMobile = String(phone).replace(/\s/g, "").replace("+91", "");
+    if (!/^[6-9]\d{9}$/.test(normalizedMobile)) {
+      return NextResponse.json({ error: "Invalid Indian mobile number" }, { status: 400 });
+    }
+  }
+
   if (password.length < 8) {
     return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
   }
@@ -39,10 +47,21 @@ export async function POST(req: NextRequest) {
       email: email.toLowerCase(),
       password: hashed,
       role: "DEALER",
-      ...(companyName && gstNumber && ownerName && phone && state && city && address && pincode
+      mobileNumber: normalizedMobile,
+      ...(companyName && ownerName && phone && state && city
         ? {
             dealer: {
-              create: { companyName, gstNumber: gstNumber.toUpperCase(), ownerName, phone, state, city, address, pincode },
+              create: {
+                companyName,
+                gstNumber: gstNumber ? gstNumber.toUpperCase() : null,
+                ownerName,
+                phone: normalizedMobile || phone,
+                state,
+                city,
+                address: address || null,
+                pincode: pincode || null,
+                status: "PENDING",
+              },
             },
           }
         : {}),

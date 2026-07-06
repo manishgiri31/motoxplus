@@ -1,11 +1,13 @@
 ﻿import { prisma } from "@/lib/prisma";
 
 import Link from "next/link";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { AdminDealerActions } from "@/components/admin/dealer-actions";
+import { GstVerifyButton } from "@/components/admin/gst-verify-button";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-yellow-900/20 text-yellow-400",
-  APPROVED: "bg-green-900/20 text-green-400",
+  ACTIVE: "bg-green-900/20 text-green-400",
   REJECTED: "bg-red-900/20 text-red-400",
   SUSPENDED: "bg-orange-900/20 text-orange-400",
 };
@@ -45,7 +47,7 @@ export default async function AdminDealersPage({
 
       {/* Status filters */}
       <div className="flex gap-2 mb-6">
-        {[null, "PENDING", "APPROVED", "REJECTED", "SUSPENDED"].map((s) => (
+        {[null, "PENDING", "ACTIVE", "REJECTED", "SUSPENDED"].map((s) => (
           <Link
             key={s || "all"}
             href={`/admin/dealers${s ? `?status=${s}` : ""}`}
@@ -65,6 +67,7 @@ export default async function AdminDealersPage({
           <thead>
             <tr className="border-b border-[var(--border-color)]">
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Company</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Verified</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">GST</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Location</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Orders</th>
@@ -82,8 +85,21 @@ export default async function AdminDealersPage({
                     <div className="text-gray-600 text-xs">{dealer.user.email}</div>
                   </Link>
                 </td>
+                <td className="px-4 py-4 hidden lg:table-cell">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1 text-[10px] ${dealer.user.emailVerified ? "text-green-400" : "text-gray-600"}`} title="Email verified">
+                      {dealer.user.emailVerified ? <CheckCircle2 size={12} /> : <XCircle size={12} />} Email
+                    </span>
+                    <span className={`inline-flex items-center gap-1 text-[10px] ${dealer.user.mobileVerified ? "text-green-400" : "text-gray-600"}`} title="Mobile verified">
+                      {dealer.user.mobileVerified ? <CheckCircle2 size={12} /> : <XCircle size={12} />} Mobile
+                    </span>
+                  </div>
+                </td>
                 <td className="px-4 py-4 hidden md:table-cell">
-                  <span className="text-[var(--text-muted)] text-xs font-mono">{dealer.gstNumber}</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[var(--text-muted)] text-xs font-mono">{dealer.gstNumber || "Not provided"}</span>
+                    <GstVerifyButton entity="dealers" id={dealer.id} gstNumber={dealer.gstNumber} gstVerified={dealer.gstVerified} />
+                  </div>
                 </td>
                 <td className="px-4 py-4 hidden lg:table-cell">
                   <span className="text-[var(--text-muted)] text-xs">{dealer.city}, {dealer.state}</span>

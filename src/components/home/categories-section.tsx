@@ -10,8 +10,8 @@ const CATEGORIES = [
     slug: "head-light-visor",
     description: "Headlight visors and visor assemblies for all major two-wheeler models.",
     Icon: Eye,
-    iconBg: "bg-slate-50 group-hover:bg-slate-100 border-slate-200",
-    iconColor: "text-slate-500 group-hover:text-slate-700",
+    iconBg: "bg-[var(--bg-secondary)] group-hover:bg-[var(--bg-card-hover)] border-[var(--border-color)]",
+    iconColor: "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]",
   },
   {
     name: "Mudguard",
@@ -34,8 +34,8 @@ const CATEGORIES = [
     slug: "brake-parts",
     description: "Disc brakes, drum brakes, brake pads, and caliper assemblies for maximum stopping power.",
     Icon: Disc2,
-    iconBg: "bg-slate-50 group-hover:bg-red-50 border-slate-200 group-hover:border-red-100",
-    iconColor: "text-slate-500 group-hover:text-red-500",
+    iconBg: "bg-[var(--bg-secondary)] group-hover:bg-red-500/10 border-[var(--border-color)] group-hover:border-red-500/20",
+    iconColor: "text-[var(--text-muted)] group-hover:text-red-500",
   },
 ];
 
@@ -78,12 +78,12 @@ export function CategoriesSection({ categoryCounts = {} }: Props) {
               <TiltCard key={cat.slug} intensity={8}>
                 <Link
                   href={`/products?category=${cat.slug}`}
-                  className="group relative overflow-hidden rounded-2xl block bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:border-red-200/80 hover:-translate-y-0.5 transition-all duration-300"
+                  className="group relative overflow-hidden rounded-2xl block glass border border-[var(--border-color)] shadow-sm hover:shadow-xl hover:border-red-900/40 hover:-translate-y-0.5 transition-all duration-300"
                 >
                   {/* Hover tint */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-50/0 to-red-50/0 group-hover:from-red-50/60 group-hover:to-white transition-all duration-500 rounded-2xl" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/0 to-red-500/0 group-hover:from-red-500/10 group-hover:to-transparent transition-all duration-500 rounded-2xl" />
                   {/* Top accent line */}
-                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
 
                   <div className="relative z-10 p-7 flex gap-6 items-start">
                     <div
@@ -94,14 +94,14 @@ export function CategoriesSection({ categoryCounts = {} }: Props) {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xl font-bold text-gray-900">{cat.name}</h3>
-                        <ChevronRight size={18} className="text-gray-300 group-hover:text-red-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                        <h3 className="text-xl font-bold text-[var(--text-primary)]">{cat.name}</h3>
+                        <ChevronRight size={18} className="text-[var(--text-muted)] group-hover:text-red-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                       </div>
-                      <p className="text-gray-500 group-hover:text-gray-600 text-sm leading-relaxed mb-5 transition-colors">
+                      <p className="text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] text-sm leading-relaxed mb-5 transition-colors">
                         {cat.description}
                       </p>
                       {count > 0 && (
-                        <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-red-50 border border-red-100">
+                        <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-red-500/10 border border-red-500/20">
                           <span className="text-red-600 font-black text-base">{count}+</span>
                           <span className="text-red-400 text-[10px] uppercase tracking-widest">Products</span>
                         </div>

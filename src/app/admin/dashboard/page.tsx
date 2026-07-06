@@ -33,7 +33,7 @@ export default async function AdminDashboardPage() {
     recentOrders,
     recentDealers,
   ] = await Promise.all([
-    prisma.dealer.count({ where: { status: "APPROVED" } }),
+    prisma.dealer.count({ where: { status: "ACTIVE" } }),
     prisma.dealer.count({ where: { status: "PENDING" } }),
     prisma.order.count(),
     prisma.order.count({ where: { status: "PENDING" } }),

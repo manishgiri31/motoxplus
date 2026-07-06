@@ -35,15 +35,18 @@ export function VendorRegistrationForm() {
     category: "",
     gstNumber: "",
     panNumber: "",
+    aadhaarNumber: "",
     state: "",
     city: "",
-    address: "",
+    companyAddress: "",
+    shopAddress: "",
     pincode: "",
     website: "",
     notes: "",
   });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [userId, setUserId] = useState("");
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -67,11 +70,13 @@ export function VendorRegistrationForm() {
         category: form.category,
         state: form.state,
         city: form.city,
-        address: form.address,
-        pincode: form.pincode,
       };
+      if (form.companyAddress) body.companyAddress = form.companyAddress;
+      if (form.shopAddress) body.shopAddress = form.shopAddress;
+      if (form.pincode) body.pincode = form.pincode;
       if (form.gstNumber) body.gstNumber = form.gstNumber.toUpperCase();
       if (form.panNumber) body.panNumber = form.panNumber.toUpperCase();
+      if (form.aadhaarNumber) body.aadhaarNumber = form.aadhaarNumber;
       if (form.website) body.website = form.website;
       if (form.notes) body.notes = form.notes;
 
@@ -86,6 +91,7 @@ export function VendorRegistrationForm() {
         setStatus("error");
         return;
       }
+      setUserId(data.userId);
       setStatus("success");
     } catch {
       setErrorMsg("Something went wrong. Please try again.");
@@ -101,16 +107,16 @@ export function VendorRegistrationForm() {
         </div>
         <h2 className="text-2xl font-black text-[var(--text-primary)] mb-3">Application Submitted!</h2>
         <p className="text-[var(--text-muted)] mb-6 leading-relaxed">
-          Your vendor application has been received. Our procurement team will
-          review it within 3 business days and contact you via email.
+          Your vendor application has been received. Please verify your email to continue —
+          we&apos;ve sent a code to {form.email}.
         </p>
         <div className="glass border border-[var(--border-color)] rounded-sm p-4 text-left mb-6">
           <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-2">What happens next?</div>
           {[
+            "Verify your email address",
+            "Verify your mobile number",
             "Application review by our procurement team",
-            "Business verification (GST / PAN check)",
-            "Approval notification sent to your email",
-            "Access to vendor portal — track POs & payments",
+            "Approval notification — then access to the vendor portal",
           ].map((step, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-[var(--border-color)] last:border-0">
               <span className="text-red-600 font-black text-sm">{i + 1}</span>
@@ -119,10 +125,10 @@ export function VendorRegistrationForm() {
           ))}
         </div>
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push(`/verify-email?userId=${userId}`)}
           className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
         >
-          Back to Home
+          Verify Email
         </button>
       </div>
     );
@@ -179,7 +185,7 @@ export function VendorRegistrationForm() {
         </div>
 
         <div className="border-t border-[var(--border-color)] pt-4">
-          <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-4 font-bold">Business Details</p>
+          <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-4 font-bold">Business Details (Optional)</p>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">GST Number</label>
@@ -190,6 +196,11 @@ export function VendorRegistrationForm() {
               <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">PAN Number</label>
               <input className={`${inputClass} font-mono`} value={form.panNumber} onChange={(e) => set("panNumber", e.target.value.toUpperCase())} placeholder="AAAAA0000A" maxLength={10} />
             </div>
+          </div>
+          <div>
+            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Aadhaar Number</label>
+            <input className={`${inputClass} font-mono`} value={form.aadhaarNumber} onChange={(e) => set("aadhaarNumber", e.target.value.replace(/\D/g, ""))} placeholder="000000000000" maxLength={12} />
+            <p className="text-gray-600 text-xs mt-1">Optional — stored securely, never verified externally</p>
           </div>
         </div>
 
@@ -207,15 +218,21 @@ export function VendorRegistrationForm() {
           </div>
         </div>
 
-        <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Business Address <span className="text-red-500">*</span></label>
-          <input required className={inputClass} value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Street / building address" />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Company Address</label>
+            <input className={inputClass} value={form.companyAddress} onChange={(e) => set("companyAddress", e.target.value)} placeholder="Registered / company address (optional)" />
+          </div>
+          <div>
+            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Shop Address</label>
+            <input className={inputClass} value={form.shopAddress} onChange={(e) => set("shopAddress", e.target.value)} placeholder="Shop / warehouse address (optional)" />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Pincode <span className="text-red-500">*</span></label>
-            <input required pattern="[0-9]{6}" maxLength={6} className={inputClass} value={form.pincode} onChange={(e) => set("pincode", e.target.value)} placeholder="000000" />
+            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Pincode</label>
+            <input pattern="[0-9]{6}" maxLength={6} className={inputClass} value={form.pincode} onChange={(e) => set("pincode", e.target.value)} placeholder="000000 (optional)" />
           </div>
           <div>
             <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Website</label>

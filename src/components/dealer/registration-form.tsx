@@ -18,17 +18,21 @@ export function DealerRegistrationForm() {
   const [formData, setFormData] = useState({
     companyName: "",
     gstNumber: "",
+    panNumber: "",
+    aadhaarNumber: "",
     ownerName: "",
     phone: "",
     email: "",
     password: "",
     state: "",
     city: "",
-    address: "",
+    companyAddress: "",
+    shopAddress: "",
     pincode: "",
   });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [userId, setUserId] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +54,7 @@ export function DealerRegistrationForm() {
         return;
       }
 
+      setUserId(data.userId);
       setStatus("success");
     } catch {
       setErrorMsg("Something went wrong. Please try again.");
@@ -70,16 +75,15 @@ export function DealerRegistrationForm() {
         <h2 className="text-2xl font-black text-[var(--text-primary)] mb-3">Application Submitted!</h2>
         <p className="text-[var(--text-muted)] mb-6 leading-relaxed">
           Thank you for applying to become a MotoXPlus dealer.
-          Our team will review your application within 2 business days.
-          You&apos;ll receive an email notification once approved.
+          Please verify your email to continue — we&apos;ve sent a code to {formData.email}.
         </p>
         <div className="glass border border-[var(--border-color)] rounded-xl p-4 text-left mb-6">
           <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-2">What happens next?</div>
           {[
+            "Verify your email address",
+            "Verify your mobile number",
             "Application review by our dealer team",
-            "Background verification (GST check)",
-            "Approval email with login credentials",
-            "Access to dealer portal and pricing",
+            "Approval email — then access to dealer portal and pricing",
           ].map((step, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-[var(--border-color)] last:border-0">
               <span className="text-red-600 font-black text-sm">{i + 1}</span>
@@ -88,10 +92,10 @@ export function DealerRegistrationForm() {
           ))}
         </div>
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push(`/verify-email?userId=${userId}`)}
           className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
         >
-          Back to Home
+          Verify Email
         </button>
       </div>
     );
@@ -118,22 +122,38 @@ export function DealerRegistrationForm() {
           />
         </div>
 
-        {/* GST */}
-        <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
-            GST Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
-            value={formData.gstNumber}
-            onChange={(e) => update("gstNumber", e.target.value.toUpperCase())}
-            className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors font-mono"
-            placeholder="22AAAAA0000A1Z5"
-            maxLength={15}
-          />
-          <div className="text-gray-600 text-xs mt-1">15-digit GST Identification Number</div>
+        {/* GST + PAN (optional) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              GST Number
+            </label>
+            <input
+              type="text"
+              pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+              value={formData.gstNumber}
+              onChange={(e) => update("gstNumber", e.target.value.toUpperCase())}
+              className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors font-mono"
+              placeholder="22AAAAA0000A1Z5"
+              maxLength={15}
+            />
+            <div className="text-gray-600 text-xs mt-1">Optional — provide if registered</div>
+          </div>
+          <div>
+            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              PAN Number
+            </label>
+            <input
+              type="text"
+              pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$"
+              value={formData.panNumber}
+              onChange={(e) => update("panNumber", e.target.value.toUpperCase())}
+              className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors font-mono"
+              placeholder="AAAAA0000A"
+              maxLength={10}
+            />
+            <div className="text-gray-600 text-xs mt-1">Optional</div>
+          </div>
         </div>
 
         {/* Owner + Phone */}
@@ -230,33 +250,60 @@ export function DealerRegistrationForm() {
           </div>
         </div>
 
-        {/* Address + Pincode */}
+        {/* Aadhaar (optional) */}
         <div>
           <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
-            Business Address <span className="text-red-500">*</span>
+            Aadhaar Number
           </label>
           <input
             type="text"
-            required
-            value={formData.address}
-            onChange={(e) => update("address", e.target.value)}
+            pattern="[0-9]{12}"
+            maxLength={12}
+            value={formData.aadhaarNumber}
+            onChange={(e) => update("aadhaarNumber", e.target.value.replace(/\D/g, ""))}
+            className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors font-mono"
+            placeholder="000000000000"
+          />
+          <div className="text-gray-600 text-xs mt-1">Optional — stored securely, never verified externally</div>
+        </div>
+
+        {/* Address (optional) */}
+        <div>
+          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            Company Address
+          </label>
+          <input
+            type="text"
+            value={formData.companyAddress}
+            onChange={(e) => update("companyAddress", e.target.value)}
             className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
-            placeholder="Street address"
+            placeholder="Registered / company address (optional)"
           />
         </div>
         <div>
           <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
-            Pincode <span className="text-red-500">*</span>
+            Shop Address
           </label>
           <input
             type="text"
-            required
+            value={formData.shopAddress}
+            onChange={(e) => update("shopAddress", e.target.value)}
+            className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
+            placeholder="Shop / outlet address (optional)"
+          />
+        </div>
+        <div>
+          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            Pincode
+          </label>
+          <input
+            type="text"
             pattern="[0-9]{6}"
             maxLength={6}
             value={formData.pincode}
             onChange={(e) => update("pincode", e.target.value)}
             className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors"
-            placeholder="000000"
+            placeholder="000000 (optional)"
           />
         </div>
 

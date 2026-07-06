@@ -142,7 +142,7 @@ async function main() {
             city: "Pune",
             address: "Shop No. 12, Auto Market",
             pincode: "411001",
-            status: "APPROVED",
+            status: "ACTIVE",
           },
         },
       },

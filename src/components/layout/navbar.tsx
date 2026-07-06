@@ -10,9 +10,9 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navLinks = [
   { label: "Home", href: "/" },
+  { label: "Vehicles", href: "/vehicles" },
   { label: "Products", href: "/products" },
   { label: "About", href: "/about" },
-  { label: "Become a Dealer", href: "/become-dealer" },
   { label: "Become a Vendor", href: "/become-vendor" },
   { label: "Contact", href: "/contact" },
 ];

@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { OtpInput } from "./otp-input";
 import { Spinner } from "@/components/ui/spinner";
@@ -9,7 +10,9 @@ import { CountdownTimer } from "./countdown-timer";
 
 export function VerifyEmailForm() {
   const params = useSearchParams();
-  const userId = params.get("userId") || "";
+  const router = useRouter();
+  const { data: session, update } = useSession();
+  const userId = params.get("userId") || session?.user?.id || "";
   const [otp, setOtp] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState("");
@@ -27,6 +30,11 @@ export function VerifyEmailForm() {
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Verification failed"); setStatus("error"); return; }
     setStatus("success");
+    if (session) {
+      await update();
+      router.push("/verify-mobile");
+      router.refresh();
+    }
   }
 
   async function handleResend() {

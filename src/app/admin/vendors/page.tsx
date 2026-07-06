@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 
 import Link from "next/link";
 import { VendorStatusActions } from "@/components/admin/vendor-actions";
-import { Plus, Star } from "lucide-react";
+import { GstVerifyButton } from "@/components/admin/gst-verify-button";
+import { Plus, Star, CheckCircle2, XCircle } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-yellow-900/20 text-yellow-400",
@@ -43,6 +44,7 @@ export default async function AdminVendorsPage({
         contacts: { where: { isPrimary: true }, take: 1 },
         ratings: { select: { overallScore: true } },
         _count: { select: { payments: true } },
+        user: { select: { emailVerified: true, mobileVerified: true } },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -106,6 +108,7 @@ export default async function AdminVendorsPage({
             <tr className="border-b border-[var(--border-color)]">
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Company</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Code</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">GST</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Category</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Location</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Rating</th>
@@ -140,6 +143,22 @@ export default async function AdminVendorsPage({
                     </td>
                     <td className="px-4 py-4 hidden md:table-cell">
                       <span className="text-[var(--text-muted)] text-xs font-mono">{vendor.vendorCode}</span>
+                      {vendor.user && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`inline-flex items-center gap-1 text-[10px] ${vendor.user.emailVerified ? "text-green-400" : "text-gray-600"}`} title="Email verified">
+                            {vendor.user.emailVerified ? <CheckCircle2 size={11} /> : <XCircle size={11} />} Email
+                          </span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] ${vendor.user.mobileVerified ? "text-green-400" : "text-gray-600"}`} title="Mobile verified">
+                            {vendor.user.mobileVerified ? <CheckCircle2 size={11} /> : <XCircle size={11} />} Mobile
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 hidden lg:table-cell">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[var(--text-muted)] text-xs font-mono">{vendor.gstNumber || "Not provided"}</span>
+                        <GstVerifyButton entity="vendors" id={vendor.id} gstNumber={vendor.gstNumber} gstVerified={vendor.gstVerified} />
+                      </div>
                     </td>
                     <td className="px-4 py-4 hidden lg:table-cell">
                       <span className="text-[var(--text-muted)] text-xs">

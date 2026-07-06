@@ -12,21 +12,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many login attempts. Try again in a minute." }, { status: 429 });
   }
 
-  const { email, password } = await req.json();
-  if (!email || !password) {
-    return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+  const { email, mobile, password } = await req.json();
+  const identifier = (email || mobile || "").trim();
+  if (!identifier || !password) {
+    return NextResponse.json({ error: "Email or mobile number, and password are required" }, { status: 400 });
   }
 
+  const normalizedMobile = identifier.replace(/\s/g, "").replace("+91", "");
+  const isMobile = /^[6-9]\d{9}$/.test(normalizedMobile);
+
   const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
+    where: isMobile ? { mobileNumber: normalizedMobile } : { email: identifier.toLowerCase() },
     include: { dealer: true, admin: true, vendor: true },
   });
 
+  const deviceInfo = getDeviceInfo(req);
+  const userAgent = req.headers.get("user-agent") || undefined;
+  const logFailure = async (userId: string | undefined, reason: string) => {
+    if (!userId) return;
+    await prisma.loginHistory.create({
+      data: { userId, success: false, method: isMobile ? "password-mobile" : "password-email", reason, ipAddress: ip, userAgent, deviceInfo },
+    }).catch(() => null);
+  };
+
   if (!user || !user.password) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    return NextResponse.json({ error: "Invalid email/mobile or password" }, { status: 401 });
   }
 
   if (!user.isActive) {
+    await logFailure(user.id, "Account disabled");
     return NextResponse.json({ error: "Account has been disabled. Contact support." }, { status: 403 });
   }
 
@@ -35,37 +49,40 @@ export async function POST(req: NextRequest) {
     const minutesLeft = lockStatus.until
       ? Math.ceil((lockStatus.until.getTime() - Date.now()) / 60000)
       : 30;
+    await logFailure(user.id, "Account locked");
     return NextResponse.json({ error: `Account locked. Try again in ${minutesLeft} minutes.` }, { status: 423 });
   }
 
   const isValid = await bcrypt.compare(password, user.password);
   if (!isValid) {
     const result = await recordFailedLogin(user.id);
+    await logFailure(user.id, "Incorrect password");
     if (result.locked) {
       return NextResponse.json({ error: "Account locked after too many failed attempts. Try again in 30 minutes." }, { status: 423 });
     }
-    return NextResponse.json({ error: `Invalid email or password. ${result.attemptsLeft} attempt(s) remaining.` }, { status: 401 });
-  }
-
-  // Dealer status checks
-  if (user.role === "DEALER" && user.dealer?.status !== "APPROVED") {
-    const msgs: Record<string, string> = {
-      PENDING: "Your dealer account is pending approval.",
-      REJECTED: "Your dealer application has been rejected.",
-      SUSPENDED: "Your dealer account has been suspended.",
-    };
-    return NextResponse.json({ error: msgs[user.dealer?.status || ""] || "Account not approved." }, { status: 403 });
+    return NextResponse.json({ error: `Invalid email/mobile or password. ${result.attemptsLeft} attempt(s) remaining.` }, { status: 401 });
   }
 
   await clearFailedLogins(user.id);
 
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginIP: ip, lastDevice: deviceInfo },
+  });
+
+  await prisma.loginHistory.create({
+    data: { userId: user.id, success: true, method: isMobile ? "password-mobile" : "password-email", ipAddress: ip, userAgent, deviceInfo },
+  }).catch(() => null);
+
+  // Email/mobile verification and dealer/vendor approval are surfaced to the
+  // caller via the response flags rather than blocking login outright.
   const { accessToken, refreshToken } = await createSession({
     userId: user.id,
     email: user.email,
     role: user.role,
     ipAddress: ip,
-    userAgent: req.headers.get("user-agent") || undefined,
-    deviceInfo: getDeviceInfo(req),
+    userAgent,
+    deviceInfo,
   });
 
   const res = NextResponse.json({
@@ -76,6 +93,8 @@ export async function POST(req: NextRequest) {
       role: user.role,
       emailVerified: !!user.emailVerified,
       mobileVerified: user.mobileVerified,
+      dealerStatus: user.dealer?.status ?? null,
+      vendorStatus: user.vendor?.status ?? null,
     },
   });
 

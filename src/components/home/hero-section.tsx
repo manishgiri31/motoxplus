@@ -28,23 +28,23 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-white">
+    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)]">
       {/* Background */}
       <div className="absolute inset-0 z-0">
         {/* Dot grid pattern */}
         <div
-          className="absolute inset-0 opacity-[0.055]"
+          className="absolute inset-0 opacity-[0.055] dark:opacity-[0.08]"
           style={{
-            backgroundImage: `radial-gradient(circle, #000 1px, transparent 1px)`,
+            backgroundImage: `radial-gradient(circle, var(--text-muted) 1px, transparent 1px)`,
             backgroundSize: "32px 32px",
           }}
         />
         {/* Red glow blob top-right */}
-        <div className="absolute -top-32 -right-32 w-[700px] h-[700px] bg-red-100/60 rounded-full blur-[120px]" />
+        <div className="absolute -top-32 -right-32 w-[700px] h-[700px] bg-red-500/10 rounded-full blur-[120px]" />
         {/* Soft accent bottom-left */}
-        <div className="absolute -bottom-20 -left-20 w-[500px] h-[500px] bg-slate-100 rounded-full blur-[100px]" />
+        <div className="absolute -bottom-20 -left-20 w-[500px] h-[500px] bg-[var(--bg-secondary)] rounded-full blur-[100px]" />
         {/* Bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-gray-50/80 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[var(--bg-primary)]/80 to-transparent" />
       </div>
 
       {/* Decorative vertical lines */}
@@ -52,7 +52,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="w-px bg-gray-500 rounded-full"
+            className="w-px bg-[var(--text-muted)] rounded-full"
             style={{ height: `${12 + i * 4}px` }}
           />
         ))}
@@ -79,7 +79,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
           }`}
         >
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.95] mb-6">
-            <span className="block text-gray-900">
+            <span className="block text-[var(--text-primary)]">
               {headlines[currentHeadline][0]}
             </span>
             <span className="block text-gradient-red">
@@ -90,7 +90,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
 
         {/* Subheadline */}
         <p
-          className={`text-gray-500 text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed transition-all duration-1000 delay-400 ${
+          className={`text-[var(--text-muted)] text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed transition-all duration-1000 delay-400 ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
@@ -113,7 +113,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
           </Link>
           <Link
             href="/products"
-            className="group flex items-center gap-2.5 border-2 border-gray-200 hover:border-red-300 text-gray-700 hover:text-red-600 font-bold px-8 py-4 rounded-xl transition-all duration-200 text-sm uppercase tracking-wider bg-white hover:bg-red-50"
+            className="group flex items-center gap-2.5 border-2 border-[var(--border-color)] hover:border-red-300 text-[var(--text-secondary)] hover:text-red-600 font-bold px-8 py-4 rounded-xl transition-all duration-200 text-sm uppercase tracking-wider bg-[var(--bg-secondary)] hover:bg-red-500/10"
           >
             Explore Products
             <ArrowRight size={16} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
@@ -133,12 +133,12 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="flex-1 rounded-xl px-4 py-4 text-center bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-100 transition-all duration-200"
+              className="flex-1 rounded-xl px-4 py-4 text-center glass border border-[var(--border-color)] shadow-sm hover:shadow-md hover:border-red-900/30 transition-all duration-200"
             >
-              <div className="text-3xl md:text-4xl font-black text-gray-900 mb-1">
+              <div className="text-3xl md:text-4xl font-black text-[var(--text-primary)] mb-1">
                 {stat.value}
               </div>
-              <div className="text-gray-400 text-[10px] uppercase tracking-widest">{stat.label}</div>
+              <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -146,7 +146,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce z-10">
-        <span className="text-gray-400 text-[10px] uppercase tracking-widest">Scroll</span>
+        <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Scroll</span>
         <ChevronDown size={14} className="text-red-500" />
       </div>
 
@@ -157,7 +157,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
             key={i}
             onClick={() => setCurrentHeadline(i)}
             className={`h-[2px] transition-all duration-300 rounded-full ${
-              i === currentHeadline ? "w-8 bg-red-600" : "w-3 bg-gray-300"
+              i === currentHeadline ? "w-8 bg-red-600" : "w-3 bg-[var(--border-color)]"
             }`}
           />
         ))}

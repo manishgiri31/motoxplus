@@ -13,6 +13,7 @@
     "db:seed-mudguard": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"node\\\",\\\"target\\\":\\\"ES2017\\\"}\" prisma/seed-mudguard.ts",
     "db:copy-mudguard-images": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"node\\\",\\\"target\\\":\\\"ES2017\\\"}\" prisma/copy-mudguard-images.ts",
     "db:seed-descriptions": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed-descriptions.ts",
+    "db:seed-vehicles": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed-vehicles.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },
@@ -56,7 +57,7 @@
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.79.0",
-    "resend": "^6.14.0",
+    "resend": "^6.17.1",
     "sharp": "^0.35.1",
     "tailwind-merge": "^3.6.0",
     "three": "^0.185.0",

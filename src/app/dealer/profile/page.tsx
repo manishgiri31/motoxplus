@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { DeleteAccountDialog } from "@/components/dealer/delete-account-dialog";
+import { VerificationStatusCard } from "@/components/auth/verification-status-card";
 
 export default async function DealerProfilePage() {
   const session = await getServerSession(authOptions);
@@ -61,7 +62,7 @@ export default async function DealerProfilePage() {
               <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">{field.label}</div>
               <div className={`text-sm font-semibold ${
                 field.label === "Account Status"
-                  ? field.value === "APPROVED" ? "text-green-400" : "text-yellow-400"
+                  ? field.value === "ACTIVE" ? "text-green-400" : "text-yellow-400"
                   : field.label === "GST Number"
                   ? "text-[var(--text-primary)] font-mono"
                   : "text-[var(--text-primary)]"
@@ -80,6 +81,17 @@ export default async function DealerProfilePage() {
             </a>
           </p>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <VerificationStatusCard
+          email={dealer.user.email}
+          emailVerified={!!dealer.user.emailVerified}
+          mobileVerified={dealer.user.mobileVerified}
+          gstNumber={dealer.gstNumber}
+          gstVerified={dealer.gstVerified}
+          accountStatus={dealer.status}
+        />
       </div>
 
       <DeleteAccountDialog />

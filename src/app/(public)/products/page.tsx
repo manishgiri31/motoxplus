@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { ProductCatalog } from "@/components/products/product-catalog";
 import { buildSearchWhere } from "@/lib/product-search";
+import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; search?: string; page?: string };
+  searchParams: { category?: string; search?: string; page?: string; vehicle?: string; variant?: string; section?: string };
 }) {
   const page = parseInt(searchParams.page || "1");
   const pageSize = 12;
@@ -19,10 +20,36 @@ export default async function ProductsPage({
 
   const searchWhere = search ? await buildSearchWhere(search, true) : {};
 
+  let vehicleWhere = {};
+  let vehicleName: string | undefined;
+  if (searchParams.vehicle) {
+    const vehicle = await prisma.vehicle.findUnique({ where: { slug: searchParams.vehicle } });
+    if (vehicle) {
+      vehicleName = vehicle.name;
+      const [selectedVariant, selectedSection] = await Promise.all([
+        searchParams.variant
+          ? prisma.vehicleVariant.findFirst({ where: { vehicleId: vehicle.id, slug: searchParams.variant } })
+          : Promise.resolve(null),
+        searchParams.section
+          ? prisma.vehiclePartSection.findFirst({ where: { slug: searchParams.section } })
+          : Promise.resolve(null),
+      ]);
+      const filter: CompatibilityFilter = {
+        vehicleId: vehicle.id,
+        variantId: selectedVariant?.id ?? null,
+        generationId: selectedVariant?.generationId ?? null,
+        sectionId: selectedSection?.id ?? null,
+      };
+      const productIds = await getCompatibleProductIds(filter);
+      vehicleWhere = { id: { in: productIds } };
+    }
+  }
+
   const baseWhere = {
     isActive: true,
     ...(searchParams.category && { category: { slug: searchParams.category } }),
     ...searchWhere,
+    ...vehicleWhere,
   };
 
   const [products, categories, totalProducts] = await Promise.all([
@@ -56,7 +83,11 @@ export default async function ProductsPage({
             Premium <span className="text-gradient-red">Spare Parts.</span>
           </h1>
           <p className="text-[var(--text-muted)] mt-4 max-w-xl">
-            {totalProducts}+ products across all categories. Wholesale prices and MRP shown below — dealer login required to place orders.
+            {vehicleName ? (
+              <>Showing {totalProducts} part{totalProducts === 1 ? "" : "s"} compatible with <span className="text-[var(--text-primary)] font-semibold">{vehicleName}</span>.</>
+            ) : (
+              <>{totalProducts}+ products across all categories. Wholesale prices and MRP shown below — dealer login required to place orders.</>
+            )}
           </p>
         </div>
       </section>

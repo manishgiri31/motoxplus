@@ -9,6 +9,10 @@ declare module "next-auth" {
     isSuperAdmin?: boolean;
     vendorId?: string;
     department?: StaffDepartment;
+    emailVerified?: boolean;
+    mobileVerified?: boolean;
+    dealerStatus?: string;
+    vendorStatus?: string;
   }
   interface Session {
     user: {
@@ -21,6 +25,10 @@ declare module "next-auth" {
       isSuperAdmin?: boolean;
       vendorId?: string;
       department?: StaffDepartment;
+      emailVerified?: boolean;
+      mobileVerified?: boolean;
+      dealerStatus?: string;
+      vendorStatus?: string;
     };
   }
 }
@@ -33,5 +41,9 @@ declare module "next-auth/jwt" {
     isSuperAdmin?: boolean;
     vendorId?: string;
     department?: StaffDepartment;
+    emailVerified?: boolean;
+    mobileVerified?: boolean;
+    dealerStatus?: string;
+    vendorStatus?: string;
   }
 }

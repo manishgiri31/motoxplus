@@ -208,7 +208,7 @@ export default async function DealerDashboardPage() {
               <div className="flex justify-between items-center pt-1 border-t border-[var(--border-color)]">
                 <span className="text-[var(--text-muted)] text-xs">Status</span>
                 <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full text-green-400 bg-green-500/10 border border-green-500/20">
-                  APPROVED
+                  ACTIVE
                 </span>
               </div>
             </div>

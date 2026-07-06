@@ -36,7 +36,7 @@ export function LoginForm() {
   async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading"); setError("");
-    const result = await signIn("credentials", { email, password, redirect: false });
+    const result = await signIn("credentials", { identifier: email, password, redirect: false });
     if (result?.error) { setError(result.error); setStatus("error"); return; }
     router.push(callbackUrl);
     router.refresh();
@@ -105,7 +105,7 @@ export function LoginForm() {
           className={`flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${tab === "password" ? "bg-red-600 text-white shadow-[0_0_12px_rgba(220,38,38,0.35)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
         >
           <Lock size={12} />
-          Email
+          Password
         </button>
         <button
           type="button"
@@ -121,10 +121,10 @@ export function LoginForm() {
       {tab === "password" && (
         <form onSubmit={handlePasswordLogin} className="space-y-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Email Address</label>
+            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Email or Mobile Number</label>
             <div className="relative">
               <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="you@company.com" autoComplete="email" />
+              <input type="text" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="you@company.com or 98765 43210" autoComplete="username" />
             </div>
           </div>
           <div>

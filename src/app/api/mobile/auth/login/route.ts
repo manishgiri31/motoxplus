@@ -8,7 +8,7 @@ import {
   isAccountLocked,
   checkIPRateLimit,
 } from "@/lib/auth/rate-limit";
-import { getClientIP } from "@/lib/auth/middleware";
+import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
 
 // Mobile login — returns tokens in the response body instead of cookies.
 export async function POST(req: NextRequest) {
@@ -20,27 +20,41 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { email, password } = await req.json();
-  if (!email || !password) {
+  const { email, mobile, password } = await req.json();
+  const identifier = (email || mobile || "").trim();
+  if (!identifier || !password) {
     return NextResponse.json(
-      { error: "Email and password are required" },
+      { error: "Email or mobile number, and password are required" },
       { status: 400 }
     );
   }
 
+  const normalizedMobile = identifier.replace(/\s/g, "").replace("+91", "");
+  const isMobile = /^[6-9]\d{9}$/.test(normalizedMobile);
+
   const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
+    where: isMobile ? { mobileNumber: normalizedMobile } : { email: identifier.toLowerCase() },
     include: { dealer: true },
   });
 
+  const deviceInfo = getDeviceInfo(req);
+  const userAgent = req.headers.get("user-agent") || undefined;
+  const logFailure = async (userId: string | undefined, reason: string) => {
+    if (!userId) return;
+    await prisma.loginHistory.create({
+      data: { userId, success: false, method: isMobile ? "password-mobile" : "password-email", reason, ipAddress: ip, userAgent, deviceInfo },
+    }).catch(() => null);
+  };
+
   if (!user || !user.password) {
     return NextResponse.json(
-      { error: "Invalid email or password" },
+      { error: "Invalid email/mobile or password" },
       { status: 401 }
     );
   }
 
   if (!user.isActive) {
+    await logFailure(user.id, "Account disabled");
     return NextResponse.json(
       { error: "Account has been disabled. Contact support." },
       { status: 403 }
@@ -52,6 +66,7 @@ export async function POST(req: NextRequest) {
     const minutesLeft = lockStatus.until
       ? Math.ceil((lockStatus.until.getTime() - Date.now()) / 60000)
       : 30;
+    await logFailure(user.id, "Account locked");
     return NextResponse.json(
       { error: `Account locked. Try again in ${minutesLeft} minutes.` },
       { status: 423 }
@@ -61,6 +76,7 @@ export async function POST(req: NextRequest) {
   const isValid = await bcrypt.compare(password, user.password);
   if (!isValid) {
     const result = await recordFailedLogin(user.id);
+    await logFailure(user.id, "Incorrect password");
     if (result.locked) {
       return NextResponse.json(
         { error: "Account locked after too many failed attempts. Try again in 30 minutes." },
@@ -68,31 +84,32 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: `Invalid email or password. ${result.attemptsLeft} attempt(s) remaining.` },
+      { error: `Invalid email/mobile or password. ${result.attemptsLeft} attempt(s) remaining.` },
       { status: 401 }
-    );
-  }
-
-  if (user.role === "DEALER" && user.dealer?.status !== "APPROVED") {
-    const msgs: Record<string, string> = {
-      PENDING: "Your dealer account is pending approval.",
-      REJECTED: "Your dealer application has been rejected.",
-      SUSPENDED: "Your dealer account has been suspended.",
-    };
-    return NextResponse.json(
-      { error: msgs[user.dealer?.status || ""] || "Account not approved." },
-      { status: 403 }
     );
   }
 
   await clearFailedLogins(user.id);
 
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginIP: ip, lastDevice: deviceInfo },
+  });
+
+  await prisma.loginHistory.create({
+    data: { userId: user.id, success: true, method: isMobile ? "password-mobile" : "password-email", ipAddress: ip, userAgent, deviceInfo },
+  }).catch(() => null);
+
+  // Verification/approval gating is left to the client: emailVerified,
+  // mobileVerified and dealer.status are returned so the app can route to
+  // the appropriate screen instead of the request being hard-blocked here.
   const { accessToken, refreshToken } = await createSession({
     userId: user.id,
     email: user.email,
     role: user.role,
     ipAddress: ip,
-    userAgent: req.headers.get("user-agent") || undefined,
+    userAgent,
+    deviceInfo,
   });
 
   return NextResponse.json({
@@ -103,6 +120,7 @@ export async function POST(req: NextRequest) {
       name: user.name,
       email: user.email,
       role: user.role,
+      emailVerified: !!user.emailVerified,
       mobileVerified: user.mobileVerified,
       isActive: user.isActive,
     },
