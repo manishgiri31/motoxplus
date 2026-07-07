@@ -62,7 +62,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
       <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8 text-center">
         {/* Badge */}
         <div
-          className={`inline-flex items-center gap-2.5 border border-red-200 bg-red-50 rounded-full px-5 py-2 mb-10 transition-all duration-1000 ${
+          className={`inline-flex items-center gap-2.5 border border-red-500/20 bg-red-500/10 rounded-full px-5 py-2 mb-10 transition-all duration-1000 ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >

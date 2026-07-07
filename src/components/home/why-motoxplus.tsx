@@ -10,8 +10,8 @@ const features = [
     Icon: ShieldCheck,
     stat: "100%",
     statLabel: "OEM Fit",
-    accent: "from-red-50 to-rose-50/30",
-    iconBg: "bg-red-50 group-hover:bg-red-100",
+    accent: "from-red-500/10 to-transparent",
+    iconBg: "bg-red-500/10 group-hover:bg-red-500/15",
     iconColor: "text-red-500 group-hover:text-red-600",
     statColor: "text-red-500",
   },
@@ -21,8 +21,8 @@ const features = [
     Icon: Microscope,
     stat: "ISO",
     statLabel: "Certified",
-    accent: "from-blue-50 to-sky-50/30",
-    iconBg: "bg-blue-50 group-hover:bg-blue-100",
+    accent: "from-blue-500/10 to-transparent",
+    iconBg: "bg-blue-500/10 group-hover:bg-blue-500/15",
     iconColor: "text-blue-500 group-hover:text-blue-600",
     statColor: "text-blue-500",
   },
@@ -32,8 +32,8 @@ const features = [
     Icon: Award,
     stat: "3×",
     statLabel: "Lifespan",
-    accent: "from-amber-50 to-yellow-50/30",
-    iconBg: "bg-amber-50 group-hover:bg-amber-100",
+    accent: "from-amber-500/10 to-transparent",
+    iconBg: "bg-amber-500/10 group-hover:bg-amber-500/15",
     iconColor: "text-amber-500 group-hover:text-amber-600",
     statColor: "text-amber-500",
   },
@@ -43,8 +43,8 @@ const features = [
     Icon: Network,
     stat: "18+",
     statLabel: "States",
-    accent: "from-green-50 to-emerald-50/30",
-    iconBg: "bg-green-50 group-hover:bg-green-100",
+    accent: "from-green-500/10 to-transparent",
+    iconBg: "bg-green-500/10 group-hover:bg-green-500/15",
     iconColor: "text-green-500 group-hover:text-green-600",
     statColor: "text-green-500",
   },
@@ -76,9 +76,9 @@ export function WhyMotoXPlus() {
               in two-wheeler engineering to deliver parts that perform when it matters most.
             </p>
 
-            <div className="flex items-center gap-6 bg-white border border-gray-100 shadow-sm rounded-2xl p-6 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-50 to-white rounded-2xl" />
-              <div className="text-8xl font-black text-red-100 leading-none select-none relative z-10">15+</div>
+            <div className="flex items-center gap-6 glass border border-[var(--border-color)] shadow-sm rounded-2xl p-6 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent rounded-2xl" />
+              <div className="text-8xl font-black text-red-500/15 leading-none select-none relative z-10">15+</div>
               <div className="relative z-10">
                 <div className="text-[var(--text-primary)] font-bold text-xl mb-1">Years of Excellence</div>
                 <div className="text-[var(--text-muted)] text-sm leading-relaxed">
@@ -92,7 +92,7 @@ export function WhyMotoXPlus() {
           <div className="grid grid-cols-2 gap-4">
             {features.map((feature) => (
               <TiltCard key={feature.title} intensity={10}>
-                <div className="group bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-red-100 rounded-2xl p-6 transition-all duration-300 relative overflow-hidden">
+                <div className="group glass border border-[var(--border-color)] shadow-sm hover:shadow-md hover:border-red-900/40 rounded-2xl p-6 transition-all duration-300 relative overflow-hidden">
                   <div className={`absolute inset-0 bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl`} />
 
                   <div className={`relative z-10 w-11 h-11 rounded-xl flex items-center justify-center mb-5 transition-colors border border-transparent ${feature.iconBg}`}>
@@ -101,7 +101,7 @@ export function WhyMotoXPlus() {
 
                   <div className="relative z-10 flex items-baseline gap-1 mb-1.5">
                     <span className={`text-2xl font-black ${feature.statColor}`}>{feature.stat}</span>
-                    <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">{feature.statLabel}</span>
+                    <span className="text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-wider">{feature.statLabel}</span>
                   </div>
                   <h3 className="relative z-10 text-[var(--text-primary)] font-bold mb-2 text-sm">{feature.title}</h3>
                   <p className="relative z-10 text-[var(--text-muted)] text-xs leading-relaxed">{feature.description}</p>

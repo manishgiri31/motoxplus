@@ -28,9 +28,9 @@ export function DealerProgram() {
     <section className="py-24 px-4 md:px-8 bg-[var(--bg-secondary)] relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-200/40 to-transparent" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-red-50/80 rounded-full blur-[130px]" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/20 to-transparent" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-red-500/10 rounded-full blur-[130px]" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
@@ -75,7 +75,7 @@ export function DealerProgram() {
           <div className="relative">
             <TiltCard intensity={7}>
             <div className="glass border border-[var(--border-color)] rounded-2xl p-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-red-50 rounded-full blur-[60px] pointer-events-none" />
+              <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/10 rounded-full blur-[60px] pointer-events-none" />
 
               <h3 className="text-[var(--text-primary)] font-bold text-lg mb-8 uppercase tracking-wider relative z-10">
                 Dealer Network Stats

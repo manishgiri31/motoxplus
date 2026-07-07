@@ -18,7 +18,7 @@ const CATEGORIES = [
     slug: "mudguard",
     description: "Front and rear mudguards engineered for precise OEM fitment and durability.",
     Icon: Shield,
-    iconBg: "bg-red-50 group-hover:bg-red-100 border-red-100",
+    iconBg: "bg-red-500/10 group-hover:bg-red-500/15 border-red-500/20",
     iconColor: "text-red-500 group-hover:text-red-600",
   },
   {
@@ -26,7 +26,7 @@ const CATEGORIES = [
     slug: "indicators",
     description: "Indicator assemblies and turn signal lamps for safe and compliant riding.",
     Icon: Radio,
-    iconBg: "bg-orange-50 group-hover:bg-orange-100 border-orange-100",
+    iconBg: "bg-orange-500/10 group-hover:bg-orange-500/15 border-orange-500/20",
     iconColor: "text-orange-500 group-hover:text-orange-600",
   },
   {
