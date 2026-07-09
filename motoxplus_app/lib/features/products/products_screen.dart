@@ -125,7 +125,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           // Category filter
           categories.when(
             loading: () => const SizedBox(height: 48),
-            error: (_, __) => const SizedBox(),
+            error: (_, _) => const SizedBox(),
             data: (cats) => SizedBox(
               height: 40,
               child: ListView(
@@ -156,7 +156,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.7),
                 itemCount: 6,
-                itemBuilder: (_, __) => const ShimmerCard(),
+                itemBuilder: (_, _) => const ShimmerCard(),
               ),
               error: (e, _) => Center(
                 child: Text('Failed to load products',
@@ -318,8 +318,8 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: p.isInStock
-                                ? AppColors.success.withOpacity(0.15)
-                                : AppColors.error.withOpacity(0.15),
+                                ? AppColors.success.withValues(alpha: 0.15)
+                                : AppColors.error.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(

@@ -1,0 +1,12 @@
+[
+  {"action": "goto", "url": "http://localhost:3000/products"},
+  {"action": "wait", "ms": 2000},
+  {"action": "click", "selector": "input[placeholder*='Search by name']"},
+  {"action": "fill", "selector": "input[placeholder*='Search by name']", "value": "Glamour"},
+  {"action": "log"},
+  {"action": "wait", "ms": 1000},
+  {"action": "log"},
+  {"action": "wait", "ms": 1500},
+  {"action": "log"},
+  {"action": "screenshot", "name": "06-after-debounce"}
+]

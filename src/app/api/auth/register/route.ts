@@ -3,8 +3,13 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createOTP } from "@/lib/auth/otp";
 import { sendEmail, verifyEmailTemplate, welcomeTemplate } from "@/lib/email";
+import { encrypt } from "@/lib/crypto/encryption";
 import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
+
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+const AADHAAR_REGEX = /^[0-9]{12}$/;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
@@ -13,10 +18,20 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { name, email, password, companyName, gstNumber, ownerName, phone, state, city, address, pincode } = body;
+  const { name, email, password, companyName, gstNumber, panNumber, aadhaarNumber, ownerName, phone, state, city, address, pincode } = body;
 
   if (!name || !email || !password) {
     return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
+  }
+
+  if (gstNumber && !GST_REGEX.test(gstNumber)) {
+    return NextResponse.json({ error: "Invalid GST number" }, { status: 400 });
+  }
+  if (panNumber && !PAN_REGEX.test(panNumber)) {
+    return NextResponse.json({ error: "Invalid PAN number" }, { status: 400 });
+  }
+  if (aadhaarNumber && !AADHAAR_REGEX.test(aadhaarNumber)) {
+    return NextResponse.json({ error: "Invalid Aadhaar number" }, { status: 400 });
   }
 
   let normalizedMobile: string | undefined;
@@ -39,6 +54,11 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (existing) return NextResponse.json({ error: "Email already registered" }, { status: 409 });
 
+  if (gstNumber) {
+    const existingGST = await prisma.dealer.findUnique({ where: { gstNumber: gstNumber.toUpperCase() } });
+    if (existingGST) return NextResponse.json({ error: "GST number already registered" }, { status: 409 });
+  }
+
   const hashed = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.create({
@@ -54,6 +74,8 @@ export async function POST(req: NextRequest) {
               create: {
                 companyName,
                 gstNumber: gstNumber ? gstNumber.toUpperCase() : null,
+                panNumber: panNumber ? panNumber.toUpperCase() : null,
+                aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : null,
                 ownerName,
                 phone: normalizedMobile || phone,
                 state,

@@ -186,7 +186,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       body: cartAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (_, __) =>
+        error: (_, _) =>
             const Center(child: Text('Error loading cart', style: TextStyle(color: AppColors.textMuted))),
         data: (cart) {
           if (cart.items.isEmpty) {
@@ -381,7 +381,7 @@ class _PaymentOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withOpacity(0.05) : AppColors.bgCard,
+          color: selected ? AppColors.primary.withValues(alpha: 0.05) : AppColors.bgCard,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: selected ? AppColors.primary : AppColors.border),
@@ -409,7 +409,7 @@ class _PaymentOption extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: selected ? AppColors.primary.withOpacity(0.1) : AppColors.bgCardHover,
+                color: selected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.bgCardHover,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(icon,

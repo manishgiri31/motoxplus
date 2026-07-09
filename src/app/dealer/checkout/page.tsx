@@ -172,7 +172,15 @@ export default function CheckoutPage() {
   }, []);
 
   const orderTotal = (cart?.subtotal ?? 0) + (cart?.gstAmount ?? 0);
-  const shippingCost = cart && serviceabilityResult?.serviceable ? calcShipping(orderTotal) : 0;
+  // Mirrors the server's unconditional calcShipping(orderTotal) in /api/orders —
+  // shipping cost doesn't depend on courier serviceability (that only affects
+  // the "may be outside courier coverage" delivery-arrangement notice below).
+  // Gating this on serviceabilityResult used to show ₹0 shipping (and a lower
+  // grand total) whenever the check hadn't resolved yet, e.g. while the
+  // Delhivery API was slow/unreachable, even though the order actually created
+  // moments later always carried the real shipping charge — a bait-and-switch
+  // between what checkout displayed and what the dealer was actually billed.
+  const shippingCost = cart ? calcShipping(orderTotal) : 0;
   const freeDeliveryRemaining = Math.max(0, FREE_DELIVERY_THRESHOLD - orderTotal);
   const freeDeliveryProgress = Math.min(100, (orderTotal / FREE_DELIVERY_THRESHOLD) * 100);
 

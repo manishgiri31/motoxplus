@@ -15,7 +15,7 @@ const INDIAN_STATES = [
 export function RegisterForm() {
   const [step, setStep] = useState(1);
   const [s1, setS1] = useState({ name: "", email: "", password: "", confirmPassword: "" });
-  const [s2, setS2] = useState({ companyName: "", gstNumber: "", ownerName: "", phone: "", state: "", city: "", address: "", pincode: "" });
+  const [s2, setS2] = useState({ companyName: "", gstNumber: "", panNumber: "", aadhaarNumber: "", ownerName: "", phone: "", state: "", city: "", address: "", pincode: "" });
   const [showPw, setShowPw] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState("");
@@ -124,11 +124,24 @@ export function RegisterForm() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">GST Number</label>
-              <input type="text" required value={s2.gstNumber} onChange={(e) => setS2({ ...s2, gstNumber: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="22AAAAA0000A1Z5" maxLength={15} />
+              <input type="text" pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$" value={s2.gstNumber} onChange={(e) => setS2({ ...s2, gstNumber: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="22AAAAA0000A1Z5" maxLength={15} />
+              <div className="text-[var(--text-muted)] text-xs mt-1">Optional — or provide PAN / Aadhaar below</div>
             </div>
             <div>
               <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Mobile</label>
               <input type="tel" required value={s2.phone} onChange={(e) => setS2({ ...s2, phone: e.target.value })} className={inputCls} placeholder="10-digit number" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">PAN Number</label>
+              <input type="text" pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$" value={s2.panNumber} onChange={(e) => setS2({ ...s2, panNumber: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="AAAAA0000A" maxLength={10} />
+              <div className="text-[var(--text-muted)] text-xs mt-1">Optional</div>
+            </div>
+            <div>
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Aadhaar Number</label>
+              <input type="text" pattern="[0-9]{12}" maxLength={12} value={s2.aadhaarNumber} onChange={(e) => setS2({ ...s2, aadhaarNumber: e.target.value.replace(/\D/g, "") })} className={inputCls + " font-mono"} placeholder="000000000000" />
+              <div className="text-[var(--text-muted)] text-xs mt-1">Optional — stored securely</div>
             </div>
           </div>
           <div>

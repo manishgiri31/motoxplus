@@ -23,7 +23,7 @@ class OrderDetailScreen extends ConsumerWidget {
       body: orderAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (_, __) => const Center(
+        error: (_, _) => const Center(
             child: Text('Failed to load order',
                 style: TextStyle(color: AppColors.textMuted))),
         data: (order) => SingleChildScrollView(

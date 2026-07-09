@@ -112,8 +112,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: product.isInStock
-                                  ? AppColors.success.withOpacity(0.15)
-                                  : AppColors.error.withOpacity(0.15),
+                                  ? AppColors.success.withValues(alpha: 0.15)
+                                  : AppColors.error.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(

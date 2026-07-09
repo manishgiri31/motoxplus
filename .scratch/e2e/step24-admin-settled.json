@@ -1,0 +1,11 @@
+[
+  {"action": "goto", "url": "http://localhost:3000/login"},
+  {"action": "wait", "ms": 1500},
+  {"action": "fill", "selector": "input[placeholder*='you@company.com']", "value": "superadmin@motoxplus.in"},
+  {"action": "fill", "selector": "input[placeholder='Your password']", "value": "SuperAdmin@123"},
+  {"action": "click", "selector": "button:has-text('SIGN IN')"},
+  {"action": "wait", "ms": 4000},
+  {"action": "wait", "ms": 4000},
+  {"action": "screenshot", "name": "30-admin-settled"},
+  {"action": "log"}
+]

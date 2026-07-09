@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle } from "lucide-react";
 
@@ -33,6 +33,13 @@ export function DealerRegistrationForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [userId, setUserId] = useState("");
+
+  useEffect(() => {
+    if (status === "success" && userId) {
+      const timer = setTimeout(() => router.push(`/verify-email?userId=${userId}`), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [status, userId, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,8 +102,9 @@ export function DealerRegistrationForm() {
           onClick={() => router.push(`/verify-email?userId=${userId}`)}
           className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
         >
-          Verify Email
+          Verify Email Now
         </button>
+        <p className="text-gray-600 text-xs mt-4">Redirecting you to the verification page...</p>
       </div>
     );
   }

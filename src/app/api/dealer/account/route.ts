@@ -3,6 +3,25 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export async function GET() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || session.user.role !== "DEALER") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const dealer = await prisma.dealer.findUnique({
+    where: { userId: session.user.id },
+    select: { ownerName: true, phone: true, address: true, city: true, state: true, pincode: true },
+  });
+
+  if (!dealer) {
+    return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(dealer);
+}
+
 export async function DELETE() {
   const session = await getServerSession(authOptions);
 

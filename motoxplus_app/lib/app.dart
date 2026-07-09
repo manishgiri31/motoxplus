@@ -29,24 +29,24 @@ final _routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       ShellRoute(
         builder: (context, state, child) => _MainShell(child: child),
         routes: [
-          GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
-          GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),
-          GoRoute(path: '/orders', builder: (_, __) => const OrdersScreen()),
-          GoRoute(path: '/invoices', builder: (_, __) => const InvoicesScreen()),
-          GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+          GoRoute(path: '/dashboard', builder: (_, _) => const DashboardScreen()),
+          GoRoute(path: '/products', builder: (_, _) => const ProductsScreen()),
+          GoRoute(path: '/orders', builder: (_, _) => const OrdersScreen()),
+          GoRoute(path: '/invoices', builder: (_, _) => const InvoicesScreen()),
+          GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
         ],
       ),
       GoRoute(
         path: '/products/:id',
         builder: (_, state) => ProductDetailScreen(productId: state.pathParameters['id']!),
       ),
-      GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
-      GoRoute(path: '/checkout', builder: (_, __) => const CheckoutScreen()),
+      GoRoute(path: '/cart', builder: (_, _) => const CartScreen()),
+      GoRoute(path: '/checkout', builder: (_, _) => const CheckoutScreen()),
       GoRoute(
         path: '/orders/:id',
         builder: (_, state) => OrderDetailScreen(orderId: state.pathParameters['id']!),

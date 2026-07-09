@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://motoxplus.com";
+const IS_PROD = process.env.NODE_ENV === "production";
 
 const securityHeaders = [
   // Prevent clickjacking
@@ -14,11 +15,13 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=(self), interest-cohort=()",
   },
-  // HSTS — 2 years, include subdomains + preload
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
+  // HSTS — 2 years, include subdomains + preload. Prod-only: the dev server
+  // is plain HTTP, and a browser that ever receives this header for
+  // localhost will force-upgrade all future localhost requests to HTTPS,
+  // breaking local dev until the HSTS entry is manually cleared.
+  ...(IS_PROD
+    ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }]
+    : []),
   // Legacy XSS filter
   { key: "X-XSS-Protection", value: "1; mode=block" },
   // DNS prefetch control
@@ -42,7 +45,8 @@ const securityHeaders = [
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'self'",
-      "upgrade-insecure-requests",
+      // Prod-only: would force dev's plain-HTTP fetches/RSC requests to HTTPS
+      ...(IS_PROD ? ["upgrade-insecure-requests"] : []),
     ].join("; "),
   },
 ];

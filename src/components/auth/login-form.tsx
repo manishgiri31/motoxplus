@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock, Smartphone, ShieldCheck, ChevronRight } from "lucide-react";
 import { OtpInput } from "./otp-input";
@@ -13,7 +13,6 @@ type Tab = "password" | "otp";
 type OtpStep = "enter-mobile" | "enter-otp";
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dealer/dashboard";
 
@@ -38,8 +37,11 @@ export function LoginForm() {
     setStatus("loading"); setError("");
     const result = await signIn("credentials", { identifier: email, password, redirect: false });
     if (result?.error) { setError(result.error); setStatus("error"); return; }
-    router.push(callbackUrl);
-    router.refresh();
+    // Full reload instead of router.push+refresh: those race against each
+    // other on a slow backend, and refresh() can reapply the stale /login
+    // segment after push() has already navigated, bouncing the user back
+    // here with the submit button frozen on "Signing in...".
+    window.location.href = callbackUrl;
   }
 
   async function handleSendOTP(e: React.FormEvent) {
@@ -68,8 +70,7 @@ export function LoginForm() {
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Invalid OTP"); setStatus("error"); return; }
-    router.push(callbackUrl);
-    router.refresh();
+    window.location.href = callbackUrl;
   }
 
   async function handleResendOTP() {

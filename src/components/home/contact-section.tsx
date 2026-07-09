@@ -12,11 +12,30 @@ export function ContactSection() {
     message: "",
   });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("loading");
-    setTimeout(() => setStatus("success"), 1000);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to send message");
+      }
+
+      setStatus("success");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send message");
+      setStatus("error");
+    }
   };
 
   return (
@@ -163,6 +182,9 @@ export function ContactSection() {
                     placeholder="Tell us about your requirements..."
                   />
                 </div>
+                {status === "error" && error && (
+                  <p className="text-red-500 text-sm text-center">{error}</p>
+                )}
                 <button
                   type="submit"
                   disabled={status === "loading"}

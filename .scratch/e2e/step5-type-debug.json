@@ -1,0 +1,10 @@
+[
+  {"action": "goto", "url": "http://localhost:3000/products"},
+  {"action": "wait", "ms": 2000},
+  {"action": "click", "selector": "input[placeholder*='Search by name']"},
+  {"action": "type", "selector": "input[placeholder*='Search by name']", "value": "Glamour", "delay": 100},
+  {"action": "eval", "fn": "(() => document.querySelector('input[placeholder*=\"Search by name\"]').value)()"},
+  {"action": "wait", "ms": 2000},
+  {"action": "log"},
+  {"action": "screenshot", "name": "07-typed-slow"}
+]

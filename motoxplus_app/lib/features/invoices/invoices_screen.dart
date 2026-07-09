@@ -30,7 +30,7 @@ class InvoicesScreen extends ConsumerWidget {
       body: invoicesAsync.when(
         loading: () =>
             const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (_, __) => const Center(
+        error: (_, _) => const Center(
             child: Text('Failed to load invoices',
                 style: TextStyle(color: AppColors.textMuted))),
         data: (invoices) {
@@ -46,7 +46,7 @@ class InvoicesScreen extends ConsumerWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: invoices.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (_, i) => _InvoiceCard(invoice: invoices[i]),
             ),
           );
@@ -82,7 +82,7 @@ class _InvoiceCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.receipt_long_outlined,

@@ -1,0 +1,6 @@
+[
+  {"action": "goto", "url": "http://localhost:3000/products?search=Glamour"},
+  {"action": "wait", "ms": 2000},
+  {"action": "screenshot", "name": "05-direct-search-url"},
+  {"action": "log"}
+]

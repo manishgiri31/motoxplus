@@ -1,0 +1,15 @@
+[
+  {"action": "goto", "url": "http://localhost:3000/login"},
+  {"action": "wait", "ms": 1500},
+  {"action": "fill", "selector": "input[placeholder*='you@company.com']", "value": "dealer@testshop.in"},
+  {"action": "fill", "selector": "input[placeholder='Your password']", "value": "Dealer@123456"},
+  {"action": "click", "selector": "button:has-text('SIGN IN')"},
+  {"action": "wait", "ms": 3000},
+  {"action": "waitFor", "selector": "text=Welcome,", "timeout": 15000},
+  {"action": "goto", "url": "http://localhost:3000/dealer/cart"},
+  {"action": "wait", "ms": 3000},
+  {"action": "clickText", "text": "Proceed to Checkout"},
+  {"action": "wait", "ms": 3000},
+  {"action": "screenshot", "name": "21-checkout-page"},
+  {"action": "log"}
+]

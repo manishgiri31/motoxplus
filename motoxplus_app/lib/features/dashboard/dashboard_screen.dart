@@ -95,9 +95,9 @@ class DashboardScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
+                    color: AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -130,7 +130,7 @@ class DashboardScreen extends ConsumerWidget {
                   childAspectRatio: 1.4,
                   children: List.generate(4, (_) => const ShimmerCard()),
                 ),
-                error: (_, __) => const SizedBox(),
+                error: (_, _) => const SizedBox(),
                 data: (data) => GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
@@ -260,7 +260,7 @@ class _StatCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(icon, color: color, size: 18),
@@ -312,7 +312,7 @@ class _QuickAction extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Icon(icon, color: color, size: 18),

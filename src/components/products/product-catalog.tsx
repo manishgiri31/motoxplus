@@ -278,63 +278,61 @@ export function ProductCatalog({
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-10">
-      {/* Filters */}
-      <div className="flex flex-col lg:flex-row gap-4 mb-8">
-        {/* Search */}
-        <div className="w-full lg:w-[380px] lg:flex-shrink-0 relative">
-          <div className="relative">
-            <Search
-              size={16}
-              className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
-                inputFocused ? "text-red-400" : "text-[var(--text-muted)]"
-              }`}
-            />
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onFocus={() => { setInputFocused(true); setActiveSuggestion(-1); }}
-              onKeyDown={handleKeyDown}
-              placeholder="Search by name, part number, vehicle (e.g. Hero Glamour)..."
-              className={`w-full themed-input border rounded-xl pl-11 pr-11 py-3.5 text-sm transition-all duration-200 ${
-                inputFocused
-                  ? "border-red-600/60 shadow-[0_0_0_3px_rgba(220,38,38,0.08)]"
-                  : ""
-              }`}
-              autoComplete="off"
-              spellCheck={false}
-              role="combobox"
-              aria-expanded={showDropdown}
-              aria-autocomplete="list"
-              aria-controls="product-search-listbox"
-              aria-activedescendant={activeSuggestion >= 0 ? `product-search-option-${activeSuggestion}` : undefined}
-            />
-            {search ? (
-              <button
-                onClick={handleClear}
-                aria-label="Clear search"
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
-              >
-                <X size={12} />
-              </button>
-            ) : (
-              !inputFocused && (
-                <kbd className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 items-center justify-center w-5 h-5 rounded-md border border-[var(--border-color)] text-[var(--text-muted)] text-[10px] font-mono bg-[var(--bg-card)] pointer-events-none">
-                  /
-                </kbd>
-              )
-            )}
-          </div>
-
-          {/* Dropdown */}
-          {showDropdown && (
-            <div
-              ref={dropdownRef}
-              id="product-search-listbox"
-              role="listbox"
-              className="absolute top-full left-0 right-0 mt-1.5 glass border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-x-hidden overflow-y-auto animate-dropdown-in max-h-[70vh]"
+      {/* Search — large, prominent, full-width */}
+      <div className="w-full relative mb-6">
+        <div className="relative">
+          <Search
+            size={22}
+            className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${
+              inputFocused ? "text-red-400" : "text-[var(--text-muted)]"
+            }`}
+          />
+          <input
+            ref={inputRef}
+            type="text"
+            value={search}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onFocus={() => { setInputFocused(true); setActiveSuggestion(-1); }}
+            onKeyDown={handleKeyDown}
+            placeholder="Search by name, part number, vehicle (e.g. Hero Glamour)..."
+            className={`w-full themed-input border rounded-2xl pl-14 pr-14 py-5 text-base md:text-lg font-medium transition-all duration-200 ${
+              inputFocused
+                ? "border-red-600/60 shadow-[0_0_0_4px_rgba(220,38,38,0.1)]"
+                : ""
+            }`}
+            autoComplete="off"
+            spellCheck={false}
+            role="combobox"
+            aria-expanded={showDropdown}
+            aria-autocomplete="list"
+            aria-controls="product-search-listbox"
+            aria-activedescendant={activeSuggestion >= 0 ? `product-search-option-${activeSuggestion}` : undefined}
+          />
+          {search ? (
+            <button
+              onClick={handleClear}
+              aria-label="Clear search"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
             >
+              <X size={15} />
+            </button>
+          ) : (
+            !inputFocused && (
+              <kbd className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 items-center justify-center w-6 h-6 rounded-md border border-[var(--border-color)] text-[var(--text-muted)] text-xs font-mono bg-[var(--bg-card)] pointer-events-none">
+                /
+              </kbd>
+            )
+          )}
+        </div>
+
+        {/* Dropdown */}
+        {showDropdown && (
+          <div
+            ref={dropdownRef}
+            id="product-search-listbox"
+            role="listbox"
+            className="absolute top-full left-0 right-0 mt-1.5 glass border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-x-hidden overflow-y-auto animate-dropdown-in max-h-[70vh]"
+          >
               {/* Loading */}
               {suggestionsLoading && suggestions.length === 0 && search.length >= 2 && (
                 <div className="py-2">
@@ -464,8 +462,8 @@ export function ProductCatalog({
           )}
         </div>
 
-        {/* Category pills */}
-        <div className="flex flex-wrap gap-2 lg:flex-1 lg:min-w-0">
+      {/* Category pills */}
+      <div className="flex flex-wrap gap-2 mb-8">
           <button
             onClick={() => handleCategory(null)}
             className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
@@ -489,7 +487,6 @@ export function ProductCatalog({
               {cat.name}
             </button>
           ))}
-        </div>
       </div>
 
       {/* Results count + active search badge */}

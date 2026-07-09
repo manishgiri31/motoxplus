@@ -95,22 +95,26 @@ class StatusBadge extends StatelessWidget {
       case 'PAID':
       case 'IN_STOCK':
         return StatusBadge(
-            label: status, color: AppColors.success, bgColor: AppColors.success.withOpacity(0.15));
+            label: status,
+            color: AppColors.success,
+            bgColor: AppColors.success.withValues(alpha: 0.15));
       case 'PENDING':
       case 'PROCESSING':
         return StatusBadge(
-            label: status, color: AppColors.warning, bgColor: AppColors.warning.withOpacity(0.15));
+            label: status,
+            color: AppColors.warning,
+            bgColor: AppColors.warning.withValues(alpha: 0.15));
       case 'CANCELLED':
       case 'REJECTED':
       case 'FAILED':
       case 'OUT_OF_STOCK':
         return StatusBadge(
-            label: status, color: AppColors.error, bgColor: AppColors.error.withOpacity(0.15));
+            label: status, color: AppColors.error, bgColor: AppColors.error.withValues(alpha: 0.15));
       default:
         return StatusBadge(
             label: status,
             color: AppColors.textSecondary,
-            bgColor: AppColors.textSecondary.withOpacity(0.1));
+            bgColor: AppColors.textSecondary.withValues(alpha: 0.1));
     }
   }
 
@@ -148,12 +152,12 @@ class ProductImageWidget extends StatelessWidget {
       height: height ?? 140,
       width: double.infinity,
       fit: BoxFit.cover,
-      placeholder: (_, __) => Shimmer.fromColors(
+      placeholder: (_, _) => Shimmer.fromColors(
         baseColor: context.cBgCard,
         highlightColor: context.isDark ? AppColors.bgCardHover : const Color(0xFFEEEEEE),
         child: Container(height: height ?? 140, color: context.cBgCard),
       ),
-      errorWidget: (_, __, ___) => placeholder,
+      errorWidget: (_, _, _) => placeholder,
     );
   }
 }

@@ -1,0 +1,12 @@
+[
+  {"action": "goto", "url": "http://localhost:3000/products"},
+  {"action": "wait", "ms": 2000},
+  {"action": "screenshot", "name": "02-products"},
+  {"action": "fill", "selector": "input[placeholder*='Search by name']", "value": "Glamour"},
+  {"action": "wait", "ms": 1500},
+  {"action": "screenshot", "name": "03-products-search-dropdown"},
+  {"action": "press", "key": "Enter"},
+  {"action": "wait", "ms": 1500},
+  {"action": "screenshot", "name": "04-products-search-results"},
+  {"action": "log"}
+]
