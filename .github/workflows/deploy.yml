@@ -64,6 +64,7 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
           NEXT_PUBLIC_COMPANY_NAME: ${{ secrets.NEXT_PUBLIC_COMPANY_NAME }}
 
