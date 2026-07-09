@@ -35,7 +35,7 @@ const socialLinks = [
   },
   {
     name: "LinkedIn",
-    href: "https://linkedin.com/company/motoxplus-india",
+    href: "https://www.linkedin.com/company/motoxplus/",
     icon: (
       <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
         <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
@@ -67,6 +67,34 @@ function FooterHeading({ children }: { children: React.ReactNode }) {
 export function Footer() {
   return (
     <footer className="bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
+      {/* CTA strip */}
+      <div className="border-b border-[var(--border-color)]">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="text-center md:text-left">
+            <h3 className="text-[var(--text-primary)] font-black text-xl md:text-2xl tracking-tight">
+              Ready to stock MOTOXPLUS parts?
+            </h3>
+            <p className="text-[var(--text-muted)] text-sm mt-1">
+              Join 500+ dealers already growing with us.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Link
+              href="/become-dealer"
+              className="bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors duration-200 red-glow-sm uppercase tracking-wider"
+            >
+              Become a Dealer
+            </Link>
+            <Link
+              href="/contact"
+              className="glass border border-[var(--border-color)] hover:border-red-600/40 text-[var(--text-secondary)] hover:text-red-500 text-sm font-bold px-6 py-3 rounded-xl transition-colors duration-200"
+            >
+              Contact Sales
+            </Link>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
 

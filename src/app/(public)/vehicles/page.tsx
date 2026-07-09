@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bike, Zap, Truck, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { Bike, Zap, Truck, ArrowUpRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicle-categories";
-import { TiltCard } from "@/components/3d/tilt-card";
 
 export const metadata: Metadata = {
   title: "Select Your Vehicle",
@@ -17,13 +17,36 @@ const CATEGORY_ICON = {
   COMMERCIAL: Truck,
 } as const;
 
+// Category-tinted gradient used behind the line-art placeholder when a
+// category has no representative vehicle photo yet.
+const CATEGORY_TINT = {
+  MOTORCYCLE: "from-red-900/40 via-zinc-900 to-black",
+  SCOOTER: "from-zinc-700/40 via-zinc-900 to-black",
+  ELECTRIC: "from-emerald-900/40 via-zinc-900 to-black",
+  COMMERCIAL: "from-amber-900/40 via-zinc-900 to-black",
+} as const;
+
 export default async function VehiclesPage() {
-  const counts = await prisma.vehicle.groupBy({
-    by: ["category"],
-    where: { isActive: true },
-    _count: { _all: true },
-  });
+  const [counts, sampleVehicles] = await Promise.all([
+    prisma.vehicle.groupBy({
+      by: ["category"],
+      where: { isActive: true },
+      _count: { _all: true },
+    }),
+    prisma.vehicle.findMany({
+      where: { isActive: true, heroImage: { not: null } },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { category: true, heroImage: true, name: true },
+    }),
+  ]);
+
   const countByCategory = Object.fromEntries(counts.map((c) => [c.category, c._count._all]));
+  const imageByCategory: Partial<Record<string, { heroImage: string; name: string }>> = {};
+  for (const v of sampleVehicles) {
+    if (!imageByCategory[v.category] && v.heroImage) {
+      imageByCategory[v.category] = { heroImage: v.heroImage, name: v.name };
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -47,36 +70,71 @@ export default async function VehiclesPage() {
           {VEHICLE_CATEGORIES.map((cat) => {
             const Icon = CATEGORY_ICON[cat.value];
             const count = countByCategory[cat.value] ?? 0;
+            const sample = imageByCategory[cat.value];
+
             return (
-              <TiltCard key={cat.slug} intensity={6}>
-                <Link
-                  href={`/vehicles/${cat.slug}`}
-                  className="group relative overflow-hidden rounded-3xl block glass border border-[var(--border-color)] hover:border-red-900/40 transition-all duration-300 p-10 min-h-[240px] flex flex-col justify-between"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-600/0 to-red-600/0 group-hover:from-red-600/10 group-hover:to-transparent transition-all duration-500" />
-                  <div className="relative z-10 flex items-center justify-between">
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-red-600/10 border border-red-600/20 group-hover:bg-red-600/20 transition-colors">
-                      <Icon size={30} className="text-red-500" />
+              <Link
+                key={cat.slug}
+                href={`/vehicles/${cat.slug}`}
+                className="group relative overflow-hidden rounded-3xl block h-[320px] md:h-[380px] shadow-lg hover:shadow-2xl hover:shadow-black/30 transition-shadow duration-500"
+              >
+                {/* Image or line-art placeholder */}
+                <div className="absolute inset-0">
+                  {sample ? (
+                    <Image
+                      src={sample.heroImage}
+                      alt={`${cat.label} — ${sample.name}`}
+                      fill
+                      unoptimized
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                      sizes="(min-width: 768px) 50vw, 100vw"
+                    />
+                  ) : (
+                    <div className={`absolute inset-0 bg-gradient-to-br ${CATEGORY_TINT[cat.value]}`}>
+                      <Icon
+                        size={220}
+                        strokeWidth={0.6}
+                        className="absolute -right-8 -bottom-8 text-white/[0.07] transition-transform duration-700 ease-out group-hover:scale-110 group-hover:-rotate-3"
+                      />
                     </div>
-                    <ArrowRight size={22} className="text-[var(--text-muted)] group-hover:text-red-500 group-hover:translate-x-1 transition-all" />
+                  )}
+                </div>
+
+                {/* Gradient overlay for legibility */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/10" />
+                <div className="absolute inset-0 bg-gradient-to-br from-red-600/0 to-red-600/0 group-hover:from-red-600/15 group-hover:to-transparent transition-all duration-500" />
+
+                {/* Top row: icon chip + arrow */}
+                <div className="relative z-10 h-full flex flex-col justify-between p-7 md:p-8">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/15">
+                      <Icon size={22} className="text-white" />
+                    </div>
+                    <div className="w-11 h-11 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/15 group-hover:bg-red-600 group-hover:border-red-600 transition-all duration-300">
+                      <ArrowUpRight size={18} className="text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </div>
                   </div>
-                  <div className="relative z-10">
-                    <h2 className="text-3xl font-black text-[var(--text-primary)] tracking-tight mb-2">
+
+                  <div>
+                    <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2 drop-shadow-sm">
                       {cat.label}
                     </h2>
-                    <p className="text-[var(--text-muted)] text-sm mb-4">{cat.tagline}</p>
+                    <p className="text-white/70 text-sm mb-4 max-w-xs">{cat.tagline}</p>
                     {count > 0 ? (
-                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-red-600/10 border border-red-600/20 text-red-500 text-xs font-bold">
-                        {count} model{count === 1 ? "" : "s"}
+                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold">
+                        {count} model{count === 1 ? "" : "s"} supported
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-muted)] text-xs font-semibold">
+                      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 text-white/60 text-xs font-semibold">
                         Coming soon
                       </span>
                     )}
                   </div>
-                </Link>
-              </TiltCard>
+                </div>
+
+                {/* Bottom accent sweep */}
+                <div className="absolute bottom-0 left-0 h-[3px] w-0 group-hover:w-full bg-gradient-to-r from-red-600 via-red-500 to-transparent transition-all duration-500" />
+              </Link>
             );
           })}
         </div>

@@ -2,6 +2,7 @@
 
 import { ShieldCheck, Microscope, Award, Network } from "lucide-react";
 import { TiltCard } from "@/components/3d/tilt-card";
+import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
 const features = [
   {
@@ -60,7 +61,7 @@ export function WhyMotoXPlus() {
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left */}
-          <div>
+          <Reveal>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-px bg-red-600" />
               <span className="text-red-500 text-xs font-semibold uppercase tracking-widest">
@@ -86,12 +87,13 @@ export function WhyMotoXPlus() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
 
           {/* Right grid */}
-          <div className="grid grid-cols-2 gap-4">
+          <RevealGroup className="grid grid-cols-2 gap-4">
             {features.map((feature) => (
-              <TiltCard key={feature.title} intensity={10}>
+              <RevealItem key={feature.title}>
+              <TiltCard intensity={10}>
                 <div className="group glass border border-[var(--border-color)] shadow-sm hover:shadow-md hover:border-red-900/40 rounded-2xl p-6 transition-all duration-300 relative overflow-hidden">
                   <div className={`absolute inset-0 bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl`} />
 
@@ -107,8 +109,9 @@ export function WhyMotoXPlus() {
                   <p className="relative z-10 text-[var(--text-muted)] text-xs leading-relaxed">{feature.description}</p>
                 </div>
               </TiltCard>
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
         </div>
       </div>
     </section>

@@ -12,7 +12,7 @@
   --border-hover: rgba(220,38,38,0.5);
   --text-primary: #f0f0f0;
   --text-secondary: #c8c8c8;
-  --text-muted: #5a5a5a;
+  --text-muted: #7a7a7a;
   --input-bg: rgba(255,255,255,0.04);
   --input-border: rgba(255,255,255,0.1);
   --scrollbar-track: #0a0a0a;
@@ -33,7 +33,7 @@
   --border-hover: rgba(220,38,38,0.4);
   --text-primary: #09090b;
   --text-secondary: #18181b;
-  --text-muted: #71717a;
+  --text-muted: #676770;
   --input-bg: rgba(0,0,0,0.04);
   --input-border: rgba(0,0,0,0.14);
   --scrollbar-track: #e4e4e7;
@@ -48,6 +48,13 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+/* ─── ACCESSIBLE FOCUS STATE ─── */
+:focus-visible {
+  outline: 2px solid #DC2626;
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 body {
@@ -289,6 +296,16 @@ select.themed-input option {
 .animate-dropdown-in {
   animation: dropdown-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-origin: top center;
+}
+
+/* ─── REDUCED MOTION ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ─── SKELETON ─── */

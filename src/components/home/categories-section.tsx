@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Eye, Shield, Radio, Disc2, ChevronRight } from "lucide-react";
 import { TiltCard } from "@/components/3d/tilt-card";
+import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
 const CATEGORIES = [
   {
@@ -48,7 +49,7 @@ export function CategoriesSection({ categoryCounts = {} }: Props) {
     <section className="py-24 px-4 md:px-8 bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-16">
+        <Reveal className="flex flex-col md:flex-row md:items-end md:justify-between mb-16">
           <div>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-px bg-red-600" />
@@ -68,14 +69,15 @@ export function CategoriesSection({ categoryCounts = {} }: Props) {
             View All Products
             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
-        </div>
+        </Reveal>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <RevealGroup className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {CATEGORIES.map((cat) => {
             const count = categoryCounts[cat.slug] ?? 0;
             return (
-              <TiltCard key={cat.slug} intensity={8}>
+              <RevealItem key={cat.slug}>
+              <TiltCard intensity={8}>
                 <Link
                   href={`/products?category=${cat.slug}`}
                   className="group relative overflow-hidden rounded-2xl block glass border border-[var(--border-color)] shadow-sm hover:shadow-xl hover:border-red-900/40 hover:-translate-y-0.5 transition-all duration-300"
@@ -112,9 +114,10 @@ export function CategoriesSection({ categoryCounts = {} }: Props) {
                   <div className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-red-600 via-red-400 to-transparent transition-all duration-500 rounded-b-2xl" />
                 </Link>
               </TiltCard>
+              </RevealItem>
             );
           })}
-        </div>
+        </RevealGroup>
       </div>
     </section>
   );

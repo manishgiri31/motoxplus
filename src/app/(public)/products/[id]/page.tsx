@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ProductDetailClient } from "@/components/products/product-detail-client";
+import { JsonLd } from "@/components/seo/json-ld";
+import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -11,9 +13,21 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const product = await prisma.product.findUnique({
     where: { id: params.id },
+    include: { category: true },
   });
   if (!product) return { title: "Product Not Found" };
-  return { title: product.name, description: product.description || undefined };
+
+  const title = `${product.name} | ${product.category.name}`;
+  const description =
+    product.description ||
+    `${product.name} — OEM-compatible ${product.category.name.toLowerCase()} by ${product.brand}, manufactured in ${product.countryOfOrigin}. Part No. ${product.partNumber}.`;
+
+  return buildMetadata({
+    title,
+    description,
+    path: `/products/${product.id}`,
+    image: product.images[0],
+  });
 }
 
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
@@ -47,8 +61,52 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     },
   });
 
+  const productUrl = absoluteUrl(`/products/${product.id}`);
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+            { "@type": "ListItem", position: 2, name: "Products", item: absoluteUrl("/products") },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: product.category.name,
+              item: absoluteUrl(`/products?category=${product.category.slug}`),
+            },
+            { "@type": "ListItem", position: 4, name: product.name, item: productUrl },
+          ],
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: product.name,
+          description: product.description || undefined,
+          sku: product.sku,
+          mpn: product.partNumber,
+          image: product.images,
+          brand: { "@type": "Brand", name: product.brand },
+          manufacturer: { "@type": "Organization", name: product.brand },
+          countryOfOrigin: product.countryOfOrigin,
+          category: product.category.name,
+          offers: {
+            "@type": "Offer",
+            url: productUrl,
+            priceCurrency: "INR",
+            price: product.price,
+            availability:
+              product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+            itemCondition: "https://schema.org/NewCondition",
+          },
+        }}
+      />
+
       {/* Breadcrumb */}
       <div className="border-b border-white/5 px-4 md:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs text-[var(--text-muted)]">

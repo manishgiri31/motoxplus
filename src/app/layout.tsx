@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { JsonLd } from "@/components/seo/json-ld";
 
 // Metadata (OG/Twitter images, canonical, metadataBase) must always resolve to the
 // production domain, even when NEXT_PUBLIC_APP_URL is set to localhost for local dev.
@@ -106,6 +107,51 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "@id": `${APP_URL}#organization`,
+            name: "MOTOXPLUS India Private Limited",
+            url: APP_URL,
+            logo: `${APP_URL}/motoxplus/logo.png`,
+            description:
+              "Premium OEM-compatible two-wheeler spare parts manufacturer based in India.",
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "New Delhi, India",
+              addressCountry: "IN",
+            },
+            contactPoint: {
+              "@type": "ContactPoint",
+              telephone: process.env.NEXT_PUBLIC_COMPANY_PHONE || "",
+              email: process.env.NEXT_PUBLIC_COMPANY_EMAIL || "",
+              contactType: "sales",
+              areaServed: "IN",
+            },
+            sameAs: [
+              "https://www.facebook.com/people/Moto-X-Plus-Pvt-Ltd/61583505116513/",
+              "https://www.instagram.com/motoxplusin/",
+              "https://youtube.com/@motoxplus",
+              "https://www.linkedin.com/company/motoxplus/",
+            ],
+          }}
+        />
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "@id": `${APP_URL}#website`,
+            name: "MOTOXPLUS India",
+            url: APP_URL,
+            publisher: { "@id": `${APP_URL}#organization` },
+            potentialAction: {
+              "@type": "SearchAction",
+              target: `${APP_URL}/products?search={search_term_string}`,
+              "query-input": "required name=search_term_string",
+            },
+          }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>

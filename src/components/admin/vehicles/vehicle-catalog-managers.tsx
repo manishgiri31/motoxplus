@@ -188,6 +188,61 @@ export function VehicleCatalogManagers({ vehicleId, manufacturerId }: { vehicleI
       />
 
       <EntityManager
+        title="FAQs"
+        description="Parts-and-compatibility FAQs shown on the public vehicle page. Never invent generic vehicle-warranty content — keep answers specific to MotoXPlus parts."
+        apiBase={`/api/admin/vehicles/${vehicleId}/faqs`}
+        emptyMessage="No FAQs yet."
+        fields={[
+          { key: "question", label: "Question", type: "text", required: true, span: 4 },
+          { key: "answer", label: "Answer", type: "textarea", required: true, span: 4 },
+          { key: "sortOrder", label: "Sort Order", type: "number" },
+          { key: "isActive", label: "Active", type: "checkbox" },
+        ]}
+        columns={[
+          { key: "question", label: "Question" },
+          { key: "isActive", label: "Active", render: (r) => (r.isActive ? "Yes" : "No") },
+        ]}
+        toFormValues={(r) => ({
+          question: r.question,
+          answer: r.answer,
+          sortOrder: String(r.sortOrder ?? 0),
+          isActive: String(r.isActive ?? true),
+        })}
+      />
+
+      <EntityManager
+        title="Compatible Accessories"
+        description="Link real catalog products by part number or SKU — never fabricated accessory items."
+        apiBase={`/api/admin/vehicles/${vehicleId}/accessories`}
+        emptyMessage="No accessories linked yet."
+        fields={[
+          { key: "productPartNumber", label: "Product Part Number / SKU", type: "text", required: true, span: 3 },
+          { key: "sortOrder", label: "Sort Order", type: "number" },
+        ]}
+        columns={[
+          { key: "productName", label: "Product" },
+          { key: "productPartNumber", label: "Part No." },
+        ]}
+        toFormValues={(r) => ({ productPartNumber: r.productPartNumber, sortOrder: String(r.sortOrder ?? 0) })}
+      />
+
+      <EntityManager
+        title="Recommended Products"
+        description="Consumables/parts recommended for this vehicle — linked by part number or SKU from the real catalog only."
+        apiBase={`/api/admin/vehicles/${vehicleId}/recommendations`}
+        emptyMessage="No recommendations yet."
+        fields={[
+          { key: "productPartNumber", label: "Product Part Number / SKU", type: "text", required: true, span: 3 },
+          { key: "priority", label: "Priority", type: "number" },
+        ]}
+        columns={[
+          { key: "productName", label: "Product" },
+          { key: "productPartNumber", label: "Part No." },
+        ]}
+        toFormValues={(r) => ({ productPartNumber: r.productPartNumber, priority: String(r.priority ?? 0) })}
+      />
+
+      <EntityManager
         title="3D Models (GLB/GLTF/USDZ)"
         description="Optionally scoped to a specific variant and/or color — the most specific match wins on the public page."
         apiBase={`/api/admin/vehicles/${vehicleId}/models-3d`}

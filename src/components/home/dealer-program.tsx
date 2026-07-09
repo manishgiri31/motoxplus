@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { TiltCard } from "@/components/3d/tilt-card";
+import { Reveal } from "@/components/ui/reveal";
 
 const benefits = [
   "Exclusive dealer pricing and margin protection",
@@ -36,7 +37,7 @@ export function DealerProgram() {
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left */}
-          <div>
+          <Reveal>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-px bg-red-600" />
               <span className="text-red-500 text-xs font-semibold uppercase tracking-widest">
@@ -69,10 +70,10 @@ export function DealerProgram() {
               Apply Now — It&apos;s Free
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
-          </div>
+          </Reveal>
 
           {/* Right — Stats card */}
-          <div className="relative">
+          <Reveal delay={0.15} className="relative">
             <TiltCard intensity={7}>
             <div className="glass border border-[var(--border-color)] rounded-2xl p-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/10 rounded-full blur-[60px] pointer-events-none" />
@@ -100,7 +101,7 @@ export function DealerProgram() {
             {/* Decorative corners */}
             <div className="absolute -top-3 -right-3 w-20 h-20 border-t-2 border-r-2 border-red-600/35 rounded-tr-lg" />
             <div className="absolute -bottom-3 -left-3 w-20 h-20 border-b-2 border-l-2 border-red-600/25 rounded-bl-lg" />
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>

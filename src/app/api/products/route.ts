@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ stock: "desc" }, { createdAt: "desc" }],
     }),
     prisma.product.count({ where }),
   ]);

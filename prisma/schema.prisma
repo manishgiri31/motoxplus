@@ -37,6 +37,7 @@ model User {
   otpCodes            OtpCode[]
   vendor              Vendor?
   loginHistory        LoginHistory[]
+  reviews             Review[]
 }
 
 model LoginHistory {
@@ -209,6 +210,9 @@ model Product {
   variants        ProductVariant[]
   compatibilities ProductCompatibility[]
   diagramHotspots VehicleDiagramHotspot[]
+  reviews         Review[]
+  accessoryOf     VehicleAccessory[]
+  recommendedFor  VehicleProductRecommendation[]
 
   @@index([categoryId, isActive])
   @@index([isActive, createdAt])
@@ -1025,6 +1029,11 @@ model Vehicle {
   compatibilities ProductCompatibility[]
   vinPatterns    VehicleVinPattern[]
   detectionLogs  VehicleDetectionLog[]
+  reviews        Review[]
+  accessories    VehicleAccessory[]
+  recommendations VehicleProductRecommendation[]
+  faqs           VehicleFAQ[]
+  downloads      VehicleDownload[]
 
   @@index([category, isActive])
   @@index([manufacturerId])
@@ -1279,4 +1288,84 @@ model VehicleDetectionLog {
 
   @@index([detectedVehicleId])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Vehicle content models — reviews, accessories, recommendations, FAQs,
+// downloads. All optional/empty by default; UI must show honest empty
+// states rather than fabricated content when unpopulated.
+// ─────────────────────────────────────────────────────────────────────────
+
+model Review {
+  id               String   @id @default(cuid())
+  vehicleId        String?
+  productId        String?
+  userId           String
+  rating           Int
+  title            String?
+  body             String
+  verifiedPurchase Boolean  @default(false)
+  isApproved       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  vehicle          Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  product          Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, isApproved])
+  @@index([productId, isApproved])
+}
+
+model VehicleAccessory {
+  id        String   @id @default(cuid())
+  vehicleId String
+  productId String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, productId])
+  @@index([vehicleId, sortOrder])
+}
+
+model VehicleProductRecommendation {
+  id        String   @id @default(cuid())
+  vehicleId String
+  productId String
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, productId])
+  @@index([vehicleId, priority])
+}
+
+model VehicleFAQ {
+  id        String   @id @default(cuid())
+  vehicleId String
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, isActive, sortOrder])
+}
+
+model VehicleDownload {
+  id        String   @id @default(cuid())
+  vehicleId String
+  label     String
+  fileUrl   String
+  fileType  String   @default("pdf")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, isActive, sortOrder])
 }

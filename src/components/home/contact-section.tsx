@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MapPin, Phone, Mail, Clock, CheckCircle2 } from "lucide-react";
+import { Reveal } from "@/components/ui/reveal";
 
 export function ContactSection() {
   const [formData, setFormData] = useState({
@@ -42,7 +43,7 @@ export function ContactSection() {
     <section className="py-24 px-4 md:px-8 bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-16">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-8 h-px bg-red-600" />
             <span className="text-red-500 text-xs font-semibold uppercase tracking-widest">
@@ -56,7 +57,7 @@ export function ContactSection() {
           <p className="text-[var(--text-muted)] mt-4 max-w-lg mx-auto">
             Have questions? We&apos;d love to hear from you. Send us a message and we&apos;ll respond within 24 hours.
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Contact info */}

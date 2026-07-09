@@ -1,13 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRightIcon } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
-const headlines: [string, string][] = [
-  ["Engineered For", "Reliability."],
-  ["Built For", "Every Journey."],
-  ["Performance", "You Can Trust."],
+interface Slide {
+  eyebrow: string;
+  headline: [string, string];
+  copy: string;
+  accent: string; // gradient stops for the background mesh
+}
+
+const slides: Slide[] = [
+  {
+    eyebrow: "Premium Automotive Parts Manufacturer",
+    headline: ["Engineered For", "Reliability."],
+    copy: "OEM-compatible spare parts for two-wheelers, manufactured with precision engineering and tested to the highest standards.",
+    accent: "from-red-600/30 via-red-900/10 to-transparent",
+  },
+  {
+    eyebrow: "500+ Dealers Across 18+ States",
+    headline: ["Built For", "Every Journey."],
+    copy: "A nationwide dealer and distribution network built to get the right part to the right workshop, fast.",
+    accent: "from-zinc-500/25 via-red-900/10 to-transparent",
+  },
+  {
+    eyebrow: "ISO-Certified Manufacturing",
+    headline: ["Performance", "You Can Trust."],
+    copy: "Six-stage manufacturing and multi-point quality inspection behind every component that leaves our facility.",
+    accent: "from-red-500/25 via-zinc-800/10 to-transparent",
+  },
 ];
 
 interface Props {
@@ -16,21 +39,48 @@ interface Props {
 }
 
 export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
-  const [currentHeadline, setCurrentHeadline] = useState(0);
+  const [active, setActive] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => setIsVisible(true), []);
 
   useEffect(() => {
-    setIsVisible(true);
-    const interval = setInterval(() => {
-      setCurrentHeadline((prev) => (prev + 1) % headlines.length);
-    }, 4000);
-    return () => clearInterval(interval);
+    if (paused) return;
+    timerRef.current = setInterval(() => {
+      setActive((prev) => (prev + 1) % slides.length);
+    }, 6000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [paused]);
+
+  const goTo = useCallback((i: number) => {
+    setActive(((i % slides.length) + slides.length) % slides.length);
   }, []);
 
+  const slide = slides[active];
+
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)]">
-      {/* Background */}
+    <section
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* Background layer — crossfades + slow Ken-Burns zoom per slide */}
       <div className="absolute inset-0 z-0">
+        <AnimatePresence mode="sync">
+          <motion.div
+            key={active}
+            initial={{ opacity: 0, scale: 1.08 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ opacity: { duration: 1.1, ease: "easeInOut" }, scale: { duration: 6, ease: "linear" } }}
+            className={`absolute inset-0 bg-gradient-to-br ${slide.accent}`}
+          />
+        </AnimatePresence>
+
         {/* Dot grid pattern */}
         <div
           className="absolute inset-0 opacity-[0.055] dark:opacity-[0.08]"
@@ -58,6 +108,22 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
         ))}
       </div>
 
+      {/* Prev/Next arrows */}
+      <button
+        onClick={() => goTo(active - 1)}
+        aria-label="Previous slide"
+        className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 items-center justify-center rounded-full glass border border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500 hover:border-red-500/40 transition-all"
+      >
+        <ChevronLeft size={18} />
+      </button>
+      <button
+        onClick={() => goTo(active + 1)}
+        aria-label="Next slide"
+        className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 items-center justify-center rounded-full glass border border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500 hover:border-red-500/40 transition-all"
+      >
+        <ChevronRightIcon size={18} />
+      </button>
+
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8 text-center">
         {/* Badge */}
@@ -67,9 +133,18 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
           }`}
         >
           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-          <span className="text-red-600 text-xs font-semibold uppercase tracking-widest">
-            Premium Automotive Parts Manufacturer
-          </span>
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={active}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.3 }}
+              className="text-red-600 text-xs font-semibold uppercase tracking-widest"
+            >
+              {slide.eyebrow}
+            </motion.span>
+          </AnimatePresence>
         </div>
 
         {/* Headline */}
@@ -78,25 +153,42 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.95] mb-6">
-            <span className="block text-[var(--text-primary)]">
-              {headlines[currentHeadline][0]}
-            </span>
-            <span className="block text-gradient-red">
-              {headlines[currentHeadline][1]}
-            </span>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.95] mb-6 min-h-[2.1em] md:min-h-[1.9em]">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={active}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -24 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="block"
+              >
+                <span className="block text-[var(--text-primary)]">{slide.headline[0]}</span>
+                <span className="block text-gradient-red">{slide.headline[1]}</span>
+              </motion.span>
+            </AnimatePresence>
           </h1>
         </div>
 
         {/* Subheadline */}
-        <p
-          className={`text-[var(--text-muted)] text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed transition-all duration-1000 delay-400 ${
+        <div
+          className={`min-h-[3.5em] md:min-h-[2.5em] max-w-2xl mx-auto mb-12 transition-all duration-1000 delay-400 ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
           }`}
         >
-          OEM-compatible spare parts for two-wheelers, manufactured with precision
-          engineering and tested to the highest standards.
-        </p>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={active}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="text-[var(--text-muted)] text-lg md:text-xl leading-relaxed"
+            >
+              {slide.copy}
+            </motion.p>
+          </AnimatePresence>
+        </div>
 
         {/* CTAs */}
         <div
@@ -150,14 +242,15 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
         </div>
       </div>
 
-      {/* Headline dots */}
-      <div className="absolute bottom-8 right-8 hidden lg:flex gap-2 items-center z-10">
-        {headlines.map((_, i) => (
+      {/* Slide indicators */}
+      <div className="absolute bottom-8 right-8 hidden lg:flex gap-2 items-center z-20">
+        {slides.map((_, i) => (
           <button
             key={i}
-            onClick={() => setCurrentHeadline(i)}
-            className={`h-[2px] transition-all duration-300 rounded-full ${
-              i === currentHeadline ? "w-8 bg-red-600" : "w-3 bg-[var(--border-color)]"
+            onClick={() => goTo(i)}
+            aria-label={`Go to slide ${i + 1}`}
+            className={`h-[3px] transition-all duration-300 rounded-full ${
+              i === active ? "w-8 bg-red-600" : "w-3 bg-[var(--border-color)] hover:bg-red-600/40"
             }`}
           />
         ))}

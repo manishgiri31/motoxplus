@@ -4,7 +4,9 @@ import { HeroSection } from "@/components/home/hero-section";
 import { TrustStrip } from "@/components/home/trust-strip";
 import { CategoriesSection } from "@/components/home/categories-section";
 import { WhyMotoXPlus } from "@/components/home/why-motoxplus";
+import { CertificationsSection } from "@/components/home/certifications-section";
 import { ManufacturingSection } from "@/components/home/manufacturing-section";
+import { TestimonialsSection } from "@/components/home/testimonials-section";
 import { DealerProgram } from "@/components/home/dealer-program";
 import { ContactSection } from "@/components/home/contact-section";
 import { prisma } from "@/lib/prisma";
@@ -41,7 +43,9 @@ export default async function HomePage() {
         <TrustStrip />
         <CategoriesSection categoryCounts={categoryCounts} />
         <WhyMotoXPlus />
+        <CertificationsSection />
         <ManufacturingSection />
+        <TestimonialsSection />
         <DealerProgram />
         <ContactSection />
       </main>

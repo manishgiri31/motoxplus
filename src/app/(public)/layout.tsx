@@ -6,7 +6,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <>
       <Navbar />
-      <main className="pt-[76px] md:pt-[104px]">{children}</main>
+      <main className="pt-[80px] md:pt-[108px]">{children}</main>
       <Footer />
       <WhatsAppButton />
     </>

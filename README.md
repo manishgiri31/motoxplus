@@ -60,10 +60,12 @@ Open http://localhost:3000
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | admin@motoxplus.com | admin123 |
-| Admin | manager@motoxplus.com | admin123 |
-| Dealer | dealer@test.com | dealer123 |
-| Vendor | vendor@test.com | vendor123 |
+| Super Admin | superadmin@motoxplus.in | SuperAdmin@123 |
+| Admin | admin@motoxplus.in | Admin@123456 |
+| Dealer | dealer@testshop.in | Dealer@123456 |
+| Vendor | vendor@testparts.in | Vendor@123456 |
+    
+**Change these passwords immediately after first login on any non-local environment.**
 
 ## Scripts
 

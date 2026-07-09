@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { TiltCard } from "@/components/3d/tilt-card";
+import { VehicleImage } from "@/components/vehicles/vehicle-image";
 
 export interface VehicleCardData {
   slug: string;
@@ -29,18 +30,13 @@ export function VehicleCard({ vehicle, categorySlug }: { vehicle: VehicleCardDat
         className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden transition-all duration-300 block"
       >
         <div className="relative h-44 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
-          {vehicle.heroImage ? (
-            <Image
-              src={vehicle.heroImage}
-              alt={vehicle.name}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
-              sizes="320px"
-              unoptimized
-            />
-          ) : (
-            <div className="text-5xl text-red-500/20 font-black">◈</div>
-          )}
+          <VehicleImage
+            src={vehicle.heroImage}
+            alt={vehicle.name}
+            logId={`${categorySlug}/${vehicle.slug}`}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            className="p-3 group-hover:scale-105"
+          />
           {vehicle.manufacturer.logo && (
             <div className="absolute top-3 left-3 bg-white/90 rounded-lg px-2 py-1">
               <Image src={vehicle.manufacturer.logo} alt={vehicle.manufacturer.name} width={48} height={16} className="object-contain h-4 w-auto" unoptimized />

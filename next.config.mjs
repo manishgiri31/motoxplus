@@ -66,11 +66,16 @@ const nextConfig = {
         headers: securityHeaders,
       },
       {
-        // Aggressive caching for Next.js static assets (_next/static)
+        // Aggressive caching for Next.js static assets (_next/static) — prod only.
+        // In dev this same path also serves HMR bookkeeping files
+        // (_buildManifest.js, webpack hot-update manifests) whose content
+        // changes on every restart; caching them "immutable" made the browser
+        // keep using a stale build manifest against a freshly restarted dev
+        // server, producing "options.factory ... reading 'call'" errors.
         source: "/_next/static/:path*",
-        headers: [
-          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
-        ],
+        headers: IS_PROD
+          ? [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }]
+          : [{ key: "Cache-Control", value: "no-store" }],
       },
       {
         // No caching for API routes

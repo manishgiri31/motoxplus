@@ -1,6 +1,7 @@
 "use client";
 
 import { TiltCard } from "@/components/3d/tilt-card";
+import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
 const processes = [
   {
@@ -40,7 +41,7 @@ export function ManufacturingSection() {
     <section className="py-24 px-4 md:px-8 bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-16">
+        <Reveal className="text-center mb-16">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-8 h-px bg-red-600" />
             <span className="text-red-500 text-xs font-semibold uppercase tracking-widest">
@@ -56,12 +57,13 @@ export function ManufacturingSection() {
             Our six-stage manufacturing process ensures every component that leaves
             our facility is built to perform.
           </p>
-        </div>
+        </Reveal>
 
         {/* Process grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <RevealGroup className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {processes.map((process) => (
-            <TiltCard key={process.step} intensity={9}>
+            <RevealItem key={process.step}>
+            <TiltCard intensity={9}>
             <div
               className="group relative glass border border-[var(--border-color)] hover:border-red-900/45 rounded-2xl p-7 transition-all duration-300 overflow-hidden"
             >
@@ -86,11 +88,12 @@ export function ManufacturingSection() {
               <div className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-red-600 to-transparent transition-all duration-500 rounded-b-2xl" />
             </div>
             </TiltCard>
+            </RevealItem>
           ))}
-        </div>
+        </RevealGroup>
 
         {/* Bottom CTA */}
-        <div className="mt-16 glass border border-[var(--border-color)] rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+        <Reveal className="mt-16 glass border border-[var(--border-color)] rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 rounded-full blur-[80px] pointer-events-none" />
           <div className="relative z-10">
             <h3 className="text-2xl md:text-3xl font-black text-[var(--text-primary)] mb-2">
@@ -106,7 +109,7 @@ export function ManufacturingSection() {
           >
             Get in Touch
           </a>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
