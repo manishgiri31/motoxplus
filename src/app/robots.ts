@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://motoxplus.com";
+// Always the production domain — this file must never emit localhost URLs
+// for crawlers, regardless of local dev env overrides.
+const APP_URL = "https://motoxplus.com";
 
 export default function robots(): MetadataRoute.Robots {
   return {

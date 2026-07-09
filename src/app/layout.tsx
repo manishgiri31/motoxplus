@@ -3,7 +3,9 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://motoxplus.com";
+// Metadata (OG/Twitter images, canonical, metadataBase) must always resolve to the
+// production domain, even when NEXT_PUBLIC_APP_URL is set to localhost for local dev.
+const APP_URL = "https://motoxplus.com";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -75,8 +77,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/motoxplus/logo.png",
-        width: 512,
-        height: 512,
+        width: 1536,
+        height: 1024,
         alt: "MOTOXPLUS India — Premium Automotive Parts",
       },
     ],

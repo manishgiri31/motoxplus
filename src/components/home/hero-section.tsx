@@ -142,16 +142,16 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce z-10">
-        <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Scroll</span>
-        <ChevronDown size={14} className="text-red-500" />
+        {/* Scroll indicator */}
+        <div className="mt-12 flex flex-col items-center gap-2 animate-bounce">
+          <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest">Scroll</span>
+          <ChevronDown size={14} className="text-red-500" />
+        </div>
       </div>
 
       {/* Headline dots */}
-      <div className="absolute bottom-8 right-8 flex gap-2 items-center z-10">
+      <div className="absolute bottom-8 right-8 hidden lg:flex gap-2 items-center z-10">
         {headlines.map((_, i) => (
           <button
             key={i}
