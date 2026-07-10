@@ -12,32 +12,32 @@ model User {
   name                String?
   email               String           @unique
   emailVerified       DateTime?
-  emailVerifiedAt     DateTime?
   image               String?
   password            String?
   role                UserRole         @default(DEALER)
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   department          StaffDepartment?
+  accountLockedUntil  DateTime?
+  emailVerifiedAt     DateTime?
+  failedLoginAttempts Int              @default(0)
+  isActive            Boolean          @default(true)
+  lastLogin           DateTime?
   mobileNumber        String?          @unique
   mobileVerified      Boolean          @default(false)
   mobileVerifiedAt    DateTime?
-  lastLogin           DateTime?
-  failedLoginAttempts Int              @default(0)
-  accountLockedUntil  DateTime?
   twoFactorEnabled    Boolean          @default(false)
-  isActive            Boolean          @default(true)
-  lastLoginIP         String?
   lastDevice          String?
+  lastLoginIP         String?
   accounts            Account[]
   admin               Admin?
   dealer              Dealer?
+  loginHistory        LoginHistory[]
+  otpCodes            OtpCode[]
+  reviews             Review[]
   sessions            Session[]
   userSessions        UserSession[]
-  otpCodes            OtpCode[]
   vendor              Vendor?
-  loginHistory        LoginHistory[]
-  reviews             Review[]
 }
 
 model LoginHistory {
@@ -122,28 +122,28 @@ model VerificationToken {
 }
 
 model Dealer {
-  id                 String               @id @default(cuid())
-  userId             String               @unique
+  id                 String              @id @default(cuid())
+  userId             String              @unique
   companyName        String
-  gstNumber          String?              @unique
-  panNumber          String?
-  aadhaarNumber      String?
+  gstNumber          String?             @unique
   ownerName          String
   phone              String
   state              String
   city               String
   address            String?
-  companyAddress     String?
-  shopAddress        String?
   pincode            String?
-  gstVerified        Boolean              @default(false)
+  status             DealerStatus        @default(PENDING)
+  creditLimit        Float               @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  aadhaarNumber      String?
+  companyAddress     String?
+  gstVerified        Boolean             @default(false)
   gstVerifiedAt      DateTime?
-  status             DealerStatus         @default(PENDING)
-  creditLimit        Float                @default(0)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  panNumber          String?
+  shopAddress        String?
   cart               Cart?
-  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents          DealerDocument[]
   invoices           Invoice[]
   orders             Order[]
@@ -173,45 +173,45 @@ model Category {
 }
 
 model Product {
-  id              String           @id @default(cuid())
+  id              String                         @id @default(cuid())
   name            String
-  sku             String           @unique
-  partNumber      String           @unique
+  sku             String                         @unique
+  partNumber      String                         @unique
   description     String?
   categoryId      String
   weight          Float?
-  moq             Int              @default(1)
+  moq             Int                            @default(1)
   price           Float
-  mrp             Float?
-  gstRate         Float            @default(18)
+  gstRate         Float                          @default(18)
   images          String[]
   compatibility   String[]
-  isActive        Boolean          @default(true)
-  stock           Int              @default(0)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  brand           String           @default("MOTOXPLUS")
-  countryOfOrigin String           @default("India")
-  hsnCode         String           @default("")
+  isActive        Boolean                        @default(true)
+  stock           Int                            @default(0)
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  brand           String                         @default("MOTOXPLUS")
+  countryOfOrigin String                         @default("India")
+  hsnCode         String                         @default("")
   oemNumber       String?
   packageHeight   Float?
   packageLength   Float?
   packageWeight   Float?
   packageWidth    Float?
-  warranty        String           @default("No Warranty")
-  vendorId        String?
-  vendorCostPrice Float?
+  warranty        String                         @default("No Warranty")
   markupPercent   Float?
+  mrp             Float?
+  vendorCostPrice Float?
+  vendorId        String?
   cartItems       CartItem[]
   orderItems      OrderItem[]
-  category        Category         @relation(fields: [categoryId], references: [id])
-  productImages   ProductImage[]
-  vendor          Vendor?          @relation(fields: [vendorId], references: [id])
-  variants        ProductVariant[]
+  category        Category                       @relation(fields: [categoryId], references: [id])
+  vendor          Vendor?                        @relation(fields: [vendorId], references: [id])
   compatibilities ProductCompatibility[]
-  diagramHotspots VehicleDiagramHotspot[]
+  productImages   ProductImage[]
+  variants        ProductVariant[]
   reviews         Review[]
   accessoryOf     VehicleAccessory[]
+  diagramHotspots VehicleDiagramHotspot[]
   recommendedFor  VehicleProductRecommendation[]
 
   @@index([categoryId, isActive])
@@ -224,30 +224,25 @@ model ProductVariant {
   id           String         @id @default(cuid())
   productId    String
   label        String
-  sku          String?
-  partNumber   String?
-  // Variant attributes
   color        String?
-  vehicleModel String?
-  finish       String?
-  size         String?
   extra        String?
-  // Pricing
   price        Float
   mrp          Float?
-  // Inventory
   stock        Int            @default(0)
-  moq          Int?
-  // Status
   isActive     Boolean        @default(true)
   sortOrder    Int            @default(0)
-  // Legacy single image (kept for backward compat)
   imageUrl     String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  product      Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  partNumber   String?
+  finish       String?
+  moq          Int?
+  size         String?
+  sku          String?
+  vehicleModel String?
   cartItems    CartItem[]
   orderItems   OrderItem[]
+  product      Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
   images       VariantImage[]
 }
 
@@ -324,10 +319,10 @@ model CartItem {
   id        String          @id @default(cuid())
   cartId    String
   productId String
-  variantId String?
   quantity  Int             @default(1)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
+  variantId String?
   cart      Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variant   ProductVariant? @relation(fields: [variantId], references: [id])
@@ -337,33 +332,33 @@ model CartItem {
 }
 
 model Order {
-  id                  String               @id @default(cuid())
-  orderNumber         String               @unique
-  dealerId            String
-  subtotal            Float
-  gstAmount           Float
-  shippingCost        Float                @default(0)
-  grandTotal          Float
-  paymentType         PaymentType
-  amountPaid          Float                @default(0)
-  amountDue           Float
-  status              OrderStatus          @default(PENDING)
-  paymentStatus       PaymentStatus        @default(PENDING)
-  notes               String?
-  shippingAddress     String?
-  deliveryName        String?
-  deliveryPhone       String?
-  deliveryCity        String?
-  deliveryState       String?
-  deliveryPincode     String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  invoice             Invoice?
-  shipment            Shipment?
-  dealer              Dealer               @relation(fields: [dealerId], references: [id])
-  items               OrderItem[]
-  payments            Payment[]
-  paymentSubmissions  PaymentSubmission[]
+  id                 String              @id @default(cuid())
+  orderNumber        String              @unique
+  dealerId           String
+  subtotal           Float
+  gstAmount          Float
+  grandTotal         Float
+  paymentType        PaymentType
+  amountPaid         Float               @default(0)
+  amountDue          Float
+  status             OrderStatus         @default(PENDING)
+  paymentStatus      PaymentStatus       @default(PENDING)
+  notes              String?
+  shippingAddress    String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deliveryCity       String?
+  deliveryName       String?
+  deliveryPhone      String?
+  deliveryPincode    String?
+  deliveryState      String?
+  shippingCost       Float               @default(0)
+  invoice            Invoice?
+  dealer             Dealer              @relation(fields: [dealerId], references: [id])
+  items              OrderItem[]
+  payments           Payment[]
+  paymentSubmissions PaymentSubmission[]
+  shipment           Shipment?
 
   @@index([dealerId, status])
   @@index([dealerId, createdAt])
@@ -376,15 +371,15 @@ model OrderItem {
   id           String          @id @default(cuid())
   orderId      String
   productId    String
-  variantId    String?
-  variantLabel String?
-  variantSku   String?
   quantity     Int
   unitPrice    Float
   gstRate      Float
   gstAmount    Float
   total        Float
   createdAt    DateTime        @default(now())
+  variantId    String?
+  variantLabel String?
+  variantSku   String?
   order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product      Product         @relation(fields: [productId], references: [id])
   variant      ProductVariant? @relation(fields: [variantId], references: [id])
@@ -436,9 +431,6 @@ model Vendor {
   phone          String
   gstNumber      String?          @unique
   panNumber      String?
-  aadhaarNumber  String?
-  gstVerified    Boolean          @default(false)
-  gstVerifiedAt  DateTime?
   category       VendorCategory
   status         VendorStatus     @default(PENDING)
   creditDays     Int              @default(30)
@@ -453,13 +445,16 @@ model Vendor {
   notes          String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+  aadhaarNumber  String?
+  gstVerified    Boolean          @default(false)
+  gstVerifiedAt  DateTime?
+  products       Product[]
   purchaseOrders PurchaseOrder[]
   user           User?            @relation(fields: [userId], references: [id])
   contacts       VendorContact[]
   documents      VendorDocument[]
   payments       VendorPayment[]
   ratings        VendorRating[]
-  products       Product[]
 }
 
 model VendorContact {
@@ -675,6 +670,478 @@ model LeadNote {
   lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }
 
+model Shipment {
+  id               String                  @id @default(cuid())
+  orderId          String                  @unique
+  waybill          String                  @unique
+  status           ShipmentStatus          @default(PENDING)
+  trackingUrl      String?
+  expectedDelivery DateTime?
+  weight           Float?
+  pickupDate       DateTime?
+  deliveredAt      DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  order            Order                   @relation(fields: [orderId], references: [id])
+  events           ShipmentTrackingEvent[]
+}
+
+model ShipmentTrackingEvent {
+  id         String   @id @default(cuid())
+  shipmentId String
+  status     String
+  location   String?
+  activity   String?
+  timestamp  DateTime
+  createdAt  DateTime @default(now())
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+}
+
+model ShippingRate {
+  id         String   @id @default(cuid())
+  zoneName   String
+  states     String[]
+  minWeight  Float
+  maxWeight  Float
+  baseRate   Float
+  perKgRate  Float
+  baseWeight Float
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  pincode   String
+  city      String
+  state     String
+  phone     String
+  gstin     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PaymentSubmission {
+  id              String              @id @default(cuid())
+  orderId         String
+  dealerId        String
+  paymentMethod   DirectPaymentMethod
+  utrNumber       String              @unique
+  payerName       String
+  payerEmail      String
+  payerPhone      String
+  screenshotUrl   String
+  screenshotKey   String
+  amount          Float
+  status          UpiSubmissionStatus @default(SUBMITTED)
+  notes           String?
+  rejectionReason String?
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  rejectedAt      DateTime?
+  rejectedBy      String?
+  ipAddress       String?
+  submittedAt     DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  dealer          Dealer              @relation(fields: [dealerId], references: [id])
+  order           Order               @relation(fields: [orderId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([dealerId])
+  @@index([orderId])
+}
+
+model VehicleManufacturer {
+  id          String              @id @default(cuid())
+  name        String              @unique
+  slug        String              @unique
+  logo        String?
+  sortOrder   Int                 @default(0)
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  wmi         String?
+  oemColors   OemColor[]
+  vehicles    Vehicle[]
+  vinPatterns VehicleVinPattern[]
+}
+
+model Vehicle {
+  id              String                         @id @default(cuid())
+  name            String
+  slug            String                         @unique
+  category        VehicleCategory
+  manufacturerId  String
+  engineCc        Float?
+  launchYear      Int?
+  yearFrom        Int?
+  yearTo          Int?
+  heroImage       String?
+  power           String?
+  torque          String?
+  mileage         String?
+  weight          String?
+  fuelTank        String?
+  modelUrl        String?
+  searchAliases   String[]                       @default([])
+  isActive        Boolean                        @default(true)
+  sortOrder       Int                            @default(0)
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  aiLabels        String[]                       @default([])
+  badgeText       String?
+  ocrKeywords     String[]                       @default([])
+  compatibilities ProductCompatibility[]
+  reviews         Review[]
+  manufacturer    VehicleManufacturer            @relation(fields: [manufacturerId], references: [id])
+  accessories     VehicleAccessory[]
+  colors          VehicleColor[]
+  detectionLogs   VehicleDetectionLog[]
+  diagrams        VehicleDiagram[]
+  downloads       VehicleDownload[]
+  faqs            VehicleFAQ[]
+  gallery         VehicleGallery[]
+  generations     VehicleGeneration[]
+  model3d         VehicleModel3D[]
+  recommendations VehicleProductRecommendation[]
+  spins           VehicleSpin[]
+  variants        VehicleVariant[]
+  vinPatterns     VehicleVinPattern[]
+
+  @@index([category, isActive])
+  @@index([manufacturerId])
+}
+
+model VehicleColor {
+  id         String           @id @default(cuid())
+  vehicleId  String
+  name       String
+  hex        String
+  image      String?
+  sortOrder  Int              @default(0)
+  oemColorId String?
+  oemColor   OemColor?        @relation(fields: [oemColorId], references: [id])
+  vehicle    Vehicle          @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  model3d    VehicleModel3D[]
+  spins      VehicleSpin[]
+
+  @@index([vehicleId])
+  @@index([oemColorId])
+}
+
+model VehicleGallery {
+  id        String  @id @default(cuid())
+  vehicleId String
+  imageUrl  String
+  sortOrder Int     @default(0)
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+}
+
+model VehiclePartSection {
+  id              String                  @id @default(cuid())
+  name            String                  @unique
+  slug            String                  @unique
+  icon            String?
+  description     String?
+  sortOrder       Int                     @default(0)
+  isActive        Boolean                 @default(true)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  compatibilities ProductCompatibility[]
+  diagrams        VehicleDiagram[]
+  hotspots        VehicleDiagramHotspot[]
+
+  @@index([isActive, sortOrder])
+}
+
+model VehicleGeneration {
+  id              String                 @id @default(cuid())
+  vehicleId       String
+  name            String
+  codeName        String?
+  yearFrom        Int
+  yearTo          Int?
+  description     String?
+  sortOrder       Int                    @default(0)
+  isActive        Boolean                @default(true)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  compatibilities ProductCompatibility[]
+  diagrams        VehicleDiagram[]
+  vehicle         Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  variants        VehicleVariant[]
+
+  @@index([vehicleId, isActive])
+}
+
+model VehicleVariant {
+  id               String                 @id @default(cuid())
+  vehicleId        String
+  generationId     String?
+  name             String
+  slug             String
+  emissionStandard EmissionStandard?
+  brakeType        String?
+  startType        String?
+  transmission     String?
+  fuelType         String?
+  engineCc         Float?
+  yearFrom         Int?
+  yearTo           Int?
+  chassisPrefix    String?
+  sortOrder        Int                    @default(0)
+  isActive         Boolean                @default(true)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  compatibilities  ProductCompatibility[]
+  detectionLogs    VehicleDetectionLog[]
+  model3d          VehicleModel3D[]
+  spins            VehicleSpin[]
+  generation       VehicleGeneration?     @relation(fields: [generationId], references: [id])
+  vehicle          Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vinPatterns      VehicleVinPattern[]
+
+  @@unique([vehicleId, slug])
+  @@index([generationId])
+}
+
+model OemColor {
+  id             String              @id @default(cuid())
+  manufacturerId String
+  name           String
+  colorCode      String?
+  paintCode      String?
+  hex            String
+  finish         String?
+  sortOrder      Int                 @default(0)
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  manufacturer   VehicleManufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  vehicleColors  VehicleColor[]
+
+  @@index([manufacturerId, isActive])
+}
+
+model ProductCompatibility {
+  id               String                  @id @default(cuid())
+  productId        String
+  vehicleId        String?
+  generationId     String?
+  variantId        String?
+  sectionId        String?
+  yearFrom         Int?
+  yearTo           Int?
+  emissionStandard EmissionStandard?
+  position         String?
+  confidence       CompatibilityConfidence @default(VERIFIED)
+  confidenceScore  Float?
+  source           CompatibilitySource     @default(MANUAL)
+  fitmentNote      String?
+  isActive         Boolean                 @default(true)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  generation       VehicleGeneration?      @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  product          Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  section          VehiclePartSection?     @relation(fields: [sectionId], references: [id])
+  variant          VehicleVariant?         @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  vehicle          Vehicle?                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  hotspots         VehicleDiagramHotspot[]
+
+  @@index([productId])
+  @@index([vehicleId])
+  @@index([variantId])
+  @@index([sectionId])
+}
+
+model VehicleModel3D {
+  id        String             @id @default(cuid())
+  vehicleId String
+  variantId String?
+  colorId   String?
+  format    VehicleModelFormat @default(GLB)
+  url       String
+  sortOrder Int                @default(0)
+  createdAt DateTime           @default(now())
+  color     VehicleColor?      @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  variant   VehicleVariant?    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+}
+
+model VehicleSpin {
+  id         String          @id @default(cuid())
+  vehicleId  String
+  variantId  String?
+  colorId    String?
+  frameUrls  String[]        @default([])
+  frameCount Int             @default(0)
+  sortOrder  Int             @default(0)
+  createdAt  DateTime        @default(now())
+  color      VehicleColor?   @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  variant    VehicleVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  vehicle    Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+}
+
+model VehicleDiagram {
+  id           String                  @id @default(cuid())
+  vehicleId    String
+  generationId String?
+  sectionId    String?
+  name         String
+  imageUrl     String
+  sortOrder    Int                     @default(0)
+  isActive     Boolean                 @default(true)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  generation   VehicleGeneration?      @relation(fields: [generationId], references: [id])
+  section      VehiclePartSection?     @relation(fields: [sectionId], references: [id])
+  vehicle      Vehicle                 @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  hotspots     VehicleDiagramHotspot[]
+
+  @@index([vehicleId])
+}
+
+model VehicleDiagramHotspot {
+  id              String                @id @default(cuid())
+  diagramId       String
+  x               Float
+  y               Float
+  label           String
+  calloutNumber   Int?
+  sectionId       String?
+  productId       String?
+  compatibilityId String?
+  sortOrder       Int                   @default(0)
+  createdAt       DateTime              @default(now())
+  compatibility   ProductCompatibility? @relation(fields: [compatibilityId], references: [id])
+  diagram         VehicleDiagram        @relation(fields: [diagramId], references: [id], onDelete: Cascade)
+  product         Product?              @relation(fields: [productId], references: [id])
+  section         VehiclePartSection?   @relation(fields: [sectionId], references: [id])
+
+  @@index([diagramId])
+}
+
+model VehicleVinPattern {
+  id             String               @id @default(cuid())
+  manufacturerId String?
+  vehicleId      String?
+  variantId      String?
+  wmi            String
+  vdsPattern     String?
+  yearCode       String?
+  description    String?
+  createdAt      DateTime             @default(now())
+  manufacturer   VehicleManufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  variant        VehicleVariant?      @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  vehicle        Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([wmi])
+}
+
+model VehicleDetectionLog {
+  id                String                @id @default(cuid())
+  inputType         VehicleDetectionInput
+  rawInput          String?
+  imageUrl          String?
+  detectedVehicleId String?
+  detectedVariantId String?
+  confidenceScore   Float?
+  alternatives      Json?
+  method            String?
+  userId            String?
+  createdAt         DateTime              @default(now())
+  detectedVariant   VehicleVariant?       @relation(fields: [detectedVariantId], references: [id])
+  detectedVehicle   Vehicle?              @relation(fields: [detectedVehicleId], references: [id])
+
+  @@index([detectedVehicleId])
+  @@index([createdAt])
+}
+
+model Review {
+  id               String   @id @default(cuid())
+  vehicleId        String?
+  productId        String?
+  userId           String
+  rating           Int
+  title            String?
+  body             String
+  verifiedPurchase Boolean  @default(false)
+  isApproved       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  product          Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle          Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, isApproved])
+  @@index([productId, isApproved])
+}
+
+model VehicleAccessory {
+  id        String   @id @default(cuid())
+  vehicleId String
+  productId String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, productId])
+  @@index([vehicleId, sortOrder])
+}
+
+model VehicleProductRecommendation {
+  id        String   @id @default(cuid())
+  vehicleId String
+  productId String
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, productId])
+  @@index([vehicleId, priority])
+}
+
+model VehicleFAQ {
+  id        String   @id @default(cuid())
+  vehicleId String
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, isActive, sortOrder])
+}
+
+model VehicleDownload {
+  id        String   @id @default(cuid())
+  vehicleId String
+  label     String
+  fileUrl   String
+  fileType  String   @default("pdf")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, isActive, sortOrder])
+}
+
 enum UserRole {
   GUEST
   DEALER
@@ -824,61 +1291,6 @@ enum LeadPriority {
   HIGH
 }
 
-model Shipment {
-  id               String                  @id @default(cuid())
-  orderId          String                  @unique
-  waybill          String                  @unique
-  status           ShipmentStatus          @default(PENDING)
-  trackingUrl      String?
-  expectedDelivery DateTime?
-  weight           Float?
-  pickupDate       DateTime?
-  deliveredAt      DateTime?
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  order            Order                   @relation(fields: [orderId], references: [id])
-  events           ShipmentTrackingEvent[]
-}
-
-model ShipmentTrackingEvent {
-  id         String   @id @default(cuid())
-  shipmentId String
-  status     String
-  location   String?
-  activity   String?
-  timestamp  DateTime
-  createdAt  DateTime @default(now())
-  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-}
-
-model ShippingRate {
-  id         String   @id @default(cuid())
-  zoneName   String
-  states     String[]
-  minWeight  Float
-  maxWeight  Float
-  baseRate   Float
-  perKgRate  Float
-  baseWeight Float
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
-model Warehouse {
-  id        String   @id @default(cuid())
-  name      String
-  address   String
-  pincode   String
-  city      String
-  state     String
-  phone     String
-  gstin     String?
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 enum ShipmentStatus {
   PENDING
   MANIFESTED
@@ -901,38 +1313,6 @@ enum UpiSubmissionStatus {
 enum DirectPaymentMethod {
   UPI
   BANK_TRANSFER
-}
-
-model PaymentSubmission {
-  id              String              @id @default(cuid())
-  orderId         String
-  dealerId        String
-  paymentMethod   DirectPaymentMethod
-  utrNumber       String
-  payerName       String
-  payerEmail      String
-  payerPhone      String
-  screenshotUrl   String
-  screenshotKey   String
-  amount          Float
-  status          UpiSubmissionStatus @default(SUBMITTED)
-  notes           String?
-  rejectionReason String?
-  verifiedAt      DateTime?
-  verifiedBy      String?
-  rejectedAt      DateTime?
-  rejectedBy      String?
-  ipAddress       String?
-  submittedAt     DateTime            @default(now())
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  order           Order               @relation(fields: [orderId], references: [id])
-  dealer          Dealer              @relation(fields: [dealerId], references: [id])
-
-  @@unique([utrNumber])
-  @@index([status, createdAt])
-  @@index([dealerId])
-  @@index([orderId])
 }
 
 enum VehicleCategory {
@@ -976,396 +1356,4 @@ enum VehicleDetectionInput {
   VIN
   PLATE
   MANUAL
-}
-
-model VehicleManufacturer {
-  id         String              @id @default(cuid())
-  name       String              @unique
-  slug       String              @unique
-  logo       String?
-  wmi        String?
-  sortOrder  Int                 @default(0)
-  isActive   Boolean             @default(true)
-  createdAt  DateTime            @default(now())
-  updatedAt  DateTime            @updatedAt
-  vehicles   Vehicle[]
-  oemColors  OemColor[]
-  vinPatterns VehicleVinPattern[]
-}
-
-model Vehicle {
-  id             String              @id @default(cuid())
-  name           String
-  slug           String              @unique
-  category       VehicleCategory
-  manufacturerId String
-  engineCc       Float?
-  launchYear     Int?
-  yearFrom       Int?
-  yearTo         Int?
-  heroImage      String?
-  power          String?
-  torque         String?
-  mileage        String?
-  weight         String?
-  fuelTank       String?
-  modelUrl       String?
-  searchAliases  String[]            @default([])
-  ocrKeywords    String[]            @default([])
-  aiLabels       String[]            @default([])
-  badgeText      String?
-  isActive       Boolean             @default(true)
-  sortOrder      Int                 @default(0)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  manufacturer   VehicleManufacturer @relation(fields: [manufacturerId], references: [id])
-  colors         VehicleColor[]
-  gallery        VehicleGallery[]
-  generations    VehicleGeneration[]
-  variants       VehicleVariant[]
-  diagrams       VehicleDiagram[]
-  model3d        VehicleModel3D[]
-  spins          VehicleSpin[]
-  compatibilities ProductCompatibility[]
-  vinPatterns    VehicleVinPattern[]
-  detectionLogs  VehicleDetectionLog[]
-  reviews        Review[]
-  accessories    VehicleAccessory[]
-  recommendations VehicleProductRecommendation[]
-  faqs           VehicleFAQ[]
-  downloads      VehicleDownload[]
-
-  @@index([category, isActive])
-  @@index([manufacturerId])
-}
-
-model VehicleColor {
-  id         String    @id @default(cuid())
-  vehicleId  String
-  name       String
-  hex        String
-  image      String?
-  sortOrder  Int       @default(0)
-  oemColorId String?
-  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  oemColor   OemColor? @relation(fields: [oemColorId], references: [id])
-  model3d    VehicleModel3D[]
-  spins      VehicleSpin[]
-
-  @@index([vehicleId])
-  @@index([oemColorId])
-}
-
-model VehicleGallery {
-  id        String  @id @default(cuid())
-  vehicleId String
-  imageUrl  String
-  sortOrder Int     @default(0)
-  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-
-  @@index([vehicleId])
-}
-
-model VehiclePartSection {
-  id              String                  @id @default(cuid())
-  name            String                  @unique
-  slug            String                  @unique
-  icon            String?
-  description     String?
-  sortOrder       Int                     @default(0)
-  isActive        Boolean                 @default(true)
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
-  compatibilities ProductCompatibility[]
-  diagrams        VehicleDiagram[]
-  hotspots        VehicleDiagramHotspot[]
-
-  @@index([isActive, sortOrder])
-}
-
-model VehicleGeneration {
-  id              String                 @id @default(cuid())
-  vehicleId       String
-  name            String
-  codeName        String?
-  yearFrom        Int
-  yearTo          Int?
-  description     String?
-  sortOrder       Int                    @default(0)
-  isActive        Boolean                @default(true)
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  vehicle         Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  variants        VehicleVariant[]
-  diagrams        VehicleDiagram[]
-  compatibilities ProductCompatibility[]
-
-  @@index([vehicleId, isActive])
-}
-
-model VehicleVariant {
-  id               String                 @id @default(cuid())
-  vehicleId        String
-  generationId     String?
-  name             String
-  slug             String
-  emissionStandard EmissionStandard?
-  brakeType        String?
-  startType        String?
-  transmission     String?
-  fuelType         String?
-  engineCc         Float?
-  yearFrom         Int?
-  yearTo           Int?
-  chassisPrefix    String?
-  sortOrder        Int                    @default(0)
-  isActive         Boolean                @default(true)
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-  vehicle          Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  generation       VehicleGeneration?     @relation(fields: [generationId], references: [id])
-  model3d          VehicleModel3D[]
-  spins            VehicleSpin[]
-  compatibilities  ProductCompatibility[]
-  vinPatterns      VehicleVinPattern[]
-  detectionLogs    VehicleDetectionLog[]
-
-  @@unique([vehicleId, slug])
-  @@index([generationId])
-}
-
-model OemColor {
-  id             String              @id @default(cuid())
-  manufacturerId String
-  name           String
-  colorCode      String?
-  paintCode      String?
-  hex            String
-  finish         String?
-  sortOrder      Int                 @default(0)
-  isActive       Boolean             @default(true)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  manufacturer   VehicleManufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
-  vehicleColors  VehicleColor[]
-
-  @@index([manufacturerId, isActive])
-}
-
-model ProductCompatibility {
-  id               String                  @id @default(cuid())
-  productId        String
-  vehicleId        String?
-  generationId     String?
-  variantId        String?
-  sectionId        String?
-  yearFrom         Int?
-  yearTo           Int?
-  emissionStandard EmissionStandard?
-  position         String?
-  confidence       CompatibilityConfidence @default(VERIFIED)
-  confidenceScore  Float?
-  source           CompatibilitySource     @default(MANUAL)
-  fitmentNote      String?
-  isActive         Boolean                 @default(true)
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
-  product          Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
-  vehicle          Vehicle?                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  generation       VehicleGeneration?      @relation(fields: [generationId], references: [id], onDelete: Cascade)
-  variant          VehicleVariant?         @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  section          VehiclePartSection?     @relation(fields: [sectionId], references: [id])
-  hotspots         VehicleDiagramHotspot[]
-
-  @@index([productId])
-  @@index([vehicleId])
-  @@index([variantId])
-  @@index([sectionId])
-}
-
-model VehicleModel3D {
-  id        String             @id @default(cuid())
-  vehicleId String
-  variantId String?
-  colorId   String?
-  format    VehicleModelFormat @default(GLB)
-  url       String
-  sortOrder Int                @default(0)
-  createdAt DateTime           @default(now())
-  vehicle   Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  variant   VehicleVariant?    @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  color     VehicleColor?      @relation(fields: [colorId], references: [id], onDelete: Cascade)
-
-  @@index([vehicleId])
-}
-
-model VehicleSpin {
-  id         String          @id @default(cuid())
-  vehicleId  String
-  variantId  String?
-  colorId    String?
-  frameUrls  String[]        @default([])
-  frameCount Int             @default(0)
-  sortOrder  Int             @default(0)
-  createdAt  DateTime        @default(now())
-  vehicle    Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  variant    VehicleVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  color      VehicleColor?   @relation(fields: [colorId], references: [id], onDelete: Cascade)
-
-  @@index([vehicleId])
-}
-
-model VehicleDiagram {
-  id           String                  @id @default(cuid())
-  vehicleId    String
-  generationId String?
-  sectionId    String?
-  name         String
-  imageUrl     String
-  sortOrder    Int                     @default(0)
-  isActive     Boolean                 @default(true)
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
-  vehicle      Vehicle                 @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  generation   VehicleGeneration?      @relation(fields: [generationId], references: [id])
-  section      VehiclePartSection?     @relation(fields: [sectionId], references: [id])
-  hotspots     VehicleDiagramHotspot[]
-
-  @@index([vehicleId])
-}
-
-model VehicleDiagramHotspot {
-  id              String                @id @default(cuid())
-  diagramId       String
-  x               Float
-  y               Float
-  label           String
-  calloutNumber   Int?
-  sectionId       String?
-  productId       String?
-  compatibilityId String?
-  sortOrder       Int                   @default(0)
-  createdAt       DateTime              @default(now())
-  diagram         VehicleDiagram        @relation(fields: [diagramId], references: [id], onDelete: Cascade)
-  section         VehiclePartSection?   @relation(fields: [sectionId], references: [id])
-  product         Product?              @relation(fields: [productId], references: [id])
-  compatibility   ProductCompatibility? @relation(fields: [compatibilityId], references: [id])
-
-  @@index([diagramId])
-}
-
-model VehicleVinPattern {
-  id             String              @id @default(cuid())
-  manufacturerId String?
-  vehicleId      String?
-  variantId      String?
-  wmi            String
-  vdsPattern     String?
-  yearCode       String?
-  description    String?
-  createdAt      DateTime            @default(now())
-  manufacturer   VehicleManufacturer? @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
-  vehicle        Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  variant        VehicleVariant?      @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-  @@index([wmi])
-}
-
-model VehicleDetectionLog {
-  id                String                @id @default(cuid())
-  inputType         VehicleDetectionInput
-  rawInput          String?
-  imageUrl          String?
-  detectedVehicleId String?
-  detectedVariantId String?
-  confidenceScore   Float?
-  alternatives      Json?
-  method            String?
-  userId            String?
-  createdAt         DateTime              @default(now())
-  detectedVehicle   Vehicle?        @relation(fields: [detectedVehicleId], references: [id])
-  detectedVariant   VehicleVariant? @relation(fields: [detectedVariantId], references: [id])
-
-  @@index([detectedVehicleId])
-  @@index([createdAt])
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Vehicle content models — reviews, accessories, recommendations, FAQs,
-// downloads. All optional/empty by default; UI must show honest empty
-// states rather than fabricated content when unpopulated.
-// ─────────────────────────────────────────────────────────────────────────
-
-model Review {
-  id               String   @id @default(cuid())
-  vehicleId        String?
-  productId        String?
-  userId           String
-  rating           Int
-  title            String?
-  body             String
-  verifiedPurchase Boolean  @default(false)
-  isApproved       Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  vehicle          Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  product          Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([vehicleId, isApproved])
-  @@index([productId, isApproved])
-}
-
-model VehicleAccessory {
-  id        String   @id @default(cuid())
-  vehicleId String
-  productId String
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([vehicleId, productId])
-  @@index([vehicleId, sortOrder])
-}
-
-model VehicleProductRecommendation {
-  id        String   @id @default(cuid())
-  vehicleId String
-  productId String
-  priority  Int      @default(0)
-  createdAt DateTime @default(now())
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([vehicleId, productId])
-  @@index([vehicleId, priority])
-}
-
-model VehicleFAQ {
-  id        String   @id @default(cuid())
-  vehicleId String
-  question  String
-  answer    String
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-
-  @@index([vehicleId, isActive, sortOrder])
-}
-
-model VehicleDownload {
-  id        String   @id @default(cuid())
-  vehicleId String
-  label     String
-  fileUrl   String
-  fileType  String   @default("pdf")
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-
-  @@index([vehicleId, isActive, sortOrder])
 }

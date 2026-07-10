@@ -64,7 +64,7 @@ export function HeroSection({ productCount = 700, categoryCount = 15 }: Props) {
 
   return (
     <section
-      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)]"
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] pt-24 md:pt-32"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
