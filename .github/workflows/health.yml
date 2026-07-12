@@ -9,12 +9,19 @@ concurrency:
   group: production-health-check
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   health:
     name: Health Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Record start time
+        id: start
+        run: echo "start_time=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Check public site (https://motoxplus.com)
         run: |
           CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://motoxplus.com)
@@ -114,7 +121,42 @@ jobs:
             fi
             echo "===== Health check passed ====="
 
-      - name: Notify on failure
+      - name: Compute duration
+        id: duration
+        if: always()
+        run: |
+          START="${{ steps.start.outputs.start_time }}"
+          END=$(date +%s)
+          ELAPSED=$((END - START))
+          echo "human=$(printf '%dm%ds' $((ELAPSED / 60)) $((ELAPSED % 60)))" >> "$GITHUB_OUTPUT"
+
+      - name: Report success
+        if: success()
+        run: |
+          echo "===== Health Check Passed ====="
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+          # Deliberately no Slack ping on success — this runs every 15 minutes;
+          # a success notification that frequent would just be alert-fatigue noise.
+          # The log above (viewable in the Actions tab) is the success record.
+
+      - name: Report failure
         if: failure()
         run: |
           echo "::error::Health monitor detected a problem — see the step logs above for which component failed."
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+          echo "Run:      ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Optional Slack notification on failure
+        if: failure()
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -sf -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"MotoXPlus health check FAILED. Run: ${RUN_URL}\"}" \
+              "$SLACK_WEBHOOK_URL" || echo "Slack notification failed to send."
+          else
+            echo "SLACK_WEBHOOK_URL not configured — skipping notification."
+          fi
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

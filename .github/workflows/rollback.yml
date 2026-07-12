@@ -12,20 +12,29 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   validate_inputs:
     name: Validate Inputs & Secrets
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      start_time: ${{ steps.start.outputs.start_time }}
     steps:
+      - name: Record start time
+        id: start
+        run: echo "start_time=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Check commit input and required secrets
         run: |
-          if [ -z "${{ inputs.commit }}" ]; then
+          if [ -z "$TARGET_COMMIT" ]; then
             echo "::error::commit input is required"
             exit 1
           fi
-          if ! [[ "${{ inputs.commit }}" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-            echo "::error::commit input '${{ inputs.commit }}' does not look like a valid git SHA (7-40 hex characters)"
+          if ! [[ "$TARGET_COMMIT" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            echo "::error::commit input '${TARGET_COMMIT}' does not look like a valid git SHA (7-40 hex characters)"
             exit 1
           fi
           missing=0
@@ -37,6 +46,9 @@ jobs:
           done
           exit $missing
         env:
+          # Routed through env (not interpolated directly into the script text)
+          # so a crafted commit input can't break out of the shell command.
+          TARGET_COMMIT: ${{ inputs.commit }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -47,6 +59,8 @@ jobs:
     needs: validate_inputs
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - name: Roll back via SSH
         uses: appleboy/ssh-action@v1.2.5
@@ -120,7 +134,62 @@ jobs:
         env:
           TARGET_COMMIT: ${{ inputs.commit }}
 
-      - name: Notify on failure
-        if: failure()
+  notify:
+    name: Notify
+    if: always()
+    needs: [validate_inputs, rollback]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Compute duration
+        id: duration
         run: |
-          echo "::error::Rollback to ${{ inputs.commit }} failed. Check: ssh in and run 'pm2 logs motoxplus'."
+          START="${{ needs.validate_inputs.outputs.start_time }}"
+          END=$(date +%s)
+          if [ -n "$START" ]; then
+            ELAPSED=$((END - START))
+            echo "human=$(printf '%dm%ds' $((ELAPSED / 60)) $((ELAPSED % 60)))" >> "$GITHUB_OUTPUT"
+          else
+            echo "human=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report success
+        if: needs.rollback.result == 'success'
+        run: |
+          echo "===== Rollback Succeeded ====="
+          echo "Workflow:       ${{ github.workflow }}"
+          echo "Rolled back to: ${TARGET_COMMIT}"
+          echo "Branch:         ${{ github.ref_name }}"
+          echo "Actor:          ${{ github.actor }}"
+          echo "Duration:       ${{ steps.duration.outputs.human }}"
+        env:
+          TARGET_COMMIT: ${{ inputs.commit }}
+
+      - name: Report failure
+        if: needs.rollback.result == 'failure'
+        run: |
+          echo "::error::Rollback to ${TARGET_COMMIT} failed."
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Actor:    ${{ github.actor }}"
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+          echo "Run:      ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "Check on the VPS: pm2 logs motoxplus / pm2 describe motoxplus"
+        env:
+          TARGET_COMMIT: ${{ inputs.commit }}
+
+      - name: Optional Slack notification on failure
+        if: needs.rollback.result == 'failure'
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -sf -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"MotoXPlus rollback to ${TARGET_COMMIT} FAILED (by ${{ github.actor }}). Run: ${RUN_URL}\"}" \
+              "$SLACK_WEBHOOK_URL" || echo "Slack notification failed to send."
+          else
+            echo "SLACK_WEBHOOK_URL not configured — skipping notification."
+          fi
+        env:
+          TARGET_COMMIT: ${{ inputs.commit }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

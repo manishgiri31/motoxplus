@@ -13,15 +13,24 @@ on:
           - all
 
 concurrency:
-  group: production-seed
+  group: production-deploy
   cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   validate_secrets:
     name: Validate Secrets
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      start_time: ${{ steps.start.outputs.start_time }}
     steps:
+      - name: Record start time
+        id: start
+        run: echo "start_time=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Check required secrets are configured
         run: |
           missing=0
@@ -43,6 +52,8 @@ jobs:
     needs: validate_secrets
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
       - name: Run seed via SSH
         uses: appleboy/ssh-action@v1.2.5
@@ -97,7 +108,62 @@ jobs:
         env:
           SEED_TARGET: ${{ inputs.target }}
 
-      - name: Notify on failure
-        if: failure()
+  notify:
+    name: Notify
+    if: always()
+    needs: [validate_secrets, seed]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Compute duration
+        id: duration
         run: |
-          echo "::error::Seed run '${{ inputs.target }}' failed. Check the SSH step log above for which seed script failed."
+          START="${{ needs.validate_secrets.outputs.start_time }}"
+          END=$(date +%s)
+          if [ -n "$START" ]; then
+            ELAPSED=$((END - START))
+            echo "human=$(printf '%dm%ds' $((ELAPSED / 60)) $((ELAPSED % 60)))" >> "$GITHUB_OUTPUT"
+          else
+            echo "human=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report success
+        if: needs.seed.result == 'success'
+        run: |
+          echo "===== Seed Succeeded ====="
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Target:   ${SEED_TARGET}"
+          echo "Commit:   ${{ github.sha }}"
+          echo "Branch:   ${{ github.ref_name }}"
+          echo "Actor:    ${{ github.actor }}"
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+        env:
+          SEED_TARGET: ${{ inputs.target }}
+
+      - name: Report failure
+        if: needs.seed.result == 'failure'
+        run: |
+          echo "::error::Seed run '${SEED_TARGET}' failed."
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+          echo "Run:      ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "Check the SSH step log above for which seed script failed."
+        env:
+          SEED_TARGET: ${{ inputs.target }}
+
+      - name: Optional Slack notification on failure
+        if: needs.seed.result == 'failure'
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -sf -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"MotoXPlus seed '${SEED_TARGET}' FAILED (by ${{ github.actor }}). Run: ${RUN_URL}\"}" \
+              "$SLACK_WEBHOOK_URL" || echo "Slack notification failed to send."
+          else
+            echo "SLACK_WEBHOOK_URL not configured — skipping notification."
+          fi
+        env:
+          SEED_TARGET: ${{ inputs.target }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -6,15 +6,24 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: production-backup
+  group: production-deploy
   cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   validate_secrets:
     name: Validate Secrets
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      start_time: ${{ steps.start.outputs.start_time }}
     steps:
+      - name: Record start time
+        id: start
+        run: echo "start_time=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Check required secrets are configured
         run: |
           missing=0
@@ -32,12 +41,14 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
 
   backup:
-    name: Backup, Upload to R2, Prune
+    name: Backup, Verify, Upload to R2, Prune
     needs: validate_secrets
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
-      - name: Dump, compress, upload, verify, prune
+      - name: Dump (custom format), verify integrity, upload, verify checksum, prune
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -53,7 +64,7 @@ jobs:
             APP_DIR="/var/www/motoxplus"
             BACKUP_DIR="/var/backups/motoxplus"
             TIMESTAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
-            FILENAME="motoxplus-db-${TIMESTAMP}.sql.gz"
+            FILENAME="motoxplus-db-${TIMESTAMP}.dump"
             LOCAL_PATH="${BACKUP_DIR}/${FILENAME}"
 
             echo "====================================="
@@ -71,7 +82,6 @@ jobs:
               sudo apt-get update -y -qq
               sudo apt-get install -y -qq postgresql-client
             }
-
             command -v aws >/dev/null 2>&1 || {
               echo "===== Installing awscli ====="
               sudo apt-get update -y -qq
@@ -79,8 +89,12 @@ jobs:
             }
 
             echo ""
-            echo "===== Dumping database ====="
-            pg_dump --no-owner --no-privileges --format=plain "$DATABASE_URL" | gzip -9 > "$LOCAL_PATH"
+            echo "===== Dumping database (custom format, compressed) ====="
+            # --format=custom produces a compressed, structured archive that
+            # pg_restore can inspect/validate. The previous --format=plain
+            # (piped through gzip) cannot be verified this way at all — pg_restore
+            # only understands custom/directory/tar archives, not plain SQL text.
+            pg_dump --no-owner --no-privileges --format=custom --file="$LOCAL_PATH" "$DATABASE_URL"
 
             SIZE_BYTES=$(stat -c%s "$LOCAL_PATH")
             echo "Backup created: ${LOCAL_PATH} (${SIZE_BYTES} bytes)"
@@ -90,6 +104,23 @@ jobs:
             fi
 
             echo ""
+            echo "===== Verifying archive integrity (pg_restore --list) ====="
+            # Parses the archive's table of contents without touching any live
+            # database. A truncated/corrupt archive fails here, before it is
+            # ever uploaded.
+            if ! pg_restore --list "$LOCAL_PATH" > /dev/null; then
+              echo "::error::Backup archive failed integrity check (pg_restore --list) — not uploading"
+              exit 1
+            fi
+            echo "Archive integrity OK: $(pg_restore --list "$LOCAL_PATH" | wc -l) TOC entries."
+
+            echo ""
+            echo "===== Computing local checksum ====="
+            LOCAL_SHA256=$(sha256sum "$LOCAL_PATH" | awk '{print $1}')
+            echo "$LOCAL_SHA256" > "${LOCAL_PATH}.sha256"
+            echo "SHA-256: ${LOCAL_SHA256}"
+
+            echo ""
             echo "===== Uploading to Cloudflare R2 ====="
             export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
             export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
@@ -97,24 +128,43 @@ jobs:
 
             aws s3 cp "$LOCAL_PATH" "s3://${R2_BUCKET_NAME}/db-backups/${FILENAME}" \
               --endpoint-url "$R2_ENDPOINT" --only-show-errors
+            aws s3 cp "${LOCAL_PATH}.sha256" "s3://${R2_BUCKET_NAME}/db-backups/${FILENAME}.sha256" \
+              --endpoint-url "$R2_ENDPOINT" --only-show-errors
 
             echo ""
-            echo "===== Verifying upload ====="
+            echo "===== Verifying object exists ====="
             REMOTE_SIZE=$(aws s3api head-object \
               --endpoint-url "$R2_ENDPOINT" \
               --bucket "$R2_BUCKET_NAME" \
               --key "db-backups/${FILENAME}" \
               --query 'ContentLength' --output text)
-
             if [ "$REMOTE_SIZE" != "$SIZE_BYTES" ]; then
-              echo "::error::Upload verification failed: local=${SIZE_BYTES} bytes, remote=${REMOTE_SIZE} bytes"
+              echo "::error::Upload size mismatch: local=${SIZE_BYTES} bytes, remote=${REMOTE_SIZE} bytes"
               exit 1
             fi
-            echo "Upload verified: ${REMOTE_SIZE} bytes match local file."
+            echo "Object exists, size matches: ${REMOTE_SIZE} bytes."
+
+            echo ""
+            echo "===== Verifying checksum (download-and-compare) ====="
+            # ETag is not a reliable checksum once multipart upload kicks in —
+            # it becomes a hash-of-part-hashes rather than the file's own
+            # SHA-256. Downloading and re-hashing is slower but unambiguous and
+            # correct regardless of upload part size.
+            VERIFY_PATH="/tmp/${FILENAME}.verify"
+            aws s3 cp "s3://${R2_BUCKET_NAME}/db-backups/${FILENAME}" "$VERIFY_PATH" \
+              --endpoint-url "$R2_ENDPOINT" --only-show-errors
+            REMOTE_SHA256=$(sha256sum "$VERIFY_PATH" | awk '{print $1}')
+            rm -f "$VERIFY_PATH"
+
+            if [ "$REMOTE_SHA256" != "$LOCAL_SHA256" ]; then
+              echo "::error::Checksum mismatch: local=${LOCAL_SHA256} remote=${REMOTE_SHA256}"
+              exit 1
+            fi
+            echo "Checksum verified: ${REMOTE_SHA256}"
 
             echo ""
             echo "===== Pruning local backups older than 30 days ====="
-            find "$BACKUP_DIR" -name "motoxplus-db-*.sql.gz" -mtime +30 -print -delete
+            find "$BACKUP_DIR" -name "motoxplus-db-*.dump*" -mtime +30 -print -delete
 
             echo ""
             echo "===== Pruning remote backups older than 30 days ====="
@@ -134,9 +184,54 @@ jobs:
             done
 
             echo ""
-            echo "===== Backup complete: ${FILENAME} ====="
+            echo "===== Backup complete: ${FILENAME} (integrity + checksum verified) ====="
 
-      - name: Notify on failure
-        if: failure()
+  notify:
+    name: Notify
+    if: always()
+    needs: [validate_secrets, backup]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Compute duration
+        id: duration
         run: |
-          echo "::error::Nightly database backup failed. Check VPS pg_dump/R2 upload logs above."
+          START="${{ needs.validate_secrets.outputs.start_time }}"
+          END=$(date +%s)
+          if [ -n "$START" ]; then
+            ELAPSED=$((END - START))
+            echo "human=$(printf '%dm%ds' $((ELAPSED / 60)) $((ELAPSED % 60)))" >> "$GITHUB_OUTPUT"
+          else
+            echo "human=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report success
+        if: needs.backup.result == 'success'
+        run: |
+          echo "===== Backup Succeeded ====="
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+
+      - name: Report failure
+        if: needs.backup.result == 'failure'
+        run: |
+          echo "::error::Nightly database backup failed."
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+          echo "Run:      ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "See the SSH step log — it fails before upload if the dump is corrupt (pg_restore --list), and after upload if the checksum doesn't match."
+
+      - name: Optional Slack notification on failure
+        if: needs.backup.result == 'failure'
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            curl -sf -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"MotoXPlus nightly backup FAILED. Run: ${RUN_URL}\"}" \
+              "$SLACK_WEBHOOK_URL" || echo "Slack notification failed to send."
+          else
+            echo "SLACK_WEBHOOK_URL not configured — skipping notification."
+          fi
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -22,7 +22,13 @@ jobs:
     name: Validate Secrets
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      start_time: ${{ steps.start.outputs.start_time }}
     steps:
+      - name: Record start time
+        id: start
+        run: echo "start_time=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Ensure deploying from main
         run: |
           if [ "${{ github.ref }}" != "refs/heads/main" ]; then
@@ -56,6 +62,8 @@ jobs:
     name: Typecheck & Lint (parallel build check)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -76,13 +84,24 @@ jobs:
       - name: Lint
         run: npm run lint --if-present
 
+  # NOTE ON ROLLBACK POLICY:
+  # This job deliberately does NOT roll back automatically, even if the health
+  # check below fails. By the time `prisma migrate deploy` has run, the schema
+  # may have already changed — an automatic code rollback at that point would
+  # leave the (older) running code pointed at a (newer) migrated schema, which
+  # is its own failure mode, often worse than a known-bad-but-consistent state.
+  # A failed deploy here is a hard stop: the workflow fails, diagnostics are
+  # captured, and a human decides whether/how to roll back via the separate,
+  # explicit rollback.yml workflow.
   deploy:
     name: Deploy
     needs: [validate_secrets, typecheck_lint]
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
     steps:
-      - name: Deploy via SSH (exact commit, migrate, build, reload, health-gated, auto-rollback)
+      - name: Deploy via SSH (exact commit, migrate, build, reload, health-gated — no auto-rollback)
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -106,29 +125,7 @@ jobs:
 
             PREV_SHA=$(git rev-parse HEAD)
             echo "$PREV_SHA" > "$APP_DIR/.deploy_prev_sha"
-            echo "Previously deployed commit: $PREV_SHA"
-
-            ROLLED_BACK=0
-
-            rollback() {
-              if [ "$ROLLED_BACK" = "1" ]; then return 0; fi
-              ROLLED_BACK=1
-              echo "::error::Deployment failed — rolling back to ${PREV_SHA}"
-              set +e
-              git checkout -f "$PREV_SHA"
-              npm ci --ignore-scripts
-              npx prisma generate
-              npm run build
-              pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js --env production
-              for i in $(seq 1 15); do
-                curl -sf --max-time 5 http://localhost:3000/api/health > /dev/null && break
-                sleep 4
-              done
-              echo "::error::Rollback to ${PREV_SHA} complete. Original deployment of ${TARGET_SHA} failed."
-              exit 1
-            }
-
-            trap rollback ERR
+            echo "Previously deployed commit (for manual rollback reference): $PREV_SHA"
 
             echo ""
             echo "===== Pull Exact Commit ====="
@@ -137,7 +134,12 @@ jobs:
 
             echo ""
             echo "===== Install Dependencies ====="
-            npm ci --ignore-scripts
+            if ! npm ci --ignore-scripts > "$APP_DIR/.install.log" 2>&1; then
+              echo "::error::npm ci failed"
+              tail -n 100 "$APP_DIR/.install.log"
+              exit 1
+            fi
+            tail -n 30 "$APP_DIR/.install.log"
 
             echo ""
             echo "===== Generate Prisma Client ====="
@@ -145,11 +147,22 @@ jobs:
 
             echo ""
             echo "===== Run Prisma Migrations ====="
-            npx prisma migrate deploy
+            echo "NOTE: from this point on, failures are NOT automatically rolled back."
+            if ! npx prisma migrate deploy > "$APP_DIR/.migrate.log" 2>&1; then
+              echo "::error::Prisma migration failed"
+              cat "$APP_DIR/.migrate.log"
+              exit 1
+            fi
+            cat "$APP_DIR/.migrate.log"
 
             echo ""
             echo "===== Build Next.js ====="
-            npm run build
+            if ! npm run build > "$APP_DIR/.build.log" 2>&1; then
+              echo "::error::Build failed"
+              tail -n 150 "$APP_DIR/.build.log"
+              exit 1
+            fi
+            tail -n 30 "$APP_DIR/.build.log"
 
             echo ""
             echo "===== Reload PM2 (zero-downtime) ====="
@@ -169,11 +182,11 @@ jobs:
             done
 
             if [ "$HEALTHY" != "1" ]; then
-              echo "::error::Application failed health check after deploy"
-              rollback
+              echo "::error::Application failed health check after deploy."
+              echo "::error::Migrations for ${TARGET_SHA} have already run and were NOT rolled back automatically."
+              echo "::error::To roll back, run the separate 'Manual Rollback' workflow (rollback.yml) with commit ${PREV_SHA}."
+              exit 1
             fi
-
-            trap - ERR
 
             echo ""
             echo "===== PM2 Status ====="
@@ -210,6 +223,8 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - name: Check https://motoxplus.com returns 200
         run: |
@@ -221,11 +236,23 @@ jobs:
             fi
             sleep 6
           done
-          echo "::error::https://motoxplus.com did not return 200 after 10 attempts"
+          echo "::error::https://motoxplus.com did not return 200 after 10 attempts."
+          echo "::error::Migrations for ${{ github.sha }} have already run and were NOT rolled back automatically."
+          echo "::error::To roll back, run the separate 'Manual Rollback' workflow (rollback.yml) with the previous known-good commit."
           exit 1
 
-      - name: Validate rollback secrets
-        if: failure()
+  # Runs only when `deploy` or `verify` actually failed (not merely skipped, e.g.
+  # because typecheck_lint failed upstream and nothing touched the VPS at all).
+  diagnostics:
+    name: Collect Failure Diagnostics
+    if: failure()
+    needs: [deploy, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Validate secrets
         run: |
           missing=0
           for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
@@ -241,67 +268,136 @@ jobs:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
 
-      - name: Emergency rollback (public site unhealthy)
-        if: failure()
-        uses: appleboy/ssh-action@v1.2.5
+      - name: Fetch remote diagnostics (PM2, Nginx, install/migrate/build logs)
+        run: |
+          set -uo pipefail
+          mkdir -p diagnostics
+          umask 077
+          printf '%s\n' "$VPS_SSH_KEY" > diagnostics/ssh_key
+          chmod 600 diagnostics/ssh_key
+
+          ssh_cmd() {
+            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+              -i diagnostics/ssh_key -p "$VPS_PORT" "${VPS_USER}@${VPS_HOST}" "$1"
+          }
+
+          APP_DIR="/var/www/motoxplus"
+
+          ssh_cmd "pm2 logs motoxplus --lines 200 --nostream" > diagnostics/pm2.log 2>&1 \
+            || echo "pm2 logs unavailable" > diagnostics/pm2.log
+          ssh_cmd "pm2 describe motoxplus" > diagnostics/pm2-describe.log 2>&1 \
+            || echo "pm2 describe unavailable" > diagnostics/pm2-describe.log
+          ssh_cmd "sudo tail -n 200 /var/log/nginx/error.log" > diagnostics/nginx-error.log 2>&1 \
+            || echo "nginx error log unavailable (check sudo permissions for the deploy user)" > diagnostics/nginx-error.log
+          ssh_cmd "cat ${APP_DIR}/.install.log 2>/dev/null || echo 'not present'" > diagnostics/install.log 2>&1
+          ssh_cmd "cat ${APP_DIR}/.migrate.log 2>/dev/null || echo 'not present'" > diagnostics/prisma-migrate.log 2>&1
+          ssh_cmd "cat ${APP_DIR}/.build.log 2>/dev/null || echo 'not present'" > diagnostics/build.log 2>&1
+
+          rm -f diagnostics/ssh_key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+
+      - name: Upload diagnostics artifact
+        if: always()
+        uses: actions/upload-artifact@v7
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
-          timeout: 15m
-          command_timeout: 15m
-          script_stop: true
-          script: |
-            set -euo pipefail
-            APP_DIR="/var/www/motoxplus"
-            cd "$APP_DIR"
-
-            if [ ! -f "$APP_DIR/.deploy_prev_sha" ]; then
-              echo "::error::No .deploy_prev_sha found — cannot determine rollback target"
-              exit 1
-            fi
-            PREV_SHA=$(cat "$APP_DIR/.deploy_prev_sha")
-
-            echo "::error::Public site unhealthy after deploy — rolling back to ${PREV_SHA}"
-            git checkout -f "$PREV_SHA"
-            npm ci --ignore-scripts
-            npx prisma generate
-            npm run build
-            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js --env production
-
-            for i in $(seq 1 15); do
-              curl -sf --max-time 5 http://localhost:3000/api/health > /dev/null && break
-              sleep 4
-            done
-
-            echo "Rollback to ${PREV_SHA} complete."
+          name: deploy-diagnostics-${{ github.sha }}
+          path: diagnostics/*.log
+          retention-days: 14
 
   notify:
     name: Notify
     if: always()
-    needs: [typecheck_lint, deploy, verify]
+    needs: [validate_secrets, typecheck_lint, deploy, verify, diagnostics]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
-      - name: Report pipeline status
+      - name: Compute duration
+        id: duration
         run: |
+          START="${{ needs.validate_secrets.outputs.start_time }}"
+          END=$(date +%s)
+          if [ -n "$START" ]; then
+            ELAPSED=$((END - START))
+            echo "human=$(printf '%dm%ds' $((ELAPSED / 60)) $((ELAPSED % 60)))" >> "$GITHUB_OUTPUT"
+          else
+            echo "human=unknown" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine overall status
+        id: status
+        run: |
+          if [ "${{ needs.deploy.result }}" = "success" ] && [ "${{ needs.verify.result }}" = "success" ]; then
+            echo "overall=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "overall=failure" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report success
+        if: steps.status.outputs.overall == 'success'
+        run: |
+          echo "===== Deployment Succeeded ====="
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Commit:   ${{ github.sha }}"
+          echo "Branch:   ${{ github.ref_name }}"
+          echo "Actor:    ${{ github.actor }}"
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+
+      - name: Report failure and identify failing step
+        if: steps.status.outputs.overall == 'failure'
+        run: |
+          FAILING="unknown"
+          if [ "${{ needs.typecheck_lint.result }}" = "failure" ]; then FAILING="typecheck_lint"; fi
+          if [ "${{ needs.deploy.result }}" = "failure" ]; then FAILING="deploy"; fi
+          if [ "${{ needs.verify.result }}" = "failure" ]; then FAILING="verify"; fi
+
+          echo "::error::Deployment pipeline failed at step: ${FAILING}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Commit:   ${{ github.sha }}"
+          echo "Branch:   ${{ github.ref_name }}"
+          echo "Actor:    ${{ github.actor }}"
+          echo "Duration: ${{ steps.duration.outputs.human }}"
+          echo "Run:      ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
           echo "typecheck_lint: ${{ needs.typecheck_lint.result }}"
           echo "deploy:         ${{ needs.deploy.result }}"
           echo "verify:         ${{ needs.verify.result }}"
-          if [ "${{ needs.deploy.result }}" = "failure" ] || [ "${{ needs.verify.result }}" = "failure" ]; then
-            echo "::error::Deployment pipeline failed for commit ${{ github.sha }}. Automatic rollback was attempted."
-            echo "Diagnostics:"
-            echo "  ssh in and run: pm2 logs motoxplus"
-            echo "  sudo journalctl -u nginx -n 100"
-            echo "  sudo journalctl -u postgresql -n 100"
-          fi
+          echo ""
+          echo "Migrations may have already run for this commit — this workflow does NOT roll back automatically."
+          echo "To roll back, run the 'Manual Rollback' workflow (rollback.yml) with the previous known-good commit."
+
+      - name: Download diagnostics artifact
+        if: steps.status.outputs.overall == 'failure' && needs.diagnostics.result == 'success'
+        uses: actions/download-artifact@v8
+        with:
+          name: deploy-diagnostics-${{ github.sha }}
+          path: diagnostics
+
+      - name: Print last 100 lines of each diagnostic log
+        if: steps.status.outputs.overall == 'failure' && needs.diagnostics.result == 'success'
+        run: |
+          for f in diagnostics/*.log; do
+            [ -f "$f" ] || continue
+            echo "----- $f (last 100 lines) -----"
+            tail -n 100 "$f"
+            echo ""
+          done
 
       - name: Optional Slack notification on failure
-        if: needs.deploy.result == 'failure' || needs.verify.result == 'failure'
+        if: steps.status.outputs.overall == 'failure'
         run: |
           if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            MSG="MotoXPlus deploy FAILED: ${{ github.sha }} on ${{ github.ref_name }} (by ${{ github.actor }})."
+            MSG="${MSG} Duration: ${{ steps.duration.outputs.human }}."
+            MSG="${MSG} No auto-rollback — use rollback.yml if needed. Run: ${RUN_URL}"
             curl -sf -X POST -H 'Content-type: application/json' \
-              --data "{\"text\":\"MotoXPlus deploy failed for commit ${{ github.sha }} (by ${{ github.actor }}). Automatic rollback attempted — verify manually.\"}" \
+              --data "{\"text\":\"${MSG}\"}" \
               "$SLACK_WEBHOOK_URL" || echo "Slack notification failed to send."
           else
             echo "SLACK_WEBHOOK_URL not configured — skipping notification."
