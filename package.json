@@ -14,6 +14,7 @@
     "db:copy-mudguard-images": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"node\\\",\\\"target\\\":\\\"ES2017\\\"}\" prisma/copy-mudguard-images.ts",
     "db:seed-descriptions": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed-descriptions.ts",
     "db:seed-vehicles": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed-vehicles.ts",
+    "db:seed-cables": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed-cables.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

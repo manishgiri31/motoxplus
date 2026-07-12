@@ -68,6 +68,10 @@ async function main() {
       name: "Head Light Visor", slug: "head-light-visor", sortOrder: 15,
       description: "Headlight visor and nacelle assemblies providing a clean, OEM-matched replacement for broken or faded headlight surrounds. Made from durable ABS plastic with chrome or painted finish options for motorcycles and scooters.",
     },
+    {
+      name: "Cables", slug: "cables", sortOrder: 16,
+      description: "Friction-free control cables — clutch, throttle, front brake, rear brake, speedometer, choke, seat lock, and gear cables — for motorcycles and scooters across Hero, Honda, Bajaj, TVS, Yamaha, Suzuki, Royal Enfield, and other major brands.",
+    },
   ];
 
   for (const cat of categories) {
