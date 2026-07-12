@@ -12,38 +12,128 @@ concurrency:
 
 env:
   NODE_VERSION: "20"
+  APP_DIR: /var/www/motoxplus
+
+permissions:
+  contents: read
 
 jobs:
+  validate_secrets:
+    name: Validate Secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ensure deploying from main
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "::error::This workflow only deploys from 'main'. Triggering ref was '${{ github.ref }}'."
+            echo "::error::workflow_dispatch does not restrict the branch/ref selector by default — this explicit check is the actual guard."
+            exit 1
+          fi
+          echo "Confirmed: deploying from refs/heads/main."
+
+      - name: Check required secrets are configured
+        run: |
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing required secret: $v"
+              missing=1
+            fi
+          done
+          if [ "$missing" = "1" ]; then
+            echo "::error::One or more required secrets are not configured. Aborting before touching production."
+            exit 1
+          fi
+          echo "All required secrets present."
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+
+  typecheck_lint:
+    name: Typecheck & Lint (parallel build check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint --if-present
+
   deploy:
     name: Deploy
+    needs: [validate_secrets, typecheck_lint]
     runs-on: ubuntu-latest
-
+    timeout-minutes: 25
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Deploy via SSH (exact commit, migrate, build, reload, health-gated, auto-rollback)
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           timeout: 20m
+          command_timeout: 20m
           script_stop: true
-
+          envs: TARGET_SHA
           script: |
             set -euo pipefail
 
             APP_DIR="/var/www/motoxplus"
+            cd "$APP_DIR"
 
             echo "====================================="
             echo " MotoXPlus Production Deployment"
+            echo " Target commit: ${TARGET_SHA}"
             echo "====================================="
 
-            cd "$APP_DIR"
+            PREV_SHA=$(git rev-parse HEAD)
+            echo "$PREV_SHA" > "$APP_DIR/.deploy_prev_sha"
+            echo "Previously deployed commit: $PREV_SHA"
+
+            ROLLED_BACK=0
+
+            rollback() {
+              if [ "$ROLLED_BACK" = "1" ]; then return 0; fi
+              ROLLED_BACK=1
+              echo "::error::Deployment failed — rolling back to ${PREV_SHA}"
+              set +e
+              git checkout -f "$PREV_SHA"
+              npm ci --ignore-scripts
+              npx prisma generate
+              npm run build
+              pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js --env production
+              for i in $(seq 1 15); do
+                curl -sf --max-time 5 http://localhost:3000/api/health > /dev/null && break
+                sleep 4
+              done
+              echo "::error::Rollback to ${PREV_SHA} complete. Original deployment of ${TARGET_SHA} failed."
+              exit 1
+            }
+
+            trap rollback ERR
 
             echo ""
-            echo "===== Pull Latest Code ====="
+            echo "===== Pull Exact Commit ====="
             git fetch origin
-            git reset --hard origin/main
+            git checkout -f "$TARGET_SHA"
 
             echo ""
             echo "===== Install Dependencies ====="
@@ -62,29 +152,159 @@ jobs:
             npm run build
 
             echo ""
-            echo "===== Reload PM2 ====="
-            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js
+            echo "===== Reload PM2 (zero-downtime) ====="
+            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js --env production
 
             echo ""
-            echo "===== Waiting for Application ====="
-            sleep 8
+            echo "===== Waiting for Application Health ====="
+            HEALTHY=0
+            for i in $(seq 1 20); do
+              if curl -sf --max-time 5 http://localhost:3000/api/health > /dev/null; then
+                HEALTHY=1
+                echo "Healthy after ${i} attempt(s)."
+                break
+              fi
+              echo "Attempt ${i}/20 — not ready yet, retrying in 3s..."
+              sleep 3
+            done
 
-            echo ""
-            echo "===== Health Check ====="
-            curl -f http://localhost:3000 > /dev/null
+            if [ "$HEALTHY" != "1" ]; then
+              echo "::error::Application failed health check after deploy"
+              rollback
+            fi
+
+            trap - ERR
 
             echo ""
             echo "===== PM2 Status ====="
             pm2 list
 
             echo ""
-            echo "===== Deployment Successful ====="
+            echo "===== Deployment Successful: ${TARGET_SHA} ====="
+        env:
+          TARGET_SHA: ${{ github.sha }}
 
-      - name: Notify on failure
+      - name: Record deployment manifest
+        if: success()
+        run: |
+          mkdir -p artifacts
+          cat > artifacts/deployment-manifest.json <<EOF
+          {
+            "sha": "${{ github.sha }}",
+            "ref": "${{ github.ref }}",
+            "actor": "${{ github.actor }}",
+            "deployedAt": "$(date -u +%FT%TZ)"
+          }
+          EOF
+
+      - name: Upload deployment manifest
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deployment-manifest-${{ github.sha }}
+          path: artifacts/deployment-manifest.json
+          retention-days: 90
+
+  verify:
+    name: Verify Public Site
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check https://motoxplus.com returns 200
+        run: |
+          for i in $(seq 1 10); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://motoxplus.com)
+            echo "Attempt ${i}/10: HTTP ${CODE}"
+            if [ "$CODE" = "200" ]; then
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error::https://motoxplus.com did not return 200 after 10 attempts"
+          exit 1
+
+      - name: Validate rollback secrets
         if: failure()
         run: |
-          echo "::error::Deployment failed!"
-          echo "Check:"
-          echo "  pm2 logs motoxplus"
-          echo "  sudo journalctl -u nginx -n 100"
-          echo "  sudo journalctl -u postgresql -n 100"
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing required secret: $v"
+              missing=1
+            fi
+          done
+          exit $missing
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+
+      - name: Emergency rollback (public site unhealthy)
+        if: failure()
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 15m
+          command_timeout: 15m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            APP_DIR="/var/www/motoxplus"
+            cd "$APP_DIR"
+
+            if [ ! -f "$APP_DIR/.deploy_prev_sha" ]; then
+              echo "::error::No .deploy_prev_sha found — cannot determine rollback target"
+              exit 1
+            fi
+            PREV_SHA=$(cat "$APP_DIR/.deploy_prev_sha")
+
+            echo "::error::Public site unhealthy after deploy — rolling back to ${PREV_SHA}"
+            git checkout -f "$PREV_SHA"
+            npm ci --ignore-scripts
+            npx prisma generate
+            npm run build
+            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js --env production
+
+            for i in $(seq 1 15); do
+              curl -sf --max-time 5 http://localhost:3000/api/health > /dev/null && break
+              sleep 4
+            done
+
+            echo "Rollback to ${PREV_SHA} complete."
+
+  notify:
+    name: Notify
+    if: always()
+    needs: [typecheck_lint, deploy, verify]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report pipeline status
+        run: |
+          echo "typecheck_lint: ${{ needs.typecheck_lint.result }}"
+          echo "deploy:         ${{ needs.deploy.result }}"
+          echo "verify:         ${{ needs.verify.result }}"
+          if [ "${{ needs.deploy.result }}" = "failure" ] || [ "${{ needs.verify.result }}" = "failure" ]; then
+            echo "::error::Deployment pipeline failed for commit ${{ github.sha }}. Automatic rollback was attempted."
+            echo "Diagnostics:"
+            echo "  ssh in and run: pm2 logs motoxplus"
+            echo "  sudo journalctl -u nginx -n 100"
+            echo "  sudo journalctl -u postgresql -n 100"
+          fi
+
+      - name: Optional Slack notification on failure
+        if: needs.deploy.result == 'failure' || needs.verify.result == 'failure'
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -sf -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"MotoXPlus deploy failed for commit ${{ github.sha }} (by ${{ github.actor }}). Automatic rollback attempted — verify manually.\"}" \
+              "$SLACK_WEBHOOK_URL" || echo "Slack notification failed to send."
+          else
+            echo "SLACK_WEBHOOK_URL not configured — skipping notification."
+          fi
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

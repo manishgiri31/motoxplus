@@ -1,0 +1,130 @@
+name: Server Tools
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Command to run on the VPS"
+        required: true
+        type: choice
+        options:
+          - restart-pm2
+          - restart-nginx
+          - restart-postgres
+          - clear-next-cache
+          - clear-pm2-logs
+          - tail-pm2-logs
+          - tail-nginx-logs
+          - disk-usage
+          - memory-usage
+          - uptime
+
+concurrency:
+  group: production-server-tools
+  cancel-in-progress: false
+
+jobs:
+  validate_secrets:
+    name: Validate Secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check required secrets are configured
+        run: |
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing required secret: $v"
+              missing=1
+            fi
+          done
+          exit $missing
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+
+  run_command:
+    name: Run ${{ inputs.command }}
+    needs: validate_secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Execute selected command
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 8m
+          command_timeout: 8m
+          script_stop: true
+          envs: TOOL_COMMAND
+          script: |
+            set -euo pipefail
+            APP_DIR="/var/www/motoxplus"
+
+            echo "====================================="
+            echo " MotoXPlus Server Tools: ${TOOL_COMMAND}"
+            echo "====================================="
+            echo ""
+
+            case "$TOOL_COMMAND" in
+              restart-pm2)
+                cd "$APP_DIR"
+                pm2 reload ecosystem.config.js --update-env || pm2 restart ecosystem.config.js --env production
+                pm2 list
+                ;;
+              restart-nginx)
+                sudo systemctl restart nginx
+                systemctl status nginx --no-pager
+                ;;
+              restart-postgres)
+                sudo systemctl restart postgresql
+                systemctl status postgresql --no-pager
+                ;;
+              clear-next-cache)
+                cd "$APP_DIR"
+                rm -rf .next/cache
+                echo "Cleared .next/cache"
+                ;;
+              clear-pm2-logs)
+                pm2 flush
+                echo "PM2 logs flushed"
+                ;;
+              tail-pm2-logs)
+                pm2 logs motoxplus --lines 200 --nostream
+                ;;
+              tail-nginx-logs)
+                echo "----- access.log (last 200 lines) -----"
+                sudo tail -n 200 /var/log/nginx/access.log
+                echo ""
+                echo "----- error.log (last 200 lines) -----"
+                sudo tail -n 200 /var/log/nginx/error.log
+                ;;
+              disk-usage)
+                df -h
+                ;;
+              memory-usage)
+                free -h
+                ;;
+              uptime)
+                uptime
+                ;;
+              *)
+                echo "::error::Unknown command: ${TOOL_COMMAND}"
+                exit 1
+                ;;
+            esac
+
+            echo ""
+            echo "===== Done: ${TOOL_COMMAND} ====="
+        env:
+          TOOL_COMMAND: ${{ inputs.command }}
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Server tool '${{ inputs.command }}' failed. See the SSH step log above."

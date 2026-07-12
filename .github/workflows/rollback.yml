@@ -1,0 +1,126 @@
+name: Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Commit SHA to roll back to"
+        required: true
+        type: string
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate_inputs:
+    name: Validate Inputs & Secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check commit input and required secrets
+        run: |
+          if [ -z "${{ inputs.commit }}" ]; then
+            echo "::error::commit input is required"
+            exit 1
+          fi
+          if ! [[ "${{ inputs.commit }}" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            echo "::error::commit input '${{ inputs.commit }}' does not look like a valid git SHA (7-40 hex characters)"
+            exit 1
+          fi
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing required secret: $v"
+              missing=1
+            fi
+          done
+          exit $missing
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+
+  rollback:
+    name: Roll Back to ${{ inputs.commit }}
+    needs: validate_inputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Roll back via SSH
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 20m
+          command_timeout: 20m
+          script_stop: true
+          envs: TARGET_COMMIT
+          script: |
+            set -euo pipefail
+            APP_DIR="/var/www/motoxplus"
+            cd "$APP_DIR"
+
+            echo "====================================="
+            echo " MotoXPlus Manual Rollback"
+            echo " Target commit: ${TARGET_COMMIT}"
+            echo "====================================="
+
+            echo ""
+            echo "===== Fetching ====="
+            git fetch origin
+
+            echo ""
+            echo "===== Verifying commit exists ====="
+            if ! git rev-parse --verify "${TARGET_COMMIT}^{commit}" > /dev/null 2>&1; then
+              echo "::error::Commit ${TARGET_COMMIT} does not exist in this repository — aborting before touching the running app"
+              exit 1
+            fi
+            echo "Confirmed: ${TARGET_COMMIT} exists."
+
+            echo ""
+            echo "===== Checking out ${TARGET_COMMIT} ====="
+            git checkout -f "$TARGET_COMMIT"
+
+            echo ""
+            echo "===== Install Dependencies ====="
+            npm ci --ignore-scripts
+
+            echo ""
+            echo "===== Generate Prisma Client ====="
+            npx prisma generate
+
+            echo ""
+            echo "===== Build ====="
+            npm run build
+
+            echo ""
+            echo "===== Reload PM2 ====="
+            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js --env production
+
+            echo ""
+            echo "===== Waiting for Application Health ====="
+            for i in $(seq 1 15); do
+              if curl -sf --max-time 5 http://localhost:3000/api/health > /dev/null; then
+                echo "Healthy after ${i} attempt(s)."
+                echo "$TARGET_COMMIT" > "$APP_DIR/.deploy_prev_sha"
+                echo ""
+                echo "===== Rollback to ${TARGET_COMMIT} successful ====="
+                exit 0
+              fi
+              echo "Attempt ${i}/15 — not ready yet, retrying in 4s..."
+              sleep 4
+            done
+
+            echo "::error::Application did not become healthy after rollback to ${TARGET_COMMIT}"
+            exit 1
+        env:
+          TARGET_COMMIT: ${{ inputs.commit }}
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Rollback to ${{ inputs.commit }} failed. Check: ssh in and run 'pm2 logs motoxplus'."

@@ -1,0 +1,120 @@
+name: Health Monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: production-health-check
+  cancel-in-progress: true
+
+jobs:
+  health:
+    name: Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check public site (https://motoxplus.com)
+        run: |
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://motoxplus.com)
+          echo "https://motoxplus.com -> HTTP ${CODE}"
+          if [ "$CODE" != "200" ]; then
+            echo "::error::https://motoxplus.com returned ${CODE} (expected 200)"
+            exit 1
+          fi
+
+      - name: Validate secrets for server-side checks
+        run: |
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing required secret: $v"
+              missing=1
+            fi
+          done
+          exit $missing
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+
+      - name: Check server-side services
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 5m
+          command_timeout: 5m
+          script_stop: false
+          script: |
+            FAILED=0
+
+            echo "===== localhost:3000 ====="
+            if curl -sf --max-time 10 http://localhost:3000/api/health > /dev/null; then
+              echo "OK: application responding"
+            else
+              echo "::error::localhost:3000/api/health not responding"
+              FAILED=1
+            fi
+
+            echo ""
+            echo "===== PM2 process (motoxplus) ====="
+            if pm2 describe motoxplus 2>/dev/null | grep -q "status.*online"; then
+              echo "OK: pm2 process online"
+            else
+              echo "::error::motoxplus PM2 process is not online"
+              pm2 list || true
+              FAILED=1
+            fi
+
+            echo ""
+            echo "===== Nginx ====="
+            if systemctl is-active --quiet nginx; then
+              echo "OK: nginx active"
+            else
+              echo "::error::nginx is not active"
+              FAILED=1
+            fi
+
+            echo ""
+            echo "===== PostgreSQL ====="
+            if systemctl is-active --quiet postgresql; then
+              echo "OK: postgresql active"
+            else
+              echo "::error::postgresql is not active"
+              FAILED=1
+            fi
+
+            echo ""
+            echo "===== Disk usage ====="
+            DISK_PCT=$(df -P / | awk 'NR==2 {gsub("%","",$5); print $5}')
+            echo "Root disk usage: ${DISK_PCT}%"
+            if [ "$DISK_PCT" -ge 90 ]; then
+              echo "::error::Disk usage critical: ${DISK_PCT}%"
+              FAILED=1
+            fi
+
+            echo ""
+            echo "===== Memory usage ====="
+            MEM_PCT=$(free | awk '/Mem:/ {printf "%.0f", $3/$2*100}')
+            echo "Memory usage: ${MEM_PCT}%"
+            if [ "$MEM_PCT" -ge 90 ]; then
+              echo "::error::Memory usage critical: ${MEM_PCT}%"
+              FAILED=1
+            fi
+
+            echo ""
+            if [ "$FAILED" = "1" ]; then
+              echo "===== Health check FAILED ====="
+              exit 1
+            fi
+            echo "===== Health check passed ====="
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Health monitor detected a problem — see the step logs above for which component failed."

@@ -1,0 +1,142 @@
+name: Nightly Database Backup
+
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: production-backup
+  cancel-in-progress: false
+
+jobs:
+  validate_secrets:
+    name: Validate Secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check required secrets are configured
+        run: |
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing required secret: $v"
+              missing=1
+            fi
+          done
+          exit $missing
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+
+  backup:
+    name: Backup, Upload to R2, Prune
+    needs: validate_secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Dump, compress, upload, verify, prune
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 25m
+          command_timeout: 25m
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/var/www/motoxplus"
+            BACKUP_DIR="/var/backups/motoxplus"
+            TIMESTAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+            FILENAME="motoxplus-db-${TIMESTAMP}.sql.gz"
+            LOCAL_PATH="${BACKUP_DIR}/${FILENAME}"
+
+            echo "====================================="
+            echo " MotoXPlus Nightly Database Backup"
+            echo "====================================="
+
+            mkdir -p "$BACKUP_DIR"
+            cd "$APP_DIR"
+            set -a
+            source .env
+            set +a
+
+            command -v pg_dump >/dev/null 2>&1 || {
+              echo "===== Installing postgresql-client ====="
+              sudo apt-get update -y -qq
+              sudo apt-get install -y -qq postgresql-client
+            }
+
+            command -v aws >/dev/null 2>&1 || {
+              echo "===== Installing awscli ====="
+              sudo apt-get update -y -qq
+              sudo apt-get install -y -qq awscli
+            }
+
+            echo ""
+            echo "===== Dumping database ====="
+            pg_dump --no-owner --no-privileges --format=plain "$DATABASE_URL" | gzip -9 > "$LOCAL_PATH"
+
+            SIZE_BYTES=$(stat -c%s "$LOCAL_PATH")
+            echo "Backup created: ${LOCAL_PATH} (${SIZE_BYTES} bytes)"
+            if [ "$SIZE_BYTES" -lt 1024 ]; then
+              echo "::error::Backup file suspiciously small (${SIZE_BYTES} bytes) — aborting before upload"
+              exit 1
+            fi
+
+            echo ""
+            echo "===== Uploading to Cloudflare R2 ====="
+            export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+            export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+            R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+            aws s3 cp "$LOCAL_PATH" "s3://${R2_BUCKET_NAME}/db-backups/${FILENAME}" \
+              --endpoint-url "$R2_ENDPOINT" --only-show-errors
+
+            echo ""
+            echo "===== Verifying upload ====="
+            REMOTE_SIZE=$(aws s3api head-object \
+              --endpoint-url "$R2_ENDPOINT" \
+              --bucket "$R2_BUCKET_NAME" \
+              --key "db-backups/${FILENAME}" \
+              --query 'ContentLength' --output text)
+
+            if [ "$REMOTE_SIZE" != "$SIZE_BYTES" ]; then
+              echo "::error::Upload verification failed: local=${SIZE_BYTES} bytes, remote=${REMOTE_SIZE} bytes"
+              exit 1
+            fi
+            echo "Upload verified: ${REMOTE_SIZE} bytes match local file."
+
+            echo ""
+            echo "===== Pruning local backups older than 30 days ====="
+            find "$BACKUP_DIR" -name "motoxplus-db-*.sql.gz" -mtime +30 -print -delete
+
+            echo ""
+            echo "===== Pruning remote backups older than 30 days ====="
+            CUTOFF_EPOCH=$(date -u -d '30 days ago' +%s)
+            aws s3api list-objects-v2 \
+              --endpoint-url "$R2_ENDPOINT" \
+              --bucket "$R2_BUCKET_NAME" \
+              --prefix "db-backups/" \
+              --query 'Contents[].[Key,LastModified]' --output text 2>/dev/null | \
+            while IFS=$'\t' read -r KEY LASTMOD; do
+              [ -z "$KEY" ] && continue
+              OBJ_EPOCH=$(date -u -d "$LASTMOD" +%s)
+              if [ "$OBJ_EPOCH" -lt "$CUTOFF_EPOCH" ]; then
+                echo "Deleting old remote backup: ${KEY} (last modified ${LASTMOD})"
+                aws s3 rm "s3://${R2_BUCKET_NAME}/${KEY}" --endpoint-url "$R2_ENDPOINT"
+              fi
+            done
+
+            echo ""
+            echo "===== Backup complete: ${FILENAME} ====="
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Nightly database backup failed. Check VPS pg_dump/R2 upload logs above."
