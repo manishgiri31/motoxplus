@@ -130,6 +130,16 @@ function parseItem(raw: string, group: string): ParsedItem {
   return { type: FALLBACK_TYPE, vehicles: group.split("/").map((s) => s.trim()).filter(Boolean) };
 }
 
+/**
+ * Rounds a price up to the nearest odd whole rupee (charm-pricing
+ * convention for this catalog): 34.5→35, 31.7→33, 42.2→43, 47.5→49.
+ * Never decreases the price; an already-odd whole number is left as-is.
+ */
+function roundUpToOddWhole(value: number): number {
+  const ceiled = Math.ceil(value);
+  return ceiled % 2 === 0 ? ceiled + 1 : ceiled;
+}
+
 function buildDescription(typeLabel: string, action: string, vehicles: string[]): string {
   const vehicleText = vehicles.length > 0 ? vehicles.join(", ") : "a wide range of two-wheeler models";
   return (
@@ -177,7 +187,7 @@ async function main(): Promise<void> {
       const name = `MOTOXPLUS ${type.label} — ${displayVehicles}`;
       const description = buildDescription(type.label, type.action, vehicles);
 
-      const price = parseFloat(item.price.toFixed(2));
+      const price = roundUpToOddWhole(item.price);
       const mrp = parseFloat(item.mrp.toFixed(2));
 
       // Each product is handled independently: a permanent failure on one
@@ -197,8 +207,8 @@ async function main(): Promise<void> {
               mrp,
               gstRate: 18,
               hsnCode: "87141090",
-              moq: 1,
-              stock: 0,
+              moq: 50,
+              stock: 100,
               brand: "MOTOXPLUS",
               warranty: "No Warranty",
               countryOfOrigin: "India",
@@ -210,6 +220,8 @@ async function main(): Promise<void> {
               description,
               price,
               mrp,
+              moq: 50,
+              stock: 100,
               compatibility: vehicles,
               isActive: true,
             },
