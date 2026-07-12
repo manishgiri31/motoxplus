@@ -10,87 +10,81 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
+env:
+  NODE_VERSION: "20"
+
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
 
     steps:
-      - name: Print connection info
-        run: |
-          echo "HOST=${{ secrets.VPS_HOST }}"
-          echo "PORT=${{ secrets.VPS_PORT }}"
-          echo "USER=${{ secrets.VPS_USER }}"
-
-      - name: Test TCP connection
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y netcat-openbsd
-          nc -vz ${{ secrets.VPS_HOST }} ${{ secrets.VPS_PORT }}
-
-      - name: Test SSH connection
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          timeout: 30s
-          debug: true
-          script: |
-            echo "===== SSH SUCCESS ====="
-            hostname
-            whoami
-            pwd
+          timeout: 20m
+          script_stop: true
 
-      - name: Deploy
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
-          timeout: 15m
           script: |
-            set -e
+            set -euo pipefail
 
             APP_DIR="/var/www/motoxplus"
 
-            echo "===== Enter Project ====="
+            echo "====================================="
+            echo " MotoXPlus Production Deployment"
+            echo "====================================="
+
             cd "$APP_DIR"
 
+            echo ""
             echo "===== Pull Latest Code ====="
             git fetch origin
             git reset --hard origin/main
 
+            echo ""
             echo "===== Install Dependencies ====="
             npm ci --ignore-scripts
 
+            echo ""
             echo "===== Generate Prisma Client ====="
             npx prisma generate
 
-            echo "===== Skip Prisma Migrations (Temporary) ====="
-            # npx prisma migrate deploy
+            echo ""
+            echo "===== Run Prisma Migrations ====="
+            npx prisma migrate deploy
 
+            echo ""
             echo "===== Build Next.js ====="
             npm run build
 
-            echo "===== Restart PM2 ====="
+            echo ""
+            echo "===== Reload PM2 ====="
             pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js
 
+            echo ""
+            echo "===== Waiting for Application ====="
+            sleep 8
+
+            echo ""
+            echo "===== Health Check ====="
+            curl -f http://localhost:3000 > /dev/null
+
+            echo ""
             echo "===== PM2 Status ====="
             pm2 list
 
-            echo "===== Health Check ====="
-            curl -I http://localhost:3000 || true
-
+            echo ""
             echo "===== Deployment Successful ====="
 
-      - name: Notify Failure
+      - name: Notify on failure
         if: failure()
         run: |
           echo "::error::Deployment failed!"
           echo "Check:"
           echo "  pm2 logs motoxplus"
-          echo "  journalctl -u nginx"
-          echo "  journalctl -u postgresql"
+          echo "  sudo journalctl -u nginx -n 100"
+          echo "  sudo journalctl -u postgresql -n 100"
