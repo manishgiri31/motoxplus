@@ -49,6 +49,7 @@ logs/
 
 # backup files
 *.sql
+!prisma/migrations/**/*.sql
 *.sql.gz
 *.dump
 
