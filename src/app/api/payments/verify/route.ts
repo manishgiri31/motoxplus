@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "DEALER") {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser || authUser.role !== "DEALER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -33,7 +36,8 @@ export async function POST(req: NextRequest) {
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
   // Ensure the order belongs to the requesting dealer
-  if (order.dealerId !== session.user.dealerId) {
+  const dealer = await prisma.dealer.findUnique({ where: { userId } });
+  if (!dealer || order.dealerId !== dealer.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 

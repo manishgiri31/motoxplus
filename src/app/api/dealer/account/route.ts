@@ -1,17 +1,21 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-
-  if (!session || session.user.role !== "DEALER") {
+// Accepts either the web NextAuth session or the mobile/plain-login JWT
+// (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
+export async function GET(req: NextRequest) {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser || authUser.role !== "DEALER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const dealer = await prisma.dealer.findUnique({
-    where: { userId: session.user.id },
+    where: { userId },
     select: { ownerName: true, phone: true, address: true, city: true, state: true, pincode: true },
   });
 
@@ -22,15 +26,18 @@ export async function GET() {
   return NextResponse.json(dealer);
 }
 
-export async function DELETE() {
-  const session = await getServerSession(authOptions);
-
-  if (!session || session.user.role !== "DEALER") {
+export async function DELETE(req: NextRequest) {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser || authUser.role !== "DEALER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const dealer = await prisma.dealer.findUnique({
-    where: { userId: session.user.id },
+    where: { userId },
   });
 
   if (!dealer) {
@@ -45,7 +52,7 @@ export async function DELETE() {
   await prisma.order.deleteMany({ where: { dealerId: dealer.id } });
 
   // 3. User (cascades → Dealer → Cart → CartItems, Account, Session)
-  await prisma.user.delete({ where: { id: session.user.id } });
+  await prisma.user.delete({ where: { id: userId } });
 
   return NextResponse.json({ success: true });
 }

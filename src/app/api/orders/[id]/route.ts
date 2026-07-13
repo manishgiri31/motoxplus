@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 
+// Accepts either the web NextAuth session or the mobile/plain-login JWT
+// (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getCurrentUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const order = await prisma.order.findUnique({
     where: { id: params.id },
@@ -23,8 +28,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
   // Dealer can only view own orders
-  if (session.user.role === "DEALER") {
-    const dealer = await prisma.dealer.findUnique({ where: { userId: session.user.id } });
+  if (authUser.role === "DEALER") {
+    const dealer = await prisma.dealer.findUnique({ where: { userId } });
     if (order.dealerId !== dealer?.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

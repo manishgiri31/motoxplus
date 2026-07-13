@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "DEALER") {
+// Accepts either the web NextAuth session or the mobile/plain-login JWT
+// (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
+export async function GET(req: NextRequest) {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser || authUser.role !== "DEALER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const dealer = await prisma.dealer.findUnique({
-    where: { userId: session.user.id },
+    where: { userId },
   });
 
   if (!dealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
@@ -31,8 +36,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "DEALER") {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser || authUser.role !== "DEALER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -42,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const dealer = await prisma.dealer.findUnique({ where: { userId: session.user.id } });
+  const dealer = await prisma.dealer.findUnique({ where: { userId } });
   if (!dealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
 
   const product = await prisma.product.findUnique({ where: { id: productId, isActive: true } });
@@ -101,15 +110,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "DEALER") {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser || authUser.role !== "DEALER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { itemId } = await req.json();
   if (!itemId) return NextResponse.json({ error: "Item ID required" }, { status: 400 });
 
-  const dealer = await prisma.dealer.findUnique({ where: { userId: session.user.id } });
+  const dealer = await prisma.dealer.findUnique({ where: { userId } });
   if (!dealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
 
   const cart = await prisma.cart.findUnique({ where: { dealerId: dealer.id } });

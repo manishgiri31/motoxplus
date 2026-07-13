@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ok, badRequest, unauthorized, forbidden, notFound, serverError } from "@/lib/api";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 import Razorpay from "razorpay";
 
 // Singleton — avoid re-creating client on every request
@@ -20,8 +19,12 @@ function getRazorpay(): Razorpay {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "DEALER") {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
+    return unauthorized();
+  }
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser || authUser.role !== "DEALER") {
     return unauthorized();
   }
 
@@ -40,7 +43,7 @@ export async function POST(req: NextRequest) {
   try {
     const [order, dealer] = await Promise.all([
       prisma.order.findUnique({ where: { id: orderId } }),
-      prisma.dealer.findUnique({ where: { userId: session.user.id } }),
+      prisma.dealer.findUnique({ where: { userId } }),
     ]);
 
     if (!order) return notFound("Order");
