@@ -21,11 +21,12 @@ const URGENCY_COLORS: Record<string, string> = {
 
 const ALL_STATUSES = ["SUBMITTED", "APPROVED", "REJECTED", "CONVERTED"];
 
-export default async function PurchaseRequestsPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; page?: string };
-}) {
+export default async function PurchaseRequestsPage(
+  props: {
+    searchParams: Promise<{ status?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
   const where: any = {};

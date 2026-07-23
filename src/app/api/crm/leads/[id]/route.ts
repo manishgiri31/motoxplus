@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 
 import { requireSectionAccess } from "@/lib/staff-access";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !requireSectionAccess(session.user.role, session.user.department, "crm")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,7 +25,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(lead);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !requireSectionAccess(session.user.role, session.user.department, "crm")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

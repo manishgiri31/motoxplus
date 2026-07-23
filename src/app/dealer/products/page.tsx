@@ -2,11 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { DealerProductCatalog } from "@/components/dealer/dealer-product-catalog";
 import { buildSearchWhere } from "@/lib/product-search";
 
-export default async function DealerProductsPage({
-  searchParams,
-}: {
-  searchParams: { category?: string; search?: string; page?: string };
-}) {
+export default async function DealerProductsPage(
+  props: {
+    searchParams: Promise<{ category?: string; search?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 12;
   const search = searchParams.search?.trim();

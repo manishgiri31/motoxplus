@@ -123,11 +123,14 @@ const nextConfig = {
     ],
   },
 
+  // Packages that should not be bundled for server components (stable since Next 15)
+  serverExternalPackages: ["@prisma/client", "bcryptjs", "sharp"],
+
   experimental: {
-    // Packages that should not be bundled for server components
-    serverComponentsExternalPackages: ["@prisma/client", "bcryptjs", "sharp"],
     // Optimize package imports (tree-shake icon libs, etc.)
     optimizePackageImports: ["lucide-react", "framer-motion", "@radix-ui/react-dialog"],
+    // TEMP DIAGNOSTIC: serialize static-generation workers to isolate DB connection-limit flakiness
+    cpus: 1,
   },
 
   // Webpack customization

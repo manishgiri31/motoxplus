@@ -14,11 +14,12 @@ const SORT_OPTIONS = [
   { value: "sku_desc", label: "SKU Z→A",         orderBy: { sku: "desc" as const } },
 ];
 
-export default async function AdminProductsPage({
-  searchParams,
-}: {
-  searchParams: { page?: string; category?: string; vendor?: string; search?: string; sort?: string };
-}) {
+export default async function AdminProductsPage(
+  props: {
+    searchParams: Promise<{ page?: string; category?: string; vendor?: string; search?: string; sort?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
   const search = searchParams.search?.trim();
@@ -107,12 +108,12 @@ export default async function AdminProductsPage({
             autoComplete="off"
           />
           {search && (
-            <a
+            <Link
               href="/admin/products"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-red-400 text-xs"
             >
               ✕
-            </a>
+            </Link>
           )}
         </div>
       </form>

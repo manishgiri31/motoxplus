@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET: list all unique vehicleModels for this product + their current imageUrl
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,7 +35,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 // PUT: set imageUrl for ALL variants of a given vehicleModel
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role))
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

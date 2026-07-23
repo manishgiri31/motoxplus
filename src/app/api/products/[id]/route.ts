@@ -11,7 +11,8 @@ const INCLUDE_IMAGES = {
   productImages: { orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }] },
 };
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const product = await prisma.product.findUnique({
     where: { id: params.id },
     include: INCLUDE_IMAGES,
@@ -21,7 +22,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json(product);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -108,7 +110,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

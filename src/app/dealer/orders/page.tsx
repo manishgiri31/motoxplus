@@ -14,11 +14,12 @@ const statusColors: Record<string, string> = {
   CANCELLED: "bg-red-900/20 text-red-400",
 };
 
-export default async function OrdersPage({
-  searchParams,
-}: {
-  searchParams: { page?: string };
-}) {
+export default async function OrdersPage(
+  props: {
+    searchParams: Promise<{ page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions);
   const dealer = await prisma.dealer.findUnique({ where: { userId: session!.user.id } });
 

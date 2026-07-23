@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string; accessoryId: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  props: { params: Promise<{ id: string; accessoryId: string }> }
+) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -13,7 +17,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(accessory);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string; accessoryId: string } }) {
+export async function DELETE(
+  _req: NextRequest,
+  props: { params: Promise<{ id: string; accessoryId: string }> }
+) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await prisma.vehicleAccessory.delete({ where: { id: params.accessoryId } });

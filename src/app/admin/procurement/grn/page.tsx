@@ -2,11 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 
-export default async function GRNPage({
-  searchParams,
-}: {
-  searchParams: { page?: string };
-}) {
+export default async function GRNPage(
+  props: {
+    searchParams: Promise<{ page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
 

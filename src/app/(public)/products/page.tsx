@@ -9,11 +9,12 @@ export const metadata: Metadata = {
   description: "Browse MotoXPlus India's complete range of two-wheeler spare parts.",
 };
 
-export default async function ProductsPage({
-  searchParams,
-}: {
-  searchParams: { category?: string; search?: string; page?: string; vehicle?: string; variant?: string; section?: string };
-}) {
+export default async function ProductsPage(
+  props: {
+    searchParams: Promise<{ category?: string; search?: string; page?: string; vehicle?: string; variant?: string; section?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 12;
   const search = searchParams.search?.trim();

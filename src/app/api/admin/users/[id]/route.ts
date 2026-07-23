@@ -3,13 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 function isAdmin(role: string) {
   return ["ADMIN", "SUPER_ADMIN"].includes(role);
 }
 
-export async function GET(req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

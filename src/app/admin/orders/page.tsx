@@ -12,11 +12,12 @@ const statusColors: Record<string, string> = {
   CANCELLED: "bg-red-900/20 text-red-400",
 };
 
-export default async function AdminOrdersPage({
-  searchParams,
-}: {
-  searchParams: { page?: string; status?: string };
-}) {
+export default async function AdminOrdersPage(
+  props: {
+    searchParams: Promise<{ page?: string; status?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
 

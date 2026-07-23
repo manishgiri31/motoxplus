@@ -50,7 +50,8 @@ function InfoRow({
   );
 }
 
-export default async function DealerDetailPage({ params }: { params: { id: string } }) {
+export default async function DealerDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const dealer = await prisma.dealer.findUnique({
     where: { id: params.id },
     include: {

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TiltCard } from "@/components/3d/tilt-card";
 import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 
@@ -103,12 +104,12 @@ export function ManufacturingSection() {
               Schedule a factory visit or request our capability document.
             </p>
           </div>
-          <a
+          <Link
             href="/contact"
             className="relative z-10 flex-shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 rounded-xl transition-colors uppercase tracking-wider text-sm red-glow-sm"
           >
             Get in Touch
-          </a>
+          </Link>
         </Reveal>
       </div>
     </section>

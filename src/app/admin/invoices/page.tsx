@@ -11,11 +11,12 @@ const paymentStatusColors: Record<string, string> = {
   FAILED: "bg-red-900/20 text-red-400",
 };
 
-export default async function AdminInvoicesPage({
-  searchParams,
-}: {
-  searchParams: { page?: string; q?: string };
-}) {
+export default async function AdminInvoicesPage(
+  props: {
+    searchParams: Promise<{ page?: string; q?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 25;
   const q = searchParams.q?.trim();

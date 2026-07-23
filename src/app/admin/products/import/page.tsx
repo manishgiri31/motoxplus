@@ -117,6 +117,8 @@ export default function ProductImportPage() {
             <p className="text-[var(--text-muted)] mt-1">Upload an Excel file to create or update products</p>
           </div>
         </div>
+        {/* File download, not a page route — Link's client-side transition would intercept the response */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/api/admin/products/import/template"
           className="flex items-center gap-2 glass border border-green-900/40 text-green-400 font-bold px-4 py-2.5 rounded-xl transition-colors text-sm hover:border-green-600/60"

@@ -3,11 +3,12 @@ import Image from "next/image";
 import { Plus, Bike, Factory, LayoutGrid, ScanSearch } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
-export default async function AdminVehiclesPage({
-  searchParams,
-}: {
-  searchParams: { search?: string; category?: string };
-}) {
+export default async function AdminVehiclesPage(
+  props: {
+    searchParams: Promise<{ search?: string; category?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const search = searchParams.search?.trim();
 
   const vehicles = await prisma.vehicle.findMany({

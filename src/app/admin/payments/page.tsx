@@ -18,11 +18,12 @@ function statusBadge(status: string) {
   return `inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${map[status] ?? "bg-zinc-900/20 text-zinc-400 border-zinc-400/20"}`;
 }
 
-export default async function AdminPaymentsPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; page?: string };
-}) {
+export default async function AdminPaymentsPage(
+  props: {
+    searchParams: Promise<{ status?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions);
   if (!session || !ALLOWED.includes(session.user.role)) redirect("/login");
 

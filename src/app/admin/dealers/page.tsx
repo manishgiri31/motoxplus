@@ -12,11 +12,12 @@ const statusColors: Record<string, string> = {
   SUSPENDED: "bg-orange-900/20 text-orange-400",
 };
 
-export default async function AdminDealersPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; page?: string };
-}) {
+export default async function AdminDealersPage(
+  props: {
+    searchParams: Promise<{ status?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
 

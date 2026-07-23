@@ -4,7 +4,8 @@ import { ProductForm } from "@/components/admin/product-form";
 import { ProductVariantManager } from "@/components/admin/product-variant-manager";
 import { ModelImageManager } from "@/components/admin/model-image-manager";
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
+export default async function EditProductPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const [product, categories] = await Promise.all([
     prisma.product.findUnique({
       where: { id: params.id },

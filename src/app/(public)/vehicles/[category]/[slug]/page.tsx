@@ -12,11 +12,12 @@ import { VehicleDetailClient } from "@/components/vehicles/vehicle-detail-client
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { category: string; slug: string };
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ category: string; slug: string }>;
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const cat = categoryBySlug(params.category);
   const vehicle = await prisma.vehicle.findUnique({
     where: { slug: params.slug },
@@ -32,13 +33,14 @@ export async function generateMetadata({
   });
 }
 
-export default async function VehicleDetailPage({
-  params,
-  searchParams,
-}: {
-  params: { category: string; slug: string };
-  searchParams: { variant?: string; generation?: string; year?: string; section?: string };
-}) {
+export default async function VehicleDetailPage(
+  props: {
+    params: Promise<{ category: string; slug: string }>;
+    searchParams: Promise<{ variant?: string; generation?: string; year?: string; section?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const cat = categoryBySlug(params.category);
   if (!cat) notFound();
 

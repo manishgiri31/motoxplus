@@ -16,11 +16,12 @@ const STATUS_COLORS: Record<string, string> = {
 
 const ALL_STATUSES = ["SENT", "ACCEPTED", "PARTIALLY_RECEIVED", "FULLY_RECEIVED", "REJECTED", "CLOSED"];
 
-export default async function PurchaseOrdersPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; page?: string };
-}) {
+export default async function PurchaseOrdersPage(
+  props: {
+    searchParams: Promise<{ status?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
   const where: any = {};

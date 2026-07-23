@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string; diagramId: string } }) {
+export async function GET(
+  _req: NextRequest,
+  props: { params: Promise<{ id: string; diagramId: string }> }
+) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const hotspots = await prisma.vehicleDiagramHotspot.findMany({
@@ -12,7 +16,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string;
   return NextResponse.json(hotspots);
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string; diagramId: string } }) {
+export async function POST(
+  req: NextRequest,
+  props: { params: Promise<{ id: string; diagramId: string }> }
+) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();

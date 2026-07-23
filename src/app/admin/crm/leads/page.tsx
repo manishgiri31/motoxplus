@@ -21,11 +21,12 @@ const PRIORITY_DOTS: Record<string, string> = {
 
 const ALL_STATUSES = ["NEW", "CONTACTED", "INTERESTED", "NEGOTIATION", "CONVERTED", "LOST", "DORMANT"];
 
-export default async function CRMLeadsPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; page?: string };
-}) {
+export default async function CRMLeadsPage(
+  props: {
+    searchParams: Promise<{ status?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 25;
   const where: any = {};

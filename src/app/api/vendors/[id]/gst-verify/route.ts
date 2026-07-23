@@ -7,7 +7,8 @@ const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 // Internal-only confirmation that staff have checked the vendor's GST number —
 // never calls an external GST verification API, per business rules.
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !ADMIN_ROLES.includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -5,17 +5,19 @@ import { prisma } from "@/lib/prisma";
 import { categoryBySlug } from "@/lib/vehicle-categories";
 import { VehicleGrid } from "@/components/vehicles/vehicle-grid";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { category: string };
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ category: string }>;
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const cat = categoryBySlug(params.category);
   if (!cat) return { title: "Not Found" };
   return { title: cat.label, description: `Browse all supported ${cat.label.toLowerCase()} and find compatible parts.` };
 }
 
-export default async function VehicleCategoryPage({ params }: { params: { category: string } }) {
+export default async function VehicleCategoryPage(props: { params: Promise<{ category: string }> }) {
+  const params = await props.params;
   const cat = categoryBySlug(params.category);
   if (!cat) notFound();
 

@@ -15,8 +15,9 @@ const variantInclude = {
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; variantId: string } }
+  props: { params: Promise<{ id: string; variantId: string }> }
 ) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -53,8 +54,9 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string; variantId: string } }
+  props: { params: Promise<{ id: string; variantId: string }> }
 ) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const variant = await prisma.productVariant.findUnique({ where: { id: params.variantId } });

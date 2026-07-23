@@ -36,7 +36,8 @@ async function resolve(params: Params) {
   return { manufacturer, vehicle, category, products, vehicleCategory };
 }
 
-export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<Params> }): Promise<Metadata> {
+  const params = await props.params;
   const data = await resolve(params);
   if (!data) return { title: "Not Found" };
   const { manufacturer, vehicle, category, products } = data;
@@ -52,7 +53,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   });
 }
 
-export default async function BrandVehicleCategoryPage({ params }: { params: Params }) {
+export default async function BrandVehicleCategoryPage(props: { params: Promise<Params> }) {
+  const params = await props.params;
   const data = await resolve(params);
   if (!data) notFound();
   const { manufacturer, vehicle, category, products, vehicleCategory } = data;

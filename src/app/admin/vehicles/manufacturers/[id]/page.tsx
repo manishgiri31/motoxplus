@@ -4,7 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { OemColorManager } from "@/components/admin/vehicles/oem-color-manager";
 
-export default async function ManufacturerDetailPage({ params }: { params: { id: string } }) {
+export default async function ManufacturerDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const manufacturer = await prisma.vehicleManufacturer.findUnique({ where: { id: params.id } });
   if (!manufacturer) notFound();
 

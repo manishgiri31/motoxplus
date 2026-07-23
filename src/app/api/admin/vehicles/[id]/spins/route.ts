@@ -8,7 +8,8 @@ function toFrameUrls(v: unknown): string[] {
   return [];
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const spins = await prisma.vehicleSpin.findMany({
@@ -18,7 +19,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json(spins);
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();

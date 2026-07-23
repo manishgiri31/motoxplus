@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requireSectionAccess } from "@/lib/staff-access";
 const VALID_TYPES = ["CALL", "EMAIL", "VISIT", "DEMO", "PROPOSAL", "FOLLOW_UP", "MEETING", "OTHER"];
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !requireSectionAccess(session.user.role, session.user.department, "crm")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

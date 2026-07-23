@@ -8,7 +8,11 @@ function toFrameUrls(v: unknown): string[] {
   return [];
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string; spinId: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  props: { params: Promise<{ id: string; spinId: string }> }
+) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -26,7 +30,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(spin);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string; spinId: string } }) {
+export async function DELETE(
+  _req: NextRequest,
+  props: { params: Promise<{ id: string; spinId: string }> }
+) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await prisma.vehicleSpin.delete({ where: { id: params.spinId } });

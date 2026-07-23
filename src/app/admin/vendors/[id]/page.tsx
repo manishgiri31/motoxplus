@@ -41,7 +41,8 @@ function StarRating({ score }: { score: number }) {
   );
 }
 
-export default async function VendorDetailPage({ params }: { params: { id: string } }) {
+export default async function VendorDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const vendor = await prisma.vendor.findUnique({
     where: { id: params.id },
     include: {

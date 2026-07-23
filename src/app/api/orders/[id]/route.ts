@@ -6,7 +6,8 @@ import { getCurrentUserId } from "@/lib/auth/current-user";
 
 // Accepts either the web NextAuth session or the mobile/plain-login JWT
 // (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const userId = await getCurrentUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
@@ -38,7 +39,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(order);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

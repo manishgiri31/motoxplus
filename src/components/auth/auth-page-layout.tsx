@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 interface AuthPageLayoutProps {
   children: React.ReactNode;
@@ -24,7 +25,7 @@ export function AuthPageLayout({ children }: AuthPageLayoutProps) {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8">
-          <a href="/" className="inline-flex flex-col items-center gap-3 group">
+          <Link href="/" className="inline-flex flex-col items-center gap-3 group">
             <div className="w-28 h-28 rounded-2xl glass border border-[var(--border-color)] flex items-center justify-center p-3 group-hover:border-red-600/40 transition-colors">
               <Image
                 src="/motoxplus/logo.png"
@@ -43,7 +44,7 @@ export function AuthPageLayout({ children }: AuthPageLayoutProps) {
                 INDIA PRIVATE LIMITED
               </div>
             </div>
-          </a>
+          </Link>
         </div>
         {children}
       </div>

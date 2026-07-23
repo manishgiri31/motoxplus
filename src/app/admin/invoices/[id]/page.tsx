@@ -12,7 +12,8 @@ const paymentStatusColors: Record<string, string> = {
   FAILED: "bg-red-900/20 text-red-400",
 };
 
-export default async function AdminInvoiceDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminInvoiceDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const invoice = await prisma.invoice.findUnique({
     where: { id: params.id },
     include: {

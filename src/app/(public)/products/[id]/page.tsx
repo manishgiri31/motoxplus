@@ -6,11 +6,12 @@ import { ProductDetailClient } from "@/components/products/product-detail-client
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string };
-}): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+): Promise<Metadata> {
+  const params = await props.params;
   const product = await prisma.product.findUnique({
     where: { id: params.id },
     include: { category: true },
@@ -30,7 +31,8 @@ export async function generateMetadata({
   });
 }
 
-export default async function ProductDetailPage({ params }: { params: { id: string } }) {
+export default async function ProductDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const product = await (prisma.product as any).findUnique({
     where: { id: params.id, isActive: true },
     include: {

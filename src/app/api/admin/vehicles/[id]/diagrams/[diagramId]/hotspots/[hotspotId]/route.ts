@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; diagramId: string; hotspotId: string } }
+  props: { params: Promise<{ id: string; diagramId: string; hotspotId: string }> }
 ) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -24,8 +25,9 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string; diagramId: string; hotspotId: string } }
+  props: { params: Promise<{ id: string; diagramId: string; hotspotId: string }> }
 ) {
+  const params = await props.params;
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await prisma.vehicleDiagramHotspot.delete({ where: { id: params.hotspotId } });

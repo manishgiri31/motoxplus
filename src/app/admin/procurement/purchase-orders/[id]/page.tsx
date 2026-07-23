@@ -16,7 +16,8 @@ const STATUS_COLORS: Record<string, string> = {
   CLOSED: "bg-purple-900/20 text-purple-400 border-purple-900/30",
 };
 
-export default async function PurchaseOrderDetailPage({ params }: { params: { id: string } }) {
+export default async function PurchaseOrderDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const po = await prisma.purchaseOrder.findUnique({
     where: { id: params.id },
     include: {

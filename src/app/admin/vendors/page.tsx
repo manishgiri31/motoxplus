@@ -25,11 +25,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const ALL_STATUSES = ["PENDING", "APPROVED", "REJECTED", "SUSPENDED", "BLACKLISTED"];
 
-export default async function AdminVendorsPage({
-  searchParams,
-}: {
-  searchParams: { status?: string; category?: string; page?: string };
-}) {
+export default async function AdminVendorsPage(
+  props: {
+    searchParams: Promise<{ status?: string; category?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
   const pageSize = 20;
 

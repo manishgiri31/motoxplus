@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
 
@@ -30,7 +31,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <a href="/" className="inline-flex flex-col items-center gap-3 group">
+          <Link href="/" className="inline-flex flex-col items-center gap-3 group">
             <div className="w-20 h-20 rounded-2xl glass border border-[var(--border-color)] flex items-center justify-center group-hover:border-red-600/40 transition-colors">
               <Image
                 src="/motoxplus/logo.png"
@@ -52,7 +53,7 @@ export default function LoginPage() {
                 Engineered For Reliability
               </div>
             </div>
-          </a>
+          </Link>
         </div>
 
         <Suspense

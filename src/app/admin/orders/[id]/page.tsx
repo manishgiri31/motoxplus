@@ -21,7 +21,8 @@ const paymentColors: Record<string, string> = {
   FAILED:  "text-red-400",
 };
 
-export default async function AdminOrderDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminOrderDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const order = await prisma.order.findUnique({
     where: { id: params.id },
     include: {
@@ -61,7 +62,6 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
           </div>
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column — items + payments */}
         <div className="lg:col-span-2 space-y-6">
@@ -79,7 +79,7 @@ export default async function AdminOrderDetailPage({ params }: { params: { id: s
                     <div className="w-12 h-12 rounded-sm bg-white/5 border border-[var(--border-color)] overflow-hidden flex-shrink-0">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img.thumbnailUrl ?? img.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                        (<img src={img.thumbnailUrl ?? img.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />)
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
                           <Package className="w-5 h-5" />

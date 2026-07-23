@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { InvoiceView } from "@/components/invoice/invoice-view";
 
-export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
+export default async function InvoiceDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   const dealer = await prisma.dealer.findUnique({ where: { userId: session!.user.id } });
 

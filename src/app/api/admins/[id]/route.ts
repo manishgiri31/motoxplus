@@ -11,7 +11,8 @@ function superAdminOnly(session: any) {
 }
 
 // PATCH /api/admins/:id — toggle super admin
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   const deny = superAdminOnly(session);
   if (deny) return deny;
@@ -36,7 +37,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE /api/admins/:id — revoke admin
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   const deny = superAdminOnly(session);
   if (deny) return deny;

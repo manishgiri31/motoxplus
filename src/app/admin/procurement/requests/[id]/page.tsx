@@ -20,7 +20,8 @@ const URGENCY_COLORS: Record<string, string> = {
   CRITICAL: "text-red-400",
 };
 
-export default async function PurchaseRequestDetailPage({ params }: { params: { id: string } }) {
+export default async function PurchaseRequestDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const request = await prisma.purchaseRequest.findUnique({
     where: { id: params.id },
     include: {

@@ -6,7 +6,8 @@ import { VehicleForm } from "@/components/admin/vehicles/vehicle-form";
 import { VehicleCatalogManagers } from "@/components/admin/vehicles/vehicle-catalog-managers";
 import { DiagramManager } from "@/components/admin/vehicles/diagram-manager";
 
-export default async function EditVehiclePage({ params }: { params: { id: string } }) {
+export default async function EditVehiclePage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const [vehicle, manufacturers, sections] = await Promise.all([
     prisma.vehicle.findUnique({ where: { id: params.id } }),
     prisma.vehicleManufacturer.findMany({

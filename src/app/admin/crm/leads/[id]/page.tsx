@@ -32,7 +32,8 @@ const OUTCOME_COLORS: Record<string, string> = {
   NEGATIVE: "text-red-400",
 };
 
-export default async function LeadDetailPage({ params }: { params: { id: string } }) {
+export default async function LeadDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const lead = await prisma.lead.findUnique({
     where: { id: params.id },
     include: {
@@ -67,14 +68,12 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           )}
         </div>
       </div>
-
       {isOverdue && (
         <div className="mb-6 flex items-center gap-2 bg-red-900/10 border border-red-900/40 text-red-400 px-4 py-3 rounded-sm text-sm">
           <AlertCircle size={16} />
           Follow-up was due {formatDate(lead.nextFollowUp!)} — overdue
         </div>
       )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Info cards */}
         <div className="lg:col-span-1 space-y-6">

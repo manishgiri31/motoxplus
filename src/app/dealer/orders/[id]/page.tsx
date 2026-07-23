@@ -5,13 +5,14 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
-export default async function OrderDetailPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { success?: string };
-}) {
+export default async function OrderDetailPage(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ success?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   const dealer = await prisma.dealer.findUnique({ where: { userId: session!.user.id } });
 

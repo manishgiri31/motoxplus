@@ -7,7 +7,8 @@ import { sendEmail, vendorApprovedTemplate } from "@/lib/email";
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 const VALID_STATUSES = ["PENDING", "APPROVED", "REJECTED", "SUSPENDED", "BLACKLISTED"];
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getServerSession(authOptions);
   if (!session || !ADMIN_ROLES.includes(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
