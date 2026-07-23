@@ -60,7 +60,8 @@ interface Product {
   category: { name: string; slug: string };
 }
 
-interface Props { product: Product; relatedProducts: Product[]; }
+interface VehicleContext { slug: string; name: string; }
+interface Props { product: Product; relatedProducts: Product[]; vehicleContext?: VehicleContext | null; }
 
 // Attribute dimensions for Amazon-style selection
 const DIMS = ["color", "vehicleModel", "finish", "size", "extra"] as const;
@@ -108,7 +109,7 @@ function getExtraColor(val: string | null | undefined): string | null {
   return null;
 }
 
-export function ProductDetailClient({ product, relatedProducts }: Props) {
+export function ProductDetailClient({ product, relatedProducts, vehicleContext }: Props) {
   const { data: session } = useSession();
   const router = useRouter();
   const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -366,6 +367,15 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
         <div>
           {/* Category + Brand + Warranty badges */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {vehicleContext && (
+              <Link
+                href={`/products?vehicle=${vehicleContext.slug}`}
+                className="glass border border-emerald-800/40 text-emerald-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl hover:border-emerald-600/60 transition-colors flex items-center gap-1.5"
+              >
+                <CheckCircle className="w-3 h-3" />
+                Fits {vehicleContext.name}
+              </Link>
+            )}
             <span className="glass border border-red-900/30 text-red-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl">
               {product.category.name}
             </span>
@@ -757,16 +767,30 @@ export function ProductDetailClient({ product, relatedProducts }: Props) {
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <div>
-          <h2 className="text-2xl font-black text-[var(--text-primary)] mb-8">
-            More from <span className="text-gradient-red">{product.category.name}</span>
-          </h2>
+          <div className="flex items-end justify-between mb-8 gap-4 flex-wrap">
+            <h2 className="text-2xl font-black text-[var(--text-primary)]">
+              {vehicleContext ? (
+                <>More parts for <span className="text-gradient-red">{vehicleContext.name}</span></>
+              ) : (
+                <>More from <span className="text-gradient-red">{product.category.name}</span></>
+              )}
+            </h2>
+            {vehicleContext && (
+              <Link
+                href={`/products?vehicle=${vehicleContext.slug}`}
+                className="text-red-400 hover:text-red-300 text-xs font-bold uppercase tracking-wider transition-colors"
+              >
+                View all →
+              </Link>
+            )}
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {relatedProducts.map((p) => {
               const thumb = getRelatedThumb(p);
               return (
                 <Link
                   key={p.id}
-                  href={`/products/${p.id}`}
+                  href={`/products/${p.id}${vehicleContext ? `?vehicle=${vehicleContext.slug}` : ""}`}
                   className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-xl overflow-hidden transition-all card-hover"
                 >
                   <div className="relative h-36 bg-gradient-to-br from-zinc-900 to-black">

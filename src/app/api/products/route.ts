@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { buildSearchWhere } from "@/lib/product-search";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
+import { uniqueProductSlug } from "@/lib/slug";
 import { Prisma } from "@prisma/client";
 
 function autoSku(partNumber: string): string {

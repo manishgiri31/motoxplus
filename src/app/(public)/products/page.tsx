@@ -54,11 +54,16 @@ export default async function ProductsPage(
   };
 
   const [products, categories, totalProducts] = await Promise.all([
-    prisma.product.findMany({
+    (prisma.product as any).findMany({
       where: baseWhere,
       include: {
         category: true,
         productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
+        variants: {
+          where: { isActive: true, color: { not: null } },
+          select: { color: true },
+          take: 6,
+        },
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -101,6 +106,9 @@ export default async function ProductsPage(
         pageSize={pageSize}
         currentCategory={searchParams.category}
         currentSearch={search}
+        currentVehicle={searchParams.vehicle}
+        currentVariant={searchParams.variant}
+        currentSection={searchParams.section}
       />
     </div>
   );

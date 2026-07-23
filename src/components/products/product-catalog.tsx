@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search, Lock, Package, ChevronLeft, ChevronRight, X, Clock, Zap, Heart, Eye, Scale, Check } from "lucide-react";
+import { Search, Lock, Package, ChevronLeft, ChevronRight, X, Clock, Zap, Heart, Eye, Scale, Check, Palette } from "lucide-react";
 import { TiltCard } from "@/components/3d/tilt-card";
 
 const RECENT_KEY = "motox_recent_searches";
@@ -24,6 +24,7 @@ interface Product {
   description: string | null;
   images: string[];
   productImages?: ProductImage[];
+  variants?: { color: string | null }[];
   compatibility: string[];
   price: number;
   mrp?: number | null;
@@ -31,6 +32,11 @@ interface Product {
   moq: number;
   stock: number;
   category: { name: string; slug: string };
+}
+
+function colorCount(product: Product): number {
+  if (!product.variants || product.variants.length === 0) return 0;
+  return new Set(product.variants.map((v) => v.color).filter(Boolean)).size;
 }
 
 function getWishlist(): string[] {
@@ -72,6 +78,9 @@ interface Props {
   pageSize: number;
   currentCategory?: string;
   currentSearch?: string;
+  currentVehicle?: string;
+  currentVariant?: string;
+  currentSection?: string;
 }
 
 function highlight(text: string, query: string) {
@@ -132,11 +141,39 @@ export function ProductCatalog({
   pageSize,
   currentCategory,
   currentSearch,
+  currentVehicle,
+  currentVariant,
+  currentSection,
 }: Props) {
   const { data: session } = useSession();
   const router = useRouter();
   const totalPages = Math.ceil(totalProducts / pageSize);
   const isDealer = session?.user?.role === "DEALER";
+
+  // Preserves the active vehicle/variant/section filter across search, category,
+  // pagination, and into the product detail page — without this, navigating away
+  // from a vehicle-filtered view (e.g. clicking a product) silently drops the filter.
+  const buildParams = useCallback((extra: Record<string, string | undefined>) => {
+    const params = new URLSearchParams();
+    if (currentVehicle) params.set("vehicle", currentVehicle);
+    if (currentVariant) params.set("variant", currentVariant);
+    if (currentSection) params.set("section", currentSection);
+    for (const [key, value] of Object.entries(extra)) {
+      if (value) params.set(key, value);
+    }
+    return params;
+  }, [currentVehicle, currentVariant, currentSection]);
+
+  const detailHref = useCallback((id: string) => {
+    const qs = buildParams({}).toString();
+    return `/products/${id}${qs ? `?${qs}` : ""}`;
+  }, [buildParams]);
+
+  const pageHref = useCallback((p: number) => {
+    const params = buildParams({ category: currentCategory, search: currentSearch });
+    params.set("page", String(p));
+    return `/products?${params.toString()}`;
+  }, [buildParams, currentCategory, currentSearch]);
 
   const [search, setSearch] = useState(currentSearch || "");
   const [inputFocused, setInputFocused] = useState(false);
@@ -214,13 +251,11 @@ export function ProductCatalog({
 
   // Debounce auto-submit search to URL
   const doSearch = useCallback((term: string) => {
-    const params = new URLSearchParams();
-    if (term) params.set("search", term);
-    if (currentCategory) params.set("category", currentCategory);
+    const params = buildParams({ search: term, category: currentCategory });
     if (term) saveRecentSearch(term);
     setRecentSearches(getRecentSearches());
     router.push(`/products?${params.toString()}`);
-  }, [currentCategory, router]);
+  }, [currentCategory, buildParams, router]);
 
   const handleInputChange = (value: string) => {
     setSearch(value);
@@ -241,7 +276,7 @@ export function ProductCatalog({
     setSearch(suggestion.name);
     saveRecentSearch(suggestion.name);
     setRecentSearches(getRecentSearches());
-    router.push(`/products/${suggestion.id}`);
+    router.push(detailHref(suggestion.id));
   };
 
   const handleRecentClick = (term: string) => {
@@ -303,9 +338,7 @@ export function ProductCatalog({
   };
 
   const handleCategory = (slug: string | null) => {
-    const params = new URLSearchParams();
-    if (slug) params.set("category", slug);
-    if (search) params.set("search", search);
+    const params = buildParams({ category: slug ?? undefined, search: search || undefined });
     router.push(`/products?${params.toString()}`);
   };
 
@@ -643,11 +676,12 @@ export function ProductCatalog({
             const isWishlisted = wishlist.includes(product.id);
             const isComparing = compareIds.includes(product.id);
             const outOfStock = product.stock <= 0;
+            const colors = colorCount(product);
 
             return (
               <TiltCard key={product.id} intensity={8}>
               <Link
-                href={`/products/${product.id}`}
+                href={detailHref(product.id)}
                 className="group relative glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-black/10 transition-all duration-300 block"
               >
                 {/* Image */}
@@ -752,6 +786,12 @@ export function ProductCatalog({
                         MOQ {product.moq}
                       </span>
                     </div>
+                    {colors > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 text-[var(--text-muted)] text-[10px] font-semibold">
+                        <Palette size={11} className="text-red-400/80" />
+                        {colors} colour{colors === 1 ? "" : "s"} available
+                      </div>
+                    )}
                     {!isDealer && (
                       <div className="mt-2 flex items-center gap-1.5 glass border border-red-500/20 rounded-full px-2.5 py-1 w-fit">
                         <Lock size={9} className="text-red-500" />
@@ -869,7 +909,7 @@ export function ProductCatalog({
                     </span>
                   </div>
                   <Link
-                    href={`/products/${quickView.id}`}
+                    href={detailHref(quickView.id)}
                     className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-wider text-sm"
                   >
                     View Full Details
@@ -949,7 +989,7 @@ export function ProductCatalog({
                         {compareProducts.map((p) => (
                           <td key={p.id} className="py-3 px-3">
                             <Link
-                              href={`/products/${p.id}`}
+                              href={detailHref(p.id)}
                               className="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors uppercase tracking-wider"
                             >
                               View
@@ -971,7 +1011,7 @@ export function ProductCatalog({
         <div className="flex items-center justify-center gap-2 mt-12">
           {currentPage > 1 && (
             <Link
-              href={`/products?page=${currentPage - 1}${currentCategory ? `&category=${currentCategory}` : ""}${currentSearch ? `&search=${currentSearch}` : ""}`}
+              href={pageHref(currentPage - 1)}
               className="w-9 h-9 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-[var(--text-primary)] transition-all"
             >
               <ChevronLeft size={16} />
@@ -988,7 +1028,7 @@ export function ProductCatalog({
             .map((p) => (
               <Link
                 key={p}
-                href={`/products?page=${p}${currentCategory ? `&category=${currentCategory}` : ""}${currentSearch ? `&search=${currentSearch}` : ""}`}
+                href={pageHref(p as number)}
                 className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
                   p === currentPage
                     ? "bg-red-600 text-white shadow-[0_0_12px_rgba(220,38,38,0.3)]"
@@ -1000,7 +1040,7 @@ export function ProductCatalog({
             ))}
           {currentPage < totalPages && (
             <Link
-              href={`/products?page=${currentPage + 1}${currentCategory ? `&category=${currentCategory}` : ""}${currentSearch ? `&search=${currentSearch}` : ""}`}
+              href={pageHref(currentPage + 1)}
               className="w-9 h-9 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-[var(--text-primary)] transition-all"
             >
               <ChevronRight size={16} />

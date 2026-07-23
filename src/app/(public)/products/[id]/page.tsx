@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ProductDetailClient } from "@/components/products/product-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
+import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
 
 export async function generateMetadata(
   props: {
@@ -31,8 +32,14 @@ export async function generateMetadata(
   });
 }
 
-export default async function ProductDetailPage(props: { params: Promise<{ id: string }> }) {
+export default async function ProductDetailPage(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ vehicle?: string; variant?: string; section?: string }>;
+  }
+) {
   const params = await props.params;
+  const searchParams = await props.searchParams;
   const product = await (prisma.product as any).findUnique({
     where: { id: params.id, isActive: true },
     include: {
@@ -50,18 +57,59 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
 
   if (!product) notFound();
 
-  const relatedProducts = await (prisma.product as any).findMany({
-    where: {
-      categoryId: product.categoryId,
-      id: { not: product.id },
-      isActive: true,
-    },
-    take: 4,
-    include: {
-      category: true,
-      productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
-    },
-  });
+  // If the visitor arrived filtered by a vehicle (e.g. from /products?vehicle=super-splendor),
+  // show other parts compatible with that same vehicle instead of just same-category products —
+  // this is what "all products available for that vehicle" refers to on the detail page.
+  let vehicleContext: { slug: string; name: string } | null = null;
+  let relatedProducts: any[] = [];
+
+  if (searchParams.vehicle) {
+    const vehicle = await prisma.vehicle.findUnique({ where: { slug: searchParams.vehicle } });
+    if (vehicle) {
+      vehicleContext = { slug: vehicle.slug, name: vehicle.name };
+      const [selectedVariant, selectedSection] = await Promise.all([
+        searchParams.variant
+          ? prisma.vehicleVariant.findFirst({ where: { vehicleId: vehicle.id, slug: searchParams.variant } })
+          : Promise.resolve(null),
+        searchParams.section
+          ? prisma.vehiclePartSection.findFirst({ where: { slug: searchParams.section } })
+          : Promise.resolve(null),
+      ]);
+      const filter: CompatibilityFilter = {
+        vehicleId: vehicle.id,
+        variantId: selectedVariant?.id ?? null,
+        generationId: selectedVariant?.generationId ?? null,
+        sectionId: selectedSection?.id ?? null,
+      };
+      const compatibleIds = (await getCompatibleProductIds(filter)).filter((id) => id !== product.id);
+      if (compatibleIds.length > 0) {
+        relatedProducts = await (prisma.product as any).findMany({
+          where: { id: { in: compatibleIds }, isActive: true },
+          include: {
+            category: true,
+            productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
+          },
+          take: 8,
+          orderBy: [{ stock: "desc" }, { createdAt: "desc" }],
+        });
+      }
+    }
+  }
+
+  if (relatedProducts.length === 0) {
+    relatedProducts = await (prisma.product as any).findMany({
+      where: {
+        categoryId: product.categoryId,
+        id: { not: product.id },
+        isActive: true,
+      },
+      take: 4,
+      include: {
+        category: true,
+        productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
+      },
+    });
+  }
 
   const productUrl = absoluteUrl(`/products/${product.id}`);
 
@@ -114,9 +162,23 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
         <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs text-[var(--text-muted)]">
           <Link href="/" className="hover:text-red-400 transition-colors">Home</Link>
           <span>/</span>
-          <Link href="/products" className="hover:text-red-400 transition-colors">Products</Link>
-          <span>/</span>
-          <Link href={`/products?category=${product.category.slug}`} className="hover:text-red-400 transition-colors">
+          {vehicleContext ? (
+            <>
+              <Link href={`/products?vehicle=${vehicleContext.slug}`} className="hover:text-red-400 transition-colors">
+                {vehicleContext.name}
+              </Link>
+              <span>/</span>
+            </>
+          ) : (
+            <>
+              <Link href="/products" className="hover:text-red-400 transition-colors">Products</Link>
+              <span>/</span>
+            </>
+          )}
+          <Link
+            href={`/products?category=${product.category.slug}${vehicleContext ? `&vehicle=${vehicleContext.slug}` : ""}`}
+            className="hover:text-red-400 transition-colors"
+          >
             {product.category.name}
           </Link>
           <span>/</span>
@@ -127,6 +189,7 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
       <ProductDetailClient
         product={JSON.parse(JSON.stringify(product))}
         relatedProducts={JSON.parse(JSON.stringify(relatedProducts))}
+        vehicleContext={vehicleContext}
       />
     </div>
   );
