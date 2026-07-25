@@ -102,12 +102,36 @@ async function compatibilityMatchIdsMulti(
   return rows.map((r) => r.id);
 }
 
+/**
+ * Matches Product.name / description / brand against any of several vehicle
+ * aliases. Mirrors the free-text matching used by the general product search
+ * so a vehicle page surfaces the same products a text search for that model
+ * would find, even when no compatibility[] entry or matrix row exists yet.
+ */
+async function nameMatchIdsMulti(terms: string[], activeOnly: boolean): Promise<string[]> {
+  const patterns = terms.map((t) => `%${t}%`);
+  if (patterns.length === 0) return [];
+
+  const rows = activeOnly
+    ? await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Product"
+        WHERE "isActive" = true
+          AND (name ILIKE ANY(${patterns}) OR description ILIKE ANY(${patterns}) OR brand ILIKE ANY(${patterns}))`
+    : await prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Product"
+        WHERE (name ILIKE ANY(${patterns}) OR description ILIKE ANY(${patterns}) OR brand ILIKE ANY(${patterns}))`;
+  return rows.map((r) => r.id);
+}
+
 export async function buildVehicleCompatibilityWhere(
   terms: string[],
   activeOnly = true
 ): Promise<Prisma.ProductWhereInput> {
-  const compatIds = await compatibilityMatchIdsMulti(terms, activeOnly);
-  return { id: { in: compatIds } };
+  const [compatIds, nameIds] = await Promise.all([
+    compatibilityMatchIdsMulti(terms, activeOnly),
+    nameMatchIdsMulti(terms, activeOnly),
+  ]);
+  return { id: { in: Array.from(new Set([...compatIds, ...nameIds])) } };
 }
 
 /**

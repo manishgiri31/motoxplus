@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
+import { VehicleHeroImageUploader } from "@/components/admin/vehicle-image-uploader";
 
 const CATEGORIES = ["MOTORCYCLE", "SCOOTER", "ELECTRIC", "COMMERCIAL"];
 
@@ -171,11 +172,15 @@ export function VehicleForm({
       </div>
 
       <p className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest">Media & AI</p>
+      <div>
+        <label className="block text-[var(--text-muted)] text-xs mb-1.5">Hero Image</label>
+        <VehicleHeroImageUploader
+          value={form.heroImage}
+          onChange={(url) => set("heroImage", url)}
+          vehicleId={vehicle?.id}
+        />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[var(--text-muted)] text-xs mb-1.5">Hero Image URL</label>
-          <input value={form.heroImage} onChange={(e) => set("heroImage", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
-        </div>
         <div>
           <label className="block text-[var(--text-muted)] text-xs mb-1.5">Default GLB Model URL</label>
           <input value={form.modelUrl} onChange={(e) => set("modelUrl", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />

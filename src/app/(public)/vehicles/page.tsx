@@ -27,7 +27,7 @@ const CATEGORY_TINT = {
 } as const;
 
 export default async function VehiclesPage() {
-  const [counts, sampleVehicles] = await Promise.all([
+  const [counts, sampleVehicles, vehicleTypes] = await Promise.all([
     prisma.vehicle.groupBy({
       by: ["category"],
       where: { isActive: true },
@@ -38,6 +38,7 @@ export default async function VehiclesPage() {
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { category: true, heroImage: true, name: true },
     }),
+    prisma.vehicleType.findMany({ where: { heroImage: { not: null } } }),
   ]);
 
   const countByCategory = Object.fromEntries(counts.map((c) => [c.category, c._count._all]));
@@ -45,6 +46,12 @@ export default async function VehiclesPage() {
   for (const v of sampleVehicles) {
     if (!imageByCategory[v.category] && v.heroImage) {
       imageByCategory[v.category] = { heroImage: v.heroImage, name: v.name };
+    }
+  }
+  // A curated category-card image (set in admin) always wins over a sample vehicle's hero image.
+  for (const t of vehicleTypes) {
+    if (t.heroImage) {
+      imageByCategory[t.category] = { heroImage: t.heroImage, name: imageByCategory[t.category]?.name ?? "" };
     }
   }
 
@@ -83,7 +90,7 @@ export default async function VehiclesPage() {
                   {sample ? (
                     <Image
                       src={sample.heroImage}
-                      alt={`${cat.label} — ${sample.name}`}
+                      alt={sample.name ? `${cat.label} — ${sample.name}` : cat.label}
                       fill
                       unoptimized
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"

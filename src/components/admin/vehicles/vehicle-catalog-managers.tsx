@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { EntityManager } from "@/components/admin/vehicles/entity-manager";
+import { VehicleGalleryManager } from "@/components/admin/vehicle-image-uploader";
 
 const EMISSION_OPTIONS = [
   { value: "BS3", label: "BS3" },
@@ -171,21 +172,13 @@ export function VehicleCatalogManagers({ vehicleId, manufacturerId }: { vehicleI
         })}
       />
 
-      <EntityManager
-        title="Gallery"
-        description="Additional gallery photos shown on the public vehicle page."
-        apiBase={`/api/admin/vehicles/${vehicleId}/gallery`}
-        emptyMessage="No gallery images yet."
-        fields={[
-          { key: "imageUrl", label: "Image URL", type: "text", required: true, span: 3 },
-          { key: "sortOrder", label: "Sort Order", type: "number" },
-        ]}
-        columns={[
-          { key: "preview", label: "Preview", render: (r) => <img src={r.imageUrl} alt="" className="w-10 h-10 object-cover rounded-lg" /> },
-          { key: "imageUrl", label: "URL" },
-        ]}
-        toFormValues={(r) => ({ imageUrl: r.imageUrl, sortOrder: String(r.sortOrder ?? 0) })}
-      />
+      <div className="glass border border-[var(--border-color)] rounded-2xl p-5">
+        <div className="mb-4">
+          <h3 className="text-[var(--text-primary)] font-bold text-sm">Gallery</h3>
+          <p className="text-[var(--text-muted)] text-xs mt-0.5">Additional gallery photos shown on the public vehicle page.</p>
+        </div>
+        <VehicleGalleryManager vehicleId={vehicleId} />
+      </div>
 
       <EntityManager
         title="FAQs"

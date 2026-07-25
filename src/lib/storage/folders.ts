@@ -11,6 +11,19 @@ export const folders = {
     return `${base}/${uuid}${suffix}.webp`;
   },
 
+  /** Vehicle image variants (hero + gallery) */
+  vehicleImage(vehicleId: string | undefined, uuid: string, variant: "orig" | "med" | "thumb"): string {
+    const base = vehicleId ? `vehicles/${vehicleId}` : "vehicles";
+    const suffix = variant === "orig" ? "" : `_${variant}`;
+    return `${base}/${uuid}${suffix}.webp`;
+  },
+
+  /** Vehicle-type (category) card image */
+  vehicleTypeImage(category: string, uuid: string, variant: "orig" | "med" | "thumb"): string {
+    const suffix = variant === "orig" ? "" : `_${variant}`;
+    return `vehicle-types/${category.toLowerCase()}/${uuid}${suffix}.webp`;
+  },
+
   /** Private dealer documents */
   dealerDocument(dealerId: string, type: string, uuid: string, ext: string): string {
     return `dealers/${dealerId}/${type}_${uuid}.${ext}`;

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/admin/product-form";
 import { ProductVariantManager } from "@/components/admin/product-variant-manager";
 import { ModelImageManager } from "@/components/admin/model-image-manager";
+import { ProductCompatibilityManager } from "@/components/admin/product-compatibility-manager";
 
 export default async function EditProductPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -28,6 +29,7 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
       />
       <ProductVariantManager productId={params.id} />
       <ModelImageManager productId={params.id} />
+      <ProductCompatibilityManager productId={params.id} />
     </div>
   );
 }

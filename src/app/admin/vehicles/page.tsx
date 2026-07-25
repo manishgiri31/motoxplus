@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Bike, Factory, LayoutGrid, ScanSearch } from "lucide-react";
+import { Plus, Bike, Factory, LayoutGrid, ScanSearch, Image as ImageIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminVehiclesPage(
@@ -36,6 +36,9 @@ export default async function AdminVehiclesPage(
           </Link>
           <Link href="/admin/vehicles/sections" className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-4 py-2.5 rounded-xl transition-colors text-sm hover:border-red-900/40">
             <LayoutGrid size={14} /> Bike Sections
+          </Link>
+          <Link href="/admin/vehicles/types" className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-4 py-2.5 rounded-xl transition-colors text-sm hover:border-red-900/40">
+            <ImageIcon size={14} /> Vehicle Types
           </Link>
           <Link href="/admin/vehicles/detection-log" className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-4 py-2.5 rounded-xl transition-colors text-sm hover:border-red-900/40">
             <ScanSearch size={14} /> Detection Log
