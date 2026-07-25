@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/r2";
+import { slugify, uniqueProductSlug } from "@/lib/slug";
 
 const INCLUDE_IMAGES = {
   category: true,
@@ -70,6 +71,20 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { images: _images, ...productData } = data;
 
+  // Slug is stable by default — it's only touched if the admin explicitly sends
+  // one (e.g. via a "SEO" field in the edit form). Silently re-slugging on every
+  // name edit would break any external links/bookmarks/search results already
+  // pointing at the old URL.
+  if (typeof productData.slug === "string" && productData.slug.trim()) {
+    const requested = slugify(productData.slug);
+    productData.slug = requested
+      ? await uniqueProductSlug(requested, params.id)
+      : undefined;
+    if (!productData.slug) delete productData.slug;
+  } else if ("slug" in productData) {
+    delete productData.slug;
+  }
+
   // Check for SKU/partNumber conflicts with OTHER products before update
   const conflictChecks: { sku?: string; partNumber?: string }[] = [];
   if (productData.sku) conflictChecks.push({ sku: productData.sku });
@@ -90,13 +105,16 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
   }
 
   try {
+    const existing = await prisma.product.findUnique({ where: { id: params.id }, select: { slug: true } });
     const product = await prisma.product.update({
       where: { id: params.id },
       data: productData,
       include: INCLUDE_IMAGES,
     });
 
-    revalidatePath(`/products/${params.id}`);
+    revalidatePath(`/products/${params.id}`); // legacy id-path redirect
+    if (existing?.slug) revalidatePath(`/products/${existing.slug}`);
+    if (product.slug !== existing?.slug) revalidatePath(`/products/${product.slug}`);
     revalidatePath("/products");
 
     return NextResponse.json(product);

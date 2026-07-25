@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
       },
       select: {
         id: true,
+        slug: true,
         name: true,
         partNumber: true,
         brand: true,
@@ -39,8 +40,8 @@ export async function GET(req: NextRequest) {
       take: 8,
       orderBy: { name: "asc" },
     }),
-    prisma.$queryRaw<{ id: string; name: string; partNumber: string; brand: string; categoryName: string }[]>`
-      SELECT p.id, p.name, p."partNumber", p.brand,
+    prisma.$queryRaw<{ id: string; slug: string; name: string; partNumber: string; brand: string; categoryName: string }[]>`
+      SELECT p.id, p.slug, p.name, p."partNumber", p.brand,
              c.name AS "categoryName"
       FROM "Product" p
       JOIN "Category" c ON c.id = p."categoryId"
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
   const seen = new Set<string>();
   const suggestions: {
     id: string;
+    slug: string;
     name: string;
     partNumber: string;
     brand: string;
@@ -77,6 +79,7 @@ export async function GET(req: NextRequest) {
       : "brand";
     suggestions.push({
       id: p.id,
+      slug: p.slug,
       name: p.name,
       partNumber: p.partNumber,
       brand: p.brand,
@@ -91,6 +94,7 @@ export async function GET(req: NextRequest) {
     seen.add(p.id);
     suggestions.push({
       id: p.id,
+      slug: p.slug,
       name: p.name,
       partNumber: p.partNumber,
       brand: p.brand,

@@ -90,7 +90,7 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
             "@type": "Product",
             name: p.name,
             sku: p.sku,
-            url: absoluteUrl(`/products/${p.id}`),
+            url: absoluteUrl(`/products/${p.slug}`),
           })),
         }}
       />
@@ -131,7 +131,7 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
               return (
                 <Link
                   key={p.id}
-                  href={`/products/${p.id}`}
+                  href={`/products/${p.slug}`}
                   className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 block"
                 >
                   <div className="relative h-44 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">

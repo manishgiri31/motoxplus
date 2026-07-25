@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { productImages, sku: skuInput, ...data } = productSchema.parse(body);
     const sku = skuInput || autoSku(data.partNumber);
+    const slug = await uniqueProductSlug(data.name);
 
     // Check for duplicates before hitting DB constraint
     const conflict = await prisma.product.findFirst({
@@ -141,6 +142,7 @@ export async function POST(req: NextRequest) {
       data: {
         ...data,
         sku,
+        slug,
         productImages: productImages.length > 0 ? {
           create: productImages.map((img, i) => ({
             imageUrl: img.url,

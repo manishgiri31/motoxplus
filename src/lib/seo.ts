@@ -4,11 +4,20 @@ import type { Metadata } from "next";
 // metadata, canonical tags, or structured data, regardless of local env.
 export const SITE_URL = "https://motoxplus.com";
 export const SITE_NAME = "MOTOXPLUS India Private Limited";
+export const SITE_NAME_SHORT = "MotoXPlus";
 export const SITE_DESCRIPTION =
   "MOTOXPLUS India Private Limited — premium OEM-compatible two-wheeler spare parts manufacturer. Mudguards, visors, brake parts, indicators and more, engineered for reliability and tested to the highest standards.";
 
 export function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+/** Truncates at a word boundary and appends "…" — never cuts mid-word like a blind `.slice()`. */
+export function truncate(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const cut = text.slice(0, maxLen - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > maxLen * 0.5 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
 interface BuildMetadataOptions {

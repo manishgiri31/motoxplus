@@ -35,6 +35,7 @@ interface ProductVariant {
 
 interface Product {
   id: string;
+  slug: string;
   name: string;
   sku: string;
   partNumber: string;
@@ -790,7 +791,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               return (
                 <Link
                   key={p.id}
-                  href={`/products/${p.id}${vehicleContext ? `?vehicle=${vehicleContext.slug}` : ""}`}
+                  href={`/products/${p.slug}${vehicleContext ? `?vehicle=${vehicleContext.slug}` : ""}`}
                   className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-xl overflow-hidden transition-all card-hover"
                 >
                   <div className="relative h-36 bg-gradient-to-br from-zinc-900 to-black">

@@ -1,61 +1,90 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ProductDetailClient } from "@/components/products/product-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
-import { absoluteUrl, buildMetadata } from "@/lib/seo";
+import { absoluteUrl, buildMetadata, truncate, SITE_NAME_SHORT } from "@/lib/seo";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
 
-export async function generateMetadata(
-  props: {
-    params: Promise<{ id: string }>;
-  }
-): Promise<Metadata> {
-  const params = await props.params;
-  const product = await prisma.product.findUnique({
-    where: { id: params.id },
-    include: { category: true },
-  });
-  if (!product) return { title: "Product Not Found" };
+type SearchParams = { vehicle?: string; variant?: string; section?: string };
 
-  const title = `${product.name} | ${product.category.name}`;
-  const description =
-    product.description ||
-    `${product.name} — OEM-compatible ${product.category.name.toLowerCase()} by ${product.brand}, manufactured in ${product.countryOfOrigin}. Part No. ${product.partNumber}.`;
-
-  return buildMetadata({
-    title,
-    description,
-    path: `/products/${product.id}`,
-    image: product.images[0],
-  });
+function redirectQueryString(searchParams: SearchParams): string {
+  const qs = new URLSearchParams();
+  if (searchParams.vehicle) qs.set("vehicle", searchParams.vehicle);
+  if (searchParams.variant) qs.set("variant", searchParams.variant);
+  if (searchParams.section) qs.set("section", searchParams.section);
+  const s = qs.toString();
+  return s ? `?${s}` : "";
 }
 
-export default async function ProductDetailPage(
-  props: {
-    params: Promise<{ id: string }>;
-    searchParams: Promise<{ vehicle?: string; variant?: string; section?: string }>;
-  }
-) {
-  const params = await props.params;
-  const searchParams = await props.searchParams;
-  const product = await (prisma.product as any).findUnique({
-    where: { id: params.id, isActive: true },
+// A single [slug] segment serves both the canonical `/products/<slug>` URL and
+// any legacy `/products/<cuid>` link still pointing at the old id-based route —
+// old links redirect (308) to the canonical slug URL instead of 404ing.
+async function resolveBySlugOrLegacyId(value: string) {
+  const bySlug = await (prisma.product as any).findUnique({
+    where: { slug: value, isActive: true },
     include: {
       category: true,
       productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
       variants: {
         where: { isActive: true },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-        include: {
-          images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
-        },
+        include: { images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] } },
       },
     },
   });
+  if (bySlug) return { product: bySlug, legacySlug: null as string | null };
 
-  if (!product) notFound();
+  const byId = await prisma.product.findUnique({ where: { id: value }, select: { slug: true } });
+  return { product: null, legacySlug: byId?.slug ?? null };
+}
+
+export async function generateMetadata(
+  props: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const params = await props.params;
+  const { product, legacySlug } = await resolveBySlugOrLegacyId(params.slug);
+  const canonicalSlug = product?.slug ?? legacySlug;
+  if (!canonicalSlug) return { title: "Product Not Found" };
+
+  // Legacy id URL: metadata is irrelevant (the page redirects before rendering),
+  // but resolve minimal fields so this branch never throws.
+  const p = product ?? (await prisma.product.findUnique({ where: { slug: canonicalSlug }, include: { category: true } }));
+  if (!p) return { title: "Product Not Found" };
+
+  const titleSuffix = ` – Buy Online | ${SITE_NAME_SHORT}`;
+  const title = `${truncate(p.name, 60 - titleSuffix.length)}${titleSuffix}`;
+  const priceLine = `₹${p.price.toLocaleString("en-IN")}`;
+  const description = truncate(
+    p.description
+      ? `${p.description} ${priceLine}. Part No. ${p.partNumber}.`
+      : `${p.name} — OEM-compatible ${p.category.name.toLowerCase()} by ${p.brand}, manufactured in ${p.countryOfOrigin}. Part No. ${p.partNumber}. ${priceLine}.`,
+    155
+  );
+
+  return buildMetadata({
+    title,
+    description,
+    path: `/products/${p.slug}`,
+    image: p.images[0],
+  });
+}
+
+export default async function ProductDetailPage(
+  props: {
+    params: Promise<{ slug: string }>;
+    searchParams: Promise<SearchParams>;
+  }
+) {
+  const params = await props.params;
+  const searchParams = await props.searchParams;
+  const { product, legacySlug } = await resolveBySlugOrLegacyId(params.slug);
+
+  if (!product) {
+    if (legacySlug) permanentRedirect(`/products/${legacySlug}${redirectQueryString(searchParams)}`);
+    notFound();
+  }
 
   // If the visitor arrived filtered by a vehicle (e.g. from /products?vehicle=super-splendor),
   // show other parts compatible with that same vehicle instead of just same-category products —
@@ -111,7 +140,21 @@ export default async function ProductDetailPage(
     });
   }
 
-  const productUrl = absoluteUrl(`/products/${product.id}`);
+  const productUrl = absoluteUrl(`/products/${product.slug}`);
+
+  const reviewStats = await prisma.review.aggregate({
+    where: { productId: product.id, isApproved: true },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+  const aggregateRating =
+    reviewStats._count.rating > 0 && reviewStats._avg.rating
+      ? {
+          "@type": "AggregateRating" as const,
+          ratingValue: Number(reviewStats._avg.rating.toFixed(1)),
+          reviewCount: reviewStats._count.rating,
+        }
+      : undefined;
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -140,11 +183,15 @@ export default async function ProductDetailPage(
           description: product.description || undefined,
           sku: product.sku,
           mpn: product.partNumber,
-          image: product.images,
+          image:
+            product.productImages && product.productImages.length > 0
+              ? product.productImages.map((img: { imageUrl: string }) => img.imageUrl)
+              : product.images,
           brand: { "@type": "Brand", name: product.brand },
           manufacturer: { "@type": "Organization", name: product.brand },
           countryOfOrigin: product.countryOfOrigin,
           category: product.category.name,
+          ...(aggregateRating ? { aggregateRating } : {}),
           offers: {
             "@type": "Offer",
             url: productUrl,

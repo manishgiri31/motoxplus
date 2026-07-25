@@ -141,6 +141,7 @@ interface FitmentData {
 
 interface CompatibleProduct {
   id: string;
+  slug: string;
   name: string;
   partNumber: string;
   price: number;
@@ -171,6 +172,7 @@ interface ReviewData {
 
 interface LinkedProductData {
   id: string;
+  slug: string;
   name: string;
   partNumber: string;
   price: number;
