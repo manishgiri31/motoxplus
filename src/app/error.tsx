@@ -29,7 +29,7 @@ export default function ErrorBoundary({
         </button>
         <a
           href="/"
-          className="rounded-md border border-[var(--border)] px-4 py-2 text-sm font-medium hover:bg-[var(--surface-hover)]"
+          className="rounded-md border border-[var(--border-color)] px-4 py-2 text-sm font-medium hover:bg-[var(--bg-card-hover)]"
         >
           Go home
         </a>

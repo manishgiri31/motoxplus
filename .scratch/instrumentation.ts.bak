@@ -1,0 +1,34 @@
+/**
+ * Runs exactly once when the Next.js server process starts (both `next dev`
+ * and `next start`/PM2), before any request is served — the actual "boot"
+ * hook, unlike src/lib/env.ts's validation which only fires the first time
+ * something imports it (via prisma.ts/auth.ts), which in practice means
+ * "on the first request that happens to hit a route using Prisma," not
+ * necessarily at startup. Kept as a defense-in-depth secondary check.
+ */
+export async function register() {
+  // instrumentation.ts also loads under the edge runtime (middleware); the
+  // checks below use Node APIs (process.exit) and only make sense once.
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  const { getMissingEnvVars } = await import("@/lib/env");
+  const missing = getMissingEnvVars();
+
+  if (missing.length > 0) {
+    console.error(
+      "\n[Boot] Refusing to start — missing or placeholder required environment variable(s):\n" +
+        missing.map((v) => `  - ${v}`).join("\n") +
+        "\n\nCopy .env.example to .env and fill in real values.\n"
+    );
+    process.exit(1);
+  }
+  console.log("[Boot] Environment validation passed.");
+
+  const { getRedis } = await import("@/lib/redis");
+  const redis = getRedis();
+  console.log(
+    redis
+      ? "[Boot] Rate limiter: Redis (shared across all PM2 workers)."
+      : "[Boot] Rate limiter: in-memory (per-worker — set REDIS_URL in production so limits are shared across PM2 cluster workers instead of multiplied by core count)."
+  );
+}

@@ -51,6 +51,14 @@ interface DeliveryForm {
   pincode: string;
 }
 
+// Inlined at build time by Next.js (must reference process.env.NEXT_PUBLIC_*
+// literally, not via a dynamic key, for the static replacement to apply).
+// Razorpay isn't configured on the merchant account yet — default to
+// disabled so an unset/misconfigured flag never offers a payment method that
+// can't actually process anything. Flip to "true" (and set the Razorpay env
+// vars) once onboarded; no code changes needed on either side.
+export const RAZORPAY_ENABLED = process.env.NEXT_PUBLIC_RAZORPAY_ENABLED === "true";
+
 const ALL_PAYMENT_OPTIONS = [
   {
     id: "DIRECT_UPI" as PaymentType,
@@ -59,6 +67,7 @@ const ALL_PAYMENT_OPTIONS = [
     icon: <Smartphone size={18} className="text-purple-400" />,
     badge: "Recommended",
     requiresUpi: true,
+    requiresRazorpay: false,
   },
   {
     id: "FULL_100" as PaymentType,
@@ -67,6 +76,7 @@ const ALL_PAYMENT_OPTIONS = [
     icon: <CreditCard size={18} className="text-red-500" />,
     badge: null,
     requiresUpi: false,
+    requiresRazorpay: true,
   },
   {
     id: "ADVANCE_20" as PaymentType,
@@ -75,6 +85,7 @@ const ALL_PAYMENT_OPTIONS = [
     icon: <CreditCard size={18} className="text-blue-400" />,
     badge: null,
     requiresUpi: false,
+    requiresRazorpay: true,
   },
   {
     id: "COD" as PaymentType,
@@ -83,6 +94,7 @@ const ALL_PAYMENT_OPTIONS = [
     icon: <Truck size={18} className="text-green-400" />,
     badge: "COD",
     requiresUpi: false,
+    requiresRazorpay: false,
   },
 ];
 
@@ -96,7 +108,10 @@ function calcShipping(orderTotal: number): number {
 export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState<CartSummary | null>(null);
-  const [paymentType, setPaymentType] = useState<PaymentType>("FULL_100");
+  // COD is always available; only default to a Razorpay option when the
+  // merchant account is actually configured, otherwise a disabled option
+  // would be selected by default with no way for the user to have chosen it.
+  const [paymentType, setPaymentType] = useState<PaymentType>(RAZORPAY_ENABLED ? "FULL_100" : "COD");
   const [upiEnabled, setUpiEnabled] = useState(false);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -529,7 +544,7 @@ export default function CheckoutPage() {
       <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
         <h3 className="text-[var(--text-primary)] font-bold mb-5">Payment Method</h3>
         <div className="space-y-3">
-          {ALL_PAYMENT_OPTIONS.filter((o) => !o.requiresUpi || upiEnabled).map((option) => {
+          {ALL_PAYMENT_OPTIONS.filter((o) => (!o.requiresUpi || upiEnabled) && (!o.requiresRazorpay || RAZORPAY_ENABLED)).map((option) => {
             const isSelected = paymentType === option.id;
             const amount = option.id === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal;
 

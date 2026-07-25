@@ -2,42 +2,272 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── DARK MODE (default) — 3D depth palette ─── */
-:root {
-  --bg-primary: #050505;
-  --bg-secondary: #0a0a0a;
-  --bg-card: rgba(255,255,255,0.035);
-  --bg-card-hover: rgba(255,255,255,0.06);
-  --border-color: rgba(255,255,255,0.08);
-  --border-hover: rgba(220,38,38,0.5);
-  --text-primary: #f0f0f0;
-  --text-secondary: #c8c8c8;
-  --text-muted: #7a7a7a;
-  --input-bg: rgba(255,255,255,0.04);
-  --input-border: rgba(255,255,255,0.1);
-  --scrollbar-track: #0a0a0a;
-  --scrollbar-thumb: #DC2626;
-  --radius: 0.875rem;
-  /* 3D depth */
-  --shadow-3d: 0 24px 80px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
-  --glow-red: 0 0 40px rgba(220,38,38,0.35), 0 0 80px rgba(220,38,38,0.1);
+/* ══════════════════════════════════════════════════════════════════════════
+   MOTOXPLUS design tokens.
+
+   LIGHT is the default register (`:root, .light`) — a machined-aluminium /
+   blueprint-paper industrial surface, not a SaaS-pastel one. DARK (`.dark`)
+   is a fully-supported alternate. next-themes writes an explicit `light` or
+   `dark` class onto <html> before paint (attribute="class" in
+   src/components/providers.tsx), so both selectors always match post-hydration;
+   `:root` alone only governs the pre-hydration frame, which is why it must
+   carry the *default* theme's values, not the alternate's.
+
+   Every color that can appear with a Tailwind opacity modifier (bg-red-900/20,
+   text-red-500/80, …) is wired through tailwind.config.ts as
+   `rgb(var(--c-*) / <alpha-value>)`, so those CSS vars below are bare
+   "R G B" triplets, not hex and not rgba() — do not "simplify" them to hex,
+   it silently breaks every opacity-modifier call site.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root, .light {
+  color-scheme: light;
+
+  /* ── Raw industrial ramp — hue ~250°, 3–5% saturation reads as machined
+        metal, not cream/paper. Available directly as bg-[var(--carbon-500)] etc. ── */
+  --carbon-0: 255 255 255;    --carbon-25: 250 250 251;   --carbon-50: 244 244 246;
+  --carbon-100: 237 237 241;  --carbon-200: 220 220 225;  --carbon-300: 195 195 203;
+  --carbon-400: 160 160 172;  --carbon-500: 142 142 154;  --carbon-600: 90 90 100;
+  --carbon-700: 62 62 69;     --carbon-800: 42 42 48;     --carbon-900: 26 26 30;
+  --carbon-950: 14 14 17;     --carbon-1000: 5 5 6;
+
+  /* ── Tailwind color-ramp remap. Consumed by tailwind.config.ts as
+        `rgb(var(--c-family-step) / <alpha-value>)` — these are bare "R G B"
+        triplets, never hex, so the <alpha-value> token keeps working for the
+        726 existing opacity-modifier call sites (bg-red-900/20, etc.).
+
+        Only steps 300/400/500 differ between themes (overridden in .dark
+        below) — those are the shades actually used as TEXT color, and
+        Tailwind's stock values for them fail WCAG AA on a white surface
+        (text-red-400 is 2.6:1, text-red-500 is 3.3:1). Steps 50/100/200/
+        600/700/800/900/950 are Tailwind's stock values in both themes —
+        600 in particular is the anchor: bg-red-600 (209 sites, the primary
+        button) is byte-identical to what it always was. Values below are
+        this file's only declaration for the "constant" steps; .dark does
+        not redeclare them, so they inherit through unchanged. ── */
+  --c-red-50: 254 242 242;    --c-red-100: 254 226 226;   --c-red-200: 254 202 202;
+  --c-red-300: 217 115 111;   --c-red-400: 196 48 43;     --c-red-500: 196 31 31;
+  --c-red-600: 220 38 38;     --c-red-700: 185 28 28;     --c-red-800: 153 27 27;
+  --c-red-900: 127 29 29;     --c-red-950: 69 10 10;
+
+  --c-gray-50: 249 250 251;   --c-gray-100: 243 244 246;  --c-gray-200: 229 231 235;
+  --c-gray-300: 168 168 178;  --c-gray-400: 110 110 121;  --c-gray-500: 90 90 100;
+  --c-gray-600: 75 85 99;     --c-gray-700: 55 65 81;     --c-gray-800: 31 41 55;
+  --c-gray-900: 17 24 39;     --c-gray-950: 3 7 18;
+
+  --c-zinc-50: 250 250 250;   --c-zinc-100: 244 244 245;  --c-zinc-200: 228 228 231;
+  --c-zinc-300: 172 172 178;  --c-zinc-400: 115 115 124;  --c-zinc-500: 93 93 102;
+  --c-zinc-600: 82 82 91;     --c-zinc-700: 63 63 70;     --c-zinc-800: 39 39 42;
+  --c-zinc-900: 24 24 27;     --c-zinc-950: 9 9 11;
+
+  --c-green-50: 240 253 244;  --c-green-100: 220 252 231; --c-green-200: 187 247 208;
+  --c-green-300: 77 158 104;  --c-green-400: 21 128 61;   --c-green-500: 18 112 58;
+  --c-green-600: 22 163 74;   --c-green-700: 21 128 61;   --c-green-800: 22 101 52;
+  --c-green-900: 20 83 45;    --c-green-950: 5 46 22;
+
+  --c-emerald-50: 236 253 245;  --c-emerald-100: 209 250 229; --c-emerald-200: 167 243 208;
+  --c-emerald-300: 52 155 108;  --c-emerald-400: 5 122 85;    --c-emerald-500: 4 108 78;
+  --c-emerald-600: 5 150 105;   --c-emerald-700: 4 120 87;    --c-emerald-800: 6 95 70;
+  --c-emerald-900: 6 78 59;     --c-emerald-950: 2 44 34;
+
+  --c-amber-50: 255 251 235;  --c-amber-100: 254 243 199; --c-amber-200: 253 230 138;
+  --c-amber-300: 202 138 4;   --c-amber-400: 180 83 9;    --c-amber-500: 146 64 14;
+  --c-amber-600: 217 119 6;   --c-amber-700: 180 83 9;    --c-amber-800: 146 64 14;
+  --c-amber-900: 120 53 15;   --c-amber-950: 69 26 3;
+
+  --c-yellow-50: 254 252 232; --c-yellow-100: 254 249 195; --c-yellow-200: 254 240 138;
+  --c-yellow-300: 202 138 4;  --c-yellow-400: 161 98 7;    --c-yellow-500: 133 77 14;
+  --c-yellow-600: 202 138 4;  --c-yellow-700: 161 98 7;    --c-yellow-800: 133 77 14;
+  --c-yellow-900: 113 63 18;  --c-yellow-950: 66 32 6;
+
+  --c-orange-50: 255 247 237; --c-orange-100: 255 237 213; --c-orange-200: 254 215 170;
+  --c-orange-300: 217 119 6;  --c-orange-400: 194 65 12;   --c-orange-500: 154 52 18;
+  --c-orange-600: 234 88 12;  --c-orange-700: 194 65 12;   --c-orange-800: 154 52 18;
+  --c-orange-900: 124 45 18;  --c-orange-950: 67 20 7;
+
+  --c-blue-50: 239 246 255;   --c-blue-100: 219 234 254;  --c-blue-200: 191 219 254;
+  --c-blue-300: 96 130 220;   --c-blue-400: 29 78 216;    --c-blue-500: 30 64 175;
+  --c-blue-600: 37 99 235;    --c-blue-700: 29 78 216;    --c-blue-800: 30 64 175;
+  --c-blue-900: 30 58 138;    --c-blue-950: 23 37 84;
+
+  --c-cyan-50: 236 254 255;   --c-cyan-100: 207 250 254;  --c-cyan-200: 165 243 252;
+  --c-cyan-300: 60 148 168;   --c-cyan-400: 14 116 144;   --c-cyan-500: 21 94 117;
+  --c-cyan-600: 8 145 178;    --c-cyan-700: 14 116 144;   --c-cyan-800: 21 94 117;
+  --c-cyan-900: 22 78 99;     --c-cyan-950: 8 51 68;
+
+  --c-purple-50: 250 245 255; --c-purple-100: 243 232 255; --c-purple-200: 233 213 255;
+  --c-purple-300: 147 112 200; --c-purple-400: 109 40 217;  --c-purple-500: 91 33 182;
+  --c-purple-600: 147 51 234;  --c-purple-700: 126 34 206;  --c-purple-800: 107 33 168;
+  --c-purple-900: 88 28 135;   --c-purple-950: 59 7 100;
+
+  --c-indigo-50: 238 242 255;  --c-indigo-100: 224 231 255; --c-indigo-200: 199 210 254;
+  --c-indigo-300: 130 138 220; --c-indigo-400: 88 80 225;   --c-indigo-500: 73 64 205;
+  --c-indigo-600: 79 70 229;   --c-indigo-700: 67 56 202;   --c-indigo-800: 55 48 163;
+  --c-indigo-900: 49 46 129;   --c-indigo-950: 30 27 75;
+
+  /* ── Surfaces ── */
+  --bg-primary: #F4F4F6;      /* page canvas — mill finish */
+  --bg-secondary: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FAFAFB;
+  --surface-0: #F4F4F6;       /* canvas */
+  --surface-1: #FFFFFF;       /* card / panel */
+  --surface-2: #FAFAFB;       /* raised / hover */
+  --surface-3: #EFEFF2;       /* well / thead / code */
+  --sidebar-bg: #FFFFFF;
+  --sidebar-border: #E2E2E7;
+
+  /* ── Borders. Opaque, not rgba — a drawn hairline is a spec-drawing device;
+        an alpha border shifts with whatever sits behind it and reads soft. ── */
+  --border-color: #E2E2E7;
+  --border-subtle: #EDEDF1;
+  --border-strong: #C3C3CB;
+  --border-hover: rgba(220, 38, 38, 0.45);
+  --rule: #DCDCE1;            /* CAD hairline */
+  --rule-strong: #A0A0AC;
+
+  /* ── Text. Contrast measured against --surface-1 #FFF / --surface-0 #F4F4F6. ── */
+  --text-primary: #0E0E11;    /* 19.5:1 / 18.1:1 */
+  --text-secondary: #3E3E45;  /* 10.5:1 /  9.7:1 */
+  --text-muted: #5A5A64;      /*  6.8:1 /  6.2:1 — was #676770 @5.4:1, 1257 call sites */
+  --text-faint: #8E8E9A;      /*  3.2:1 — NON-TEXT ONLY: dividers, disabled, watermark */
+  --text-inverse: #FFFFFF;
+
+  /* ── Inputs. --input-border clears WCAG 1.4.11's 3:1 UI-boundary target. ── */
+  --input-bg: #FFFFFF;
+  --bg-input: var(--input-bg); /* alias — heals 52 call sites across 9 files that use
+                                   the (incorrect) name var(--bg-input); keep indefinitely,
+                                   don't "fix" the 52 call sites just to remove this. */
+  --input-border: #8E8E9A;     /* 3.24:1 on white */
+  --input-border-hover: #5A5A64;
+
+  /* ── Accent. Fill is theme-stable; the TEXT variant flips per theme. ── */
+  --accent: #DC2626;
+  --accent-hover: #B91C1C;
+  --accent-active: #971818;
+  --accent-fg: #FFFFFF;        /* 4.83:1 on #DC2626 */
+  --accent-text: #B91C1C;      /* red TEXT on light surfaces — 6.5:1 */
+  --accent-soft: #FFF1F1;
+  --accent-soft-border: #FBD5D5;
+  --accent-ring: rgba(220, 38, 38, 0.26);
+
+  /* ── Signal tones. Consumed via [data-tone] below — StatusBadge/Badge/Alert/Toast
+        never emit a color utility directly, only a tone name. All pairs ≥4.5:1. ── */
+  --sig-neutral-fg: #3E3E45;  --sig-neutral-bg: #F4F4F6;  --sig-neutral-bd: #DCDCE1;
+  --sig-info-fg: #1E40AF;     --sig-info-bg: #EFF6FF;     --sig-info-bd: #BFDBFE;
+  --sig-progress-fg: #0F766E; --sig-progress-bg: #F0FDFA; --sig-progress-bd: #99F6E4;
+  --sig-ok-fg: #166534;       --sig-ok-bg: #F0FDF4;       --sig-ok-bd: #BBF7D0;
+  --sig-warn-fg: #92400E;     --sig-warn-bg: #FFFBEB;     --sig-warn-bd: #FDE68A;
+  --sig-danger-fg: #B91C1C;   --sig-danger-bg: #FEF2F2;   --sig-danger-bd: #FECACA;
+
+  /* ── Elevation. Hairline + a 4-step surface ramp carries separation; blur is
+        reserved for overlays only. Heavy shadow-everywhere is the generic-SaaS tell. ── */
+  --elev-0: none;
+  --elev-1: 0 1px 0 0 rgba(14, 14, 17, 0.04);
+  --elev-2: 0 1px 2px -1px rgba(14, 14, 17, 0.10), 0 2px 6px -2px rgba(14, 14, 17, 0.05);
+  --elev-3: 0 2px 4px -2px rgba(14, 14, 17, 0.09), 0 10px 24px -8px rgba(14, 14, 17, 0.13);
+  --elev-4: 0 4px 8px -4px rgba(14, 14, 17, 0.11), 0 24px 48px -16px rgba(14, 14, 17, 0.18);
+  --elev-inset: inset 0 1px 2px rgba(14, 14, 17, 0.05);
+  --shadow-3d: var(--elev-3);   /* back-compat alias, previously unused */
+  --glow-red: 0 0 0 1px var(--accent-ring), var(--elev-2);  /* back-compat alias */
+
+  /* ── Focus. Ink, not red: guarantees ≥3:1 on every surface including red
+        buttons, and keeps red exclusively for action, never for chrome. ── */
+  --focus-ring: #0E0E11;
+  --focus-offset: 2px;
+
+  /* ── Blueprint / technical ── */
+  --grid-line: rgba(14, 14, 17, 0.045);
+  --grid-line-strong: rgba(14, 14, 17, 0.085);
+  --grid-size: 24px;
+  --grid-size-major: 120px;
+  --hatch: rgba(14, 14, 17, 0.07);
+
+  /* ── Geometry. Tight = engineered — see tailwind.config.ts borderRadius. ── */
+  --r-0: 0px; --r-1: 2px; --r-2: 3px; --r-3: 4px; --r-4: 6px;
+  --radius: var(--r-2); /* back-compat alias, only ever read by tailwind.config.ts */
+
+  /* ── Motion ── */
+  --dur-1: 120ms; --dur-2: 180ms; --dur-3: 280ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Layout ── */
+  --nav-h: 80px; --nav-h-lg: 108px; --sidebar-w: 256px; --container-max: 1440px;
+
+  --scrollbar-track: #EFEFF2;
+  --scrollbar-thumb: #C3C3CB;   /* was #DC2626 — red is action only; a red scrollbar
+                                   dilutes the one signal color in the whole system */
 }
 
-/* ─── LIGHT MODE ─── */
-.light {
-  --bg-primary: #f4f4f5;
-  --bg-secondary: #ffffff;
-  --bg-card: rgba(255,255,255,0.92);
-  --bg-card-hover: rgba(0,0,0,0.03);
-  --border-color: rgba(0,0,0,0.09);
-  --border-hover: rgba(220,38,38,0.4);
-  --text-primary: #09090b;
-  --text-secondary: #18181b;
-  --text-muted: #676770;
-  --input-bg: rgba(0,0,0,0.04);
-  --input-border: rgba(0,0,0,0.14);
-  --scrollbar-track: #e4e4e7;
-  --scrollbar-thumb: #DC2626;
+/* ══════════════════════ DARK — fully supported alternate ══════════════════════ */
+.dark {
+  color-scheme: dark;
+
+  --bg-primary: #0B0B0D; --bg-secondary: #121215; --bg-card: #16161A; --bg-card-hover: #1C1C21;
+  --surface-0: #0B0B0D; --surface-1: #16161A; --surface-2: #1C1C21; --surface-3: #232329;
+  --sidebar-bg: #0E0E11; --sidebar-border: #26262C;
+
+  --border-color: #26262C; --border-subtle: #1E1E23; --border-strong: #3A3A43;
+  --border-hover: rgba(220, 38, 38, 0.55);
+  --rule: #2A2A31; --rule-strong: #4A4A55;
+
+  --text-primary: #F2F2F4;    /* 16.9:1 on --surface-1 */
+  --text-secondary: #C4C4CC;  /* 11.0:1 */
+  --text-muted: #9A9AA5;      /*  6.5:1 */
+  --text-faint: #6B6B76;
+  --text-inverse: #0B0B0D;
+
+  --input-bg: #101014;
+  --input-border: #6A6A77;    /* 3.39:1 on --surface-1 */
+  --input-border-hover: #8E8E9A;
+
+  --accent: #DC2626; --accent-hover: #EF4444; --accent-active: #B91C1C;
+  --accent-fg: #FFFFFF;
+  --accent-text: #F87171;     /* 6.5:1 on --surface-1 */
+  --accent-soft: #2A0E0E; --accent-soft-border: #5A1A1A;
+  --accent-ring: rgba(248, 113, 113, 0.30);
+
+  --sig-neutral-fg: #C4C4CC;  --sig-neutral-bg: #1C1C21;  --sig-neutral-bd: #3A3A43;
+  --sig-info-fg: #60A5FA;     --sig-info-bg: #0C1A2E;     --sig-info-bd: #1E3A8A;
+  --sig-progress-fg: #2DD4BF; --sig-progress-bg: #082420; --sig-progress-bd: #115E59;
+  --sig-ok-fg: #4ADE80;       --sig-ok-bg: #0C2016;       --sig-ok-bd: #14532D;
+  --sig-warn-fg: #FBBF24;     --sig-warn-bg: #241A06;     --sig-warn-bd: #78350F;
+  --sig-danger-fg: #F87171;   --sig-danger-bg: #2A0E0E;   --sig-danger-bd: #7F1D1D;
+
+  /* Shadows barely read on dark — separation comes from the border brightening instead. */
+  --elev-0: none; --elev-1: none;
+  --elev-2: 0 1px 2px rgba(0, 0, 0, 0.55);
+  --elev-3: 0 8px 24px -8px rgba(0, 0, 0, 0.70);
+  --elev-4: 0 24px 56px -16px rgba(0, 0, 0, 0.80);
+  --elev-inset: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-3d: var(--elev-3);
+  --glow-red: 0 0 40px rgba(220, 38, 38, 0.35), 0 0 80px rgba(220, 38, 38, 0.1);
+
+  --focus-ring: #FFFFFF;
+  --grid-line: rgba(255, 255, 255, 0.04);
+  --grid-line-strong: rgba(255, 255, 255, 0.08);
+  --hatch: rgba(255, 255, 255, 0.06);
+
+  --scrollbar-track: #121215; --scrollbar-thumb: #34343C;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Dark island inside a light page — hero photo overlays, VideoPlate, footer.
+   Re-declares dark surface/text tokens for a subtree WITHOUT switching the
+   app's theme. This is what makes light-first photography and video work:
+   wrap a hero/footer section in this class and its children read correctly
+   regardless of the page's actual theme.
+   ══════════════════════════════════════════════════════════════════════════ */
+.surface-invert, [data-surface="invert"] {
+  color-scheme: dark;
+  --surface-0: #0B0B0D; --surface-1: #16161A; --surface-2: #1C1C21;
+  --bg-card: #16161A; --bg-card-hover: #1C1C21;
+  --text-primary: #F2F2F4; --text-secondary: #C4C4CC; --text-muted: #9A9AA5;
+  --border-color: #26262C; --border-strong: #3A3A43; --rule: #2A2A31;
+  --accent-text: #F87171; --focus-ring: #FFFFFF;
+  --grid-line: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
 }
 
 * {
@@ -50,17 +280,21 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ─── ACCESSIBLE FOCUS STATE ─── */
+/* ─── ACCESSIBLE FOCUS STATE — ink, not red; visible on every surface including
+       red fills. `border-radius` on :focus-visible is dropped: it only ever
+       styled `outline`, which doesn't respect border-radius, so it was a no-op. ─── */
 :focus-visible {
-  outline: 2px solid #DC2626;
-  outline-offset: 2px;
-  border-radius: 2px;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 body {
   color: var(--text-primary);
   background: var(--bg-primary);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, "Segoe UI", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -70,50 +304,64 @@ body {
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
 ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #B91C1C; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
-/* ─── GLASS — light-first ─── */
+/* ─── GLASS — reserved for navbar/overlays only. Card (src/components/ui/card.tsx)
+       deliberately does NOT use this: a backdrop-filter over an opaque light
+       canvas is visually a no-op but still costs a compositor layer on every
+       one of its ~400 call sites. ─── */
 .glass {
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  border: 1px solid rgba(0,0,0,0.08);
-  box-shadow: 0 1px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.02);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 20px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02);
 }
 
 .glass-dark {
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  border: 1px solid rgba(0,0,0,0.09);
+  border: 1px solid rgba(0, 0, 0, 0.09);
 }
 
-/* Dark mode glass */
 .dark .glass {
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.2);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .dark .glass-dark {
-  background: rgba(0,0,0,0.7);
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* ─── GLOW — 3D version ─── */
-.red-glow { box-shadow: 0 0 40px rgba(220,38,38,0.5), 0 0 80px rgba(220,38,38,0.15), 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15); }
-.red-glow-sm { box-shadow: 0 0 20px rgba(220,38,38,0.35), 0 2px 10px rgba(0,0,0,0.3); }
+/* ─── GLOW — light mode reads as a crisp keyline, not a glow: an actual glow next
+       to opaque hairline surfaces looks like a rendering bug, not a premium accent.
+       Dark mode keeps the original glow, where it has depth to sit in. ─── */
+.red-glow {
+  box-shadow: 0 0 0 1px var(--accent-ring), var(--elev-2);
+}
+.dark .red-glow {
+  box-shadow: 0 0 40px rgba(220, 38, 38, 0.5), 0 0 80px rgba(220, 38, 38, 0.15), 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.red-glow-sm {
+  box-shadow: 0 0 0 1px var(--accent-ring);
+}
+.dark .red-glow-sm {
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.35), 0 2px 10px rgba(0, 0, 0, 0.3);
+}
 
-/* ─── TEXT GRADIENT ─── */
+/* ─── TEXT — flat, not a gradient. A gradient on text is off-brief ("no gradients
+       everywhere"); the class name is kept so its 19 existing call sites don't move. ─── */
 .text-gradient-red {
-  background: linear-gradient(135deg, #DC2626 0%, #EF4444 50%, #FF6B6B 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-text);
 }
 
-/* ─── CARD HOVER — 3D lift ─── */
+/* ─── CARD HOVER — kept for the ~43 existing call sites; Card's own `interactive`
+       variant uses a flatter hover (surface + border step) that reads as an
+       instrument, not a consumer card. ─── */
 .card-hover {
   transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1),
               box-shadow 0.3s cubic-bezier(0.23, 1, 0.32, 1),
@@ -122,28 +370,34 @@ body {
 }
 .card-hover:hover {
   transform: translateY(-6px) translateZ(8px);
-  box-shadow: 0 24px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(220,38,38,0.15);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(220, 38, 38, 0.15);
 }
 .dark .card-hover:hover {
-  box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(220,38,38,0.2), 0 0 40px rgba(220,38,38,0.08);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(220, 38, 38, 0.2), 0 0 40px rgba(220, 38, 38, 0.08);
 }
 
-/* ─── 3D SECTION DEPTH ─── */
+/* ─── 3D SECTION DEPTH — reclaimed (0 prior usages): a top hairline with a
+       centered accent tick, the Bosch/Porsche section-divider device. ─── */
 .section-3d {
   position: relative;
 }
 .section-3d::before {
-  content: '';
+  content: "";
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(220,38,38,0.3), transparent);
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 48px; height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
 }
 
-/* ─── METALLIC BORDER ─── */
+/* ─── METALLIC BORDER — reclaimed (0 prior usages): a 1px top-highlight edge. ─── */
 .border-metallic {
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 -1px 0 rgba(0,0,0,0.3) inset;
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+}
+.dark .border-metallic {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* ─── NAV UNDERLINE ─── */
@@ -151,13 +405,13 @@ body {
   position: relative;
 }
 .nav-link::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -3px;
   left: 0;
   width: 0;
   height: 2px;
-  background: #DC2626;
+  background: var(--accent);
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 1px;
 }
@@ -173,9 +427,9 @@ body {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .themed-input:focus {
-  border-color: rgba(220,38,38,0.65);
+  border-color: var(--accent-hover);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(220,38,38,0.08);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 .themed-input::placeholder {
   color: var(--text-muted);
@@ -194,24 +448,27 @@ select.themed-input option {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .themed-select:focus {
-  border-color: rgba(220,38,38,0.65);
+  border-color: var(--accent-hover);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(220,38,38,0.08);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 /* ─── TABLE ROWS ─── */
-.light tbody tr:hover {
-  background: rgba(0,0,0,0.025);
+tbody tr:hover {
+  background: var(--bg-card-hover);
 }
 
-/* ─── LIGHT MODE SIDEBAR ─── */
-.light aside {
-  background: #ffffff !important;
-  border-color: rgba(0,0,0,0.07) !important;
+/* ─── SIDEBAR — was `.light aside { ... !important }`, which fights every themed
+       sidebar token. Sidebars now read --sidebar-bg/--sidebar-border directly
+       (src/components/*/**-sidebar.tsx); this rule only supplies a safe default
+       for any aside that hasn't opted in yet. No !important. ─── */
+aside {
+  background: var(--sidebar-bg);
+  border-color: var(--sidebar-border);
 }
 
 /* ─── UTILITIES ─── */
-.section-padding { @apply py-20 px-4 md:px-8 lg:px-16; }
+.section-padding { @apply py-24 px-4 md:px-8 lg:px-16; }
 .line-clamp-2 {
   overflow: hidden;
   display: -webkit-box;
@@ -226,7 +483,40 @@ select.themed-input option {
 }
 @layer utilities {
   .text-balance { text-wrap: balance; }
+  /* Tabular numerals — non-tabular figures in a data table/price column is the
+     #1 tell of an amateur B2B UI. Used by src/components/ui/numeral.tsx. */
+  .tnum { font-variant-numeric: tabular-nums lining-nums; letter-spacing: -0.01em; }
 }
+
+/* ─── BLUEPRINT / TECHNICAL BACKGROUNDS — used by src/components/ui/technical.tsx's
+       BlueprintGrid/Hatch. Pure CSS gradients: zero DOM, one paint layer, no
+       repaint cost on scroll (never use background-attachment:fixed with these). ─── */
+.bp-grid {
+  background-image:
+    repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px var(--grid-size)),
+    repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px var(--grid-size));
+}
+.bp-grid-major {
+  background-image:
+    repeating-linear-gradient(0deg, var(--grid-line-strong) 0 1px, transparent 1px var(--grid-size-major)),
+    repeating-linear-gradient(90deg, var(--grid-line-strong) 0 1px, transparent 1px var(--grid-size-major)),
+    repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px var(--grid-size)),
+    repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px var(--grid-size));
+}
+.hatch-45 {
+  background-image: repeating-linear-gradient(45deg, var(--hatch) 0 1px, transparent 1px 6px);
+}
+
+/* ─── STATUS TONES — the purge-proof rendering trick behind StatusBadge/Badge/Alert/
+       Toast: they emit `data-tone`, never a color utility, so six rules here cover
+       every status in the app, in both themes, colour-blind-safe (always paired
+       with an icon in the component layer, never colour alone). ─── */
+[data-tone="neutral"]  { --tone-fg: var(--sig-neutral-fg);  --tone-bg: var(--sig-neutral-bg);  --tone-bd: var(--sig-neutral-bd); }
+[data-tone="info"]     { --tone-fg: var(--sig-info-fg);     --tone-bg: var(--sig-info-bg);     --tone-bd: var(--sig-info-bd); }
+[data-tone="progress"] { --tone-fg: var(--sig-progress-fg); --tone-bg: var(--sig-progress-bg); --tone-bd: var(--sig-progress-bd); }
+[data-tone="ok"]       { --tone-fg: var(--sig-ok-fg);       --tone-bg: var(--sig-ok-bg);       --tone-bd: var(--sig-ok-bd); }
+[data-tone="warn"]     { --tone-fg: var(--sig-warn-fg);     --tone-bg: var(--sig-warn-bg);     --tone-bd: var(--sig-warn-bd); }
+[data-tone="danger"]   { --tone-fg: var(--sig-danger-fg);   --tone-bg: var(--sig-danger-bg);   --tone-bd: var(--sig-danger-bd); }
 
 /* ─── MARQUEE ─── */
 @keyframes marquee {
@@ -306,6 +596,25 @@ select.themed-input option {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  /* The blanket rule above still leaves an infinite marquee visually "parked"
+     mid-strip rather than at a clean rest state — force it fully off. It does
+     NOT stop <video autoplay> (VideoPlate gates that itself via matchMedia,
+     since CSS has no reach into media-element playback). */
+  .marquee-track {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* ─── HIGH CONTRAST / FORCED COLORS — you're shipping to Windows enterprise
+       buyers; decorative CSS-gradient textures must not fight the OS palette. ─── */
+@media (forced-colors: active) {
+  .bp-grid, .bp-grid-major, .hatch-45 { background-image: none; }
+  [data-tone] { border: 1px solid CanvasText; color: CanvasText; background: Canvas; forced-color-adjust: none; }
+  :focus-visible { outline-color: Highlight; }
+}
+@media (prefers-contrast: more) {
+  :root, .light { --text-muted: #46464E; --border-color: #B4B4BE; --rule: #9A9AA5; }
 }
 
 /* ─── SKELETON ─── */
@@ -313,39 +622,18 @@ select.themed-input option {
   background: linear-gradient(
     90deg,
     var(--border-color) 25%,
-    rgba(255,255,255,0.07) 50%,
+    var(--surface-2) 50%,
     var(--border-color) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
-  border-radius: 6px;
-}
-.light .skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(0,0,0,0.06) 25%,
-    rgba(0,0,0,0.02) 50%,
-    rgba(0,0,0,0.06) 75%
-  );
-  background-size: 800px 100%;
-  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--r-1);
 }
 
-/* ─── BUTTON PRESS ─── */
+/* ─── BUTTON PRESS — a 4% squash on every button including 12px table-row icon
+       buttons read bouncy/consumer; this reads as a firm mechanical press. ─── */
 button:not(:disabled):active,
 a[role="button"]:not(:disabled):active {
-  transform: scale(0.96);
-  transition: transform 0.08s ease;
-}
-
-/* ─── STATUS BADGES ─── */
-.badge-status {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.625rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 0.2rem 0.55rem;
-  border-radius: 9999px;
+  transform: translateY(0.5px);
+  filter: brightness(0.97);
 }

@@ -7,24 +7,34 @@ import { Trash2, AlertTriangle, X } from "lucide-react";
 export function DeleteAccountDialog() {
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const CONFIRM_WORD = "DELETE";
-  const isReady = confirm === CONFIRM_WORD;
+  const isReady = confirm === CONFIRM_WORD && password.length > 0;
 
   const handleDelete = async () => {
     if (!isReady) return;
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/dealer/account", { method: "DELETE" });
+    try {
+      const res = await fetch("/api/dealer/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
 
-    if (res.ok) {
-      await signOut({ callbackUrl: "/?deleted=1" });
-    } else {
+      if (res.ok) {
+        await signOut({ callbackUrl: "/?deleted=1" });
+        return;
+      }
       const data = await res.json().catch(() => ({}));
       setError(data.error || "Failed to delete account. Please try again.");
+    } catch {
+      setError("Could not reach the server. Check your connection and try again.");
+    } finally {
       setLoading(false);
     }
   };
@@ -33,6 +43,7 @@ export function DeleteAccountDialog() {
     if (loading) return;
     setOpen(false);
     setConfirm("");
+    setPassword("");
     setError("");
   };
 
@@ -114,7 +125,7 @@ export function DeleteAccountDialog() {
             </div>
 
             {/* Confirm input */}
-            <div className="mb-5">
+            <div className="mb-4">
               <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
                 Type <strong className="text-red-400 font-mono">{CONFIRM_WORD}</strong> to confirm
               </label>
@@ -126,6 +137,23 @@ export function DeleteAccountDialog() {
                 placeholder={CONFIRM_WORD}
                 className="w-full themed-input border focus:border-red-600 rounded-sm px-4 py-3 text-sm outline-none transition-colors font-mono tracking-widest disabled:opacity-50"
                 autoComplete="off"
+              />
+            </div>
+
+            {/* Password re-entry — proves this is really you, right now, not
+                just whoever holds an already-open session */}
+            <div className="mb-5">
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+                Enter your password to confirm
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                placeholder="Password"
+                className="w-full themed-input border focus:border-red-600 rounded-sm px-4 py-3 text-sm outline-none transition-colors disabled:opacity-50"
+                autoComplete="current-password"
               />
             </div>
 
