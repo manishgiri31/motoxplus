@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { generateInvoiceNumber } from "@/lib/utils";
+import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     where: { id: orderId },
     data: {
       amountPaid: order.amountDue,
-      amountDue: isFullPayment ? 0 : order.grandTotal - order.amountDue,
+      amountDue: isFullPayment ? 0 : roundToPaise(order.grandTotal - order.amountDue),
       paymentStatus: isFullPayment ? "PAID" : "PARTIAL",
       status: "CONFIRMED",
     },

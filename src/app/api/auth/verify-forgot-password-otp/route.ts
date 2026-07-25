@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyOTP } from "@/lib/auth/otp";
+import { checkIPRateLimit } from "@/lib/auth/rate-limit";
+import { getClientIP } from "@/lib/auth/middleware";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIP(req);
+  if (!(await checkIPRateLimit(ip, 10, 60))) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
+
   const { userId, otp } = await req.json();
   if (!userId || !otp) return NextResponse.json({ error: "User ID and OTP are required" }, { status: 400 });
 

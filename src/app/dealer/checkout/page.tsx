@@ -212,23 +212,40 @@ export default function CheckoutPage() {
     clientShippingCost: shippingCost,
   });
 
+  // Response bodies are assumed to be JSON below, but a proxy/server crash can
+  // return an HTML error page instead — .json() would throw on that and, if
+  // uncaught, leave the button stuck on "placing order" forever with no
+  // message. Parse defensively so callers always get a usable error string.
+  const safeJson = async (res: Response): Promise<any> => {
+    try {
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
   const handleCOD = async () => {
     setLoading(true);
-    const orderRes = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...buildOrderPayload(), paymentType: "COD" }),
-    });
+    try {
+      const orderRes = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...buildOrderPayload(), paymentType: "COD" }),
+      });
 
-    if (!orderRes.ok) {
-      const err = await orderRes.json();
-      alert(err.error || "Failed to place order");
+      const data = await safeJson(orderRes);
+      if (!orderRes.ok || !data?.order) {
+        alert(data?.error || "Failed to place order. Please try again.");
+        return;
+      }
+
+      router.push(`/dealer/orders/${data.order.id}?success=1`);
+    } catch (err) {
+      console.error("[Checkout] COD order failed:", err);
+      alert("Could not reach the server. Check your connection and try again.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { order } = await orderRes.json();
-    router.push(`/dealer/orders/${order.id}?success=1`);
   };
 
   const handleOnlinePayment = async () => {
@@ -240,14 +257,13 @@ export default function CheckoutPage() {
         body: JSON.stringify(buildOrderPayload()),
       });
 
-      if (!orderRes.ok) {
-        const err = await orderRes.json();
-        alert(err.error || "Failed to create order");
+      const orderData = await safeJson(orderRes);
+      if (!orderRes.ok || !orderData?.order) {
+        alert(orderData?.error || "Failed to create order. Please try again.");
         setLoading(false);
         return;
       }
-
-      const { order } = await orderRes.json();
+      const { order } = orderData;
 
       const rzpOrderRes = await fetch("/api/payments/create-order", {
         method: "POST",
@@ -255,59 +271,89 @@ export default function CheckoutPage() {
         body: JSON.stringify({ orderId: order.id }),
       });
 
-      const rzpData = await rzpOrderRes.json();
+      const rzpData = await safeJson(rzpOrderRes);
+      if (!rzpOrderRes.ok || !rzpData?.data) {
+        alert(rzpData?.error || "Could not start payment. Your order was saved — contact support with order number " + order.orderNumber + ".");
+        setLoading(false);
+        return;
+      }
+      const razorpayOrder = rzpData.data;
 
       const rzp = new window.Razorpay({
-        key: rzpData.keyId,
-        amount: rzpData.amount,
-        currency: rzpData.currency,
-        order_id: rzpData.razorpayOrderId,
+        key: razorpayOrder.keyId,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        order_id: razorpayOrder.razorpayOrderId,
         name: "MotoXPlus India Pvt. Ltd.",
-        description: `Order ${rzpData.orderNumber}`,
+        description: `Order ${razorpayOrder.orderNumber}`,
         theme: { color: "#DC2626" },
         handler: async (response: any) => {
-          const verifyRes = await fetch("/api/payments/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-              orderId: order.id,
-            }),
-          });
+          // Razorpay invokes this callback asynchronously, outside the try/catch
+          // above — money has already been captured on Razorpay's side by this
+          // point, so a thrown/network error here must never fail silently:
+          // the customer paid and needs to know whether the order confirmed.
+          try {
+            const verifyRes = await fetch("/api/payments/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                orderId: order.id,
+              }),
+            });
 
-          if (verifyRes.ok) {
-            router.push(`/dealer/orders/${order.id}?success=1`);
-          } else {
-            alert("Payment verification failed. Contact support.");
+            if (verifyRes.ok) {
+              router.push(`/dealer/orders/${order.id}?success=1`);
+              return;
+            }
+            const verifyData = await safeJson(verifyRes);
+            alert(
+              (verifyData?.error || "Payment verification failed.") +
+                ` Your payment was received for order ${order.orderNumber} — contact support if it doesn't confirm shortly.`
+            );
+          } catch (err) {
+            console.error("[Checkout] Payment verify request failed after successful payment:", err, { orderId: order.id });
+            alert(
+              `Your payment for order ${order.orderNumber} went through, but we couldn't confirm it with our server. ` +
+                `Please contact support with this order number — do not pay again.`
+            );
+          } finally {
+            setLoading(false);
           }
         },
         modal: { ondismiss: () => setLoading(false) },
       });
 
       rzp.open();
-    } catch {
-      alert("Something went wrong");
+    } catch (err) {
+      console.error("[Checkout] Online payment setup failed:", err);
+      alert("Something went wrong starting the payment. Please try again.");
       setLoading(false);
     }
   };
 
   const handleDirectUpi = async () => {
     setLoading(true);
-    const orderRes = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...buildOrderPayload(), paymentType: "FULL_100" }),
-    });
-    if (!orderRes.ok) {
-      const err = await orderRes.json();
-      alert(err.error || "Failed to create order");
+    try {
+      const orderRes = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...buildOrderPayload(), paymentType: "FULL_100" }),
+      });
+      const data = await safeJson(orderRes);
+      if (!orderRes.ok || !data?.order) {
+        alert(data?.error || "Failed to create order. Please try again.");
+        return;
+      }
+      router.push(`/dealer/orders/${data.order.id}/pay-upi`);
+    } catch (err) {
+      console.error("[Checkout] Direct UPI order failed:", err);
+      alert("Could not reach the server. Check your connection and try again.");
+    } finally {
       setLoading(false);
-      return;
     }
-    const { order } = await orderRes.json();
-    router.push(`/dealer/orders/${order.id}/pay-upi`);
   };
 
   const handlePlaceOrder = () => {

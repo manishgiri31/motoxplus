@@ -1,8 +1,12 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "fallback-secret-change-in-production"
-);
+// No hardcoded fallback: signing tokens with a guessable default secret would let
+// anyone forge valid access/refresh tokens for any user. Fail loudly instead.
+const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+if (!secret) {
+  throw new Error("JWT_SECRET (or NEXTAUTH_SECRET) must be set — refusing to sign tokens with no secret");
+}
+const JWT_SECRET = new TextEncoder().encode(secret);
 const ACCESS_TOKEN_EXPIRY = "15m";
 const REFRESH_TOKEN_EXPIRY = "7d";
 

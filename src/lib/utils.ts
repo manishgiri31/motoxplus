@@ -39,6 +39,17 @@ export function calculateGST(amount: number, gstRate: number): number {
   return (amount * gstRate) / 100;
 }
 
+/**
+ * Rounds a monetary amount to 2 decimal places (paise). Order/Invoice amounts
+ * are stored as Prisma Float (binary double), so summing many unrounded
+ * unitPrice*quantity*gstRate/100 terms accumulates floating-point drift
+ * (e.g. 1234.560000000004) — round at each computation step instead of only
+ * at display time so stored totals stay exact to the paisa.
+ */
+export function roundToPaise(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()

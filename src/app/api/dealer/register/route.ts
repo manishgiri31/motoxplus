@@ -26,7 +26,7 @@ const registerSchema = z.object({
 
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
-  if (!checkIPRateLimit(ip, 5, 60)) {
+  if (!(await checkIPRateLimit(ip, 5, 60))) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
 

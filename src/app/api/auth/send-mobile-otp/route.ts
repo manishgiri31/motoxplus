@@ -5,10 +5,11 @@ import { sendOTP } from "@/lib/sms";
 import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
-  if (!checkIPRateLimit(ip, 5, 60)) {
+  if (!(await checkIPRateLimit(ip, 5, 60))) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
 
@@ -18,9 +19,8 @@ export async function POST(req: NextRequest) {
   const { mobile } = await req.json();
   if (!mobile) return NextResponse.json({ error: "Mobile number is required" }, { status: 400 });
 
-  const mobileRegex = /^[6-9]\d{9}$/;
-  const normalizedMobile = mobile.replace(/\s/g, "").replace("+91", "");
-  if (!mobileRegex.test(normalizedMobile)) {
+  const normalizedMobile = normalizeIndianMobile(mobile);
+  if (!normalizedMobile) {
     return NextResponse.json({ error: "Invalid Indian mobile number" }, { status: 400 });
   }
 

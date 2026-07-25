@@ -13,7 +13,7 @@ const AADHAAR_REGEX = /^[0-9]{12}$/;
 
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
-  if (!checkIPRateLimit(ip, 5, 60)) {
+  if (!(await checkIPRateLimit(ip, 5, 60))) {
     return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 

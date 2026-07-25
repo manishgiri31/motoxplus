@@ -13,7 +13,7 @@ import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
 // Mobile login — returns tokens in the response body instead of cookies.
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
-  if (!checkIPRateLimit(ip, 10, 60)) {
+  if (!(await checkIPRateLimit(ip, 10, 60))) {
     return NextResponse.json(
       { error: "Too many login attempts. Try again in a minute." },
       { status: 429 }

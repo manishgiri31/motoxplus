@@ -128,9 +128,13 @@ export async function DELETE(req: NextRequest) {
   const cart = await prisma.cart.findUnique({ where: { dealerId: dealer.id } });
   if (!cart) return NextResponse.json({ error: "Cart not found" }, { status: 404 });
 
-  await prisma.cartItem.delete({
-    where: { id: itemId },
+  // Scope the delete to this dealer's own cart — `delete({ where: { id: itemId } })`
+  // would remove *any* cart item by id regardless of which dealer's cart it
+  // belongs to, since cartId was never checked (IDOR).
+  const { count } = await prisma.cartItem.deleteMany({
+    where: { id: itemId, cartId: cart.id },
   });
+  if (count === 0) return NextResponse.json({ error: "Item not found in cart" }, { status: 404 });
 
   return NextResponse.json({ success: true });
 }

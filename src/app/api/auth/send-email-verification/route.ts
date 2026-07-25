@@ -7,7 +7,7 @@ import { getClientIP } from "@/lib/auth/middleware";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
-  if (!checkIPRateLimit(ip, 5, 60)) {
+  if (!(await checkIPRateLimit(ip, 5, 60))) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
 
@@ -20,11 +20,18 @@ export async function POST(req: NextRequest) {
     user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   }
 
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  if (user.emailVerified) return NextResponse.json({ error: "Email already verified" }, { status: 400 });
+  // Generic response regardless of outcome: this endpoint is unauthenticated
+  // (anyone can call it with any userId/email), so distinguishing "not found"
+  // vs "already verified" vs "sent" would let a caller enumerate registered
+  // emails and repeatedly email-bomb arbitrary third parties with a
+  // distinguishable oracle. The resend-limit check below still caps actual
+  // sends per account.
+  const GENERIC_OK = NextResponse.json({ message: "If this account exists and is unverified, a verification email has been sent.", expires: 10 });
+
+  if (!user || user.emailVerified) return GENERIC_OK;
 
   const canResend = await checkResendLimit(user.id, "EMAIL_VERIFICATION");
-  if (!canResend) return NextResponse.json({ error: "Too many resend attempts. Try again in 1 hour." }, { status: 429 });
+  if (!canResend) return GENERIC_OK;
 
   const otp = await createOTP(user.id, "EMAIL_VERIFICATION");
   const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?userId=${user.id}`;
@@ -33,7 +40,7 @@ export async function POST(req: NextRequest) {
     to: user.email,
     subject: "Verify your email — MOTOXPLUS",
     html: verifyEmailTemplate(user.name || "", verificationUrl, otp),
-  });
+  }).catch(console.error);
 
-  return NextResponse.json({ message: "Verification email sent", expires: 10 });
+  return GENERIC_OK;
 }

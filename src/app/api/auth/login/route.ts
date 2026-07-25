@@ -8,7 +8,7 @@ import { COOKIE_ACCESS, COOKIE_REFRESH, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_
 
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
-  if (!checkIPRateLimit(ip, 10, 60)) {
+  if (!(await checkIPRateLimit(ip, 10, 60))) {
     return NextResponse.json({ error: "Too many login attempts. Try again in a minute." }, { status: 429 });
   }
 

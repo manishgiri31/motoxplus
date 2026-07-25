@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processDelhiveryWebhook } from "@/lib/delhivery";
 import type { DelhiveryWebhookPayload } from "@/lib/delhivery/types";
+import crypto from "crypto";
 
 const WEBHOOK_SECRET = process.env.DELHIVERY_WEBHOOK_SECRET;
+
+// Plain !== comparison leaks how many leading characters matched via response
+// timing. Low practical risk over the network, but constant-time compare is
+// free — do it properly since we're touching this anyway.
+function tokenMatches(provided: string | null, expected: string): boolean {
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 export async function POST(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
@@ -15,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
     // Allow in development without a secret
     console.warn("[Delhivery Webhook] Secret not set — skipping verification (dev only)");
-  } else if (token !== WEBHOOK_SECRET) {
+  } else if (!tokenMatches(token, WEBHOOK_SECRET)) {
     console.warn("[Delhivery Webhook] Invalid token");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -49,7 +61,7 @@ export async function POST(req: NextRequest) {
 // Delhivery may send GET to verify the endpoint
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
-  if (!WEBHOOK_SECRET || token !== WEBHOOK_SECRET) {
+  if (!WEBHOOK_SECRET || !tokenMatches(token, WEBHOOK_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return NextResponse.json({ ok: true, service: "MotoXPlus Delhivery Webhook" });

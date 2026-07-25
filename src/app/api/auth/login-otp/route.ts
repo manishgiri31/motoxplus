@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createOTP, verifyOTP } from "@/lib/auth/otp";
+import { createOTP, verifyOTP, checkResendLimit } from "@/lib/auth/otp";
 import { createSession } from "@/lib/auth/session";
 import { checkIPRateLimit, isAccountLocked } from "@/lib/auth/rate-limit";
 import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
 import { COOKIE_ACCESS, COOKIE_REFRESH, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from "@/lib/auth/jwt";
 import { sendOTP } from "@/lib/sms";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 // Step 1: Send OTP to mobile
 export async function POST(req: NextRequest) {
@@ -14,9 +15,8 @@ export async function POST(req: NextRequest) {
 
   if (!mobile) return NextResponse.json({ error: "Mobile number is required" }, { status: 400 });
 
-  const mobileRegex = /^[6-9]\d{9}$/;
-  const normalizedMobile = mobile.replace(/\s/g, "").replace("+91", "");
-  if (!mobileRegex.test(normalizedMobile)) {
+  const normalizedMobile = normalizeIndianMobile(mobile);
+  if (!normalizedMobile) {
     return NextResponse.json({ error: "Invalid Indian mobile number" }, { status: 400 });
   }
 
@@ -51,12 +51,21 @@ export async function POST(req: NextRequest) {
   }
 
   // Send OTP step
-  if (!checkIPRateLimit(ip, 5, 60)) {
+  if (!(await checkIPRateLimit(ip, 5, 60))) {
     return NextResponse.json({ error: "Too many requests. Try again in a minute." }, { status: 429 });
   }
 
   if (!user) return NextResponse.json({ error: "Mobile number not registered" }, { status: 404 });
   if (!user.isActive) return NextResponse.json({ error: "Account disabled" }, { status: 403 });
+
+  // Per-IP throttling alone allows an attacker rotating IPs (or just waiting
+  // out the 60s window) to keep sending OTPs to the same victim's phone
+  // indefinitely, burning SMS credits. Cap resends per account/phone too,
+  // matching send-mobile-otp and forgot-password.
+  const canResend = await checkResendLimit(user.id, "LOGIN");
+  if (!canResend) {
+    return NextResponse.json({ error: "Too many OTP requests. Try again in 1 hour." }, { status: 429 });
+  }
 
   const code = await createOTP(user.id, "LOGIN");
   const smsResult = await sendOTP(normalizedMobile, code);

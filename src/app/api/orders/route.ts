@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateOrderNumber, generateInvoiceNumber } from "@/lib/utils";
+import { generateOrderNumber, generateInvoiceNumber, roundToPaise } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 
@@ -106,6 +106,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
   }
 
+  // Cart items can sit for a long time between add-to-cart and checkout —
+  // re-check availability now rather than trusting whatever was true when the
+  // item was added. Price is always read fresh from product/variant below
+  // (the cart never snapshots a price), so that part can't go stale; stock
+  // and active status can, and previously were never re-checked here.
+  const unavailable = cart.items.filter(
+    (item) =>
+      !item.product.isActive ||
+      (item.variant && !item.variant.isActive) ||
+      item.product.stock < item.quantity
+  );
+  if (unavailable.length > 0) {
+    return NextResponse.json(
+      {
+        error: "Some items in your cart are no longer available in the requested quantity. Please update your cart.",
+        unavailableProductIds: unavailable.map((i) => i.productId),
+      },
+      { status: 409 }
+    );
+  }
+
   let subtotal = 0;
   let gstAmount = 0;
 
@@ -117,15 +138,20 @@ export async function POST(req: NextRequest) {
     gstAmount += itemGST;
   }
 
+  // Round at each step — these are stored as Float columns, and summing many
+  // unrounded unitPrice*quantity*gstRate/100 terms accumulates floating-point
+  // drift (see roundToPaise in lib/utils.ts).
+  subtotal = roundToPaise(subtotal);
+  gstAmount = roundToPaise(gstAmount);
+
   const isCOD = paymentType === "COD";
   const shippingCost = calcShipping(subtotal + gstAmount);
 
-  const grandTotal = subtotal + gstAmount + shippingCost;
+  const grandTotal = roundToPaise(subtotal + gstAmount + shippingCost);
 
-  const amountDue =
-    paymentType === "ADVANCE_20"
-      ? grandTotal * 0.2
-      : grandTotal;
+  const amountDue = roundToPaise(
+    paymentType === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal
+  );
 
   const order = await prisma.order.create({
     data: {
@@ -150,6 +176,11 @@ export async function POST(req: NextRequest) {
       items: {
         create: cart.items.map((item) => {
           const unitPrice = item.variant?.price ?? item.product.price;
+          // total derived from the already-rounded gstAmount (rather than its
+          // own independent unitPrice*qty*(1+gstRate/100) expression) so the
+          // two can't drift apart by a floating-point epsilon.
+          const itemGstAmount = roundToPaise((unitPrice * item.quantity * item.product.gstRate) / 100);
+          const itemTotal = roundToPaise(unitPrice * item.quantity + itemGstAmount);
           return {
             productId: item.productId,
             variantId: item.variantId ?? null,
@@ -158,8 +189,8 @@ export async function POST(req: NextRequest) {
             quantity: item.quantity,
             unitPrice,
             gstRate: item.product.gstRate,
-            gstAmount: (unitPrice * item.quantity * item.product.gstRate) / 100,
-            total: unitPrice * item.quantity * (1 + item.product.gstRate / 100),
+            gstAmount: itemGstAmount,
+            total: itemTotal,
           };
         }),
       },
