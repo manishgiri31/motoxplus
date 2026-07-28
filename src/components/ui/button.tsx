@@ -49,6 +49,13 @@ export const buttonVariants = cva(
       },
       block: { true: "w-full" },
     },
+    // `link` must win over whatever `size` resolves to (default "md" applies even
+    // when size is omitted). cva appends compoundVariants classes last, and Button
+    // pipes the whole result through cn()'s twMerge, which resolves same-property
+    // conflicts by keeping whichever class appears last — so this, not variant
+    // ordering, is what makes `<Button variant="link">` actually stay text-sized
+    // instead of getting silently re-heightened by the default size="md".
+    compoundVariants: [{ variant: "link", class: "h-auto p-0 [&_svg]:size-[1em]" }],
     defaultVariants: { variant: "primary", size: "md" },
   }
 );
@@ -69,19 +76,27 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     { className, variant, size, block, asChild, loading, icon, iconRight, children, disabled, ...props },
     ref
   ) => {
-    const Comp = asChild ? Slot : "button";
+    const cls = cn(buttonVariants({ variant, size, block }), className);
+
+    // asChild clones these props onto a SINGLE child element (e.g. next/link's
+    // <Link>) via Radix Slot, which requires exactly one element child — it
+    // cannot also interleave icon/spinner nodes around {children} the way the
+    // plain <button> path below does. Callers using asChild put icons inside
+    // their own child element instead (as every call site in this codebase does).
+    if (asChild) {
+      return (
+        <Slot ref={ref} className={cls} aria-busy={loading || undefined} {...props}>
+          {children}
+        </Slot>
+      );
+    }
+
     return (
-      <Comp
-        ref={ref}
-        className={cn(buttonVariants({ variant, size, block }), className)}
-        aria-busy={loading || undefined}
-        disabled={disabled || loading}
-        {...props}
-      >
+      <button ref={ref} className={cls} aria-busy={loading || undefined} disabled={disabled || loading} {...props}>
         {loading ? <Spinner className="size-[1em]" /> : icon}
         {children}
         {!loading && iconRight}
-      </Comp>
+      </button>
     );
   }
 );

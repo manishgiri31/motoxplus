@@ -47,7 +47,7 @@ export function Checkbox({ className, ...props }: React.InputHTMLAttributes<HTML
     <input
       type="checkbox"
       className={cn(
-        "h-4 w-4 rounded-[3px] border border-[var(--input-border)] bg-[var(--input-bg)]",
+        "h-4 w-4 rounded-md border border-[var(--input-border)] bg-[var(--input-bg)]",
         "accent-[var(--accent)] cursor-pointer",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
         className

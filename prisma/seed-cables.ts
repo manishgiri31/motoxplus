@@ -17,6 +17,23 @@ import { CABLE_SECTIONS } from "./data/cables-source";
 
 const prisma = new PrismaClient();
 
+/**
+ * Same transform as src/lib/slug.ts's slugify() (lowercase, hyphen-separated,
+ * alphanumeric-only) — duplicated rather than imported because this script
+ * runs via plain `ts-node` (see the `db:seed-cables` script in package.json),
+ * which has no path-alias resolution for `@/...`, unlike the Next.js app
+ * itself. Applied to `name-sku` rather than name alone: sku is already
+ * guaranteed unique (this upsert keys on it), so the composite slug is too,
+ * with no async uniqueness-checking DB round-trip needed across ~696 rows.
+ */
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 const CATEGORY_SLUG = "cables";
 const SKU_PREFIX = "MX-CB";
 
@@ -199,6 +216,7 @@ async function main(): Promise<void> {
             where: { sku },
             create: {
               name,
+              slug: slugify(`${name}-${sku}`),
               sku,
               partNumber: sku,
               description,

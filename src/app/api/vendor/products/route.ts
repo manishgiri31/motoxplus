@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { uniqueProductSlug } from "@/lib/slug";
 import { z } from "zod";
 
 const vendorProductSchema = z.object({
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
     const product = await prisma.product.create({
       data: {
         ...data,
+        slug: await uniqueProductSlug(data.name),
         hsnCode: data.hsnCode || "",
         price,
         markupPercent,

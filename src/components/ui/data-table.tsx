@@ -14,6 +14,21 @@ import { Checkbox } from "./field";
  * `scope="col"`, a visually-hidden `<caption>`, `aria-sort`, tabular numerals,
  * a real skeleton state, and a horizontal scroll container none of the
  * originals had consistently.
+ *
+ * IMPORTANT — Column.cell and rowHref are deliberately NOT functions.
+ * DataTable is a Client Component, but every one of its intended consumers
+ * (admin/dealer/vendor list pages) is a Server Component. React Server
+ * Components can only pass serializable props across that boundary — a
+ * closure (a `cell: (row) => <div>...</div>` render function, or a
+ * `rowHref: (row) => string` function) cannot be serialized and throws at
+ * runtime ("Functions cannot be passed directly to Client Components").
+ * `cells`/`actions` being pre-rendered ReactNode, and `href` being a plain
+ * string, are both fine — a Server Component can render JSX and compute
+ * strings, it just can't hand over a function to call later on the client.
+ * `onRowClick` / `onSelectionChange` / `onSortChange` stay function props
+ * because they only make sense when DataTable's parent is already a Client
+ * Component (interactive client-side tables), which is a real but separate
+ * use case from the server-rendered list pages this primitive mainly serves.
  */
 const HIDE_BELOW_CLASS = {
   sm: "hidden sm:table-cell",
@@ -22,10 +37,9 @@ const HIDE_BELOW_CLASS = {
   xl: "hidden xl:table-cell",
 } as const;
 
-export interface Column<T> {
+export interface Column {
   key: string;
   header: React.ReactNode;
-  cell?: (row: T, index: number) => React.ReactNode;
   align?: "left" | "right" | "center";
   width?: string;
   hideBelow?: keyof typeof HIDE_BELOW_CLASS;
@@ -33,22 +47,29 @@ export interface Column<T> {
   className?: string;
 }
 
+export interface DataTableRow {
+  id: string;
+  /** Whole-row link target, rendered as a real stretched <Link> (keyboard and
+   *  right-click "open in new tab" both work) — computed by the caller. */
+  href?: string;
+  /** Pre-rendered content keyed by Column.key. */
+  cells: Record<string, React.ReactNode>;
+  /** Pre-rendered row actions (buttons, menus). */
+  actions?: React.ReactNode;
+}
+
 export interface SortState {
   key: string;
   dir: "asc" | "desc";
 }
 
-export interface DataTableProps<T extends { id: string }> {
-  columns: Column<T>[];
-  rows: T[];
+export interface DataTableProps {
+  columns: Column[];
+  rows: DataTableRow[];
   loading?: boolean;
   skeletonRows?: number;
   empty?: React.ReactNode;
-  /** Renders the whole row as a real, keyboard/right-click-accessible link via a
-   *  stretched-anchor overlay — not a fake onClick handler pretending to be one. */
-  rowHref?: (row: T) => string;
-  onRowClick?: (row: T) => void;
-  actions?: (row: T) => React.ReactNode;
+  onRowClick?: (id: string) => void;
   selectable?: boolean;
   selected?: Set<string>;
   onSelectionChange?: (selected: Set<string>) => void;
@@ -63,15 +84,13 @@ export interface DataTableProps<T extends { id: string }> {
 
 const alignClass = { left: "text-left", right: "text-right", center: "text-center" } as const;
 
-export function DataTable<T extends { id: string }>({
+export function DataTable({
   columns,
   rows,
   loading,
   skeletonRows = 5,
   empty,
-  rowHref,
   onRowClick,
-  actions,
   selectable,
   selected,
   onSelectionChange,
@@ -82,7 +101,7 @@ export function DataTable<T extends { id: string }>({
   stickyHeader,
   footer,
   className,
-}: DataTableProps<T>) {
+}: DataTableProps) {
   if (loading) return <SkeletonTable rows={skeletonRows} cols={columns.length} className={className} />;
 
   if (rows.length === 0) {
@@ -151,53 +170,48 @@ export function DataTable<T extends { id: string }>({
                   </th>
                 );
               })}
-              {actions && <th scope="col" className="w-px px-4 py-3" />}
+              {rows.some((r) => r.actions) && <th scope="col" className="w-px px-4 py-3" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border-subtle)]">
-            {rows.map((row, i) => {
-              const href = rowHref?.(row);
-              return (
-                <tr
-                  key={row.id}
-                  className={cn(
-                    "relative transition-colors",
-                    (href || onRowClick) && "hover:bg-[var(--bg-card-hover)] cursor-pointer",
-                    selected?.has(row.id) && "bg-[var(--accent-soft)]"
-                  )}
-                  onClick={!href ? () => onRowClick?.(row) : undefined}
-                >
-                  {selectable && (
-                    <td className="relative z-10 px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox checked={!!selected?.has(row.id)} onChange={() => toggleOne(row.id)} aria-label={`Select row ${i + 1}`} />
-                    </td>
-                  )}
-                  {columns.map((col, ci) => (
-                    <td
-                      key={col.key}
-                      className={cn(
-                        "px-4 relative",
-                        padY,
-                        alignClass[col.align ?? (col.numeric ? "right" : "left")],
-                        col.numeric && "tnum",
-                        col.hideBelow && HIDE_BELOW_CLASS[col.hideBelow],
-                        col.className
-                      )}
-                    >
-                      {href && ci === 0 && (
-                        <Link href={href} className="absolute inset-0 z-0" aria-label={`Open row ${i + 1}`} />
-                      )}
-                      <span className="relative z-[1]">{col.cell ? col.cell(row, i) : String((row as Record<string, unknown>)[col.key] ?? "—")}</span>
-                    </td>
-                  ))}
-                  {actions && (
-                    <td className="relative z-10 px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      {actions(row)}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
+            {rows.map((row, i) => (
+              <tr
+                key={row.id}
+                className={cn(
+                  "relative transition-colors",
+                  (row.href || onRowClick) && "hover:bg-[var(--bg-card-hover)] cursor-pointer",
+                  selected?.has(row.id) && "bg-[var(--accent-soft)]"
+                )}
+                onClick={!row.href ? () => onRowClick?.(row.id) : undefined}
+              >
+                {selectable && (
+                  <td className="relative z-10 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox checked={!!selected?.has(row.id)} onChange={() => toggleOne(row.id)} aria-label={`Select row ${i + 1}`} />
+                  </td>
+                )}
+                {columns.map((col, ci) => (
+                  <td
+                    key={col.key}
+                    className={cn(
+                      "px-4 relative",
+                      padY,
+                      alignClass[col.align ?? (col.numeric ? "right" : "left")],
+                      col.numeric && "tnum",
+                      col.hideBelow && HIDE_BELOW_CLASS[col.hideBelow],
+                      col.className
+                    )}
+                  >
+                    {row.href && ci === 0 && <Link href={row.href} className="absolute inset-0 z-0" aria-label={`Open row ${i + 1}`} />}
+                    <span className="relative z-[1]">{row.cells[col.key] ?? "—"}</span>
+                  </td>
+                ))}
+                {row.actions && (
+                  <td className="relative z-10 px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                    {row.actions}
+                  </td>
+                )}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

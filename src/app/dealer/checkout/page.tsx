@@ -57,7 +57,12 @@ interface DeliveryForm {
 // disabled so an unset/misconfigured flag never offers a payment method that
 // can't actually process anything. Flip to "true" (and set the Razorpay env
 // vars) once onboarded; no code changes needed on either side.
-export const RAZORPAY_ENABLED = process.env.NEXT_PUBLIC_RAZORPAY_ENABLED === "true";
+// Not exported: Next.js App Router page.tsx files may only export a fixed
+// allowlist (default, metadata, generateStaticParams, etc.) — an extra named
+// export here fails `next build`'s page-shape validation. Nothing outside
+// this file imported it (verified), so this is a same-behavior fix, not a
+// Razorpay integration change.
+const RAZORPAY_ENABLED = process.env.NEXT_PUBLIC_RAZORPAY_ENABLED === "true";
 
 const ALL_PAYMENT_OPTIONS = [
   {

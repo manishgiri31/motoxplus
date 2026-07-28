@@ -131,8 +131,11 @@ const nextConfig = {
     ],
   },
 
-  // Packages that should not be bundled for server components (stable since Next 15)
-  serverExternalPackages: ["@prisma/client", "bcryptjs", "sharp"],
+  // Packages that should not be bundled for server components (stable since Next 15).
+  // ioredis added alongside the instrumentation.ts/instrumentation-node.ts split — this
+  // keeps it a genuine Node require on the server target too, rather than something
+  // webpack tries to bundle (which is what broke that target originally).
+  serverExternalPackages: ["@prisma/client", "bcryptjs", "sharp", "ioredis"],
 
   experimental: {
     // Optimize package imports (tree-shake icon libs, etc.) — extended to cover every

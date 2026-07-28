@@ -97,10 +97,7 @@ export default async function AdminDashboardPage() {
                   </div>
                   <div>
                     <PartNo className="text-[var(--text-primary)] text-xs font-bold">{order.orderNumber}</PartNo>
-                    {/* Prisma's include-typing for a nested relation doesn't narrow past
-                        the base type here — pre-existing `as any`, kept as-is (not a
-                        Phase 1 concern; see the analogous cast this file already had). */}
-                    <div className="text-[var(--text-muted)] text-[10px] mt-0.5">{(order.dealer as any).companyName}</div>
+                    <div className="text-[var(--text-muted)] text-[10px] mt-0.5">{order.dealer.companyName}</div>
                   </div>
                 </div>
                 <div className="text-right flex items-center gap-3">

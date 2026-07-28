@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
+import { uniqueProductSlug } from "@/lib/slug";
 
 const VALID_GST = [0, 5, 12, 18, 28];
 const VALID_WARRANTY = ["No Warranty", "3 Months", "6 Months", "12 Months"];
@@ -249,7 +250,12 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
         }
         report.updated++;
       } else {
-        const created = await prisma.product.create({ data: row.data });
+        // slug is added here, not on `row.data` itself — that object is shared
+        // with the `update` branch above, and slug should stay stable across
+        // re-imports of an existing SKU, not be recomputed on every update.
+        const created = await prisma.product.create({
+          data: { ...row.data, slug: await uniqueProductSlug(row.data.name) },
+        });
         if (row.imageUrls.length > 0) {
           await prisma.productImage.createMany({
             data: row.imageUrls.map((url, idx) => ({
