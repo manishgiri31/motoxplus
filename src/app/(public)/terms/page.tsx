@@ -1,5 +1,3 @@
-import { Navbar } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 
 export const metadata = {
@@ -9,9 +7,10 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <>
-      <Navbar />
-      <main className="min-h-screen bg-[var(--bg-primary)] pt-24 pb-20">
+    // A plain div, not <main> — (public)/layout.tsx already renders the page's one
+    // <main> landmark; this page previously imported Navbar/Footer directly and
+    // nested a second <main> inside it, so it rendered the site chrome twice.
+    <div className="min-h-screen bg-[var(--bg-primary)] pt-24 pb-20">
         <div className="max-w-3xl mx-auto px-4 md:px-8">
           {/* Header */}
           <div className="mb-12">
@@ -239,9 +238,7 @@ export default function TermsPage() {
             </Link>
           </div>
         </div>
-      </main>
-      <Footer />
-    </>
+    </div>
   );
 }
 

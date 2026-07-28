@@ -195,9 +195,12 @@ const MAP: Record<StatusDomain, Record<string, StatusMeta>> = {
 };
 
 /** Canonical display order — drives FilterChips, pipeline columns, sort. */
-export const STATUS_ORDER: Record<StatusDomain, readonly string[]> = Object.fromEntries(
-  Object.entries(MAP).map(([domain, entries]) => [domain, Object.keys(entries)])
-) as Record<StatusDomain, readonly string[]>;
+export const STATUS_ORDER: Record<StatusDomain, readonly string[]> = (
+  Object.keys(MAP) as StatusDomain[]
+).reduce((acc, domain) => {
+  acc[domain] = Object.keys(MAP[domain]);
+  return acc;
+}, {} as Record<StatusDomain, readonly string[]>);
 
 export function statusMeta(domain: StatusDomain, value?: string | null): StatusMeta {
   if (!value) return FALLBACK;

@@ -459,9 +459,9 @@ tbody tr:hover {
 }
 
 /* ─── SIDEBAR — was `.light aside { ... !important }`, which fights every themed
-       sidebar token. Sidebars now read --sidebar-bg/--sidebar-border directly
-       (src/components/*/**-sidebar.tsx); this rule only supplies a safe default
-       for any aside that hasn't opted in yet. No !important. ─── */
+       sidebar token. Sidebars read --sidebar-bg / --sidebar-border directly
+       (the dealer, vendor and admin sidebar components); this rule only supplies
+       a safe default for any aside that hasn't opted in yet. No !important. ─── */
 aside {
   background: var(--sidebar-bg);
   border-color: var(--sidebar-border);

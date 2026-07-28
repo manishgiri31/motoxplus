@@ -14,6 +14,7 @@ const geistSans = localFont({
   weight: "100 900",
   display: "swap",
   preload: true,
+  fallback: ["system-ui", "Segoe UI", "Arial", "sans-serif"],
 });
 
 const geistMono = localFont({
@@ -22,16 +23,18 @@ const geistMono = localFont({
   weight: "100 900",
   display: "swap",
   preload: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "monospace"],
 });
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
+  // Single value, not a prefers-color-scheme media list: next-themes is configured
+  // with enableSystem={false} and defaultTheme="light" (src/components/providers.tsx),
+  // so the app's actual chrome color never follows the OS theme — a media-query list
+  // here previously gave OS-dark users dark mobile browser chrome around a light site.
+  themeColor: "#F4F4F6",
 };
 
 export const metadata: Metadata = {

@@ -36,9 +36,13 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       // Images: self, blob, data URIs, R2 CDN, Unsplash
       "img-src 'self' blob: data: https://*.r2.dev https://pub-966fa80d99d64e388b250232523a507f.r2.dev https://images.unsplash.com https://motoxplus.com",
+      // Video (VideoPlate, src/components/ui/video-plate.tsx) — was previously unset,
+      // which falls back to default-src 'self' and silently blocks any R2-hosted video.
+      "media-src 'self' blob: https://*.r2.dev https://pub-966fa80d99d64e388b250232523a507f.r2.dev https://motoxplus.com",
       "font-src 'self'",
-      // API calls: self + Razorpay APIs
-      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com",
+      // API calls: self + Razorpay APIs + R2 (presigned uploads from the admin/dealer
+      // image uploaders PUT directly to R2 from the browser)
+      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://*.r2.dev https://pub-966fa80d99d64e388b250232523a507f.r2.dev",
       // Razorpay checkout iframe
       "frame-src https://api.razorpay.com https://checkout.razorpay.com",
       "object-src 'none'",
@@ -103,6 +107,10 @@ const nextConfig = {
     // Use WebP/AVIF for all Next.js optimized images
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,
+    // Tuned for a catalogue/portal app rather than Next's general-purpose defaults,
+    // which over-generate sizes this app never requests (e.g. 3840px devices).
+    deviceSizes: [390, 640, 828, 1080, 1200, 1440, 1920],
+    imageSizes: [64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: "https",
@@ -127,8 +135,19 @@ const nextConfig = {
   serverExternalPackages: ["@prisma/client", "bcryptjs", "sharp"],
 
   experimental: {
-    // Optimize package imports (tree-shake icon libs, etc.)
-    optimizePackageImports: ["lucide-react", "framer-motion", "@radix-ui/react-dialog"],
+    // Optimize package imports (tree-shake icon libs, etc.) — extended to cover every
+    // Radix primitive now actually adopted in src/components/ui/ (previously only
+    // react-dialog was listed, despite the others being installed dependencies).
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-toast",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-progress",
+    ],
   },
 
   // Webpack customization
