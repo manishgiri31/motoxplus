@@ -28,9 +28,6 @@ export const buttonVariants = cva(
         secondary:
           "bg-[var(--surface-1)] border-[var(--border-strong)] text-[var(--text-primary)] " +
           "hover:bg-[var(--surface-2)] hover:border-[var(--input-border-hover)]",
-        ghost:
-          "bg-transparent border-transparent text-[var(--text-secondary)] " +
-          "hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]",
         outline:
           "bg-transparent border-[var(--accent)] text-[var(--accent-text)] hover:bg-[var(--accent-soft)]",
         danger:
@@ -39,6 +36,20 @@ export const buttonVariants = cva(
         link:
           "border-transparent bg-transparent h-auto p-0 normal-case tracking-normal " +
           "text-[var(--accent-text)] underline-offset-4 hover:underline",
+        // ── v2 design system (paper/ink/muted/line/red). Redefines "ghost": the one
+        // existing call site (dialog.tsx's Cancel button) picks up the new pill/
+        // normal-case geometry via compoundVariants below — a deliberate, contained
+        // visual change, not a name collision worked around. Geometry (pill shape,
+        // font-weight 600, 14.5px, 10px/20px padding, 180ms ease) lives in the
+        // compoundVariants below, shared by all three so it can't drift between them.
+        solid:
+          "bg-[var(--ink)] border-[var(--ink)] text-white " +
+          "hover:bg-[var(--ink)]/90 hover:-translate-y-px",
+        brand:
+          "bg-[var(--red)] border-[var(--red)] text-white " +
+          "hover:bg-[var(--red-hover)] hover:border-[var(--red-hover)]",
+        ghost:
+          "bg-transparent border-[var(--line)] text-[var(--ink)] hover:border-[var(--ink)]",
       },
       size: {
         xs: "h-7 px-2.5 text-[10px] rounded-sm [&_svg]:size-3",
@@ -55,7 +66,16 @@ export const buttonVariants = cva(
     // conflicts by keeping whichever class appears last — so this, not variant
     // ordering, is what makes `<Button variant="link">` actually stay text-sized
     // instead of getting silently re-heightened by the default size="md".
-    compoundVariants: [{ variant: "link", class: "h-auto p-0 [&_svg]:size-[1em]" }],
+    compoundVariants: [
+      { variant: "link", class: "h-auto p-0 [&_svg]:size-[1em]" },
+      {
+        variant: ["solid", "brand", "ghost"],
+        class:
+          "h-auto rounded-pill normal-case tracking-normal font-semibold text-[14.5px] " +
+          "px-5 py-2.5 transition-[background-color,border-color,color,box-shadow,transform] " +
+          "duration-[180ms] ease-[ease]",
+      },
+    ],
     defaultVariants: { variant: "primary", size: "md" },
   }
 );

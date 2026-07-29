@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { CANCELLABLE_STATUSES } from "@/lib/orders/cancellation";
+import { CancelOrderAction } from "@/components/orders/cancel-order-action";
 
 export default async function OrderDetailPage(
   props: {
@@ -24,6 +26,7 @@ export default async function OrderDetailPage(
       items: { include: { product: { include: { category: true } } } },
       payments: true,
       invoice: true,
+      cancellation: true,
     },
   });
 
@@ -44,15 +47,17 @@ export default async function OrderDetailPage(
           </h1>
           <p className="text-[var(--text-muted)] mt-1">Placed on {formatDate(order.createdAt)}</p>
         </div>
-        <div className="text-right">
+        <div className="text-right flex flex-col items-end gap-2">
           <span className={`text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-sm ${
             order.status === "DELIVERED" ? "bg-green-900/20 text-green-400" :
             order.status === "PENDING" ? "bg-yellow-900/20 text-yellow-400" :
             order.status === "CONFIRMED" ? "bg-blue-900/20 text-blue-400" :
+            order.status === "CANCELLED" ? "bg-[var(--red-soft)] text-[var(--red)]" :
             "bg-gray-900/20 text-[var(--text-muted)]"
           }`}>
             {order.status}
           </span>
+          {CANCELLABLE_STATUSES.includes(order.status) && <CancelOrderAction orderId={order.id} />}
         </div>
       </div>
 
@@ -133,6 +138,37 @@ export default async function OrderDetailPage(
                 </span>
               </div>
             </div>
+
+            {order.cancellation && order.cancellation.refundStatus !== "NOT_APPLICABLE" && (
+              <div className="mt-4 pt-4 border-t border-[var(--line)] text-xs">
+                {order.cancellation.refundStatus === "INITIATED" && (
+                  <p className="text-[var(--muted)] leading-relaxed">
+                    Refund of{" "}
+                    <span className="font-mono font-semibold text-[var(--ink)]">
+                      {formatCurrency(order.cancellation.refundAmount)}
+                    </span>{" "}
+                    initiated — usually 5–7 working days.
+                  </p>
+                )}
+                {order.cancellation.refundStatus === "PROCESSED" && (
+                  <p className="text-green-400 leading-relaxed">
+                    Refund of{" "}
+                    <span className="font-mono font-semibold">{formatCurrency(order.cancellation.refundAmount)}</span>{" "}
+                    completed.
+                  </p>
+                )}
+                {order.cancellation.refundStatus === "FAILED" && (
+                  <p className="text-[var(--red)] leading-relaxed">
+                    Refund of{" "}
+                    <span className="font-mono font-semibold">{formatCurrency(order.cancellation.refundAmount)}</span>{" "}
+                    failed.{" "}
+                    <Link href="/contact" className="underline hover:no-underline">
+                      Contact support
+                    </Link>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {order.invoice && (

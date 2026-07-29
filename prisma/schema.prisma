@@ -388,9 +388,34 @@ model OrderCancellation {
   refundId                 String?
   refundedAt               DateTime?
   refundError              String?
+  // Admin override: waiving zeroes feeAmount and refunds the full amountPaidAtCancellation.
+  // waivedByUserId is intentionally a plain string, not a relation — matches
+  // cancelledByUserId/OrderEvent.actorId's existing no-FK audit-field convention.
+  waived                   Boolean          @default(false)
+  waivedByUserId           String?
+  waivedAt                 DateTime?
   order                    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([refundStatus])
+}
+
+/**
+ * Singleton config row — always queried/updated by the fixed id "singleton"
+ * (seeded once in prisma/seed.ts), not `findFirst()`, so there's no ambiguity
+ * if a second row is ever accidentally created.
+ *
+ * Float, not Decimal — every other money/percent field in this schema
+ * (Order.grandTotal, Product.gstRate, OrderCancellation.feePercent, etc.) is
+ * Float with app-level rounding via roundToPaise(); introducing Decimal here
+ * would mean a second money-representation paradigm (Decimal.js objects
+ * needing .toNumber() before JSON responses) for these two fields alone.
+ */
+model CancellationPolicy {
+  id                    String   @id @default(cuid())
+  preShipChargePercent  Float    @default(2.0)
+  postShipChargePercent Float    @default(20.0)
+  updatedAt             DateTime @updatedAt
+  updatedById           String?
 }
 
 model OrderEvent {

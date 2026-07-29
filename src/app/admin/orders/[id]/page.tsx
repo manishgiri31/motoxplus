@@ -1,9 +1,22 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, Truck, FileText, CreditCard, MapPin } from "lucide-react";
+import { ArrowLeft, Package, Truck, FileText, CreditCard, MapPin, Ban } from "lucide-react";
 import { AdminOrderStatus } from "@/components/admin/order-status";
+import { CancelOrderAction } from "@/components/orders/cancel-order-action";
+import { CANCELLABLE_STATUSES } from "@/lib/orders/cancellation";
+
+const WAIVE_ROLES = ["SUPER_ADMIN", "ACCOUNTS"];
+
+const refundStatusColors: Record<string, string> = {
+  INITIATED: "text-yellow-400",
+  PROCESSED: "text-green-400",
+  FAILED: "text-red-400",
+  NOT_APPLICABLE: "text-[var(--text-muted)]",
+};
 
 const statusColors: Record<string, string> = {
   PENDING:    "bg-yellow-900/20 text-yellow-400 border-yellow-400/20",
@@ -23,6 +36,9 @@ const paymentColors: Record<string, string> = {
 
 export default async function AdminOrderDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
+  const session = await getServerSession(authOptions);
+  const canWaive = !!session && WAIVE_ROLES.includes(session.user.role);
+
   const order = await prisma.order.findUnique({
     where: { id: params.id },
     include: {
@@ -31,10 +47,15 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
       payments: { orderBy: { createdAt: "desc" } },
       invoice: true,
       shipment: true,
+      cancellation: true,
     },
   });
 
   if (!order) notFound();
+
+  const waivedByUser = order.cancellation?.waivedByUserId
+    ? await prisma.user.findUnique({ where: { id: order.cancellation.waivedByUserId }, select: { name: true } })
+    : null;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -59,6 +80,9 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
               {order.status}
             </span>
             <AdminOrderStatus orderId={order.id} currentStatus={order.status} />
+            {CANCELLABLE_STATUSES.includes(order.status) && (
+              <CancelOrderAction orderId={order.id} allowWaive={canWaive} />
+            )}
           </div>
         </div>
       </div>
@@ -170,6 +194,47 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
               </span>
             </div>
           </div>
+
+          {/* Cancellation */}
+          {order.cancellation && (
+            <div className="glass border border-[var(--border-color)] rounded-xl p-4 space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <Ban className="w-4 h-4 text-[var(--text-muted)]" />
+                <h2 className="font-semibold text-[var(--text-primary)] text-sm">Cancellation</h2>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--text-muted)]">Stage</span>
+                <span className="text-[var(--text-secondary)] font-mono text-xs uppercase">
+                  {order.cancellation.fromStatus === "SHIPPED" ? "POST_SHIP" : "PRE_SHIP"}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--text-muted)]">Charge</span>
+                <span className="text-[var(--text-secondary)] font-mono">
+                  {order.cancellation.feePercent}% · {formatCurrency(order.cancellation.feeAmount)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--text-muted)]">Refund Amount</span>
+                <span className="text-[var(--text-secondary)] font-mono">{formatCurrency(order.cancellation.refundAmount)}</span>
+              </div>
+              <div className="flex justify-between text-sm pt-1 border-t border-white/5">
+                <span className="text-[var(--text-muted)]">Refund Status</span>
+                <span className={`font-bold text-xs uppercase ${refundStatusColors[order.cancellation.refundStatus] ?? ""}`}>
+                  {order.cancellation.refundStatus}
+                </span>
+              </div>
+              {order.cancellation.waived && (
+                <p className="text-yellow-400 text-xs pt-1">
+                  Waived{waivedByUser?.name ? ` by ${waivedByUser.name}` : ""}
+                  {order.cancellation.waivedAt ? ` on ${formatDate(order.cancellation.waivedAt)}` : ""}
+                </p>
+              )}
+              {order.cancellation.reason && (
+                <p className="text-[var(--text-muted)] text-xs pt-1 leading-relaxed">&ldquo;{order.cancellation.reason}&rdquo;</p>
+              )}
+            </div>
+          )}
 
           {/* Dealer */}
           <div className="glass border border-[var(--border-color)] rounded-xl p-4">

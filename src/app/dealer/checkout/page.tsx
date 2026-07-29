@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
-import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone } from "lucide-react";
+import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone, Info } from "lucide-react";
 import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
@@ -119,6 +120,10 @@ export default function CheckoutPage() {
   const [paymentType, setPaymentType] = useState<PaymentType>(RAZORPAY_ENABLED ? "FULL_100" : "COD");
   const [upiEnabled, setUpiEnabled] = useState(false);
   const [notes, setNotes] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  // Defaults match CancellationPolicy's schema defaults — see prisma/schema.prisma
+  // — so the note reads correctly even before the fetch below resolves.
+  const [cancellationPolicy, setCancellationPolicy] = useState({ preShipChargePercent: 2, postShipChargePercent: 20 });
   const [loading, setLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(true);
   const [serviceabilityResult, setServiceabilityResult] = useState<ServiceabilityResult | null>(null);
@@ -183,6 +188,15 @@ export default function CheckoutPage() {
         const enabled = data.upiEnabled !== false;
         setUpiEnabled(enabled);
         if (enabled) setPaymentType("DIRECT_UPI");
+      })
+      .catch(() => {});
+
+    fetch("/api/admin/settings/cancellation-policy")
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data.preShipChargePercent === "number" && typeof data.postShipChargePercent === "number") {
+          setCancellationPolicy(data);
+        }
       })
       .catch(() => {});
 
@@ -379,6 +393,10 @@ export default function CheckoutPage() {
   const handlePlaceOrder = () => {
     if (!isDeliveryComplete) {
       alert("Please complete all delivery address fields.");
+      return;
+    }
+    if (!termsAccepted) {
+      alert("Please accept the Terms of Service and Cancellation Policy to place your order.");
       return;
     }
     if (paymentType === "COD") handleCOD();
@@ -605,6 +623,17 @@ export default function CheckoutPage() {
             </p>
           </div>
         )}
+
+        <div className="mt-4 flex items-start gap-2.5">
+          <Info size={13} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-[var(--text-muted)] text-xs leading-relaxed">
+            Cancellation policy: {cancellationPolicy.preShipChargePercent}% charge before dispatch ·{" "}
+            {cancellationPolicy.postShipChargePercent}% after dispatch · Non-cancellable after delivery.{" "}
+            <Link href="/cancellation-policy" target="_blank" className="text-red-500 hover:underline">
+              Read full policy
+            </Link>
+          </p>
+        </div>
       </div>
 
       {/* Notes */}
@@ -644,9 +673,30 @@ export default function CheckoutPage() {
           </div>
         )}
 
+        <label className="mb-4 flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            className="mt-0.5 accent-red-600 flex-shrink-0"
+          />
+          <span className="text-[var(--text-muted)] text-xs leading-relaxed">
+            I agree to the{" "}
+            <Link href="/terms" target="_blank" className="text-red-500 hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and the{" "}
+            <Link href="/cancellation-policy" target="_blank" className="text-red-500 hover:underline">
+              Cancellation Policy
+            </Link>{" "}
+            ({cancellationPolicy.preShipChargePercent}% charge before dispatch, {cancellationPolicy.postShipChargePercent}%
+            after dispatch, non-cancellable after delivery).
+          </span>
+        </label>
+
         <button
           onClick={handlePlaceOrder}
-          disabled={loading || !isDeliveryComplete}
+          disabled={loading || !isDeliveryComplete || !termsAccepted}
           className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
         >
           {loading ? (

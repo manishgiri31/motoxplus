@@ -1,0 +1,143 @@
+import { describe, it, expect } from "vitest";
+import {
+  evaluateCancellation,
+  calculateCancellation,
+  stageOf,
+  DEFAULT_CANCELLATION_POLICY,
+} from "./cancellation";
+
+const policy = DEFAULT_CANCELLATION_POLICY; // 2% pre-ship / 20% post-ship
+
+describe("stageOf", () => {
+  it("maps PENDING/CONFIRMED/PROCESSING to PRE_SHIP and SHIPPED to POST_SHIP", () => {
+    expect(stageOf("PENDING")).toBe("PRE_SHIP");
+    expect(stageOf("CONFIRMED")).toBe("PRE_SHIP");
+    expect(stageOf("PROCESSING")).toBe("PRE_SHIP");
+    expect(stageOf("SHIPPED")).toBe("POST_SHIP");
+  });
+
+  it("returns null for terminal statuses", () => {
+    expect(stageOf("DELIVERED")).toBeNull();
+    expect(stageOf("CANCELLED")).toBeNull();
+    expect(stageOf("RETURNED")).toBeNull();
+  });
+});
+
+describe("evaluateCancellation + calculateCancellation — pre-ship prepaid", () => {
+  it("charges the pre-ship % on a FULL_100 order before dispatch", () => {
+    const eligibility = evaluateCancellation({ status: "CONFIRMED", paymentType: "FULL_100", policy });
+    expect(eligibility).toEqual({ ok: true, stage: "PRE_SHIP", feePercent: 2 });
+
+    const quote = calculateCancellation({ feePercent: 2, amountPaid: 10000 });
+    expect(quote).toEqual({ feePercent: 2, feeAmount: 200, refundAmount: 9800, waived: false });
+  });
+
+  it("applies the same pre-ship % to PENDING and PROCESSING", () => {
+    for (const status of ["PENDING", "PROCESSING"] as const) {
+      const eligibility = evaluateCancellation({ status, paymentType: "FULL_100", policy });
+      expect(eligibility).toMatchObject({ ok: true, stage: "PRE_SHIP", feePercent: 2 });
+    }
+  });
+});
+
+describe("evaluateCancellation + calculateCancellation — post-ship prepaid", () => {
+  it("charges the post-ship % on a FULL_100 order once shipped", () => {
+    const eligibility = evaluateCancellation({ status: "SHIPPED", paymentType: "FULL_100", policy });
+    expect(eligibility).toEqual({ ok: true, stage: "POST_SHIP", feePercent: 20 });
+
+    const quote = calculateCancellation({ feePercent: 20, amountPaid: 10000 });
+    expect(quote).toEqual({ feePercent: 20, feeAmount: 2000, refundAmount: 8000, waived: false });
+  });
+});
+
+describe("advance-payment (ADVANCE_20) partial refund", () => {
+  it("computes the fee against amountPaid (the captured advance), not grandTotal", () => {
+    // Grand total 10,000, only the 20% advance (2,000) was ever captured.
+    const eligibility = evaluateCancellation({ status: "CONFIRMED", paymentType: "ADVANCE_20", policy });
+    expect(eligibility).toMatchObject({ ok: true, stage: "PRE_SHIP", feePercent: 2 });
+
+    const quote = calculateCancellation({ feePercent: eligibility.ok ? eligibility.feePercent : 0, amountPaid: 2000 });
+    expect(quote).toEqual({ feePercent: 2, feeAmount: 40, refundAmount: 1960, waived: false });
+  });
+
+  it("charges the post-ship % against the same captured advance once shipped", () => {
+    const eligibility = evaluateCancellation({ status: "SHIPPED", paymentType: "ADVANCE_20", policy });
+    expect(eligibility).toMatchObject({ ok: true, stage: "POST_SHIP", feePercent: 20 });
+
+    const quote = calculateCancellation({ feePercent: 20, amountPaid: 2000 });
+    expect(quote).toEqual({ feePercent: 20, feeAmount: 400, refundAmount: 1600, waived: false });
+  });
+});
+
+describe("pure COD, pre-ship — charge waived", () => {
+  it("allows cancellation with a 0 charge and 0 refund when nothing was paid", () => {
+    const eligibility = evaluateCancellation({ status: "CONFIRMED", paymentType: "COD", policy });
+    expect(eligibility).toEqual({ ok: true, stage: "PRE_SHIP", feePercent: 2 });
+
+    const quote = calculateCancellation({ feePercent: 2, amountPaid: 0 });
+    expect(quote).toEqual({ feePercent: 2, feeAmount: 0, refundAmount: 0, waived: true });
+  });
+});
+
+describe("post-ship COD — blocked", () => {
+  it("refuses cancellation once a COD order has shipped", () => {
+    const eligibility = evaluateCancellation({ status: "SHIPPED", paymentType: "COD", policy });
+    expect(eligibility).toEqual({
+      ok: false,
+      code: "COD_AFTER_SHIPPING",
+      message: "Shipped COD orders cannot be cancelled online, contact support.",
+    });
+  });
+});
+
+describe("delivered — blocked", () => {
+  it("refuses cancellation regardless of payment type", () => {
+    for (const paymentType of ["FULL_100", "ADVANCE_20", "COD"] as const) {
+      const eligibility = evaluateCancellation({ status: "DELIVERED", paymentType, policy });
+      expect(eligibility).toMatchObject({ ok: false, code: "DELIVERED" });
+    }
+  });
+});
+
+describe("already cancelled / returned — blocked", () => {
+  it("refuses re-cancellation", () => {
+    expect(evaluateCancellation({ status: "CANCELLED", paymentType: "FULL_100", policy })).toMatchObject({
+      ok: false,
+      code: "ALREADY_CANCELLED",
+    });
+  });
+
+  it("refuses cancellation once a return is in flight", () => {
+    expect(evaluateCancellation({ status: "RETURNED", paymentType: "FULL_100", policy })).toMatchObject({
+      ok: false,
+      code: "RETURNED",
+    });
+  });
+});
+
+describe("rounding — half-up to 2 decimals", () => {
+  it("rounds a ₹1,234.56 order's pre-ship charge correctly", () => {
+    // 1234.56 * 2% = 24.6912 -> 24.69
+    const quote = calculateCancellation({ feePercent: 2, amountPaid: 1234.56 });
+    expect(quote.feeAmount).toBe(24.69);
+    expect(quote.refundAmount).toBe(1209.87);
+  });
+
+  it("rounds the same order's post-ship charge correctly", () => {
+    // 1234.56 * 20% = 246.912 -> 246.91
+    const quote = calculateCancellation({ feePercent: 20, amountPaid: 1234.56 });
+    expect(quote.feeAmount).toBe(246.91);
+    expect(quote.refundAmount).toBe(987.65);
+  });
+
+  it("rounds .5-paise-and-above up, not down (half-up, not banker's rounding)", () => {
+    // 837.25 * 2% = 16.745 -> 16.75 (would be 16.74 under round-half-to-even)
+    const quote = calculateCancellation({ feePercent: 2, amountPaid: 837.25 });
+    expect(quote.feeAmount).toBe(16.75);
+  });
+
+  it("never lets refundAmount go negative", () => {
+    const quote = calculateCancellation({ feePercent: 100, amountPaid: 500 });
+    expect(quote.refundAmount).toBe(0);
+  });
+});

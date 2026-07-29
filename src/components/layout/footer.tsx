@@ -244,6 +244,9 @@ export function Footer() {
             <Link href="/terms" className="text-[var(--text-muted)] hover:text-red-500 text-xs transition-colors">
               Terms of Service
             </Link>
+            <Link href="/cancellation-policy" className="text-[var(--text-muted)] hover:text-red-500 text-xs transition-colors">
+              Cancellation Policy
+            </Link>
             {/* /sitemap has no page — only src/app/sitemap.ts, which serves /sitemap.xml */}
             <a href="/sitemap.xml" className="text-[var(--text-muted)] hover:text-red-500 text-xs transition-colors">
               Sitemap

@@ -198,6 +198,23 @@
   --scrollbar-track: #EFEFF2;
   --scrollbar-thumb: #C3C3CB;   /* was #DC2626 — red is action only; a red scrollbar
                                    dilutes the one signal color in the whole system */
+
+  /* ── MotoXplus v2 — brand redesign foundation. Additive: existing surfaces keep
+        reading --bg-primary/--text-primary/--accent/etc. until each is migrated
+        in a later phase. New work should use these directly. ── */
+  --paper: #FBFAF8;   /* page canvas — warm white, never pure white */
+  --card: #FFFFFF;
+  --ink: #17181A;
+  --muted: #6B6E73;
+  --line: #E7E5E1;
+  --red: #D01F25;
+  --red-hover: #B5181E;
+  --red-soft: #FCEFEF;
+
+  --radius-input: 10px;
+  --radius-card: 14px;
+  --radius-panel: 20px;
+  --radius-pill: 999px;
 }
 
 /* ══════════════════════ DARK — fully supported alternate ══════════════════════ */
@@ -250,6 +267,17 @@
   --hatch: rgba(255, 255, 255, 0.06);
 
   --scrollbar-track: #121215; --scrollbar-thumb: #34343C;
+
+  /* v2 tokens — aliased to the existing dark palette rather than given new hex
+     values, so toggling dark mode (theme-toggle.tsx) doesn't desync from it. */
+  --paper: var(--bg-primary);
+  --card: var(--bg-card);
+  --ink: var(--text-primary);
+  --muted: var(--text-muted);
+  --line: var(--border-color);
+  --red: var(--accent);
+  --red-hover: var(--accent-hover);
+  --red-soft: var(--accent-soft);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -292,9 +320,9 @@ html {
 }
 
 body {
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  font-family: var(--font-geist-sans), system-ui, "Segoe UI", Arial, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--font-body), var(--font-geist-sans), system-ui, "Segoe UI", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;

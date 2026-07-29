@@ -189,6 +189,18 @@ async function main() {
     console.log("✓ Test Vendor created: vendor@testparts.in / Vendor@123456");
   }
 
+  // Cancellation policy — fixed-id singleton, see prisma/schema.prisma comment.
+  await prisma.cancellationPolicy.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: {
+      id: "singleton",
+      preShipChargePercent: 2.0,
+      postShipChargePercent: 20.0,
+    },
+  });
+  console.log("✓ Cancellation policy seeded: 2% pre-ship / 20% post-ship");
+
   console.log("✅ Seeding complete!");
 }
 

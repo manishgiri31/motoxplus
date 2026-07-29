@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { MarkupSettingsForm } from "@/components/admin/markup-settings-form";
 import { UpiSettingsForm } from "@/components/admin/upi-settings-form";
+import { CancellationPolicySettingsForm } from "@/components/admin/cancellation-policy-settings-form";
+import { CANCELLATION_POLICY_ID, getCancellationPolicy } from "@/lib/orders/cancellation-policy";
+import { formatDate } from "@/lib/utils";
 
 const UPI_KEYS = ["upi_id", "upi_name", "upi_enabled", "bank_account_name", "bank_account_number", "bank_ifsc", "bank_account_type"];
 
@@ -21,6 +24,12 @@ export default async function AdminSettingsPage() {
   const vendorProductCount = await prisma.product.count({ where: { vendorId: { not: null } } });
   const pendingCount = await prisma.product.count({ where: { vendorId: { not: null }, isActive: false } });
   const liveCount = await prisma.product.count({ where: { vendorId: { not: null }, isActive: true } });
+
+  const cancellationPolicy = await getCancellationPolicy();
+  const cancellationPolicyRow = await prisma.cancellationPolicy.findUnique({ where: { id: CANCELLATION_POLICY_ID } });
+  const cancellationPolicyUpdater = cancellationPolicyRow?.updatedById
+    ? await prisma.user.findUnique({ where: { id: cancellationPolicyRow.updatedById }, select: { name: true } })
+    : null;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -55,6 +64,15 @@ export default async function AdminSettingsPage() {
       />
 
       <MarkupSettingsForm currentMarkup={currentMarkup} />
+
+      <div className="mt-6">
+        <CancellationPolicySettingsForm
+          currentPreShip={cancellationPolicy.preShipChargePercent}
+          currentPostShip={cancellationPolicy.postShipChargePercent}
+          updatedAt={cancellationPolicyRow ? formatDate(cancellationPolicyRow.updatedAt) : null}
+          updatedByName={cancellationPolicyUpdater?.name ?? null}
+        />
+      </div>
     </div>
   );
 }

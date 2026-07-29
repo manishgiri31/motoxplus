@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Schibsted_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -24,6 +25,28 @@ const geistMono = localFont({
   display: "swap",
   preload: false,
   fallback: ["ui-monospace", "SFMono-Regular", "monospace"],
+});
+
+// v2 design system — headings / body / technical-label (SKU, HSN, order ID) fonts.
+const schibstedGrotesk = Schibsted_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "700", "800"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
+  display: "swap",
 });
 
 export const viewport: Viewport = {
@@ -109,7 +132,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${schibstedGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable} antialiased`}
+      >
         <JsonLd
           data={{
             "@context": "https://schema.org",

@@ -44,10 +44,19 @@ const config: Config = {
     },
     extend: {
       colors: {
+        // MotoXplus v2 — brand redesign foundation tokens (paper/ink/muted/line/red).
+        // Plain hex custom properties, not RGB triplets — no <alpha-value> opacity
+        // modifier support (bg-paper/50 etc. won't work), unlike the ramps below.
+        paper: "var(--paper)",
+        card: "var(--card)",
+        ink: "var(--ink)",
+        muted: "var(--muted)",
+        line: "var(--line)",
+        // Replaces the old brand.red/red-dark/red-light keys (zero call sites in src/).
         brand: {
-          red: ch("--c-red-600"),
-          "red-dark": ch("--c-red-700"),
-          "red-light": ch("--c-red-400"),
+          DEFAULT: "var(--red)",
+          hover: "var(--red-hover)",
+          soft: "var(--red-soft)",
         },
         // Re-pointed at the carbon ramp so the ordering (900 = darkest) is
         // preserved; low usage today, kept for back-compat rather than deleted.
@@ -80,7 +89,14 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        // v2 — Schibsted Grotesk (headings) / Inter (body) / IBM Plex Mono (codes).
+        // `mono` is repointed from Geist Mono to IBM Plex Mono: font-mono already has
+        // 100 call sites across 46 files (SKUs/order IDs/HSN codes in dealer, vendor,
+        // admin, products), so this is an immediate, sitewide font change on every one
+        // of them, not something scoped to new/redesigned pages.
+        display: ["var(--font-display)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
+        body: ["var(--font-body)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
@@ -126,6 +142,13 @@ const config: Config = {
         "2xl": "var(--r-4)",
         "3xl": "var(--r-4)",
         full: "9999px",
+        // v2 radius scale — additive, distinct keys so existing rounded-sm/md/lg/xl
+        // call sites (tied to --r-0..--r-4, the deliberately tight/"engineered" scale)
+        // don't move.
+        input: "var(--radius-input)",
+        card: "var(--radius-card)",
+        panel: "var(--radius-panel)",
+        pill: "var(--radius-pill)",
       },
       borderWidth: {
         hairline: "1px",

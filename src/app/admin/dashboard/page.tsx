@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { Users, Package, ClipboardList, TrendingUp, ArrowRight, Clock } from "lucide-react";
+import { Users, Package, ClipboardList, TrendingUp, ArrowRight, Clock, Ban, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatGrid, StatCard } from "@/components/ui/stat-card";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,10 @@ import { Button } from "@/components/ui/button";
 export default async function AdminDashboardPage() {
   const session = await getServerSession(authOptions);
 
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
   const [
     totalDealers,
     pendingDealers,
@@ -24,6 +28,8 @@ export default async function AdminDashboardPage() {
     revenueData,
     recentOrders,
     recentDealers,
+    cancellationsThisMonth,
+    chargesThisMonth,
   ] = await Promise.all([
     prisma.dealer.count({ where: { status: "ACTIVE" } }),
     prisma.dealer.count({ where: { status: "PENDING" } }),
@@ -42,6 +48,8 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
       include: { user: true },
     }),
+    prisma.orderCancellation.count({ where: { cancelledAt: { gte: startOfMonth } } }),
+    prisma.orderCancellation.aggregate({ _sum: { feeAmount: true }, where: { cancelledAt: { gte: startOfMonth } } }),
   ]);
 
   return (
@@ -71,6 +79,25 @@ export default async function AdminDashboardPage() {
         />
         <StatCard icon={Package} label="Products" value={totalProducts} sub="active listings" href="/admin/products" tone="progress" />
         <StatCard icon={TrendingUp} label="Total Revenue" value={<Money amount={revenueData._sum.amount || 0} />} sub="paid orders" href="/admin/orders" tone="ok" />
+      </StatGrid>
+
+      <StatGrid cols={2} className="mb-8">
+        <StatCard
+          icon={Ban}
+          label="Cancellations"
+          value={cancellationsThisMonth}
+          sub="this month"
+          href="/admin/orders?status=CANCELLED"
+          tone="danger"
+        />
+        <StatCard
+          icon={Receipt}
+          label="Charges Collected"
+          value={<Money amount={chargesThisMonth._sum.feeAmount || 0} />}
+          sub="this month"
+          href="/admin/refunds"
+          tone="danger"
+        />
       </StatGrid>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

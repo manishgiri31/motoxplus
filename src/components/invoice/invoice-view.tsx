@@ -46,6 +46,12 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
   };
 
   const handleDownload = async () => {
+    // TODO(cancellation-charges): a cancelled order with a non-zero cancellation
+    // charge (see OrderCancellation.feeAmount) currently still shows this original
+    // tax invoice, unchanged — GST law generally expects a credit note against the
+    // charge retained, not a silent invoice/order-total mismatch. Needs a CA to
+    // confirm the required credit-note format (fields, numbering series, whether
+    // it nets against feeAmount or the full order) before building this.
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
 
