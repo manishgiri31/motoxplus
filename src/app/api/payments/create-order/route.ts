@@ -3,27 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { ok, badRequest, unauthorized, forbidden, notFound, serverError } from "@/lib/api";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { paymentDebug } from "@/lib/payment-debug"; // TODO(remove-before-prod)
-import Razorpay from "razorpay";
+import { getRazorpay } from "@/lib/razorpay";
 
 // Same flag the checkout page uses to hide the Full Payment/20% Advance
 // options — checked here too since the frontend hiding a button is not an
 // authorization control. Razorpay isn't configured on the merchant account
 // yet; this must reject even if someone calls the endpoint directly.
 const RAZORPAY_ENABLED = process.env.NEXT_PUBLIC_RAZORPAY_ENABLED === "true";
-
-// Singleton — avoid re-creating client on every request
-let _razorpay: Razorpay | null = null;
-function getRazorpay(): Razorpay {
-  if (!_razorpay) {
-    const key_id = process.env.RAZORPAY_KEY_ID;
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
-    if (!key_id || !key_secret) {
-      throw new Error("Razorpay credentials not configured");
-    }
-    _razorpay = new Razorpay({ key_id, key_secret });
-  }
-  return _razorpay;
-}
 
 export async function POST(req: NextRequest) {
   if (!RAZORPAY_ENABLED) {

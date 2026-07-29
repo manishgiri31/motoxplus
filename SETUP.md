@@ -148,3 +148,4 @@ Use a cloud PostgreSQL provider like:
 - Invoices are generated as PDF in-browser using jsPDF (no server storage needed for MVP)
 - Product images can be hosted on Cloudflare R2 or any public URL
 - GST calculation is automatic based on per-product GST rate (default 18%)
+    

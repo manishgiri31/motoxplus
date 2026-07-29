@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { generateOrderNumber, generateInvoiceNumber, roundToPaise } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 
 const FREE_DELIVERY_THRESHOLD = 25000;
 
@@ -153,62 +154,89 @@ export async function POST(req: NextRequest) {
     paymentType === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal
   );
 
-  const order = await prisma.order.create({
-    data: {
-      orderNumber: generateOrderNumber(),
-      dealerId: dealer.id,
-      subtotal,
-      gstAmount,
-      shippingCost,
-      grandTotal,
-      paymentType,
-      amountDue,
-      amountPaid: 0,
-      notes: isCOD ? `[COD ORDER] ${notes || ""}`.trim() : notes,
-      status: isCOD ? "CONFIRMED" : "PENDING",
-      paymentStatus: isCOD ? "PENDING" : "PENDING",
-      shippingAddress: deliveryAddress,
-      deliveryName: deliveryName || dealer.ownerName,
-      deliveryPhone: deliveryPhone || dealer.phone,
-      deliveryCity: deliveryCity || dealer.city,
-      deliveryState: deliveryState || dealer.state,
-      deliveryPincode,
-      items: {
-        create: cart.items.map((item) => {
-          const unitPrice = item.variant?.price ?? item.product.price;
-          // total derived from the already-rounded gstAmount (rather than its
-          // own independent unitPrice*qty*(1+gstRate/100) expression) so the
-          // two can't drift apart by a floating-point epsilon.
-          const itemGstAmount = roundToPaise((unitPrice * item.quantity * item.product.gstRate) / 100);
-          const itemTotal = roundToPaise(unitPrice * item.quantity + itemGstAmount);
-          return {
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          dealerId: dealer.id,
+          subtotal,
+          gstAmount,
+          shippingCost,
+          grandTotal,
+          paymentType,
+          amountDue,
+          amountPaid: 0,
+          notes: isCOD ? `[COD ORDER] ${notes || ""}`.trim() : notes,
+          status: isCOD ? "CONFIRMED" : "PENDING",
+          paymentStatus: isCOD ? "PENDING" : "PENDING",
+          // COD orders are created already CONFIRMED, so stock is reserved
+          // immediately; prepaid orders reserve it later, at payment
+          // confirmation (see payments/verify and admin/payments/verify).
+          stockReserved: isCOD,
+          shippingAddress: deliveryAddress,
+          deliveryName: deliveryName || dealer.ownerName,
+          deliveryPhone: deliveryPhone || dealer.phone,
+          deliveryCity: deliveryCity || dealer.city,
+          deliveryState: deliveryState || dealer.state,
+          deliveryPincode,
+          items: {
+            create: cart.items.map((item) => {
+              const unitPrice = item.variant?.price ?? item.product.price;
+              // total derived from the already-rounded gstAmount (rather than its
+              // own independent unitPrice*qty*(1+gstRate/100) expression) so the
+              // two can't drift apart by a floating-point epsilon.
+              const itemGstAmount = roundToPaise((unitPrice * item.quantity * item.product.gstRate) / 100);
+              const itemTotal = roundToPaise(unitPrice * item.quantity + itemGstAmount);
+              return {
+                productId: item.productId,
+                variantId: item.variantId ?? null,
+                variantLabel: item.variant?.label ?? null,
+                variantSku: (item.variant as any)?.sku ?? null,
+                quantity: item.quantity,
+                unitPrice,
+                gstRate: item.product.gstRate,
+                gstAmount: itemGstAmount,
+                total: itemTotal,
+              };
+            }),
+          },
+        },
+      });
+
+      if (isCOD) {
+        await decrementStock(
+          tx,
+          cart.items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId ?? null,
-            variantLabel: item.variant?.label ?? null,
-            variantSku: (item.variant as any)?.sku ?? null,
             quantity: item.quantity,
-            unitPrice,
-            gstRate: item.product.gstRate,
-            gstAmount: itemGstAmount,
-            total: itemTotal,
-          };
-        }),
-      },
-    },
-  });
+          }))
+        );
 
-  // COD: generate invoice immediately
-  if (isCOD) {
-    await prisma.invoice.create({
-      data: {
-        invoiceNumber: generateInvoiceNumber(),
-        orderId: order.id,
-        dealerId: dealer.id,
-        subtotal,
-        gstAmount,
-        grandTotal,
-      },
+        await tx.invoice.create({
+          data: {
+            invoiceNumber: generateInvoiceNumber(),
+            orderId: created.id,
+            dealerId: dealer.id,
+            subtotal,
+            gstAmount,
+            grandTotal,
+          },
+        });
+      }
+
+      return created;
     });
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json(
+        { error: "Some items in your cart are no longer available in the requested quantity. Please update your cart." },
+        { status: 409 }
+      );
+    }
+    throw err;
   }
 
   // Clear cart

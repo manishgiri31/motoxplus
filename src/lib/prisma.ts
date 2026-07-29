@@ -1,6 +1,8 @@
 import "@/lib/env"; // validate env vars on every cold start
 import { PrismaClient } from "@prisma/client";
 
+console.log("DATABASE_URL =", process.env.DATABASE_URL);
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -12,11 +14,11 @@ function createClient(): PrismaClient {
     log: isProd
       ? [{ emit: "event", level: "error" }]
       : [
-          { emit: "event", level: "error" },
-          { emit: "event", level: "warn" },
-          // Uncomment during query optimization:
-          // { emit: "event", level: "query" },
-        ],
+        { emit: "event", level: "error" },
+        { emit: "event", level: "warn" },
+        // Uncomment during query optimization:
+        // { emit: "event", level: "query" },
+      ],
   });
 }
 

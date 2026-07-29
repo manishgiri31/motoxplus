@@ -23,6 +23,7 @@ import {
   Kanban,
   UserCog,
   Banknote,
+  Bike,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
   { icon: Package, label: "Products", href: "/admin/products" },
+  { icon: Bike, label: "Vehicles", href: "/admin/vehicles" },
   { icon: Users, label: "Dealers", href: "/admin/dealers" },
   { icon: ClipboardList, label: "Orders", href: "/admin/orders" },
   { icon: FileText, label: "Invoices", href: "/admin/invoices" },
@@ -57,6 +59,7 @@ const ICON_MAP: Record<string, any> = {
   "/admin/crm/leads": UserSearch,
   "/admin/crm/pipeline": Kanban,
   "/admin/products": Package,
+  "/admin/vehicles": Bike,
   "/admin/procurement/grn": PackageCheck,
   "/admin/invoices": FileText,
   "/admin/payments": Banknote,

@@ -175,7 +175,6 @@ model Category {
 model Product {
   id              String                         @id @default(cuid())
   name            String
-  slug            String                         @unique
   sku             String                         @unique
   partNumber      String                         @unique
   description     String?
@@ -203,6 +202,7 @@ model Product {
   mrp             Float?
   vendorCostPrice Float?
   vendorId        String?
+  slug            String                         @unique
   cartItems       CartItem[]
   orderItems      OrderItem[]
   category        Category                       @relation(fields: [categoryId], references: [id])
@@ -354,8 +354,11 @@ model Order {
   deliveryPincode    String?
   deliveryState      String?
   shippingCost       Float               @default(0)
+  stockReserved      Boolean             @default(false)
   invoice            Invoice?
   dealer             Dealer              @relation(fields: [dealerId], references: [id])
+  cancellation       OrderCancellation?
+  events             OrderEvent[]
   items              OrderItem[]
   payments           Payment[]
   paymentSubmissions PaymentSubmission[]
@@ -366,6 +369,43 @@ model Order {
   @@index([status, createdAt])
   @@index([paymentStatus])
   @@index([createdAt])
+}
+
+model OrderCancellation {
+  id                       String           @id @default(cuid())
+  orderId                  String           @unique
+  fromStatus               OrderStatus
+  feePercent               Float
+  feeAmount                Float
+  amountPaidAtCancellation Float
+  refundAmount             Float
+  reasonCode               CancelReasonCode
+  reason                   String?          @db.VarChar(500)
+  cancelledAt              DateTime         @default(now())
+  cancelledByUserId        String
+  cancelledByRole          CancelActor
+  refundStatus             RefundStatus     @default(NOT_APPLICABLE)
+  refundId                 String?
+  refundedAt               DateTime?
+  refundError              String?
+  order                    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([refundStatus])
+}
+
+model OrderEvent {
+  id         String       @id @default(cuid())
+  orderId    String
+  type       String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus?
+  actorId    String?
+  actorRole  String?
+  reason     String?
+  createdAt  DateTime     @default(now())
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
 }
 
 model OrderItem {
@@ -845,7 +885,8 @@ model VehicleGallery {
   @@index([vehicleId])
 }
 
-/** One row per VehicleCategory — backs the category card image on /vehicles (Motorcycles, Scooters, Electric, Commercial). */
+/// *
+///  * One row per VehicleCategory — backs the category card image on /vehicles (Motorcycles, Scooters, Electric, Commercial).
 model VehicleType {
   id        String          @id @default(cuid())
   category  VehicleCategory @unique
@@ -1210,6 +1251,27 @@ enum PaymentType {
   ADVANCE_20
   FULL_100
   COD
+}
+
+enum CancelReasonCode {
+  CHANGED_MIND
+  ORDERED_BY_MISTAKE
+  FOUND_BETTER_PRICE
+  DELIVERY_TOO_SLOW
+  OTHER
+}
+
+enum CancelActor {
+  DEALER
+  ADMIN
+  SYSTEM
+}
+
+enum RefundStatus {
+  NOT_APPLICABLE
+  INITIATED
+  PROCESSED
+  FAILED
 }
 
 enum DealerDocumentType {

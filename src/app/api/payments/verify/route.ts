@@ -5,6 +5,7 @@ import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { paymentDebug } from "@/lib/payment-debug"; // TODO(remove-before-prod)
+import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId(req);
