@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { baseTemplate } from "@/lib/email/templates/base";
 import { generateInvoiceNumber } from "@/lib/utils";
+import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
         include: {
           dealer: { include: { user: { select: { email: true } } } },
           invoice: true,
+          items: true,
         },
       },
     },
@@ -36,43 +38,68 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 
   const now = new Date();
 
-  await prisma.$transaction(async (tx) => {
-    // Mark submission verified
-    await tx.paymentSubmission.update({
-      where: { id: params.id },
-      data: {
-        status: "VERIFIED",
-        verifiedAt: now,
-        verifiedBy: session.user.id,
-        notes: notes || null,
-      },
-    });
-
-    // Update order: paid + confirmed
-    await tx.order.update({
-      where: { id: submission.orderId },
-      data: {
-        paymentStatus: "PAID",
-        amountPaid: submission.order.amountDue,
-        amountDue: 0,
-        status: submission.order.status === "PENDING" ? "CONFIRMED" : submission.order.status,
-      },
-    });
-
-    // Generate invoice if not already created
-    if (!submission.order.invoice) {
-      await tx.invoice.create({
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Mark submission verified
+      await tx.paymentSubmission.update({
+        where: { id: params.id },
         data: {
-          invoiceNumber: generateInvoiceNumber(),
-          orderId: submission.orderId,
-          dealerId: submission.dealerId,
-          subtotal: submission.order.subtotal ?? 0,
-          gstAmount: submission.order.gstAmount ?? 0,
-          grandTotal: submission.order.grandTotal,
+          status: "VERIFIED",
+          verifiedAt: now,
+          verifiedBy: session.user.id,
+          notes: notes || null,
         },
       });
+
+      // Update order: paid + confirmed. Guarded on stockReserved so this is
+      // idempotent against a double-click / retried request — only the call
+      // that actually flips the flag decrements stock, matching the pattern
+      // used by the Razorpay verify and COD checkout paths (lib/orders/stock.ts).
+      const guarded = await tx.order.updateMany({
+        where: { id: submission.orderId, stockReserved: false },
+        data: {
+          paymentStatus: "PAID",
+          amountPaid: submission.order.amountDue,
+          amountDue: 0,
+          status: submission.order.status === "PENDING" ? "CONFIRMED" : submission.order.status,
+          stockReserved: true,
+        },
+      });
+
+      if (guarded.count > 0) {
+        await decrementStock(
+          tx,
+          submission.order.items.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.quantity,
+          }))
+        );
+      }
+
+      // Generate invoice if not already created
+      if (!submission.order.invoice) {
+        await tx.invoice.create({
+          data: {
+            invoiceNumber: generateInvoiceNumber(),
+            orderId: submission.orderId,
+            dealerId: submission.dealerId,
+            subtotal: submission.order.subtotal ?? 0,
+            gstAmount: submission.order.gstAmount ?? 0,
+            grandTotal: submission.order.grandTotal,
+          },
+        });
+      }
+    });
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json(
+        { error: "Cannot verify — one or more items on this order are no longer in stock. Adjust stock or contact the dealer before verifying." },
+        { status: 409 }
+      );
     }
-  });
+    throw err;
+  }
 
   // Reload the order with invoice for email
   const updatedOrder = await prisma.order.findUnique({

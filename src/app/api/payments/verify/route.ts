@@ -59,31 +59,55 @@ export async function POST(req: NextRequest) {
     });
     paymentDebug("verify: Payment row marked PAID", { orderId, razorpayOrderId }); // TODO(remove-before-prod)
 
-    // Update order
+    // Update order, reserve stock, and generate the invoice atomically. The
+    // `stockReserved: false` guard makes this idempotent against a retried
+    // verify call (network retry, duplicate webhook): only the call that
+    // actually flips the flag decrements stock / creates the invoice, so a
+    // repeat call is a safe no-op instead of double-decrementing.
     const isFullPayment = order.paymentType === "FULL_100";
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        amountPaid: order.amountDue,
-        amountDue: isFullPayment ? 0 : roundToPaise(order.grandTotal - order.amountDue),
-        paymentStatus: isFullPayment ? "PAID" : "PARTIAL",
-        status: "CONFIRMED",
-      },
+    let invoiceNumber: string | null = null;
+    await prisma.$transaction(async (tx) => {
+      const guarded = await tx.order.updateMany({
+        where: { id: orderId, stockReserved: false },
+        data: {
+          amountPaid: order.amountDue,
+          amountDue: isFullPayment ? 0 : roundToPaise(order.grandTotal - order.amountDue),
+          paymentStatus: isFullPayment ? "PAID" : "PARTIAL",
+          status: "CONFIRMED",
+          stockReserved: true,
+        },
+      });
+      if (guarded.count === 0) return;
+
+      await decrementStock(
+        tx,
+        order.items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        }))
+      );
+
+      invoiceNumber = generateInvoiceNumber();
+      await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          orderId,
+          dealerId: order.dealerId,
+          subtotal: order.subtotal,
+          gstAmount: order.gstAmount,
+          grandTotal: order.grandTotal,
+        },
+      });
     });
     paymentDebug("verify: Order marked CONFIRMED", { orderId, paymentStatus: isFullPayment ? "PAID" : "PARTIAL" }); // TODO(remove-before-prod)
 
-    // Generate invoice
-    const invoiceNumber = generateInvoiceNumber();
-    await prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        orderId,
-        dealerId: order.dealerId,
-        subtotal: order.subtotal,
-        gstAmount: order.gstAmount,
-        grandTotal: order.grandTotal,
-      },
-    });
+    if (!invoiceNumber) {
+      // Already processed by an earlier call to this endpoint — look up the
+      // invoice that call created instead of making a second one.
+      const existing = await prisma.invoice.findUnique({ where: { orderId } });
+      invoiceNumber = existing?.invoiceNumber ?? null;
+    }
     paymentDebug("verify: Invoice generated, returning success to client", { orderId, invoiceNumber }); // TODO(remove-before-prod)
 
     // Auto-create Delhivery shipment (fire-and-forget)
@@ -98,6 +122,15 @@ export async function POST(req: NextRequest) {
     // unhandled 500 with nothing to grep for.
     console.error(`[Payments] verify failed after Razorpay capture — orderId=${orderId} razorpayOrderId=${razorpayOrderId}:`, err);
     paymentDebug("verify: FAILED", { orderId, razorpayOrderId, error: err instanceof Error ? err.message : String(err) }); // TODO(remove-before-prod)
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json(
+        {
+          error:
+            "Your payment was received, but one or more items just went out of stock. Your payment is safe — please contact support with your order number to resolve this.",
+        },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: "Payment verification failed. Please contact support." }, { status: 500 });
   }
 }
