@@ -56,17 +56,6 @@ npm run dev
 
 Open http://localhost:3000
 
-### Default seed accounts
-
-| Role | Email | Password |
-|------|-------|----------|
-| Super Admin | superadmin@motoxplus.in | SuperAdmin@123 |
-| Admin | admin@motoxplus.in | Admin@123456 |
-| Dealer | dealer@testshop.in | Dealer@123456 |
-| Vendor | vendor@testparts.in | Vendor@123456 |
-    
-**Change these passwords immediately after first login on any non-local environment.**
-
 ## Scripts
 
 ```bash
