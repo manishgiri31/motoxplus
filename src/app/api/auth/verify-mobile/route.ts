@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyOTP } from "@/lib/auth/otp";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
 
 export async function POST(req: NextRequest) {
+  const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
+  if (oversized) return oversized;
+
   const userId = await getCurrentUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const limited = await enforceRateLimit(req, "OTP_VERIFY", userId);
+  if (limited) return limited;
 
   const { otp } = await req.json();
   if (!otp) return NextResponse.json({ error: "OTP is required" }, { status: 400 });

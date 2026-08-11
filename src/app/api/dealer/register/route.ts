@@ -7,6 +7,7 @@ import { sendEmail, verifyEmailTemplate, welcomeTemplate } from "@/lib/email";
 import { encrypt } from "@/lib/crypto/encryption";
 import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 const registerSchema = z.object({
   companyName: z.string().min(2),
@@ -34,8 +35,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = registerSchema.parse(body);
 
-    const normalizedMobile = data.phone.replace(/\s/g, "").replace("+91", "");
-    if (!/^[6-9]\d{9}$/.test(normalizedMobile)) {
+    const normalizedMobile = normalizeIndianMobile(data.phone);
+    if (!normalizedMobile) {
       return NextResponse.json({ error: "Invalid Indian mobile number" }, { status: 400 });
     }
 

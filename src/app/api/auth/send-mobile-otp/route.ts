@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createOTP, checkResendLimit } from "@/lib/auth/otp";
+import { createOTP, checkResendLimit, OTP_EXPIRY_MINUTES } from "@/lib/auth/otp";
 import { sendOTP } from "@/lib/sms";
-import { checkIPRateLimit } from "@/lib/auth/rate-limit";
-import { getClientIP } from "@/lib/auth/middleware";
+import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { normalizeIndianMobile } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIP(req);
-  if (!(await checkIPRateLimit(ip, 5, 60))) {
-    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
-  }
+  const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
+  if (oversized) return oversized;
 
   const userId = await getCurrentUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -23,6 +20,11 @@ export async function POST(req: NextRequest) {
   if (!normalizedMobile) {
     return NextResponse.json({ error: "Invalid Indian mobile number" }, { status: 400 });
   }
+
+  // Per-IP AND per-phone, checked once the number is known to be well-formed
+  // — this is an OTP send (WhatsApp/SMS cost), the strictest budget class.
+  const limited = await enforceRateLimit(req, "OTP_SEND", normalizedMobile);
+  if (limited) return limited;
 
   const existingUser = await prisma.user.findUnique({ where: { mobileNumber: normalizedMobile } });
   if (existingUser && existingUser.id !== userId) {
@@ -41,5 +43,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to send OTP. Try again." }, { status: 500 });
   }
 
-  return NextResponse.json({ message: "OTP sent to your mobile number", expires: 10 });
+  return NextResponse.json({ message: "OTP sent to your mobile number", expires: OTP_EXPIRY_MINUTES });
 }

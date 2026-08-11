@@ -1,40 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { createOTP, checkResendLimit } from "@/lib/auth/otp";
+import { createOTP, checkResendLimit, OTP_EXPIRY_MINUTES } from "@/lib/auth/otp";
 import { sendEmail, passwordResetTemplate } from "@/lib/email";
 import { sendOTP } from "@/lib/sms";
-import { checkIPRateLimit } from "@/lib/auth/rate-limit";
-import { getClientIP } from "@/lib/auth/middleware";
+import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
 import { normalizeIndianMobile } from "@/lib/phone";
 
 const GENERIC_MESSAGE = "If this account exists, an OTP has been sent.";
 
+// A same-shaped, same-length placeholder for the non-existent-account branch.
+// Returning `userId: null` (and omitting method/expires) previously made the
+// response distinguishable by shape alone even though the message text was
+// unified — a shorter payload / null id is just as much an oracle as a
+// different message. verify-forgot-password-otp treats any id that doesn't
+// resolve to a real user as an opaque "invalid OTP" failure (see that route),
+// so this value never needs to correspond to anything real.
+function opaqueFlowId(): string {
+  return "c" + crypto.randomBytes(12).toString("hex");
+}
+
 export async function POST(req: NextRequest) {
-  const ip = getClientIP(req);
-  if (!(await checkIPRateLimit(ip, 5, 60))) {
-    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
-  }
+  const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
+  if (oversized) return oversized;
 
   const { email, mobile, method } = await req.json();
 
-  // method: "email" | "mobile"
+  // method: "email" | "mobile" — identifier for the per-identifier OTP_SEND
+  // budget below is whichever of these two the request is actually keyed on.
   let user;
+  let rateLimitIdentifier: string | undefined;
   if (method === "mobile" && mobile) {
     const normalizedMobile = normalizeIndianMobile(mobile);
+    rateLimitIdentifier = normalizedMobile ?? undefined;
     user = normalizedMobile ? await prisma.user.findUnique({ where: { mobileNumber: normalizedMobile } }) : null;
   } else if (email) {
-    user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    rateLimitIdentifier = String(email).toLowerCase();
+    user = await prisma.user.findUnique({ where: { email: rateLimitIdentifier } });
   } else {
     return NextResponse.json({ error: "Email or mobile number required" }, { status: 400 });
   }
 
-  // Same message, same shape, whether or not the account exists — the
-  // previous code returned a *different* message ("OTP sent successfully")
-  // and echoed back the real userId only when the account existed, which
-  // let anyone probe arbitrary emails/phone numbers for registered accounts
-  // despite the comment's stated intent to prevent that.
+  const limited = await enforceRateLimit(req, "OTP_SEND", rateLimitIdentifier);
+  if (limited) return limited;
+
+  // Same message, same shape, whether or not the account exists.
   if (!user || !user.isActive) {
-    return NextResponse.json({ message: GENERIC_MESSAGE, userId: null });
+    return NextResponse.json({
+      message: GENERIC_MESSAGE,
+      userId: opaqueFlowId(),
+      method: method === "mobile" ? "mobile" : "email",
+      expires: OTP_EXPIRY_MINUTES,
+    });
   }
 
   const canSend = await checkResendLimit(user.id, "FORGOT_PASSWORD");
@@ -56,6 +73,6 @@ export async function POST(req: NextRequest) {
     message: GENERIC_MESSAGE,
     userId: user.id,
     method: method === "mobile" ? "mobile" : "email",
-    expires: 10,
+    expires: OTP_EXPIRY_MINUTES,
   });
 }

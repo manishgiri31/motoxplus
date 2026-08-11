@@ -77,19 +77,24 @@ export async function POST(req: NextRequest) {
       }
 
       const succeeded = event.event === "refund.processed";
-      await prisma.$transaction([
-        prisma.orderCancellation.update({
-          where: { id: cancellation.id },
-          data: {
-            refundStatus: succeeded ? "PROCESSED" : "FAILED",
-            refundedAt: succeeded ? new Date() : null,
-            refundError: succeeded ? null : refund.error_description || "Refund failed",
-          },
-        }),
-        ...(succeeded
-          ? [prisma.order.update({ where: { id: cancellation.orderId }, data: { paymentStatus: "REFUNDED" as const } })]
-          : []),
-      ]);
+
+      // Razorpay retries webhooks on anything but a fast 2xx, and the same
+      // event can legitimately arrive twice. Guard on refundStatus still
+      // being INITIATED (same updateMany-guard pattern as the payment/cancel
+      // routes) so a replayed or duplicate delivery is a no-op instead of
+      // re-firing the Order.paymentStatus update a second time.
+      const guarded = await prisma.orderCancellation.updateMany({
+        where: { id: cancellation.id, refundStatus: "INITIATED" },
+        data: {
+          refundStatus: succeeded ? "PROCESSED" : "FAILED",
+          refundedAt: succeeded ? new Date() : null,
+          refundError: succeeded ? null : refund.error_description || "Refund failed",
+        },
+      });
+
+      if (guarded.count > 0 && succeeded) {
+        await prisma.order.update({ where: { id: cancellation.orderId }, data: { paymentStatus: "REFUNDED" } });
+      }
     }
 
     return NextResponse.json({ ok: true });

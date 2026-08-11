@@ -2,24 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession } from "@/lib/auth/session";
-import { recordFailedLogin, clearFailedLogins, isAccountLocked, checkIPRateLimit } from "@/lib/auth/rate-limit";
+import { recordFailedLogin, clearFailedLogins, isAccountLocked } from "@/lib/auth/rate-limit";
+import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
 import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
 import { COOKIE_ACCESS, COOKIE_REFRESH, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from "@/lib/auth/jwt";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 export async function POST(req: NextRequest) {
-  const ip = getClientIP(req);
-  if (!(await checkIPRateLimit(ip, 10, 60))) {
-    return NextResponse.json({ error: "Too many login attempts. Try again in a minute." }, { status: 429 });
-  }
+  const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
+  if (oversized) return oversized;
 
+  const ip = getClientIP(req);
   const { email, mobile, password } = await req.json();
   const identifier = (email || mobile || "").trim();
   if (!identifier || !password) {
     return NextResponse.json({ error: "Email or mobile number, and password are required" }, { status: 400 });
   }
 
-  const normalizedMobile = identifier.replace(/\s/g, "").replace("+91", "");
-  const isMobile = /^[6-9]\d{9}$/.test(normalizedMobile);
+  const normalized = normalizeIndianMobile(identifier);
+  const isMobile = normalized !== null;
+  const normalizedMobile = normalized ?? identifier;
+
+  // Per-IP AND per-identifier (fail-closed: an outage shouldn't turn login
+  // brute-forcing unlimited).
+  const limited = await enforceRateLimit(req, "LOGIN", isMobile ? normalizedMobile : identifier.toLowerCase());
+  if (limited) return limited;
 
   const user = await prisma.user.findUnique({
     where: isMobile ? { mobileNumber: normalizedMobile } : { email: identifier.toLowerCase() },

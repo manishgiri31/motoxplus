@@ -5,6 +5,7 @@ import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
+import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
 
 const FREE_DELIVERY_THRESHOLD = 25000;
 
@@ -67,6 +68,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const oversized = rejectOversizedBody(req, 8 * 1024);
+  if (oversized) return oversized;
+
   const userId = await getCurrentUserId(req);
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -98,6 +102,9 @@ export async function POST(req: NextRequest) {
 
   const dealer = await getVerifiedDealer(userId);
   if (!dealer) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
+
+  const limited = await enforceRateLimit(req, "ORDER_CREATE", dealer.id);
+  if (limited) return limited;
 
   const cart = await prisma.cart.findUnique({
     where: { dealerId: dealer.id },

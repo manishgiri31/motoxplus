@@ -12,6 +12,7 @@ import {
   type PaymentTypeForCancellation,
 } from "@/lib/orders/cancellation";
 import { getCancellationPolicy } from "@/lib/orders/cancellation-policy";
+import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
 
 const WAIVE_ROLES = ["SUPER_ADMIN", "ACCOUNTS"];
 const CANCEL_ROLES = ["ADMIN", "SUPER_ADMIN", "ACCOUNTS"];
@@ -60,6 +61,9 @@ async function buildPreviewPayload(orderId: string) {
 }
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const oversized = rejectOversizedBody(req, 4 * 1024);
+  if (oversized) return oversized;
+
   const params = await props.params;
   const userId = await getCurrentUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -71,6 +75,9 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   if (!isDealerActor && !CANCEL_ROLES.includes(authUser.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const limited = await enforceRateLimit(req, "ORDER_CANCEL", userId);
+  if (limited) return limited;
 
   const body = (await req.json().catch(() => ({}))) as CancelBody;
   const reasonCode: CancelReasonCode = REASON_CODES.includes(body.reasonCode as CancelReasonCode)

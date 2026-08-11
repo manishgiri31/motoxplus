@@ -47,36 +47,38 @@ export async function isAccountLocked(userId: string): Promise<{ locked: boolean
   return { locked: false };
 }
 
-// In-memory IP rate limiter — fallback when REDIS_URL isn't configured.
+// In-memory keyed rate limiter — fallback when REDIS_URL isn't configured
+// (or, for failMode:"open" callers, when Redis is momentarily unreachable).
 // Only effective on single-instance servers: ecosystem.config.js runs PM2 in
 // cluster mode with `instances: "max"` (one worker per CPU core), and each
 // worker has its own independent Map. Under cluster mode the *effective*
 // limit is silently multiplied by the number of workers — e.g. on a 4-core
-// box, "5 requests/60s per IP" actually allows ~20/60s, since requests
-// round-robin across workers that don't share this Map. Set REDIS_URL in
-// production so the counter below is shared across all workers instead.
-const ipStore = new Map<string, { count: number; resetAt: number }>();
+// box, "5 requests/60s" actually allows ~20/60s, since requests round-robin
+// across workers that don't share this Map. Set REDIS_URL in production so
+// the counter below is shared across all workers instead.
+const memoryStore = new Map<string, { count: number; resetAt: number }>();
 
 // Purge expired entries every 5 minutes to prevent unbounded memory growth
 setInterval(() => {
   const now = Date.now();
-  ipStore.forEach((entry, key) => {
-    if (entry.resetAt < now) ipStore.delete(key);
+  memoryStore.forEach((entry, key) => {
+    if (entry.resetAt < now) memoryStore.delete(key);
   });
 }, 5 * 60 * 1000);
 
-function checkIPRateLimitInMemory(ip: string, maxRequests: number, windowSeconds: number): boolean {
+function checkInMemory(key: string, maxRequests: number, windowSeconds: number): { allowed: boolean; retryAfterSeconds: number } {
   const now = Date.now();
-  const entry = ipStore.get(ip);
+  const entry = memoryStore.get(key);
 
   if (!entry || entry.resetAt < now) {
-    ipStore.set(ip, { count: 1, resetAt: now + windowSeconds * 1000 });
-    return true;
+    memoryStore.set(key, { count: 1, resetAt: now + windowSeconds * 1000 });
+    return { allowed: true, retryAfterSeconds: windowSeconds };
   }
 
-  if (entry.count >= maxRequests) return false;
+  const retryAfterSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+  if (entry.count >= maxRequests) return { allowed: false, retryAfterSeconds };
   entry.count++;
-  return true;
+  return { allowed: true, retryAfterSeconds };
 }
 
 // Atomic increment-and-expire in one round trip: without the Lua script, a
@@ -91,17 +93,44 @@ end
 return current
 `;
 
-export async function checkIPRateLimit(ip: string, maxRequests = 10, windowSeconds = 60): Promise<boolean> {
+export type FailMode = "open" | "closed";
+
+/**
+ * The one primitive every rate limit in the app goes through — arbitrary
+ * key (caller decides the namespace: "ip:...", "id:...", etc.), a budget,
+ * and a fail-open/fail-closed choice for what happens if Redis is down. See
+ * rate-limit-budgets.ts for the actual per-route-class budgets and the
+ * failMode reasoning.
+ */
+export async function checkRateLimit(
+  key: string,
+  opts: { max: number; windowSeconds: number; failMode?: FailMode }
+): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  const { max, windowSeconds, failMode = "open" } = opts;
   const redis = getRedis();
-  if (!redis) return checkIPRateLimitInMemory(ip, maxRequests, windowSeconds);
+
+  if (!redis) {
+    if (failMode === "closed") return { allowed: false, retryAfterSeconds: windowSeconds };
+    return checkInMemory(key, max, windowSeconds);
+  }
 
   try {
-    const count = (await redis.eval(RATE_LIMIT_SCRIPT, 1, `ratelimit:${ip}`, windowSeconds)) as number;
-    return count <= maxRequests;
+    const count = (await redis.eval(RATE_LIMIT_SCRIPT, 1, `ratelimit:${key}`, windowSeconds)) as number;
+    return { allowed: count <= max, retryAfterSeconds: windowSeconds };
   } catch (err) {
-    // Redis hiccup shouldn't take down login/OTP endpoints — degrade to the
-    // (weaker, per-worker) in-memory limiter rather than failing the request.
-    console.error("[RateLimit] Redis error, falling back to in-memory:", err);
-    return checkIPRateLimitInMemory(ip, maxRequests, windowSeconds);
+    console.error("[RateLimit] Redis error:", err);
+    if (failMode === "closed") return { allowed: false, retryAfterSeconds: windowSeconds };
+    // Read-only/public routes shouldn't go down over a Redis blip — degrade
+    // to the (weaker, per-worker) in-memory limiter instead of failing the request.
+    return checkInMemory(key, max, windowSeconds);
   }
+}
+
+// Back-compat wrapper — existing call sites across the app use this
+// IP-only, fail-open shape. New routes should prefer enforceRateLimit() in
+// rate-limit-budgets.ts, which adds per-identifier budgets, Retry-After, and
+// explicit fail-open/closed per route class.
+export async function checkIPRateLimit(ip: string, maxRequests = 10, windowSeconds = 60): Promise<boolean> {
+  const { allowed } = await checkRateLimit(`ip:${ip}`, { max: maxRequests, windowSeconds, failMode: "open" });
+  return allowed;
 }

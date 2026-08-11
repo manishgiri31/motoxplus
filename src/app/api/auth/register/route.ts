@@ -6,6 +6,7 @@ import { sendEmail, verifyEmailTemplate, welcomeTemplate } from "@/lib/email";
 import { encrypt } from "@/lib/crypto/encryption";
 import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
@@ -36,10 +37,11 @@ export async function POST(req: NextRequest) {
 
   let normalizedMobile: string | undefined;
   if (phone) {
-    normalizedMobile = String(phone).replace(/\s/g, "").replace("+91", "");
-    if (!/^[6-9]\d{9}$/.test(normalizedMobile)) {
+    const normalized = normalizeIndianMobile(String(phone));
+    if (!normalized) {
       return NextResponse.json({ error: "Invalid Indian mobile number" }, { status: 400 });
     }
+    normalizedMobile = normalized;
   }
 
   if (password.length < 8) {
