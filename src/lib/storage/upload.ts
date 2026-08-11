@@ -39,39 +39,44 @@ export async function uploadBuffer(
 /**
  * Upload a product image with WebP conversion and 3 variants.
  * Uses sharp for conversion and resize.
- * Falls back to raw upload if sharp fails.
+ *
+ * Only falls back to a raw upload if the sharp *module* can't be loaded at
+ * all (e.g. its native binary missing for this platform) — callers are
+ * expected to have already confirmed the buffer decodes as a real image
+ * (see lib/storage/validate.ts) before reaching here, so a decode/convert
+ * failure on an already-loaded sharp module is treated as a real error
+ * instead of silently storing unprocessed, unvalidated bytes.
  */
 export async function uploadProductImage(
   inputBuffer: Buffer,
   keys: { orig: string; med: string; thumb: string }
 ): Promise<ProductImageUploadResult> {
-  let origBuf: Buffer;
-  let medBuf: Buffer;
-  let thumbBuf: Buffer;
-
+  let sharp: (typeof import("sharp"))["default"];
   try {
-    const sharp = (await import("sharp")).default;
-
-    [origBuf, medBuf, thumbBuf] = await Promise.all([
-      sharp(inputBuffer)
-        .resize({ width: 2400, height: 2400, fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 90 })
-        .toBuffer(),
-      sharp(inputBuffer)
-        .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 85 })
-        .toBuffer(),
-      sharp(inputBuffer)
-        .resize({ width: 300, height: 300, fit: "cover" })
-        .webp({ quality: 80 })
-        .toBuffer(),
-    ]);
+    sharp = (await import("sharp")).default;
   } catch {
-    // Sharp unavailable — upload as-is (still works, just no optimization)
-    origBuf = inputBuffer;
-    medBuf = inputBuffer;
-    thumbBuf = inputBuffer;
+    const [original, medium, thumbnail] = await Promise.all([
+      uploadBuffer(inputBuffer, keys.orig, "image/webp"),
+      uploadBuffer(inputBuffer, keys.med, "image/webp"),
+      uploadBuffer(inputBuffer, keys.thumb, "image/webp"),
+    ]);
+    return { original, medium, thumbnail };
   }
+
+  const [origBuf, medBuf, thumbBuf] = await Promise.all([
+    sharp(inputBuffer)
+      .resize({ width: 2400, height: 2400, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 90 })
+      .toBuffer(),
+    sharp(inputBuffer)
+      .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 85 })
+      .toBuffer(),
+    sharp(inputBuffer)
+      .resize({ width: 300, height: 300, fit: "cover" })
+      .webp({ quality: 80 })
+      .toBuffer(),
+  ]);
 
   const [original, medium, thumbnail] = await Promise.all([
     uploadBuffer(origBuf, keys.orig, "image/webp"),

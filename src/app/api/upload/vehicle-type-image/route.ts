@@ -8,6 +8,7 @@ import {
   IMAGE_MIME_TYPES,
   MAX_IMAGE_SIZE,
   logStorageAction,
+  detectImageMimeType,
 } from "@/lib/storage";
 
 /** Category-card hero images for the /vehicles landing page (Motorcycles, Scooters, Electric, Commercial). */
@@ -43,6 +44,13 @@ export async function POST(req: NextRequest) {
 
   const uuid = newUUID();
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (!(await detectImageMimeType(buffer))) {
+    return NextResponse.json(
+      { error: "File content is not a valid JPG, PNG, or WEBP image." },
+      { status: 400 }
+    );
+  }
 
   try {
     const { original, medium, thumbnail } = await uploadProductImage(buffer, {

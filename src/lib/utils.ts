@@ -50,6 +50,25 @@ export function roundToPaise(amount: number): number {
   return Math.round((amount + Number.EPSILON) * 100) / 100;
 }
 
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+/**
+ * Escapes user-supplied text before interpolating it into an HTML email
+ * template. Templates in src/lib/email/templates/* build markup via plain
+ * string interpolation (no JSX/React escaping), so any field sourced from a
+ * request body — payer name, UTR, order notes, etc. — must be run through
+ * this first or it becomes an HTML/link-injection vector in outbound mail.
+ */
+export function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch]);
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()

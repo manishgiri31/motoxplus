@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { paymentDebug } from "@/lib/payment-debug"; // TODO(remove-before-prod)
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 
@@ -42,9 +43,13 @@ export async function POST(req: NextRequest) {
 
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-    // Ensure the order belongs to the requesting dealer
-    const dealer = await prisma.dealer.findUnique({ where: { userId } });
-    if (!dealer || order.dealerId !== dealer.id) {
+    // Ensure the order belongs to the requesting dealer, and that the
+    // account is still verified/approved (not just holding a valid session).
+    const dealer = await getVerifiedDealer(userId);
+    if (!dealer) {
+      return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
+    }
+    if (order.dealerId !== dealer.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

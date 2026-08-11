@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 import { calculateShippingRate } from "@/lib/delhivery";
 
 const ORIGIN_PINCODE = process.env.DELHIVERY_ORIGIN_PINCODE || "110046";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

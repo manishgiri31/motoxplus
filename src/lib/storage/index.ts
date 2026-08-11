@@ -17,6 +17,7 @@ export type { UploadResult, ProductImageUploadResult } from "./upload";
 export { deleteFile, deleteProductImage, deleteFiles } from "./delete";
 export { generateSignedUrl } from "./signed";
 export { logStorageAction } from "./audit";
+export { looksLikePdf, detectImageMimeType } from "./validate";
 export type { AuditAction } from "./audit";
 
 // Allowed MIME types for product images

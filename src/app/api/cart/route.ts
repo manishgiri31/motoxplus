@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 
 // Accepts either the web NextAuth session or the mobile/plain-login JWT
 // (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
@@ -51,8 +52,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const dealer = await prisma.dealer.findUnique({ where: { userId } });
-  if (!dealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
+  const dealer = await getVerifiedDealer(userId);
+  if (!dealer) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
 
   const product = await prisma.product.findUnique({ where: { id: productId, isActive: true } });
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });

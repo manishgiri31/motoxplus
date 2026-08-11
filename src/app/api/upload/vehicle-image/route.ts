@@ -7,6 +7,7 @@ import {
   IMAGE_MIME_TYPES,
   MAX_IMAGE_SIZE,
   logStorageAction,
+  detectImageMimeType,
 } from "@/lib/storage";
 
 /** Shared by the vehicle hero-image field and the gallery manager — both just need a WebP-optimized upload. */
@@ -38,6 +39,13 @@ export async function POST(req: NextRequest) {
 
   const uuid = newUUID();
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (!(await detectImageMimeType(buffer))) {
+    return NextResponse.json(
+      { error: "File content is not a valid JPG, PNG, or WEBP image." },
+      { status: 400 }
+    );
+  }
 
   try {
     const { original, medium, thumbnail } = await uploadProductImage(buffer, {

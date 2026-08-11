@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { baseTemplate } from "@/lib/email/templates/base";
+import { escapeHtml } from "@/lib/utils";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 
   const submission = await prisma.paymentSubmission.findUnique({
     where: { id: params.id },
-    include: { order: true },
+    include: { order: { include: { dealer: { include: { user: { select: { email: true } } } } } } },
   });
 
   if (!submission) return NextResponse.json({ error: "Submission not found." }, { status: 404 });
@@ -46,21 +47,23 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }),
   ]);
 
-  // Notify dealer
+  // Notify dealer — sent to the dealer's own account email, not the
+  // client-supplied payerEmail captured at submission time, and with all
+  // submission-sourced fields HTML-escaped before interpolation.
   sendEmail({
-    to: submission.payerEmail,
+    to: submission.order.dealer.user.email,
     subject: `Payment Rejected — Order #${submission.order.orderNumber} | MOTOXPLUS`,
     html: baseTemplate("Payment Rejected", `
       <div class="title">Payment Could Not Be Verified</div>
-      <p class="text">Hi ${submission.payerName},</p>
+      <p class="text">Hi ${escapeHtml(submission.payerName)},</p>
       <p class="text">Unfortunately, we were unable to verify your payment for order <strong style="color:#fff;">#${submission.order.orderNumber}</strong>.</p>
       <div class="warning">
-        <div class="warning-text"><strong>Reason:</strong> ${reason.trim()}</div>
+        <div class="warning-text"><strong>Reason:</strong> ${escapeHtml(reason.trim())}</div>
       </div>
       <div class="otp-box" style="text-align:left;">
         <table style="width:100%;border-collapse:collapse;">
           <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Order Number</td><td style="color:#fff;font-size:13px;font-weight:700;text-align:right;">#${submission.order.orderNumber}</td></tr>
-          <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Submitted UTR</td><td style="color:#fff;font-size:13px;font-family:monospace;text-align:right;">${submission.utrNumber}</td></tr>
+          <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Submitted UTR</td><td style="color:#fff;font-size:13px;font-family:monospace;text-align:right;">${escapeHtml(submission.utrNumber)}</td></tr>
         </table>
       </div>
       <p class="text">Please resubmit your payment details from your dealer portal. If you believe this is an error, contact us at accounts@motoxplus.in</p>

@@ -8,6 +8,7 @@ import {
   IMAGE_MIME_TYPES,
   MAX_IMAGE_SIZE,
   logStorageAction,
+  detectImageMimeType,
 } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
@@ -40,6 +41,16 @@ export async function POST(req: NextRequest) {
 
   const uuid = newUUID();
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  // `file.type` above is client-declared and trivially spoofable — confirm
+  // the bytes actually decode as one of the accepted image formats before
+  // this reaches storage.
+  if (!(await detectImageMimeType(buffer))) {
+    return NextResponse.json(
+      { error: "File content is not a valid JPG, PNG, or WEBP image." },
+      { status: 400 }
+    );
+  }
 
   try {
     const { original, medium, thumbnail } = await uploadProductImage(buffer, {

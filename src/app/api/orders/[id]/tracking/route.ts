@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchLiveTracking, syncTrackingToDb } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { requireSectionAccess } from "@/lib/staff-access";
 
 // Accepts either the web NextAuth session or the mobile/plain-login JWT
 // (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
@@ -9,7 +10,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
   const params = await props.params;
   const userId = await getCurrentUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, department: true } });
   if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const order = await prisma.order.findUnique({
@@ -24,12 +25,16 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // Dealer access control
+  // Dealer access control — non-dealer roles need admin/order-section staff
+  // access, otherwise any authenticated non-dealer role (e.g. VENDOR) could
+  // fetch any order's waybill/tracking/dealer info by id (IDOR).
   if (authUser.role === "DEALER") {
     const dealer = await prisma.dealer.findUnique({ where: { userId } });
     if (order.dealerId !== dealer?.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+  } else if (!requireSectionAccess(authUser.role, authUser.department, "orders")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (!order.shipment) {

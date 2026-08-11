@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { generateOrderNumber, generateInvoiceNumber, roundToPaise } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 
 const FREE_DELIVERY_THRESHOLD = 25000;
@@ -95,8 +96,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Valid delivery pincode is required" }, { status: 400 });
   }
 
-  const dealer = await prisma.dealer.findUnique({ where: { userId } });
-  if (!dealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
+  const dealer = await getVerifiedDealer(userId);
+  if (!dealer) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
 
   const cart = await prisma.cart.findUnique({
     where: { dealerId: dealer.id },

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, badRequest, unauthorized, forbidden, notFound, serverError } from "@/lib/api";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { paymentDebug } from "@/lib/payment-debug"; // TODO(remove-before-prod)
 import { getRazorpay } from "@/lib/razorpay";
 
@@ -42,11 +43,12 @@ export async function POST(req: NextRequest) {
   try {
     const [order, dealer] = await Promise.all([
       prisma.order.findUnique({ where: { id: orderId } }),
-      prisma.dealer.findUnique({ where: { userId } }),
+      getVerifiedDealer(userId),
     ]);
 
     if (!order) return notFound("Order");
-    if (!dealer || order.dealerId !== dealer.id) return forbidden();
+    if (!dealer) return forbidden(ACCOUNT_NOT_VERIFIED_MESSAGE);
+    if (order.dealerId !== dealer.id) return forbidden();
 
     if (order.amountDue <= 0) {
       return badRequest("No payment due on this order");

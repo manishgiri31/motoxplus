@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 import {
   uploadFile,
@@ -10,18 +9,24 @@ import {
   DOCUMENT_MIME_TYPES,
   MAX_DOCUMENT_SIZE,
   logStorageAction,
+  looksLikePdf,
+  detectImageMimeType,
 } from "@/lib/storage";
 import { DealerDocumentType } from "@prisma/client";
 
 const VALID_TYPES = new Set(Object.values(DealerDocumentType));
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "DEALER") {
+  const userId = await getCurrentUserId(req);
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!authUser || authUser.role !== "DEALER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const dealer = await prisma.dealer.findUnique({ where: { userId: session.user.id } });
+  const dealer = await prisma.dealer.findUnique({ where: { userId } });
   if (!dealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
 
   const formData = await req.formData();
@@ -50,31 +55,47 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const documentType = rawType as DealerDocumentType;
-  const uuid = newUUID();
-  const ext = extFromMime(file.type);
-  const key = folders.dealerDocument(dealer.id, documentType.toLowerCase(), uuid, ext);
   const buffer = Buffer.from(await file.arrayBuffer());
 
+  // `file.type` above is client-declared and trivially spoofable — the
+  // DOCUMENT_MIME_TYPES check is only a fast prefilter. The type actually
+  // used for storage/content-type is derived from the bytes themselves.
+  const detectedType = looksLikePdf(buffer) ? "application/pdf" : await detectImageMimeType(buffer);
+  if (!detectedType || !DOCUMENT_MIME_TYPES.has(detectedType)) {
+    return NextResponse.json(
+      { error: "Invalid file type. Accepted: PDF, JPG, PNG" },
+      { status: 400 }
+    );
+  }
+
+  const documentType = rawType as DealerDocumentType;
+  const uuid = newUUID();
+  const ext = extFromMime(detectedType);
+  const key = folders.dealerDocument(dealer.id, documentType.toLowerCase(), uuid, ext);
+
   try {
-    const { url } = await uploadFile(buffer, key, file.type, true);
+    const { url } = await uploadFile(buffer, key, detectedType, true);
 
     // Upsert — one document per type per dealer
     const doc = await prisma.dealerDocument.upsert({
       where: { dealerId_documentType: { dealerId: dealer.id, documentType } },
-      update: { fileUrl: url, fileName: file.name, fileSize: file.size, mimeType: file.type, key, uploadedAt: new Date() },
-      create: { dealerId: dealer.id, documentType, fileUrl: url, fileName: file.name, fileSize: file.size, mimeType: file.type, key },
+      update: { fileUrl: url, fileName: file.name, fileSize: file.size, mimeType: detectedType, key, uploadedAt: new Date() },
+      create: { dealerId: dealer.id, documentType, fileUrl: url, fileName: file.name, fileSize: file.size, mimeType: detectedType, key },
     });
 
     await logStorageAction({
-      userId: session.user.id,
+      userId,
       action: "UPLOAD",
       fileKey: key,
       fileUrl: url,
       metadata: { dealerId: dealer.id, documentType, fileName: file.name },
     });
 
-    return NextResponse.json({ id: doc.id, url, key, documentType });
+    // These are KYC documents (Aadhaar/PAN/GST). The client never needs the
+    // direct object URL — the UI only reads `id` and fetches a short-lived
+    // link from /api/files/signed/[id] when actually viewing a document — so
+    // it's deliberately withheld here rather than handed out on every upload.
+    return NextResponse.json({ id: doc.id, key, documentType });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
 
