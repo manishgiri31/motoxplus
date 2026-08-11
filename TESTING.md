@@ -26,11 +26,6 @@ Get test keys from **Razorpay Dashboard → Settings → API Keys**, with **Test
 Mode** toggled on (top-right switch). Restart the server after changing `.env`
 — these are read at process start, not hot-reloaded.
 
-Optional, for step-by-step server-log visibility while testing (see §4 below):
-```
-PAYMENT_DEBUG="true"
-```
-
 ## 2. Full Payment checkout (FULL_100)
 
 1. Add an item to cart, go to checkout, fill delivery details.
@@ -43,8 +38,9 @@ PAYMENT_DEBUG="true"
    (e.g. `4111 1111 1111 1111`, any future expiry, any CVV) to complete payment.
 5. Expect: redirected to `/dealer/orders/{id}?success=1`, order status
    `CONFIRMED`, `paymentStatus: PAID`, `amountDue: 0`, an invoice generated.
-6. Check server logs for the `[PAYMENT-DEBUG]` trail (§4) confirming each step
-   fired in order.
+6. Confirm the `Payment` row for this order shows `status: PAID` with the
+   `razorpayPaymentId` set, and check server logs for a
+   `[Payments] verify: capture mismatch` line — there should be none.
 
 ## 3. 20% Advance checkout (ADVANCE_20)
 
@@ -58,27 +54,33 @@ Same as above but select "20% Advance via Razorpay". Verify:
   `amountDue` to 0 (not covered by this checklist — flag if you need that
   flow tested too, it isn't implemented in the checkout UI as of this pass).
 
-## 4. Watching it happen in server logs
+## 4. Confirming the replay/tamper guards actually hold
 
-With `PAYMENT_DEBUG=true` set, both payment routes log each step with an ISO
-timestamp, prefixed `[PAYMENT-DEBUG]`:
-- `create-order: request received` → `creating Razorpay order` → `Razorpay
-  order created` → `PENDING Payment row created, returning to client`
-- `verify: request received` → `signature check` (`signatureValid: true/false`)
-  → `Payment row marked PAID` → `Order marked CONFIRMED` → `Invoice generated`
+`/api/payments/verify` now does two checks before marking an order paid, not
+just the HMAC signature (see the comments in
+`src/app/api/payments/verify/route.ts` for the full reasoning):
 
-Tail the PM2/dev server log while testing:
-```
-pm2 logs motoxplus | grep PAYMENT-DEBUG
-```
-or, in dev, just watch the terminal running `npm run dev`.
+1. **Order binding** — the signed `razorpayOrderId`/`razorpayPaymentId` pair
+   must match a `Payment` row that was created for *this* `orderId` by
+   `/api/payments/create-order`. A signature that's valid for a different
+   order (even one the same dealer legitimately paid) is rejected with
+   `400 Payment record not found for this order`.
+2. **Capture confirmation** — `getRazorpay().payments.fetch(razorpayPaymentId)`
+   must report `status: "captured"`, the same `order_id`, and `amount`/
+   `currency` matching the `Payment.amount` recorded server-side at
+   create-order time (never a client-supplied figure).
 
-**Remove this before production**, or at minimum leave `PAYMENT_DEBUG` unset
-(it's silent by default either way — see `src/lib/payment-debug.ts`). Grep for
-`TODO(remove-before-prod)` to find every call site:
-```
-grep -rn "TODO(remove-before-prod)" src/
-```
+Test this before going live:
+- **Order-binding check**: create two orders (A cheap, B expensive) for the
+  same test dealer. Pay A via Razorpay test mode and capture the
+  `razorpayOrderId`/`razorpayPaymentId`/`razorpaySignature` from the network
+  tab. Replay them against `/api/payments/verify` with `orderId: B.id`.
+  Expect `400 Payment record not found for this order`, and order B
+  unchanged (`stockReserved: false`, `paymentStatus: PENDING`).
+- **Capture-mismatch check**: hardest to force with a real Razorpay account
+  (would require a since-refunded or failed payment ID) — acceptable to
+  verify by code review of the `captured.status/order_id/amount/currency`
+  comparison instead of a live repro.
 
 ## 5. The critical failure case: verify fails *after* Razorpay already captured payment
 

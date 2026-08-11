@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { ok, badRequest, unauthorized, forbidden, notFound, serverError } from "@/lib/api";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
-import { paymentDebug } from "@/lib/payment-debug"; // TODO(remove-before-prod)
 import { getRazorpay } from "@/lib/razorpay";
 
 // Same flag the checkout page uses to hide the Full Payment/20% Advance
@@ -38,8 +37,6 @@ export async function POST(req: NextRequest) {
     return badRequest("orderId is required");
   }
 
-  paymentDebug("create-order: request received", { orderId, userId }); // TODO(remove-before-prod)
-
   try {
     const [order, dealer] = await Promise.all([
       prisma.order.findUnique({ where: { id: orderId } }),
@@ -55,7 +52,6 @@ export async function POST(req: NextRequest) {
     }
 
     const amountInPaise = Math.round(order.amountDue * 100);
-    paymentDebug("create-order: creating Razorpay order", { orderId, amountInPaise, paymentType: order.paymentType }); // TODO(remove-before-prod)
 
     const razorpayOrder = await getRazorpay().orders.create({
       amount: amountInPaise,
@@ -67,8 +63,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    paymentDebug("create-order: Razorpay order created", { orderId, razorpayOrderId: razorpayOrder.id }); // TODO(remove-before-prod)
-
     await prisma.payment.create({
       data: {
         orderId: order.id,
@@ -79,8 +73,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    paymentDebug("create-order: PENDING Payment row created, returning to client", { orderId, razorpayOrderId: razorpayOrder.id }); // TODO(remove-before-prod)
-
     return ok({
       razorpayOrderId: razorpayOrder.id,
       amount: amountInPaise,
@@ -89,7 +81,6 @@ export async function POST(req: NextRequest) {
       orderNumber: order.orderNumber,
     });
   } catch (err) {
-    paymentDebug("create-order: FAILED", { orderId, error: err instanceof Error ? err.message : String(err) }); // TODO(remove-before-prod)
     return serverError(err, "create-razorpay-order", { orderId });
   }
 }

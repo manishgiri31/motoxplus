@@ -5,8 +5,18 @@ import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
-import { paymentDebug } from "@/lib/payment-debug"; // TODO(remove-before-prod)
+import { getRazorpay } from "@/lib/razorpay";
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
+
+// Same timing-safe-compare approach as the Razorpay/Delhivery webhooks
+// (src/app/api/webhooks/*) — a plain === leaks match length via timing.
+function signatureMatches(orderId: string, paymentId: string, provided: string, secret: string): boolean {
+  const expected = crypto.createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId(req);
@@ -19,19 +29,17 @@ export async function POST(req: NextRequest) {
   }
 
   const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = await req.json();
-  paymentDebug("verify: request received", { orderId, razorpayOrderId, razorpayPaymentId, userId }); // TODO(remove-before-prod)
+  if (
+    typeof razorpayOrderId !== "string" || !razorpayOrderId ||
+    typeof razorpayPaymentId !== "string" || !razorpayPaymentId ||
+    typeof razorpaySignature !== "string" || !razorpaySignature ||
+    typeof orderId !== "string" || !orderId
+  ) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
 
   try {
-    // Verify signature
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
-      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-      .digest("hex");
-
-    const signatureValid = expectedSignature === razorpaySignature;
-    paymentDebug("verify: signature check", { orderId, razorpayOrderId, signatureValid }); // TODO(remove-before-prod)
-
-    if (!signatureValid) {
+    if (!signatureMatches(razorpayOrderId, razorpayPaymentId, razorpaySignature, process.env.RAZORPAY_KEY_SECRET!)) {
       return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
     }
 
@@ -53,16 +61,58 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    // The HMAC above only proves razorpayOrderId and razorpayPaymentId are
+    // authentically paired with each other — it says nothing about which of
+    // OUR orders they're for. Without this lookup, a dealer could legitimately
+    // pay a cheap order (getting a genuinely valid signature for that
+    // razorpayOrderId/razorpayPaymentId pair) and replay it here against a
+    // different, expensive `orderId` of theirs: the code below would then mark
+    // the expensive order PAID for its full amountDue on the strength of a
+    // signature that only ever certified a much smaller payment. Requiring a
+    // pre-existing Payment row created by /api/payments/create-order (whose
+    // `amount` is server-computed from order.amountDue, never client input)
+    // for this exact (orderId, razorpayOrderId) pair closes that gap.
+    const payment = await prisma.payment.findFirst({ where: { orderId, razorpayOrderId } });
+    if (!payment) {
+      console.error(
+        `[Payments] verify: no Payment row for orderId=${orderId} razorpayOrderId=${razorpayOrderId} — possible replay (userId=${userId})`
+      );
+      return NextResponse.json({ error: "Payment record not found for this order" }, { status: 400 });
+    }
+
+    // Confirm directly with Razorpay that this payment was actually captured,
+    // for the order/amount/currency we expect. The signature alone proves
+    // authenticity of the pair, not that the captured amount matches what
+    // THIS order is due — this is the second, independent check.
+    const expectedAmountPaise = Math.round(payment.amount * 100);
+    let captured;
+    try {
+      captured = await getRazorpay().payments.fetch(razorpayPaymentId);
+    } catch (err) {
+      console.error(`[Payments] verify: Razorpay payments.fetch failed for ${razorpayPaymentId}:`, err);
+      return NextResponse.json({ error: "Unable to confirm payment with Razorpay. Please contact support." }, { status: 502 });
+    }
+    if (
+      captured.status !== "captured" ||
+      captured.order_id !== razorpayOrderId ||
+      captured.amount !== expectedAmountPaise ||
+      captured.currency !== "INR"
+    ) {
+      console.error(
+        `[Payments] verify: capture mismatch orderId=${orderId} status=${captured.status} amount=${captured.amount} expected=${expectedAmountPaise} currency=${captured.currency} (userId=${userId})`
+      );
+      return NextResponse.json({ error: "Payment could not be verified. Please contact support." }, { status: 400 });
+    }
+
     // Update payment
-    await prisma.payment.updateMany({
-      where: { orderId, razorpayOrderId },
+    await prisma.payment.update({
+      where: { id: payment.id },
       data: {
         razorpayPaymentId,
         razorpaySignature,
         status: "PAID",
       },
     });
-    paymentDebug("verify: Payment row marked PAID", { orderId, razorpayOrderId }); // TODO(remove-before-prod)
 
     // Update order, reserve stock, and generate the invoice atomically. The
     // `stockReserved: false` guard makes this idempotent against a retried
@@ -105,7 +155,6 @@ export async function POST(req: NextRequest) {
         },
       });
     });
-    paymentDebug("verify: Order marked CONFIRMED", { orderId, paymentStatus: isFullPayment ? "PAID" : "PARTIAL" }); // TODO(remove-before-prod)
 
     if (!invoiceNumber) {
       // Already processed by an earlier call to this endpoint — look up the
@@ -113,7 +162,6 @@ export async function POST(req: NextRequest) {
       const existing = await prisma.invoice.findUnique({ where: { orderId } });
       invoiceNumber = existing?.invoiceNumber ?? null;
     }
-    paymentDebug("verify: Invoice generated, returning success to client", { orderId, invoiceNumber }); // TODO(remove-before-prod)
 
     // Auto-create Delhivery shipment (fire-and-forget)
     createDelhiveryShipment(orderId).catch((err) => {
@@ -126,7 +174,6 @@ export async function POST(req: NextRequest) {
     // here — log loudly rather than letting this fall through as a generic
     // unhandled 500 with nothing to grep for.
     console.error(`[Payments] verify failed after Razorpay capture — orderId=${orderId} razorpayOrderId=${razorpayOrderId}:`, err);
-    paymentDebug("verify: FAILED", { orderId, razorpayOrderId, error: err instanceof Error ? err.message : String(err) }); // TODO(remove-before-prod)
     if (err instanceof InsufficientStockError) {
       return NextResponse.json(
         {
