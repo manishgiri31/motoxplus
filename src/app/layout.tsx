@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { Schibsted_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -28,23 +27,35 @@ const geistMono = localFont({
 });
 
 // v2 design system — headings / body / technical-label (SKU, HSN, order ID) fonts.
-const schibstedGrotesk = Schibsted_Grotesk({
-  subsets: ["latin"],
-  weight: ["500", "700", "800"],
+// Self-hosted (latin subset, extracted from Google Fonts) so `next build` never
+// depends on reaching fonts.gstatic.com — see SchibstedGroteskVF.woff2 etc.
+const schibstedGrotesk = localFont({
+  src: "./fonts/SchibstedGroteskVF.woff2",
+  weight: "500 800",
   variable: "--font-display",
   display: "swap",
 });
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const inter = localFont({
+  src: "./fonts/InterVF.woff2",
+  weight: "400 600",
   variable: "--font-body",
   display: "swap",
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
+const ibmPlexMono = localFont({
+  src: [
+    {
+      path: "./fonts/IBMPlexMono-Regular.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/IBMPlexMono-Medium.woff2",
+      weight: "500",
+      style: "normal",
+    },
+  ],
   variable: "--font-mono",
   display: "swap",
 });
