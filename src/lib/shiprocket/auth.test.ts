@@ -40,6 +40,16 @@ class FakeRedis {
   async del(key: string): Promise<number> {
     return this.store.delete(key) ? 1 : 0;
   }
+
+  /** Only ever used for auth.ts's compare-and-delete lock-release script. */
+  async eval(_script: string, _numKeys: number, key: string, expected: string): Promise<number> {
+    const entry = this.store.get(key);
+    if (entry && entry.value === expected) {
+      this.store.delete(key);
+      return 1;
+    }
+    return 0;
+  }
 }
 
 function jsonResponse(status: number, body: unknown): Response {

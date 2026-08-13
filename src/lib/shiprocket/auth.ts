@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { getRedis } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { ShiprocketConfigError, ShiprocketAuthError } from "./errors";
@@ -18,14 +19,28 @@ const TOKEN_KEY = "shiprocket:auth:token";
 // Distributed lock so concurrent PM2 cluster workers that all miss the cache
 // at the same moment don't each call Shiprocket's login endpoint at once.
 // Only the worker holding the lock logs in; the rest poll for the token it
-// publishes. The lock is intentionally never released early — it's left to
-// expire on its own PX TTL, which is simpler and just as correct: peers
-// don't need the lock to be free, only the token key to be populated, which
-// happens immediately after a successful login, long before the lock times out.
+// publishes. Released via a compare-and-delete Lua script (not a plain DEL)
+// so a holder never releases a lock some other holder acquired after its own
+// expired — and always released in a `finally`, success or failure, so a
+// failed login doesn't strand peers waiting out the full TTL. Releasing
+// promptly (rather than "just let it expire") matters here specifically
+// because the same worker that just logged in may need to log in again
+// moments later — e.g. shiprocketFetch()'s 401-retry calling
+// invalidateShiprocketToken() then getShiprocketToken() again — and an
+// unreleased lock would make that worker wait out LOCK_TTL_MS for a "peer"
+// that isn't coming.
 const LOCK_KEY = "shiprocket:auth:lock";
 const LOCK_TTL_MS = 20000;
 const PEER_WAIT_TIMEOUT_MS = 20000;
 const PEER_POLL_INTERVAL_MS = 250;
+
+const RELEASE_LOCK_SCRIPT = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+  return redis.call("DEL", KEYS[1])
+else
+  return 0
+end
+`;
 
 function isPlaceholder(value: string | undefined): boolean {
   return !value || value.startsWith("your_") || value.startsWith("replace_with") || value.includes("_here");
@@ -146,8 +161,18 @@ async function waitForTokenFromPeer(redis: NonNullable<ReturnType<typeof getRedi
   throw new ShiprocketAuthError("Timed out waiting for another worker to complete Shiprocket login");
 }
 
+async function releaseLock(redis: NonNullable<ReturnType<typeof getRedis>>, ownerId: string): Promise<void> {
+  try {
+    await redis.eval(RELEASE_LOCK_SCRIPT, 1, LOCK_KEY, ownerId);
+  } catch (err) {
+    // Not fatal — the lock still expires on its own PX TTL.
+    logger.error("[Shiprocket] Failed to release auth lock", { error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 async function acquireTokenWithDistributedLock(redis: NonNullable<ReturnType<typeof getRedis>>): Promise<string> {
-  const acquired = await redis.set(LOCK_KEY, "1", "PX", LOCK_TTL_MS, "NX");
+  const ownerId = randomUUID();
+  const acquired = await redis.set(LOCK_KEY, ownerId, "PX", LOCK_TTL_MS, "NX");
 
   if (acquired !== "OK") {
     // Another worker is already logging in — wait for it instead of also
@@ -155,9 +180,13 @@ async function acquireTokenWithDistributedLock(redis: NonNullable<ReturnType<typ
     return waitForTokenFromPeer(redis);
   }
 
-  const token = await loginToShiprocket();
-  await redis.set(TOKEN_KEY, token, "EX", TOKEN_TTL_SECONDS);
-  return token;
+  try {
+    const token = await loginToShiprocket();
+    await redis.set(TOKEN_KEY, token, "EX", TOKEN_TTL_SECONDS);
+    return token;
+  } finally {
+    await releaseLock(redis, ownerId);
+  }
 }
 
 /**
