@@ -48,6 +48,8 @@ export function Navbar() {
   const [mobileGroup, setMobileGroup] = useState<"products" | "vehicles" | null>(null);
   const [categories, setCategories] = useState<CategoryLite[]>([]);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vehiclesRef = useRef<HTMLDivElement>(null);
+  const productsRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
 
   useEffect(() => {
@@ -87,6 +89,25 @@ export function Navbar() {
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => setOpenMenu(null), 150);
   }, []);
+
+  const toggleMenu = useCallback((menu: "products" | "vehicles") => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOpenMenu((current) => (current === menu ? null : menu));
+  }, []);
+
+  // Click-to-toggle needs a click-outside handler since touch/trackpad
+  // devices never fire mouseleave to close the dropdown.
+  useEffect(() => {
+    if (!openMenu) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      const ref = openMenu === "vehicles" ? vehiclesRef : productsRef;
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [openMenu]);
 
   const dashboardHref =
     session?.user?.role === "DEALER"
@@ -136,11 +157,15 @@ export function Navbar() {
 
             {/* Vehicles dropdown */}
             <div
+              ref={vehiclesRef}
               className="relative"
               onMouseEnter={() => openWithDelay("vehicles")}
               onMouseLeave={closeWithDelay}
             >
               <button
+                type="button"
+                onClick={() => toggleMenu("vehicles")}
+                aria-expanded={openMenu === "vehicles"}
                 className={cn(
                   "nav-link flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors",
                   openMenu === "vehicles" ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -196,11 +221,15 @@ export function Navbar() {
 
             {/* Products mega menu */}
             <div
+              ref={productsRef}
               className="relative"
               onMouseEnter={() => openWithDelay("products")}
               onMouseLeave={closeWithDelay}
             >
               <button
+                type="button"
+                onClick={() => toggleMenu("products")}
+                aria-expanded={openMenu === "products"}
                 className={cn(
                   "nav-link flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors",
                   openMenu === "products" ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
