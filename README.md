@@ -2,6 +2,8 @@
 
 Full-stack B2B dealer management platform for MOTOXPLUS India Private Limited — premium two-wheeler spare parts manufacturer.
 
+> **Mobile app:** the canonical mobile app is [`motoxplus-app`](../motoxplus-app) (Expo 54 / React Native) — `motoxplus_app/` inside this repo is a stale, abandoned Flutter attempt pending archival.
+
 ## Overview
 
 | Portal | Roles | Purpose |

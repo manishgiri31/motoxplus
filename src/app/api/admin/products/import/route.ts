@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { processImport } from "@/lib/product-import";
 
+const MAX_IMPORT_SIZE = 5 * 1024 * 1024; // 5 MB — generous for a product spreadsheet
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
@@ -20,6 +22,10 @@ export async function POST(req: NextRequest) {
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (!["xlsx", "xls"].includes(ext ?? "")) {
       return NextResponse.json({ error: "Only .xlsx or .xls files are supported" }, { status: 400 });
+    }
+
+    if (file.size > MAX_IMPORT_SIZE) {
+      return NextResponse.json({ error: "File too large. Maximum size is 5MB." }, { status: 413 });
     }
 
     const buffer = await file.arrayBuffer();

@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { UserRole, StaffDepartment } from "@prisma/client";
 import type { Adapter } from "next-auth/adapters";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { RATE_LIMITS } from "@/lib/auth/rate-limit-budgets";
 
 function getClientIP(headers?: Record<string, any>): string | undefined {
   const forwarded = headers?.["x-forwarded-for"];
@@ -50,11 +52,24 @@ export const authOptions: NextAuthOptions = {
 
         const identifier = credentials.identifier.trim();
         const isMobile = /^[6-9]\d{9}$/.test(identifier.replace(/\s/g, "").replace("+91", ""));
+        const normalizedIdentifier = isMobile
+          ? identifier.replace(/\s/g, "").replace("+91", "")
+          : identifier.toLowerCase();
+
+        // Shares the same "LOGIN" budget and Redis keyspace as the REST
+        // /api/auth/login route (rate-limit-budgets.ts) so an attacker can't
+        // dodge the throttle by switching which login endpoint they hit.
+        // Per-identifier catches a rotating-IP attack on one account; per-IP
+        // catches password spraying across many accounts from one source.
+        const rateLimitChecks = [checkRateLimit(`rl:LOGIN:id:${normalizedIdentifier}`, RATE_LIMITS.LOGIN.perIdentifier)];
+        if (ip) rateLimitChecks.push(checkRateLimit(`rl:LOGIN:ip:${ip}`, RATE_LIMITS.LOGIN.perIP));
+        const rateLimitResults = await Promise.all(rateLimitChecks);
+        if (rateLimitResults.some((r) => !r.allowed)) {
+          throw new Error("Too many login attempts. Please try again later.");
+        }
 
         const user = await prisma.user.findUnique({
-          where: isMobile
-            ? { mobileNumber: identifier.replace(/\s/g, "").replace("+91", "") }
-            : { email: identifier.toLowerCase() },
+          where: isMobile ? { mobileNumber: normalizedIdentifier } : { email: normalizedIdentifier },
           include: { dealer: true, admin: true, vendor: true },
         });
 
