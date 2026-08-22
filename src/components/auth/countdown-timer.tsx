@@ -7,9 +7,11 @@ interface CountdownTimerProps {
   onComplete?: () => void;
   onResend?: () => Promise<void>;
   label?: string;
+  /** Show "{label} in Ns" instead of the MM:SS clock — reads better for short (<60s) windows. */
+  compact?: boolean;
 }
 
-export function CountdownTimer({ seconds, onComplete, onResend, label = "Resend OTP" }: CountdownTimerProps) {
+export function CountdownTimer({ seconds, onComplete, onResend, label = "Resend OTP", compact = false }: CountdownTimerProps) {
   const [remaining, setRemaining] = useState(seconds);
   const [resending, setResending] = useState(false);
   const [key, setKey] = useState(0);
@@ -45,10 +47,18 @@ export function CountdownTimer({ seconds, onComplete, onResend, label = "Resend 
   if (remaining > 0) {
     return (
       <p className="text-center text-sm text-[var(--text-muted)]">
-        Resend in{" "}
-        <span className="font-mono text-red-400 font-bold">
-          {mm}:{ss}
-        </span>
+        {compact ? (
+          <>
+            {label} in <span className="font-mono text-red-400 font-bold">{remaining}s</span>
+          </>
+        ) : (
+          <>
+            Resend in{" "}
+            <span className="font-mono text-red-400 font-bold">
+              {mm}:{ss}
+            </span>
+          </>
+        )}
       </p>
     );
   }

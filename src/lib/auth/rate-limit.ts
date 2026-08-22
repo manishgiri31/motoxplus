@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getRedis } from "@/lib/redis";
+import type Redis from "ioredis";
 
 const LOCK_THRESHOLD = 5;
 const LOCK_DURATION_MINUTES = 30;
@@ -95,6 +96,28 @@ return current
 
 export type FailMode = "open" | "closed";
 
+// getRedis() creates its client lazily on first use and returns it
+// synchronously, before the TCP+auth handshake completes. With
+// enableOfflineQueue:false (deliberate — see redis.ts), a command issued
+// during that handshake window is rejected outright instead of queued, so
+// the very first rate-limit check after a cold start would fail closed even
+// though Redis is perfectly healthy. This gives a brief bounded window for
+// the handshake to finish; if it's still not ready after that (a genuine
+// outage, not a cold-start race), eval() below rejects immediately exactly
+// as before and falls through to the normal failMode handling.
+const REDIS_READY_WAIT_MS = 300;
+
+function waitForReady(redis: Redis): Promise<void> {
+  if (redis.status === "ready") return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, REDIS_READY_WAIT_MS);
+    redis.once("ready", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
 /**
  * The one primitive every rate limit in the app goes through — arbitrary
  * key (caller decides the namespace: "ip:...", "id:...", etc.), a budget,
@@ -113,6 +136,8 @@ export async function checkRateLimit(
     if (failMode === "closed") return { allowed: false, retryAfterSeconds: windowSeconds };
     return checkInMemory(key, max, windowSeconds);
   }
+
+  await waitForReady(redis);
 
   try {
     const count = (await redis.eval(RATE_LIMIT_SCRIPT, 1, `ratelimit:${key}`, windowSeconds)) as number;

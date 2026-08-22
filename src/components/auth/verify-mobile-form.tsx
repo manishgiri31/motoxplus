@@ -7,6 +7,26 @@ import { OtpInput } from "./otp-input";
 import { Spinner } from "@/components/ui/spinner";
 import { CountdownTimer } from "./countdown-timer";
 
+// OTP is sent via WhatsApp (see src/lib/sms/providers/whatsapp.ts) — the
+// button must be disabled for this long between sends, matching the app's
+// server-side send cooldown expectations, and the countdown is shown so the
+// user knows when "Resend OTP" becomes available again.
+const RESEND_COOLDOWN_SECONDS = 60;
+
+const MOBILE_REGEX = /^[6-9]\d{9}$/;
+
+/**
+ * Rewords the backend's OTP error strings (asserted verbatim by
+ * src/lib/auth/otp.test.ts, so that module is left untouched) into the
+ * user-facing copy this flow wants, without touching the shared OTP logic.
+ */
+function friendlyOtpError(raw: string): string {
+  if (/expired/i.test(raw)) return "OTP has expired. Please request a new OTP.";
+  if (/too many/i.test(raw)) return "You've reached the maximum attempts. Please request a new OTP.";
+  if (/incorrect otp/i.test(raw)) return "Invalid OTP. Please try again.";
+  return raw;
+}
+
 export function VerifyMobileForm() {
   const router = useRouter();
   const { data: session, update } = useSession();
@@ -19,6 +39,7 @@ export function VerifyMobileForm() {
 
   async function handleSendOTP(e: React.FormEvent) {
     e.preventDefault();
+    if (!MOBILE_REGEX.test(mobile)) { setError("Please enter a valid phone number."); setStatus("error"); return; }
     setStatus("loading"); setError("");
     const res = await fetch("/api/auth/send-mobile-otp", {
       method: "POST",
@@ -26,7 +47,7 @@ export function VerifyMobileForm() {
       body: JSON.stringify({ mobile }),
     });
     const data = await res.json();
-    if (!res.ok) { setError(data.error || "Failed to send OTP"); setStatus("error"); return; }
+    if (!res.ok) { setError(data.error || "Unable to send OTP right now. Please try again later."); setStatus("error"); return; }
     setStatus("idle");
     setStep("enter-otp");
     setTimerKey((k) => k + 1);
@@ -34,7 +55,7 @@ export function VerifyMobileForm() {
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
-    if (otp.length !== 6) { setError("Enter the 6-digit OTP"); return; }
+    if (otp.length !== 6) { setError("Please enter the 6-digit OTP."); return; }
     setStatus("loading"); setError("");
     const res = await fetch("/api/auth/verify-mobile", {
       method: "POST",
@@ -42,7 +63,7 @@ export function VerifyMobileForm() {
       body: JSON.stringify({ otp }),
     });
     const data = await res.json();
-    if (!res.ok) { setError(data.error || "Verification failed"); setStatus("error"); return; }
+    if (!res.ok) { setError(friendlyOtpError(data.error || "Verification failed")); setStatus("error"); return; }
     setStep("success");
     if (session) {
       await update();
@@ -56,7 +77,7 @@ export function VerifyMobileForm() {
       body: JSON.stringify({ mobile }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to resend");
+    if (!res.ok) throw new Error(data.error || "Unable to send OTP right now. Please try again later.");
     setTimerKey((k) => k + 1);
   }
 
@@ -92,7 +113,7 @@ export function VerifyMobileForm() {
       <div className="text-center mb-8">
         <h1 className="text-xl font-black text-[var(--text-primary)] mb-2">Verify Mobile Number</h1>
         <p className="text-[var(--text-muted)] text-sm">
-          {step === "enter-mobile" ? "Enter your mobile number to receive an OTP." : `OTP sent to +91 ${mobile}`}
+          {step === "enter-mobile" ? "Enter your mobile number to receive an OTP on WhatsApp." : `OTP sent via WhatsApp to +91 ${mobile}`}
         </p>
       </div>
 
@@ -119,7 +140,7 @@ export function VerifyMobileForm() {
           <button type="submit" disabled={status === "loading" || otp.length !== 6} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
             {status === "loading" ? <><Spinner size={15} /> Verifying...</> : "Verify OTP"}
           </button>
-          <CountdownTimer key={timerKey} seconds={600} onResend={handleResend} label="Resend OTP" />
+          <CountdownTimer key={timerKey} seconds={RESEND_COOLDOWN_SECONDS} compact onResend={handleResend} label="Resend OTP" />
           <button type="button" onClick={() => setStep("enter-mobile")} className="w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
             Change mobile number
           </button>

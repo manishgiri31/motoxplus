@@ -7,6 +7,7 @@ import { encrypt } from "@/lib/crypto/encryption";
 import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
 import { normalizeIndianMobile } from "@/lib/phone";
+import { Prisma } from "@prisma/client";
 
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
@@ -61,36 +62,61 @@ export async function POST(req: NextRequest) {
     if (existingGST) return NextResponse.json({ error: "GST number already registered" }, { status: 409 });
   }
 
+  if (normalizedMobile) {
+    const existingMobile = await prisma.user.findUnique({ where: { mobileNumber: normalizedMobile } });
+    if (existingMobile) return NextResponse.json({ error: "Mobile number already registered" }, { status: 409 });
+  }
+
   const hashed = await bcrypt.hash(password, 12);
 
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email: email.toLowerCase(),
-      password: hashed,
-      role: "DEALER",
-      mobileNumber: normalizedMobile,
-      ...(companyName && ownerName && phone && state && city
-        ? {
-            dealer: {
-              create: {
-                companyName,
-                gstNumber: gstNumber ? gstNumber.toUpperCase() : null,
-                panNumber: panNumber ? panNumber.toUpperCase() : null,
-                aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : null,
-                ownerName,
-                phone: normalizedMobile || phone,
-                state,
-                city,
-                address: address || null,
-                pincode: pincode || null,
-                status: "PENDING",
+  let user;
+  try {
+    user = await prisma.user.create({
+      data: {
+        name,
+        email: email.toLowerCase(),
+        password: hashed,
+        role: "DEALER",
+        mobileNumber: normalizedMobile,
+        ...(companyName && ownerName && phone && state && city
+          ? {
+              dealer: {
+                create: {
+                  companyName,
+                  gstNumber: gstNumber ? gstNumber.toUpperCase() : null,
+                  panNumber: panNumber ? panNumber.toUpperCase() : null,
+                  aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : null,
+                  ownerName,
+                  phone: normalizedMobile || phone,
+                  state,
+                  city,
+                  address: address || null,
+                  pincode: pincode || null,
+                  status: "PENDING",
+                },
               },
-            },
-          }
-        : {}),
-    },
-  });
+            }
+          : {}),
+      },
+    });
+  } catch (err) {
+    // The pre-checks above (lines 56-67) narrow the common case, but can't
+    // close a race between two concurrent registrations for the same
+    // email/mobile/GST — this catches that at the DB constraint instead of
+    // letting it surface as an unhandled 500.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const fields = (err.meta?.target as string[]) ?? [];
+      const field = fields.includes("mobileNumber")
+        ? "Mobile number"
+        : fields.includes("email")
+          ? "Email"
+          : fields.includes("gstNumber")
+            ? "GST number"
+            : "Value";
+      return NextResponse.json({ error: `${field} already registered` }, { status: 409 });
+    }
+    throw err;
+  }
 
   // Send verification email
   const otp = await createOTP(user.id, "EMAIL_VERIFICATION");

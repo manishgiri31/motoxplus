@@ -59,11 +59,32 @@ export async function createOTP(userId: string, type: OtpType): Promise<string> 
   return code;
 }
 
+// Local-dev convenience: lets a developer skip actually receiving the OTP
+// (WhatsApp/SMS/email) by entering this fixed code instead, so repeated
+// local testing doesn't require a live message every time. Still requires a
+// real pending OTP to exist (i.e. "Send OTP" was actually called) and burns
+// it the same way a real success does — it's a shortcut past *delivery*,
+// not past the request flow. Gated strictly on NODE_ENV === "development":
+// never "test" (vitest sets NODE_ENV=test, and otp.test.ts deliberately
+// reuses "000000" as a guaranteed-wrong guess) and structurally impossible
+// in any deployed environment, since Next.js always sets NODE_ENV=production there.
+const DEV_BYPASS_CODE = "000000";
+
 export async function verifyOTP(
   userId: string,
   type: OtpType,
   code: string
 ): Promise<{ success: boolean; error?: string }> {
+  if (process.env.NODE_ENV === "development" && code === DEV_BYPASS_CODE) {
+    const pending = await prisma.otpCode.findFirst({
+      where: { userId, type, used: false },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!pending) return { success: false, error: "Invalid or expired OTP" };
+    await prisma.otpCode.updateMany({ where: { id: pending.id, used: false }, data: { used: true } });
+    return { success: true };
+  }
+
   const otp = await prisma.otpCode.findFirst({
     where: { userId, type, used: false },
     orderBy: { createdAt: "desc" },

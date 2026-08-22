@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // In-memory stand-in for the OtpCode table — otp.ts only ever calls
 // findFirst/update/updateMany/count/create on prisma.otpCode, so a tiny fake
@@ -167,6 +167,44 @@ describe("createOTP", () => {
 
     // The first code must no longer verify, even though it hasn't expired.
     const result = await verifyOTP(USER, TYPE, first);
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("dev-only OTP bypass ('000000')", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is inert under NODE_ENV=test — '000000' behaves like any other wrong guess (this suite's own environment)", async () => {
+    await createOTP(USER, TYPE);
+    const result = await verifyOTP(USER, TYPE, "000000");
+    expect(result.success).toBe(false);
+  });
+
+  it("succeeds against a real pending OTP when NODE_ENV=development, without needing the actual code", async () => {
+    const realCode = await createOTP(USER, TYPE);
+    vi.stubEnv("NODE_ENV", "development");
+
+    const result = await verifyOTP(USER, TYPE, "000000");
+    expect(result.success).toBe(true);
+
+    // Burns the row exactly like a real success — the actual code no longer verifies either.
+    const replay = await verifyOTP(USER, TYPE, realCode);
+    expect(replay.success).toBe(false);
+  });
+
+  it("still fails when there is no pending OTP to bypass, even in development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const result = await verifyOTP(USER, TYPE, "000000");
+    expect(result.success).toBe(false);
+  });
+
+  it("is inert when NODE_ENV=production, even if '000000' happens to be guessed", async () => {
+    await createOTP(USER, TYPE);
+    vi.stubEnv("NODE_ENV", "production");
+
+    const result = await verifyOTP(USER, TYPE, "000000");
     expect(result.success).toBe(false);
   });
 });
