@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
-import { createDelhiveryShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { getRazorpay } from "@/lib/razorpay";
-import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
+import { InsufficientStockError } from "@/lib/orders/stock";
+import { finalizeCapturedPayment } from "@/lib/payments/finalize";
+
+// Same flag /api/payments/create-order enforces — the frontend hiding the
+// Razorpay options is not an authorization control, so this endpoint must
+// also reject directly if the feature is disabled (there would be no Payment
+// row to match against anyway, but this fails fast with a clearer error).
+const RAZORPAY_ENABLED = process.env.NEXT_PUBLIC_RAZORPAY_ENABLED === "true";
 
 // Same timing-safe-compare approach as the Razorpay/Delhivery webhooks
 // (src/app/api/webhooks/*) — a plain === leaks match length via timing.
@@ -19,6 +24,10 @@ function signatureMatches(orderId: string, paymentId: string, provided: string, 
 }
 
 export async function POST(req: NextRequest) {
+  if (!RAZORPAY_ENABLED) {
+    return NextResponse.json({ error: "Online payment is not available right now." }, { status: 400 });
+  }
+
   const userId = await getCurrentUserId(req);
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -43,11 +52,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
     }
 
-    // Get order
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { dealer: true, items: { include: { product: true } } },
-    });
+    // Get order (dealer/items are re-fetched by finalizeCapturedPayment as needed)
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
 
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
@@ -104,68 +110,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Payment could not be verified. Please contact support." }, { status: 400 });
     }
 
-    // Update payment
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        razorpayPaymentId,
-        razorpaySignature,
-        status: "PAID",
-      },
-    });
-
-    // Update order, reserve stock, and generate the invoice atomically. The
-    // `stockReserved: false` guard makes this idempotent against a retried
-    // verify call (network retry, duplicate webhook): only the call that
-    // actually flips the flag decrements stock / creates the invoice, so a
-    // repeat call is a safe no-op instead of double-decrementing.
-    const isFullPayment = order.paymentType === "FULL_100";
-    let invoiceNumber: string | null = null;
-    await prisma.$transaction(async (tx) => {
-      const guarded = await tx.order.updateMany({
-        where: { id: orderId, stockReserved: false },
-        data: {
-          amountPaid: order.amountDue,
-          amountDue: isFullPayment ? 0 : roundToPaise(order.grandTotal - order.amountDue),
-          paymentStatus: isFullPayment ? "PAID" : "PARTIAL",
-          status: "CONFIRMED",
-          stockReserved: true,
-        },
-      });
-      if (guarded.count === 0) return;
-
-      await decrementStock(
-        tx,
-        order.items.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-        }))
-      );
-
-      invoiceNumber = generateInvoiceNumber();
-      await tx.invoice.create({
-        data: {
-          invoiceNumber,
-          orderId,
-          dealerId: order.dealerId,
-          subtotal: order.subtotal,
-          gstAmount: order.gstAmount,
-          grandTotal: order.grandTotal,
-        },
-      });
-    });
-
-    if (!invoiceNumber) {
-      // Already processed by an earlier call to this endpoint — look up the
-      // invoice that call created instead of making a second one.
-      const existing = await prisma.invoice.findUnique({ where: { orderId } });
-      invoiceNumber = existing?.invoiceNumber ?? null;
-    }
-
-    // Auto-create Delhivery shipment (fire-and-forget)
-    createDelhiveryShipment(orderId).catch((err) => {
-      console.error(`[Delhivery] Shipment creation failed for order ${orderId}:`, err);
+    // Marks the Payment PAID and, exactly once (guarded on
+    // Order.stockReserved), transitions the order, decrements stock, creates
+    // the invoice, and kicks off the Delhivery shipment. Shared with the
+    // payment.captured/order.paid webhook so a retried verify call and a
+    // webhook delivery for the same payment can never double-process —
+    // whichever arrives first wins, the other is a safe no-op.
+    const { invoiceNumber } = await finalizeCapturedPayment({
+      paymentId: payment.id,
+      orderId,
+      razorpayPaymentId,
+      razorpaySignature,
     });
 
     return NextResponse.json({ success: true, invoiceNumber });

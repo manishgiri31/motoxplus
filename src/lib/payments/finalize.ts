@@ -1,0 +1,104 @@
+import { prisma } from "@/lib/prisma";
+import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
+import { createDelhiveryShipment } from "@/lib/delhivery";
+import { decrementStock } from "@/lib/orders/stock";
+
+export interface FinalizeCapturedPaymentResult {
+  /** false only for the single call that actually performed the transition. */
+  alreadyProcessed: boolean;
+  invoiceNumber: string | null;
+}
+
+/**
+ * Marks a Payment PAID and, exactly once, transitions its Order to
+ * paid/confirmed, decrements stock, and generates the invoice.
+ *
+ * Both /api/payments/verify (client callback, after its own HMAC + Razorpay
+ * capture-fetch checks) and the payment.captured/order.paid webhook (after
+ * its own raw-body HMAC check) call this once they've independently
+ * confirmed the payment — whichever call arrives first is the one that
+ * actually mutates state via the `stockReserved: false` guard; the other
+ * (webhook arriving after verify already ran, or vice versa, or a Razorpay
+ * webhook retry) is a safe no-op that just returns the already-created
+ * invoice number. This is the single code path for that transition so the
+ * two entry points can't drift into divergent idempotency behavior.
+ */
+export async function finalizeCapturedPayment(params: {
+  paymentId: string;
+  orderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature?: string | null;
+}): Promise<FinalizeCapturedPaymentResult> {
+  const { paymentId, orderId, razorpayPaymentId, razorpaySignature } = params;
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: true },
+  });
+  if (!order) throw new Error(`Order ${orderId} not found during payment finalization`);
+
+  // Never downgrade/overwrite a payment already marked PAID by the other entry point.
+  await prisma.payment.updateMany({
+    where: { id: paymentId, status: { not: "PAID" } },
+    data: {
+      razorpayPaymentId,
+      ...(razorpaySignature ? { razorpaySignature } : {}),
+      status: "PAID",
+    },
+  });
+
+  const isFullPayment = order.paymentType === "FULL_100";
+  let invoiceNumber: string | null = null;
+
+  await prisma.$transaction(async (tx) => {
+    const guarded = await tx.order.updateMany({
+      where: { id: orderId, stockReserved: false },
+      data: {
+        amountPaid: order.amountDue,
+        amountDue: isFullPayment ? 0 : roundToPaise(order.grandTotal - order.amountDue),
+        paymentStatus: isFullPayment ? "PAID" : "PARTIAL",
+        status: "CONFIRMED",
+        stockReserved: true,
+      },
+    });
+    if (guarded.count === 0) return;
+
+    await decrementStock(
+      tx,
+      order.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+      }))
+    );
+
+    invoiceNumber = generateInvoiceNumber();
+    await tx.invoice.create({
+      data: {
+        invoiceNumber,
+        orderId,
+        dealerId: order.dealerId,
+        subtotal: order.subtotal,
+        gstAmount: order.gstAmount,
+        grandTotal: order.grandTotal,
+      },
+    });
+  });
+
+  const alreadyProcessed = invoiceNumber === null;
+  if (alreadyProcessed) {
+    const existing = await prisma.invoice.findUnique({ where: { orderId } });
+    return { alreadyProcessed: true, invoiceNumber: existing?.invoiceNumber ?? null };
+  }
+
+  // Only the call that actually made the transition triggers shipment
+  // creation — createDelhiveryShipment also independently guards against a
+  // second Shipment row per order (throws "Shipment already exists"), but
+  // skipping the call entirely here avoids a guaranteed-to-fail Delhivery
+  // API round-trip on the second (already-processed) caller.
+  createDelhiveryShipment(orderId).catch((err) => {
+    console.error(`[Payments] Shipment creation failed for order ${orderId}:`, err);
+  });
+
+  return { alreadyProcessed: false, invoiceNumber };
+}
