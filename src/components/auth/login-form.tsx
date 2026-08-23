@@ -11,6 +11,7 @@ import { CountdownTimer } from "./countdown-timer";
 
 type Tab = "password" | "otp";
 type OtpStep = "enter-mobile" | "enter-otp";
+type OtpMethod = "mobile" | "email";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -23,8 +24,10 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
 
-  // Mobile OTP state
+  // OTP state — mobile or email
+  const [otpMethod, setOtpMethod] = useState<OtpMethod>("mobile");
   const [mobile, setMobile] = useState("");
+  const [otpEmail, setOtpEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpStep, setOtpStep] = useState<OtpStep>("enter-mobile");
   const [timerKey, setTimerKey] = useState(0);
@@ -44,13 +47,19 @@ export function LoginForm() {
     window.location.href = callbackUrl;
   }
 
+  function otpSendBody() {
+    return otpMethod === "mobile"
+      ? { method: "mobile", mobile }
+      : { method: "email", email: otpEmail };
+  }
+
   async function handleSendOTP(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading"); setError("");
     const res = await fetch("/api/auth/login-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mobile }),
+      body: JSON.stringify(otpSendBody()),
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Failed to send OTP"); setStatus("error"); return; }
@@ -66,7 +75,7 @@ export function LoginForm() {
     const res = await fetch("/api/auth/login-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mobile, otp }),
+      body: JSON.stringify({ ...otpSendBody(), otp }),
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error || "Invalid OTP"); setStatus("error"); return; }
@@ -77,7 +86,7 @@ export function LoginForm() {
     const res = await fetch("/api/auth/login-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mobile }),
+      body: JSON.stringify(otpSendBody()),
     });
     if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Resend failed"); }
     setTimerKey((k) => k + 1);
@@ -114,7 +123,7 @@ export function LoginForm() {
           className={`flex-1 inline-flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${tab === "otp" ? "bg-red-600 text-white shadow-[0_0_12px_rgba(220,38,38,0.35)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
         >
           <Smartphone size={12} />
-          Mobile OTP
+          OTP
         </button>
       </div>
 
@@ -153,37 +162,65 @@ export function LoginForm() {
         </form>
       )}
 
-      {/* Mobile OTP — enter number */}
+      {/* OTP — enter mobile or email */}
       {tab === "otp" && otpStep === "enter-mobile" && (
         <form onSubmit={handleSendOTP} className="space-y-4">
-          <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Mobile Number</label>
-            <div className="flex gap-2">
-              <div className="relative flex-shrink-0">
-                <Smartphone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                <span className="themed-input border rounded-xl pl-9 pr-3 py-3 text-sm text-[var(--text-muted)] flex items-center">+91</span>
-              </div>
-              <input type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} className="flex-1 themed-input border rounded-xl px-4 py-3 text-sm" placeholder="10-digit number" maxLength={10} />
-            </div>
+          <div className="flex bg-[var(--bg-secondary)] rounded-lg p-1 border border-[var(--border-color)]">
+            <button
+              type="button"
+              onClick={() => { setOtpMethod("mobile"); setError(""); }}
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${otpMethod === "mobile" ? "bg-red-600/90 text-white" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
+            >
+              <Smartphone size={11} />
+              Mobile
+            </button>
+            <button
+              type="button"
+              onClick={() => { setOtpMethod("email"); setError(""); }}
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold uppercase tracking-wider rounded-md transition-all ${otpMethod === "email" ? "bg-red-600/90 text-white" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
+            >
+              <Mail size={11} />
+              Email
+            </button>
           </div>
+          {otpMethod === "mobile" ? (
+            <div>
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Mobile Number</label>
+              <div className="flex gap-2">
+                <div className="relative flex-shrink-0">
+                  <Smartphone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <span className="themed-input border rounded-xl pl-9 pr-3 py-3 text-sm text-[var(--text-muted)] flex items-center">+91</span>
+                </div>
+                <input type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} className="flex-1 themed-input border rounded-xl px-4 py-3 text-sm" placeholder="10-digit number" maxLength={10} />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Email Address</label>
+              <div className="relative">
+                <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input type="email" required value={otpEmail} onChange={(e) => setOtpEmail(e.target.value)} className={inputCls} placeholder="you@company.com" />
+              </div>
+            </div>
+          )}
           {error && (
             <div className="bg-red-900/20 border border-red-900/40 rounded-xl px-4 py-3 text-red-400 text-sm flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
               {error}
             </div>
           )}
-          <button type="submit" disabled={status === "loading" || mobile.length !== 10} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-all uppercase tracking-wider text-sm red-glow-sm mt-2">
+          <button type="submit" disabled={status === "loading" || (otpMethod === "mobile" ? mobile.length !== 10 : !otpEmail)} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-all uppercase tracking-wider text-sm red-glow-sm mt-2">
             {status === "loading" ? <><Spinner size={15} /> Sending OTP...</> : <>Send OTP <ChevronRight size={15} /></>}
           </button>
         </form>
       )}
 
-      {/* Mobile OTP — enter code */}
+      {/* OTP — enter code */}
       {tab === "otp" && otpStep === "enter-otp" && (
         <form onSubmit={handleOTPLogin} className="space-y-6">
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl px-4 py-3 flex items-center gap-3">
-            <Smartphone size={15} className="text-[var(--text-muted)] flex-shrink-0" />
-            <p className="text-[var(--text-muted)] text-sm">OTP sent to <span className="text-[var(--text-primary)] font-semibold">+91 {mobile}</span></p>
+            {otpMethod === "mobile" ? <Smartphone size={15} className="text-[var(--text-muted)] flex-shrink-0" /> : <Mail size={15} className="text-[var(--text-muted)] flex-shrink-0" />}
+            <p className="text-[var(--text-muted)] text-sm">OTP sent to <span className="text-[var(--text-primary)] font-semibold">{otpMethod === "mobile" ? `+91 ${mobile}` : otpEmail}</span></p>
           </div>
           <OtpInput value={otp} onChange={setOtp} disabled={status === "loading"} />
           {error && (
@@ -198,7 +235,7 @@ export function LoginForm() {
           <div className="flex items-center justify-between text-sm">
             <CountdownTimer key={timerKey} seconds={600} onResend={handleResendOTP} label="Resend OTP" />
             <button type="button" onClick={() => { setOtpStep("enter-mobile"); setOtp(""); setError(""); }} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors text-xs">
-              Change number
+              {otpMethod === "mobile" ? "Change number" : "Change email"}
             </button>
           </div>
         </form>

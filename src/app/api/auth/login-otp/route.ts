@@ -7,39 +7,46 @@ import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/li
 import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
 import { COOKIE_ACCESS, COOKIE_REFRESH, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from "@/lib/auth/jwt";
 import { sendOTP } from "@/lib/sms";
+import { sendEmail, loginOtpTemplate } from "@/lib/email";
 import { normalizeIndianMobile } from "@/lib/phone";
 
-// Same message/shape whether or not `mobile` is registered — this used to
-// 404 "Mobile number not registered" from both branches below, letting
-// anyone enumerate registered dealer/vendor phone numbers one guess at a
-// time with no OTP needed. Matches the pattern in forgot-password.ts.
-const GENERIC_SENT = { message: "If this mobile number is registered, an OTP has been sent.", expires: OTP_EXPIRY_MINUTES };
+// Same message/shape whether or not the identifier is registered — this used
+// to 404 "Mobile number not registered" from both branches below, letting
+// anyone enumerate registered dealer/vendor phone numbers or emails one
+// guess at a time with no OTP needed. Matches the pattern in forgot-password.ts.
+const GENERIC_SENT = { message: "If this account is registered, an OTP has been sent.", expires: OTP_EXPIRY_MINUTES };
 const GENERIC_OTP_FAILURE = () => NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
 
-// Step 1: Send OTP to mobile
+// Step 1: Send OTP to mobile or email. Step 2 (otp present): verify it.
 export async function POST(req: NextRequest) {
   const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
   if (oversized) return oversized;
 
-  const { mobile, otp: otpInput } = await req.json();
+  const { mobile, email, method, otp: otpInput } = await req.json();
 
-  if (!mobile) return NextResponse.json({ error: "Mobile number is required" }, { status: 400 });
-
-  const normalizedMobile = normalizeIndianMobile(mobile);
-  if (!normalizedMobile) {
-    return NextResponse.json({ error: "Invalid Indian mobile number" }, { status: 400 });
+  const isMobileMethod = method === "mobile" || (!method && !!mobile);
+  let identifier: string | undefined;
+  if (isMobileMethod) {
+    identifier = mobile ? normalizeIndianMobile(mobile) ?? undefined : undefined;
+    if (!identifier) return NextResponse.json({ error: "Invalid Indian mobile number" }, { status: 400 });
+  } else {
+    identifier = email ? String(email).trim().toLowerCase() : undefined;
+    if (!identifier) return NextResponse.json({ error: "Email address is required" }, { status: 400 });
   }
+
+  const findUser = () =>
+    prisma.user.findUnique({ where: isMobileMethod ? { mobileNumber: identifier } : { email: identifier } });
 
   // If OTP provided, verify it (step 2)
   if (otpInput) {
-    const limited = await enforceRateLimit(req, "OTP_VERIFY", normalizedMobile);
+    const limited = await enforceRateLimit(req, "OTP_VERIFY", identifier);
     if (limited) return limited;
 
-    const user = await prisma.user.findUnique({ where: { mobileNumber: normalizedMobile } });
+    const user = await findUser();
     // Every failure path down here — no such user, disabled account, locked
     // account, wrong/expired code — returns the exact same response. Account
     // status/lock detail is only revealed once a *correct* OTP has already
-    // proven the caller actually owns this phone number.
+    // proven the caller actually owns this phone number/email.
     if (!user) return GENERIC_OTP_FAILURE();
 
     const result = await verifyOTP(user.id, "LOGIN", otpInput);
@@ -66,27 +73,37 @@ export async function POST(req: NextRequest) {
     return res;
   }
 
-  // Send OTP step — per-IP AND per-phone, strictest budget class (real
-  // WhatsApp/SMS send cost).
-  const limited = await enforceRateLimit(req, "OTP_SEND", normalizedMobile);
+  // Send OTP step. SMS/WhatsApp has a real per-send cost and stays on the
+  // strict OTP_SEND budget; email has no send cost so uses the uncapped
+  // (IP-guarded only) OTP_SEND_EMAIL budget — same split as forgot-password.
+  const limited = await enforceRateLimit(req, isMobileMethod ? "OTP_SEND" : "OTP_SEND_EMAIL", identifier);
   if (limited) return limited;
 
-  const user = await prisma.user.findUnique({ where: { mobileNumber: normalizedMobile } });
+  const user = await findUser();
   if (!user || !user.isActive) {
     return NextResponse.json(GENERIC_SENT);
   }
 
-  // Per-account resend cap (5/hour) layered on top of the per-phone/per-IP
-  // budget above.
-  const canResend = await checkResendLimit(user.id, "LOGIN");
+  // Per-account resend cap layered on top of the per-identifier/per-IP budget
+  // above — skipped for email since there's no cost to cap.
+  const canResend = await checkResendLimit(user.id, "LOGIN", isMobileMethod ? undefined : Infinity);
   if (!canResend) {
     return NextResponse.json({ error: "Too many OTP requests. Try again in 1 hour." }, { status: 429 });
   }
 
   const code = await createOTP(user.id, "LOGIN");
-  const smsResult = await sendOTP(normalizedMobile, code);
-  if (!smsResult.success) {
-    return NextResponse.json({ error: "Failed to send OTP. Try again." }, { status: 500 });
+
+  if (isMobileMethod) {
+    const smsResult = await sendOTP(identifier!, code);
+    if (!smsResult.success) {
+      return NextResponse.json({ error: "Failed to send OTP. Try again." }, { status: 500 });
+    }
+  } else {
+    await sendEmail({
+      to: user.email,
+      subject: "Login OTP — MOTOXPLUS",
+      html: loginOtpTemplate(user.name || "", code),
+    }).catch(console.error);
   }
 
   return NextResponse.json(GENERIC_SENT);

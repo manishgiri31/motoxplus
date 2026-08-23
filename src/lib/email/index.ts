@@ -58,6 +58,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 export { verifyEmailTemplate } from "./templates/verify-email";
 export { welcomeTemplate } from "./templates/welcome";
 export { passwordResetTemplate } from "./templates/password-reset";
+export { loginOtpTemplate } from "./templates/login-otp";
 export { dealerApprovedTemplate } from "./templates/dealer-approved";
 export { vendorApprovedTemplate } from "./templates/vendor-approved";
 export { orderConfirmationTemplate } from "./templates/order-confirmation";
