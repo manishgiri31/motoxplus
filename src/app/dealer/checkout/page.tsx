@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
-import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone, Info } from "lucide-react";
+import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone, Info, ShieldCheck, Building2, Wallet, Lock } from "lucide-react";
 import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
@@ -570,6 +570,7 @@ export default function CheckoutPage() {
           {ALL_PAYMENT_OPTIONS.filter((o) => (!o.requiresUpi || upiEnabled) && (!o.requiresRazorpay || RAZORPAY_ENABLED)).map((option) => {
             const isSelected = paymentType === option.id;
             const amount = option.id === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal;
+            const balanceAfterAdvance = option.id === "ADVANCE_20" ? grandTotal - amount : 0;
 
             return (
               <button
@@ -577,7 +578,7 @@ export default function CheckoutPage() {
                 onClick={() => setPaymentType(option.id)}
                 className={`w-full flex items-center gap-4 p-4 rounded-sm border text-left transition-all duration-200 ${
                   isSelected
-                    ? "border-red-600 bg-red-600/5"
+                    ? "border-red-600 bg-red-600/5 ring-1 ring-red-600/20"
                     : "border-[var(--border-color)] hover:border-red-600/40 glass"
                 }`}
               >
@@ -597,6 +598,11 @@ export default function CheckoutPage() {
                     )}
                   </div>
                   <div className="text-[var(--text-muted)] text-xs">{option.subtitle}</div>
+                  {option.id === "ADVANCE_20" && (
+                    <div className="text-[var(--text-muted)] text-[11px] mt-0.5">
+                      Then <span className="text-[var(--text-secondary)] font-medium">{formatCurrency(balanceAfterAdvance)}</span> before delivery
+                    </div>
+                  )}
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="text-[var(--text-primary)] font-black">{formatCurrency(amount)}</div>
@@ -606,6 +612,21 @@ export default function CheckoutPage() {
             );
           })}
         </div>
+
+        {RAZORPAY_ENABLED && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-color)] pt-4">
+            <div className="flex items-center gap-1.5 text-[var(--text-muted)] text-[11px]">
+              <ShieldCheck size={14} className="text-green-500" />
+              <span>Secured by Razorpay · PCI-DSS compliant, 256-bit encryption</span>
+            </div>
+            <div className="flex items-center gap-3 text-[var(--text-muted)]">
+              <span className="flex items-center gap-1 text-[10px]"><CreditCard size={13} /> Cards</span>
+              <span className="flex items-center gap-1 text-[10px]"><Smartphone size={13} /> UPI</span>
+              <span className="flex items-center gap-1 text-[10px]"><Building2 size={13} /> Netbanking</span>
+              <span className="flex items-center gap-1 text-[10px]"><Wallet size={13} /> Wallets</span>
+            </div>
+          </div>
+        )}
 
         {paymentType === "COD" && (
           <div className="mt-4 flex items-start gap-3 bg-green-900/10 border border-green-800/30 rounded-sm p-3">
@@ -620,6 +641,15 @@ export default function CheckoutPage() {
             <Smartphone size={16} className="text-purple-400 flex-shrink-0 mt-0.5" />
             <p className="text-purple-300 text-xs leading-relaxed">
               Your order will be created and you&apos;ll be redirected to pay via UPI QR or bank transfer. Verification takes 1–2 business hours.
+            </p>
+          </div>
+        )}
+        {(paymentType === "FULL_100" || paymentType === "ADVANCE_20") && RAZORPAY_ENABLED && (
+          <div className="mt-4 flex items-start gap-3 bg-red-900/10 border border-red-800/30 rounded-sm p-3">
+            <Lock size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-red-300 text-xs leading-relaxed">
+              You&apos;ll be redirected to Razorpay&apos;s secure checkout to complete payment. Your card/UPI details are
+              never seen or stored by MotoXPlus — Razorpay handles the transaction end-to-end.
             </p>
           </div>
         )}

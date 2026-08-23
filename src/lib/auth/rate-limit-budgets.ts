@@ -32,9 +32,16 @@ export const RATE_LIMITS = {
   // OTP send: strictest of all. Each send costs real money via WhatsApp/SMS —
   // this is direct cost-of-abuse protection, not just spam prevention.
   OTP_SEND: {
-    perIdentifier: { max: 3, windowSeconds: 15 * 60, failMode: "closed" } as Budget,
-    perIdentifierDaily: { max: 10, windowSeconds: 24 * 60 * 60, failMode: "closed" } as Budget,
+    perIdentifier: { max: 10, windowSeconds: 15 * 60, failMode: "closed" } as Budget,
+    perIdentifierDaily: { max: 30, windowSeconds: 24 * 60 * 60, failMode: "closed" } as Budget,
     perIP: { max: 8, windowSeconds: 60, failMode: "closed" } as Budget,
+  },
+  // Email OTP send: unlike SMS/WhatsApp there's no per-send cost, so no
+  // per-identifier or per-day cap on a given email address — only a per-IP
+  // guard against a single client hammering the route. failMode "open"
+  // because there's no cost at stake if Redis is briefly unreachable.
+  OTP_SEND_EMAIL: {
+    perIP: { max: 20, windowSeconds: 60, failMode: "open" } as Budget,
   },
   OTP_VERIFY: {
     perIdentifier: { max: 8, windowSeconds: 15 * 60, failMode: "closed" } as Budget,

@@ -153,8 +153,8 @@ describe("checkResendLimit / lockout cooldown", () => {
     expect(canResend).toBe(true);
   });
 
-  it("caps resends at 5 per rolling hour even without hitting the attempt lockout", async () => {
-    for (let i = 0; i < 5; i++) await createOTP(USER, TYPE);
+  it("caps resends at 10 per rolling hour even without hitting the attempt lockout", async () => {
+    for (let i = 0; i < 10; i++) await createOTP(USER, TYPE);
     const canResend = await checkResendLimit(USER, TYPE);
     expect(canResend).toBe(false);
   });

@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email or mobile number required" }, { status: 400 });
   }
 
-  const limited = await enforceRateLimit(req, "OTP_SEND", rateLimitIdentifier);
+  const isMobileMethod = method === "mobile" && !!mobile;
+  const limited = await enforceRateLimit(req, isMobileMethod ? "OTP_SEND" : "OTP_SEND_EMAIL", rateLimitIdentifier);
   if (limited) return limited;
 
   // Same message, same shape, whether or not the account exists.
@@ -54,7 +55,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const canSend = await checkResendLimit(user.id, "FORGOT_PASSWORD");
+  // SMS costs real money so stays capped; email is free to send so has no
+  // per-account hourly cap (isOtpLocked's brute-force lockout still applies).
+  const canSend = await checkResendLimit(user.id, "FORGOT_PASSWORD", isMobileMethod ? undefined : Infinity);
   if (!canSend) return NextResponse.json({ error: "Too many requests. Try again in 1 hour." }, { status: 429 });
 
   const code = await createOTP(user.id, "FORGOT_PASSWORD");

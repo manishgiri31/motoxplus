@@ -5,7 +5,7 @@ import crypto from "crypto";
 const OTP_LENGTH = 6;
 export const OTP_EXPIRY_MINUTES = 5;
 const MAX_OTP_ATTEMPTS = 5;
-const MAX_OTP_RESENDS_PER_HOUR = 5;
+const MAX_OTP_RESENDS_PER_HOUR = 10;
 const LOCKOUT_COOLDOWN_MINUTES = 15;
 
 export function generateOTP(): string {
@@ -118,12 +118,16 @@ export async function verifyOTP(
   return { success: true };
 }
 
-export async function checkResendLimit(userId: string, type: OtpType): Promise<boolean> {
+export async function checkResendLimit(
+  userId: string,
+  type: OtpType,
+  maxPerHour: number = MAX_OTP_RESENDS_PER_HOUR
+): Promise<boolean> {
   if (await isOtpLocked(userId, type)) return false;
 
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const count = await prisma.otpCode.count({
     where: { userId, type, createdAt: { gte: oneHourAgo } },
   });
-  return count < MAX_OTP_RESENDS_PER_HOUR;
+  return count < maxPerHour;
 }
