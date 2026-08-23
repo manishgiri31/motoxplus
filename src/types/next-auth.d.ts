@@ -13,6 +13,7 @@ declare module "next-auth" {
     mobileVerified?: boolean;
     dealerStatus?: string;
     vendorStatus?: string;
+    sessionId?: string;
   }
   interface Session {
     user: {
@@ -45,5 +46,6 @@ declare module "next-auth/jwt" {
     mobileVerified?: boolean;
     dealerStatus?: string;
     vendorStatus?: string;
+    sessionId?: string;
   }
 }

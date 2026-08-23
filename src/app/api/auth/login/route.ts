@@ -1,96 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { createSession } from "@/lib/auth/session";
-import { recordFailedLogin, clearFailedLogins, isAccountLocked } from "@/lib/auth/rate-limit";
-import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
+import { authenticateWithPassword } from "@/lib/auth/credentials";
+import { establishWebSession, setWebSessionCookies } from "@/lib/auth/web-session";
+import { rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
 import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
-import { COOKIE_ACCESS, COOKIE_REFRESH, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from "@/lib/auth/jwt";
-import { normalizeIndianMobile } from "@/lib/phone";
+
+const STATUS_BY_CODE = {
+  RATE_LIMITED: 429,
+  INVALID_CREDENTIALS: 401,
+  ACCOUNT_DISABLED: 403,
+  ACCOUNT_LOCKED: 423,
+} as const;
 
 export async function POST(req: NextRequest) {
   const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
   if (oversized) return oversized;
 
-  const ip = getClientIP(req);
   const { email, mobile, password } = await req.json();
-  const identifier = (email || mobile || "").trim();
-  if (!identifier || !password) {
+  const identifierRaw = (email || mobile || "").trim();
+  if (!identifierRaw || !password) {
     return NextResponse.json({ error: "Email or mobile number, and password are required" }, { status: 400 });
   }
 
-  const normalized = normalizeIndianMobile(identifier);
-  const isMobile = normalized !== null;
-  const normalizedMobile = normalized ?? identifier;
-
-  // Per-IP AND per-identifier (fail-closed: an outage shouldn't turn login
-  // brute-forcing unlimited).
-  const limited = await enforceRateLimit(req, "LOGIN", isMobile ? normalizedMobile : identifier.toLowerCase());
-  if (limited) return limited;
-
-  const user = await prisma.user.findUnique({
-    where: isMobile ? { mobileNumber: normalizedMobile } : { email: identifier.toLowerCase() },
-    include: { dealer: true, admin: true, vendor: true },
+  const ip = getClientIP(req);
+  const result = await authenticateWithPassword({
+    identifierRaw,
+    password,
+    ipAddress: ip,
+    userAgent: req.headers.get("user-agent") || undefined,
+    deviceInfo: getDeviceInfo(req),
   });
 
-  const deviceInfo = getDeviceInfo(req);
-  const userAgent = req.headers.get("user-agent") || undefined;
-  const logFailure = async (userId: string | undefined, reason: string) => {
-    if (!userId) return;
-    await prisma.loginHistory.create({
-      data: { userId, success: false, method: isMobile ? "password-mobile" : "password-email", reason, ipAddress: ip, userAgent, deviceInfo },
-    }).catch(() => null);
-  };
-
-  if (!user || !user.password) {
-    return NextResponse.json({ error: "Invalid email/mobile or password" }, { status: 401 });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.message }, { status: STATUS_BY_CODE[result.code] });
   }
 
-  if (!user.isActive) {
-    await logFailure(user.id, "Account disabled");
-    return NextResponse.json({ error: "Account has been disabled. Contact support." }, { status: 403 });
-  }
-
-  const lockStatus = await isAccountLocked(user.id);
-  if (lockStatus.locked) {
-    const minutesLeft = lockStatus.until
-      ? Math.ceil((lockStatus.until.getTime() - Date.now()) / 60000)
-      : 30;
-    await logFailure(user.id, "Account locked");
-    return NextResponse.json({ error: `Account locked. Try again in ${minutesLeft} minutes.` }, { status: 423 });
-  }
-
-  const isValid = await bcrypt.compare(password, user.password);
-  if (!isValid) {
-    const result = await recordFailedLogin(user.id);
-    await logFailure(user.id, "Incorrect password");
-    if (result.locked) {
-      return NextResponse.json({ error: "Account locked after too many failed attempts. Try again in 30 minutes." }, { status: 423 });
-    }
-    return NextResponse.json({ error: `Invalid email/mobile or password. ${result.attemptsLeft} attempt(s) remaining.` }, { status: 401 });
-  }
-
-  await clearFailedLogins(user.id);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginIP: ip, lastDevice: deviceInfo },
-  });
-
-  await prisma.loginHistory.create({
-    data: { userId: user.id, success: true, method: isMobile ? "password-mobile" : "password-email", ipAddress: ip, userAgent, deviceInfo },
-  }).catch(() => null);
+  const { user } = result;
 
   // Email/mobile verification and dealer/vendor approval are surfaced to the
   // caller via the response flags rather than blocking login outright.
-  const { accessToken, refreshToken } = await createSession({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    ipAddress: ip,
-    userAgent,
-    deviceInfo,
-  });
+  const session = await establishWebSession(user, { ipAddress: ip, userAgent: req.headers.get("user-agent") || undefined, deviceInfo: getDeviceInfo(req) });
 
   const res = NextResponse.json({
     user: {
@@ -105,20 +53,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  res.cookies.set(COOKIE_ACCESS, accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: ACCESS_TOKEN_MAX_AGE,
-    path: "/",
-  });
-  res.cookies.set(COOKIE_REFRESH, refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: REFRESH_TOKEN_MAX_AGE,
-    path: "/",
-  });
-
+  setWebSessionCookies(res, session);
   return res;
 }

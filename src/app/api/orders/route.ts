@@ -120,12 +120,11 @@ export async function POST(req: NextRequest) {
   // item was added. Price is always read fresh from product/variant below
   // (the cart never snapshots a price), so that part can't go stale; stock
   // and active status can, and previously were never re-checked here.
-  const unavailable = cart.items.filter(
-    (item) =>
-      !item.product.isActive ||
-      (item.variant && !item.variant.isActive) ||
-      item.product.stock < item.quantity
-  );
+  const unavailable = cart.items.filter((item) => {
+    if (!item.product.isActive) return true;
+    if (item.variant) return !item.variant.isActive || item.variant.stock < item.quantity;
+    return item.product.stock < item.quantity;
+  });
   if (unavailable.length > 0) {
     return NextResponse.json(
       {

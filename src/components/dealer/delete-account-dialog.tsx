@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signOut } from "next-auth/react";
+import { fullLogout } from "@/lib/auth/client-logout";
 import { Trash2, AlertTriangle, X } from "lucide-react";
 
 export function DeleteAccountDialog() {
@@ -27,7 +27,7 @@ export function DeleteAccountDialog() {
       });
 
       if (res.ok) {
-        await signOut({ callbackUrl: "/?deleted=1" });
+        await fullLogout("/?deleted=1");
         return;
       }
       const data = await res.json().catch(() => ({}));

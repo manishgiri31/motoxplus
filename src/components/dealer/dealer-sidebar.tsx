@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { fullLogout } from "@/lib/auth/client-logout";
 import {
   LayoutDashboard,
   Package,
@@ -44,7 +44,7 @@ export function DealerSidebar({ user }: Props) {
 
   const handleSignOut = async () => {
     setSigningOut(true);
-    await signOut({ callbackUrl: "/" });
+    await fullLogout("/");
   };
 
   const SidebarContent = () => (

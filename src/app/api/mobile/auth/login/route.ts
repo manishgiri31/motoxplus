@@ -1,107 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { authenticateWithPassword } from "@/lib/auth/credentials";
 import { createSession } from "@/lib/auth/session";
-import {
-  recordFailedLogin,
-  clearFailedLogins,
-  isAccountLocked,
-} from "@/lib/auth/rate-limit";
-import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
+import { rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
 import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
-import { normalizeIndianMobile } from "@/lib/phone";
+
+const STATUS_BY_CODE = {
+  RATE_LIMITED: 429,
+  INVALID_CREDENTIALS: 401,
+  ACCOUNT_DISABLED: 403,
+  ACCOUNT_LOCKED: 423,
+} as const;
 
 // Mobile login — returns tokens in the response body instead of cookies.
 export async function POST(req: NextRequest) {
   const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
   if (oversized) return oversized;
 
-  const ip = getClientIP(req);
   const { email, mobile, password } = await req.json();
-  const identifier = (email || mobile || "").trim();
-  if (!identifier || !password) {
-    return NextResponse.json(
-      { error: "Email or mobile number, and password are required" },
-      { status: 400 }
-    );
+  const identifierRaw = (email || mobile || "").trim();
+  if (!identifierRaw || !password) {
+    return NextResponse.json({ error: "Email or mobile number, and password are required" }, { status: 400 });
   }
 
-  const normalized = normalizeIndianMobile(identifier);
-  const isMobile = normalized !== null;
-  const normalizedMobile = normalized ?? identifier;
-
-  // Per-IP AND per-identifier (fail-closed: an outage shouldn't turn login
-  // brute-forcing unlimited).
-  const limited = await enforceRateLimit(req, "LOGIN", isMobile ? normalizedMobile : identifier.toLowerCase());
-  if (limited) return limited;
-
-  const user = await prisma.user.findUnique({
-    where: isMobile ? { mobileNumber: normalizedMobile } : { email: identifier.toLowerCase() },
-    include: { dealer: true },
-  });
-
+  const ip = getClientIP(req);
   const deviceInfo = getDeviceInfo(req);
   const userAgent = req.headers.get("user-agent") || undefined;
-  const logFailure = async (userId: string | undefined, reason: string) => {
-    if (!userId) return;
-    await prisma.loginHistory.create({
-      data: { userId, success: false, method: isMobile ? "password-mobile" : "password-email", reason, ipAddress: ip, userAgent, deviceInfo },
-    }).catch(() => null);
-  };
 
-  if (!user || !user.password) {
-    return NextResponse.json(
-      { error: "Invalid email/mobile or password" },
-      { status: 401 }
-    );
+  const result = await authenticateWithPassword({ identifierRaw, password, ipAddress: ip, userAgent, deviceInfo });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.message }, { status: STATUS_BY_CODE[result.code] });
   }
 
-  if (!user.isActive) {
-    await logFailure(user.id, "Account disabled");
-    return NextResponse.json(
-      { error: "Account has been disabled. Contact support." },
-      { status: 403 }
-    );
-  }
-
-  const lockStatus = await isAccountLocked(user.id);
-  if (lockStatus.locked) {
-    const minutesLeft = lockStatus.until
-      ? Math.ceil((lockStatus.until.getTime() - Date.now()) / 60000)
-      : 30;
-    await logFailure(user.id, "Account locked");
-    return NextResponse.json(
-      { error: `Account locked. Try again in ${minutesLeft} minutes.` },
-      { status: 423 }
-    );
-  }
-
-  const isValid = await bcrypt.compare(password, user.password);
-  if (!isValid) {
-    const result = await recordFailedLogin(user.id);
-    await logFailure(user.id, "Incorrect password");
-    if (result.locked) {
-      return NextResponse.json(
-        { error: "Account locked after too many failed attempts. Try again in 30 minutes." },
-        { status: 423 }
-      );
-    }
-    return NextResponse.json(
-      { error: `Invalid email/mobile or password. ${result.attemptsLeft} attempt(s) remaining.` },
-      { status: 401 }
-    );
-  }
-
-  await clearFailedLogins(user.id);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginIP: ip, lastDevice: deviceInfo },
-  });
-
-  await prisma.loginHistory.create({
-    data: { userId: user.id, success: true, method: isMobile ? "password-mobile" : "password-email", ipAddress: ip, userAgent, deviceInfo },
-  }).catch(() => null);
+  const { user } = result;
 
   // Verification/approval gating is left to the client: emailVerified,
   // mobileVerified and dealer.status are returned so the app can route to

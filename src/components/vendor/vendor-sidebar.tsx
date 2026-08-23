@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { fullLogout } from "@/lib/auth/client-logout";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -104,7 +104,7 @@ export function VendorSidebar({ user }: Props) {
 
       <div className="p-3 border-t border-[var(--border-color)]">
         <button
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => fullLogout("/")}
           className="flex items-center gap-3 w-full px-3 py-2.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-900/10 rounded-xl text-sm font-medium transition-all"
         >
           <LogOut size={17} />

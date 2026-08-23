@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Search, ShoppingCart, CheckCircle, Plus, Minus, ChevronRight } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { formatCurrency } from "@/lib/utils";
+import { getStockStatus, stockStatusLabel } from "@/lib/stock-status";
 
 interface ProductImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
 
@@ -55,7 +56,14 @@ export function DealerProductCatalog({
   const [cartError, setCartError] = useState<string | null>(null);
   const totalPages = Math.ceil(total / pageSize);
 
-  const getQuantity = (product: Product) => quantities[product.id] || product.moq;
+  // Largest multiple of MOQ that still fits within available stock — 0 means
+  // the dealer can't place a valid order at all (stock below one MOQ batch).
+  const maxOrderQty = (product: Product) => Math.floor(product.stock / product.moq) * product.moq;
+  const canOrder = (product: Product) => maxOrderQty(product) >= product.moq;
+  const getQuantity = (product: Product) => {
+    const max = maxOrderQty(product);
+    return Math.min(quantities[product.id] || product.moq, max || product.moq);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +151,13 @@ export function DealerProductCatalog({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map((product) => {
           const hasVariants = (product._count?.variants ?? 0) > 0;
-          const isInStock = hasVariants ? true : (product.vendorId ? true : product.stock > 0);
+          const isInStock = canOrder(product);
+          const stockLabel = product.stock < product.moq ? "Out of Stock" : stockStatusLabel(product.stock);
+          const stockBadgeCls = !isInStock
+            ? "bg-red-500/15 text-red-500"
+            : getStockStatus(product.stock) === "low_stock"
+            ? "bg-amber-500/15 text-amber-500"
+            : "bg-green-500/15 text-green-600";
           const thumb =
             product.productImages && product.productImages.length > 0
               ? (product.productImages.find((i) => i.isPrimary) || product.productImages[0]).imageUrl
@@ -196,8 +210,8 @@ export function DealerProductCatalog({
                   <div className="text-[var(--text-muted)] text-[10px] mt-0.5">+ {product.gstRate}% GST • MOQ: {product.moq}</div>
                 </div>
                 {!hasVariants && (
-                  <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${isInStock ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-500"}`}>
-                    {isInStock ? "In Stock" : "Out of Stock"}
+                  <div className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${stockBadgeCls}`}>
+                    {stockLabel}
                   </div>
                 )}
               </div>
@@ -217,14 +231,16 @@ export function DealerProductCatalog({
                 <div className="flex items-center glass border border-[var(--border-color)] rounded-sm overflow-hidden">
                   <button
                     onClick={() => setQuantities((q) => ({ ...q, [product.id]: Math.max(product.moq, getQuantity(product) - product.moq) }))}
-                    className="px-2.5 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                    disabled={!isInStock}
+                    className="px-2.5 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                   >
                     <Minus size={12} />
                   </button>
-                  <span className="px-2 text-[var(--text-primary)] text-sm font-bold min-w-[32px] text-center">{getQuantity(product)}</span>
+                  <span className="px-2 text-[var(--text-primary)] text-sm font-bold min-w-[32px] text-center">{isInStock ? getQuantity(product) : 0}</span>
                   <button
-                    onClick={() => setQuantities((q) => ({ ...q, [product.id]: getQuantity(product) + product.moq }))}
-                    className="px-2.5 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                    onClick={() => setQuantities((q) => ({ ...q, [product.id]: Math.min(getQuantity(product) + product.moq, maxOrderQty(product)) }))}
+                    disabled={!isInStock || getQuantity(product) >= maxOrderQty(product)}
+                    className="px-2.5 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                   >
                     <Plus size={12} />
                   </button>
@@ -242,6 +258,8 @@ export function DealerProductCatalog({
                     <><CheckCircle size={12} /> Added</>
                   ) : addingToCart === product.id ? (
                     <><Spinner size={12} /> Adding...</>
+                  ) : !isInStock ? (
+                    "Out of Stock"
                   ) : (
                     <><ShoppingCart size={12} /> Add</>
                   )}

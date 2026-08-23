@@ -14,7 +14,11 @@ export async function GET() {
   return NextResponse.json({
     upiId: map.upi_id || "5118678468276SB1024@mairtel",
     upiName: map.upi_name || "MotoXPlus India Private Limited",
-    upiEnabled: map.upi_enabled !== "false",
+    // Opt-in, not opt-out: Razorpay Checkout already offers UPI (with automatic
+    // verification) under Full Payment/20% Advance, so an unconfigured
+    // environment shouldn't silently surface the manual screenshot/admin-review
+    // flow as well — an admin must explicitly flip this on via Settings.
+    upiEnabled: map.upi_enabled === "true",
     bankAccountName: map.bank_account_name || "MotoXPlus India Private Limited",
     bankAccountNumber: map.bank_account_number || "7834839071",
     bankIfsc: map.bank_ifsc || "AIRP0000001",

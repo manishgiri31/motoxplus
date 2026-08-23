@@ -10,6 +10,7 @@ import {
   Shield, Tag, PackageOpen, AlertTriangle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { getStockStatus, stockStatusLabel } from "@/lib/stock-status";
 
 interface ProductImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
 interface VariantImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
@@ -47,6 +48,7 @@ interface Product {
   price: number;
   mrp?: number | null;
   moq: number;
+  stock: number;
   gstRate: number;
   hsnCode?: string;
   brand?: string;
@@ -164,9 +166,12 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
   const activeMoq = resolvedVariant?.moq ?? product.moq;
   const activeSku = resolvedVariant?.sku ?? product.sku;
   const activePartNumber = resolvedVariant?.partNumber ?? product.partNumber;
-  const activeStock = resolvedVariant?.stock ?? 0;
+  const activeStock = hasVariants ? (resolvedVariant?.stock ?? 0) : product.stock;
   const priceWithGST = activePrice * (1 + product.gstRate / 100);
-  const outOfStock = hasVariants && resolvedVariant && resolvedVariant.stock === 0;
+  const outOfStock = hasVariants ? !!resolvedVariant && resolvedVariant.stock <= 0 : product.stock <= 0;
+  // Largest MOQ-multiple that still fits within available stock — 0 means no
+  // valid order can be placed even though some stock may remain.
+  const maxOrderQty = Math.floor(activeStock / activeMoq) * activeMoq;
 
   // Check if a value is available given current other-dimension selections
   const isValueAvailable = (dim: Dim, val: string): boolean => {
@@ -222,10 +227,13 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [modelDropdownOpen]);
-  // Clamp quantity to new MOQ
+  // Clamp quantity to new MOQ, then to whatever stock is actually available
   useEffect(() => {
-    setQuantity((q) => Math.max(activeMoq, Math.round(q / activeMoq) * activeMoq || activeMoq));
-  }, [activeMoq]);
+    setQuantity((q) => {
+      const snapped = Math.max(activeMoq, Math.round(q / activeMoq) * activeMoq || activeMoq);
+      return maxOrderQty > 0 ? Math.min(snapped, maxOrderQty) : snapped;
+    });
+  }, [activeMoq, maxOrderQty]);
 
   const isDealer = session?.user?.role === "DEALER";
 

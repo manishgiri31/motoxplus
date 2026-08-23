@@ -43,7 +43,7 @@ export async function createSession(opts: CreateSessionOptions) {
     data: { lastLogin: new Date() },
   });
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken, sessionId };
 }
 
 export async function rotateSession(refreshToken: string, ipAddress?: string) {

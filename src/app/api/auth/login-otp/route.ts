@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createOTP, verifyOTP, checkResendLimit, OTP_EXPIRY_MINUTES } from "@/lib/auth/otp";
-import { createSession } from "@/lib/auth/session";
+import { establishWebSession, setWebSessionCookies } from "@/lib/auth/web-session";
+import { deliverOtp } from "@/lib/auth/otp-delivery";
 import { isAccountLocked } from "@/lib/auth/rate-limit";
 import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
 import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
-import { COOKIE_ACCESS, COOKIE_REFRESH, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from "@/lib/auth/jwt";
-import { sendOTP } from "@/lib/sms";
-import { sendEmail, loginOtpTemplate } from "@/lib/email";
 import { normalizeIndianMobile } from "@/lib/phone";
 
 // Same message/shape whether or not the identifier is registered — this used
@@ -35,7 +33,10 @@ export async function POST(req: NextRequest) {
   }
 
   const findUser = () =>
-    prisma.user.findUnique({ where: isMobileMethod ? { mobileNumber: identifier } : { email: identifier } });
+    prisma.user.findUnique({
+      where: isMobileMethod ? { mobileNumber: identifier } : { email: identifier },
+      include: { dealer: true, vendor: true, admin: true },
+    });
 
   // If OTP provided, verify it (step 2)
   if (otpInput) {
@@ -56,10 +57,7 @@ export async function POST(req: NextRequest) {
     const lockStatus = await isAccountLocked(user.id);
     if (lockStatus.locked) return NextResponse.json({ error: "Account locked. Try later." }, { status: 423 });
 
-    const { accessToken, refreshToken } = await createSession({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
+    const session = await establishWebSession(user, {
       ipAddress: getClientIP(req),
       userAgent: req.headers.get("user-agent") || undefined,
       deviceInfo: getDeviceInfo(req),
@@ -68,8 +66,7 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json({
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
-    res.cookies.set(COOKIE_ACCESS, accessToken, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: ACCESS_TOKEN_MAX_AGE, path: "/" });
-    res.cookies.set(COOKIE_REFRESH, refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: REFRESH_TOKEN_MAX_AGE, path: "/" });
+    setWebSessionCookies(res, session);
     return res;
   }
 
@@ -94,16 +91,17 @@ export async function POST(req: NextRequest) {
   const code = await createOTP(user.id, "LOGIN");
 
   if (isMobileMethod) {
-    const smsResult = await sendOTP(identifier!, code);
-    if (!smsResult.success) {
-      return NextResponse.json({ error: "Failed to send OTP. Try again." }, { status: 500 });
+    const result = await deliverOtp({ channel: "WHATSAPP", destination: identifier!, code, purpose: "LOGIN", name: user.name ?? undefined });
+    if (!result.delivered) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
   } else {
-    await sendEmail({
-      to: user.email,
-      subject: "Login OTP — MOTOXPLUS",
-      html: loginOtpTemplate(user.name || "", code),
-    }).catch(console.error);
+    // Email has no send cost, so a delivery failure here is logged but not
+    // surfaced — an already rate-limited caller shouldn't be blocked by a
+    // transient Resend hiccup when the OTP itself was created successfully.
+    deliverOtp({ channel: "EMAIL", destination: user.email, code, purpose: "LOGIN", name: user.name ?? undefined })
+      .then((result) => { if (!result.delivered) console.error("[LoginOTP]", result.error); })
+      .catch(console.error);
   }
 
   return NextResponse.json(GENERIC_SENT);

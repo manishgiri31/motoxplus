@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { fullLogout } from "@/lib/auth/client-logout";
 import { useState } from "react";
 import { Clock3, XCircle, Ban } from "lucide-react";
 
@@ -44,7 +44,7 @@ export function PendingApprovalCard({ status }: PendingApprovalCardProps) {
       <h1 className="text-xl font-black text-[var(--text-primary)] mb-3">{copy.title}</h1>
       <p className="text-[var(--text-muted)] text-sm mb-8 leading-relaxed">{copy.text}</p>
       <button
-        onClick={async () => { setSigningOut(true); await signOut({ callbackUrl: "/" }); }}
+        onClick={async () => { setSigningOut(true); await fullLogout("/"); }}
         disabled={signingOut}
         className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-wider text-sm"
       >

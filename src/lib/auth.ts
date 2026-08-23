@@ -1,12 +1,12 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { UserRole, StaffDepartment } from "@prisma/client";
 import type { Adapter } from "next-auth/adapters";
-import { checkRateLimit } from "@/lib/auth/rate-limit";
-import { RATE_LIMITS } from "@/lib/auth/rate-limit-budgets";
+import { authenticateWithPassword } from "@/lib/auth/credentials";
+import { createSession } from "@/lib/auth/session";
+import { buildSessionClaims } from "@/lib/auth/identity";
 
 function getClientIP(headers?: Record<string, any>): string | undefined {
   const forwarded = headers?.["x-forwarded-for"];
@@ -50,101 +50,39 @@ export const authOptions: NextAuthOptions = {
         const deviceInfo = getDeviceInfo(req?.headers);
         const userAgent = (req?.headers?.["user-agent"] as string) || undefined;
 
-        const identifier = credentials.identifier.trim();
-        const isMobile = /^[6-9]\d{9}$/.test(identifier.replace(/\s/g, "").replace("+91", ""));
-        const normalizedIdentifier = isMobile
-          ? identifier.replace(/\s/g, "").replace("+91", "")
-          : identifier.toLowerCase();
-
-        // Shares the same "LOGIN" budget and Redis keyspace as the REST
-        // /api/auth/login route (rate-limit-budgets.ts) so an attacker can't
-        // dodge the throttle by switching which login endpoint they hit.
-        // Per-identifier catches a rotating-IP attack on one account; per-IP
-        // catches password spraying across many accounts from one source.
-        const rateLimitChecks = [checkRateLimit(`rl:LOGIN:id:${normalizedIdentifier}`, RATE_LIMITS.LOGIN.perIdentifier)];
-        if (ip) rateLimitChecks.push(checkRateLimit(`rl:LOGIN:ip:${ip}`, RATE_LIMITS.LOGIN.perIP));
-        const rateLimitResults = await Promise.all(rateLimitChecks);
-        if (rateLimitResults.some((r) => !r.allowed)) {
-          throw new Error("Too many login attempts. Please try again later.");
-        }
-
-        const user = await prisma.user.findUnique({
-          where: isMobile ? { mobileNumber: normalizedIdentifier } : { email: normalizedIdentifier },
-          include: { dealer: true, admin: true, vendor: true },
+        // Delegates identifier normalization, rate limiting, lockout, and
+        // audit logging to the same function /api/auth/login and
+        // /api/mobile/auth/login use — this used to be a third hand-copied
+        // implementation of all of that.
+        const result = await authenticateWithPassword({
+          identifierRaw: credentials.identifier,
+          password: credentials.password,
+          ipAddress: ip,
+          userAgent,
+          deviceInfo,
         });
 
-        const logFailure = async (userId: string | undefined, reason: string) => {
-          if (!userId) return;
-          await prisma.loginHistory.create({
-            data: { userId, success: false, method: isMobile ? "password-mobile" : "password-email", reason, ipAddress: ip, userAgent, deviceInfo },
-          }).catch(() => null);
-        };
-
-        if (!user || !user.password) {
-          throw new Error("Invalid credentials");
+        if (!result.ok) {
+          throw new Error(result.message);
         }
 
-        if (!user.isActive) {
-          await logFailure(user.id, "Account disabled");
-          throw new Error("Account has been disabled. Contact support.");
-        }
+        const { user } = result;
 
-        if (user.accountLockedUntil && user.accountLockedUntil > new Date()) {
-          const mins = Math.ceil((user.accountLockedUntil.getTime() - Date.now()) / 60000);
-          await logFailure(user.id, "Account locked");
-          throw new Error(`Account locked. Try again in ${mins} minutes.`);
-        }
-
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) {
-          const newAttempts = (user.failedLoginAttempts || 0) + 1;
-          const updates: Record<string, unknown> = { failedLoginAttempts: newAttempts };
-          if (newAttempts >= 5) {
-            updates.accountLockedUntil = new Date(Date.now() + 30 * 60 * 1000);
-          }
-          await prisma.user.update({ where: { id: user.id }, data: updates });
-          await logFailure(user.id, "Incorrect password");
-          throw new Error("Invalid credentials");
-        }
-
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            failedLoginAttempts: 0,
-            accountLockedUntil: null,
-            lastLogin: new Date(),
-            lastLoginIP: ip,
-            lastDevice: deviceInfo,
-          },
-        });
-
-        await prisma.loginHistory.create({
-          data: {
-            userId: user.id,
-            success: true,
-            method: isMobile ? "password-mobile" : "password-email",
-            ipAddress: ip,
-            userAgent,
-            deviceInfo,
-          },
-        }).catch(() => null);
+        // Converges this login onto the same canonical UserSession record
+        // (see src/lib/auth/session.ts) that REST/OTP logins create — every
+        // authentication method now produces exactly one session row, even
+        // though NextAuth's own JWT cookie (minted below via the jwt/session
+        // callbacks) remains what actually gates page access for this flow.
+        const { sessionId } = await createSession({ userId: user.id, email: user.email, role: user.role, ipAddress: ip, userAgent, deviceInfo });
 
         // Email/mobile verification and dealer/vendor approval are enforced by
         // middleware redirects, not here — a correct password always issues a
         // session so the user can be routed to the right verification step.
         return {
-          id: user.id,
+          ...buildSessionClaims(user),
           email: user.email,
           name: user.name,
-          role: user.role,
-          dealerId: user.dealer?.id ?? undefined,
-          isSuperAdmin: user.admin?.isSuperAdmin ?? false,
-          vendorId: user.vendor?.id ?? undefined,
-          department: user.department ?? undefined,
-          emailVerified: !!user.emailVerified,
-          mobileVerified: user.mobileVerified,
-          dealerStatus: user.dealer?.status ?? undefined,
-          vendorStatus: user.vendor?.status ?? undefined,
+          sessionId,
         };
       },
     }),
@@ -162,6 +100,7 @@ export const authOptions: NextAuthOptions = {
         token.mobileVerified = (user as { mobileVerified?: boolean }).mobileVerified;
         token.dealerStatus = (user as { dealerStatus?: string }).dealerStatus;
         token.vendorStatus = (user as { vendorStatus?: string }).vendorStatus;
+        token.sessionId = (user as { sessionId?: string }).sessionId;
       }
 
       // Triggered by the client's `useSession().update()` right after email/mobile

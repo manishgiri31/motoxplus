@@ -58,14 +58,16 @@ export async function POST(req: NextRequest) {
   const product = await prisma.product.findUnique({ where: { id: productId, isActive: true } });
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-  // Validate variant if provided, and get its MOQ
+  // Validate variant if provided, and get its MOQ + stock
   let effectiveMoq = product.moq;
+  let availableStock = product.stock;
   if (variantId) {
     const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
     if (!variant || variant.productId !== productId || !variant.isActive) {
       return NextResponse.json({ error: "Invalid variant" }, { status: 400 });
     }
     if ((variant as any).moq != null) effectiveMoq = (variant as any).moq;
+    availableStock = variant.stock;
   }
 
   // Validate MOQ
@@ -73,6 +75,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: `Quantity must be a multiple of MOQ (${effectiveMoq})` },
       { status: 400 }
+    );
+  }
+
+  // Reject up front rather than letting the dealer discover it at checkout —
+  // the cart previously accepted any quantity with no stock check at all.
+  if (quantity > availableStock) {
+    return NextResponse.json(
+      {
+        error:
+          availableStock > 0
+            ? `Only ${availableStock} in stock. Please reduce the quantity.`
+            : "This item is currently out of stock.",
+        availableStock,
+      },
+      { status: 409 }
     );
   }
 
