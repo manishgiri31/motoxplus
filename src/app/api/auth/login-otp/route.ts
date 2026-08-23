@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { createOTP, verifyOTP, checkResendLimit, OTP_EXPIRY_MINUTES } from "@/lib/auth/otp";
 import { establishWebSession, setWebSessionCookies } from "@/lib/auth/web-session";
 import { deliverOtp } from "@/lib/auth/otp-delivery";
-import { isAccountLocked } from "@/lib/auth/rate-limit";
+import { isAccountLocked, resetRateLimit } from "@/lib/auth/rate-limit";
 import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
-import { getClientIP, getDeviceInfo } from "@/lib/auth/middleware";
+import { getClientIP, getDeviceInfo, UNKNOWN_IP } from "@/lib/auth/middleware";
 import { normalizeIndianMobile } from "@/lib/phone";
 
 // Same message/shape whether or not the identifier is registered — this used
@@ -56,6 +56,15 @@ export async function POST(req: NextRequest) {
     if (!user.isActive) return NextResponse.json({ error: "Account disabled" }, { status: 403 });
     const lockStatus = await isAccountLocked(user.id);
     if (lockStatus.locked) return NextResponse.json({ error: "Account locked. Try later." }, { status: 423 });
+
+    // Clear the OTP_VERIFY abuse counter for this identifier/IP on a
+    // successful login — same "reset on success" contract as the password
+    // path, so a string of ordinary logins doesn't erode the budget.
+    const verifyIp = getClientIP(req);
+    await Promise.all([
+      resetRateLimit(`rl:OTP_VERIFY:id:${identifier}`),
+      verifyIp !== UNKNOWN_IP ? resetRateLimit(`rl:OTP_VERIFY:ip:${verifyIp}`) : Promise.resolve(),
+    ]);
 
     const session = await establishWebSession(user, {
       ipAddress: getClientIP(req),

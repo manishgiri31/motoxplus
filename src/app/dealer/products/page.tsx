@@ -38,9 +38,9 @@ export default async function DealerProductsPage(
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">Products</h1>
-        <p className="text-[var(--text-muted)] mt-1">Browse and order from our complete catalog</p>
+      <div className="mb-5">
+        <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">Products</h1>
+        <p className="text-[var(--text-muted)] text-sm mt-0.5">Browse and order from our complete catalog</p>
       </div>
       <DealerProductCatalog
         products={JSON.parse(JSON.stringify(products))}

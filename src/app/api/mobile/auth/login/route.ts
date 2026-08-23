@@ -28,7 +28,11 @@ export async function POST(req: NextRequest) {
 
   const result = await authenticateWithPassword({ identifierRaw, password, ipAddress: ip, userAgent, deviceInfo });
   if (!result.ok) {
-    return NextResponse.json({ error: result.message }, { status: STATUS_BY_CODE[result.code] });
+    const headers = result.retryAfterSeconds ? { "Retry-After": String(Math.ceil(result.retryAfterSeconds)) } : undefined;
+    return NextResponse.json(
+      { error: result.message, ...(result.retryAfterSeconds ? { retryAfterSeconds: Math.ceil(result.retryAfterSeconds) } : {}) },
+      { status: STATUS_BY_CODE[result.code], headers }
+    );
   }
 
   const { user } = result;

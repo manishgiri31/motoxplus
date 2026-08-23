@@ -1,5 +1,7 @@
-const BASE_URL = process.env.DELHIVERY_BASE_URL || "https://track.delhivery.com";
-const API_TOKEN = process.env.DELHIVERY_API_TOKEN || "";
+import { delhiveryConfig } from "./config";
+
+const BASE_URL = delhiveryConfig.baseUrl;
+const API_TOKEN = delhiveryConfig.token;
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;

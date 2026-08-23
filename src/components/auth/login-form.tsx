@@ -25,6 +25,15 @@ function maskMobile(mobile: string) {
 
 const inputCls = "w-full themed-input border rounded-xl pl-11 pr-4 py-3 text-sm";
 
+// How long "Resend code" stays disabled after a send. Deliberately much
+// shorter than OTP_EXPIRY_MINUTES (5 min, server-side) — the resend cooldown
+// only exists to stop accidental double-sends/spam-clicking, not to mirror
+// how long the code itself stays valid. It used to be hardcoded to the same
+// 300s as the OTP's validity window, which meant "Resend code" stayed
+// disabled for the full 5 minutes even though nothing about abuse
+// prevention requires that.
+const RESEND_COOLDOWN_SECONDS = 45;
+
 export function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dealer/dashboard";
@@ -292,7 +301,7 @@ export function LoginForm() {
             {error && <ErrorBanner message={error} center />}
           </div>
           <div className="flex items-center justify-between text-sm">
-            <CountdownTimer key={timerKey} seconds={300} onResend={handleResendOtp} label="Resend code" compact />
+            <CountdownTimer key={timerKey} seconds={RESEND_COOLDOWN_SECONDS} onResend={handleResendOtp} label="Resend code" compact />
             <button type="button" onClick={() => resetTo("method")} className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors text-xs">
               Use another method
             </button>

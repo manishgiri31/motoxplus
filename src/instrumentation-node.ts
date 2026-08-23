@@ -20,6 +20,17 @@ if (missing.length > 0) {
 }
 console.log("[Boot] Environment validation passed.");
 
+try {
+  await import("@/lib/delhivery/config");
+  console.log("[Boot] Delhivery config validated.");
+} catch (err) {
+  console.error(
+    "\n[Boot] Refusing to start — Delhivery configuration is invalid:\n" +
+      `  ${err instanceof Error ? err.message : String(err)}\n`
+  );
+  process.exit(1);
+}
+
 const redis = getRedis();
 console.log(
   redis

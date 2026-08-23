@@ -1,14 +1,15 @@
 import { delhiveryPost } from "./client";
+import { delhiveryConfig } from "./config";
 import { prisma } from "@/lib/prisma";
 import type { DelhiveryCreateShipmentResponse, DelhiveryShipmentPayload } from "./types";
 
-const ORIGIN_PINCODE = process.env.DELHIVERY_ORIGIN_PINCODE || "110046";
-const PICKUP_NAME = process.env.DELHIVERY_PICKUP_NAME || "MotoXPlus India Pvt. Ltd.";
-const PICKUP_ADDRESS = process.env.DELHIVERY_PICKUP_ADDRESS || "RZ-43/291, Street Number 6, Geetanjli Park, Sagarpur West";
-const PICKUP_CITY = process.env.DELHIVERY_PICKUP_CITY || "New Delhi";
-const PICKUP_STATE = process.env.DELHIVERY_PICKUP_STATE || "Delhi";
-const PICKUP_PHONE = process.env.DELHIVERY_PICKUP_PHONE || "9217131801";
-const SELLER_GST = process.env.NEXT_PUBLIC_COMPANY_GST || "07AAUCM5765B1Z4";
+const ORIGIN_PINCODE = delhiveryConfig.pickup.pincode;
+const PICKUP_NAME = delhiveryConfig.pickup.name;
+const PICKUP_ADDRESS = delhiveryConfig.pickup.address;
+const PICKUP_CITY = delhiveryConfig.pickup.city;
+const PICKUP_STATE = delhiveryConfig.pickup.state;
+const PICKUP_PHONE = delhiveryConfig.pickup.phone;
+const SELLER_GST = delhiveryConfig.companyGst;
 
 export async function createDelhiveryShipment(orderId: string): Promise<{
   waybill: string;

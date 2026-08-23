@@ -24,11 +24,20 @@ export async function requireAuth(req: NextRequest) {
   return user;
 }
 
+// Sentinel returned by getClientIP() when neither header is present (e.g.
+// Nginx isn't setting X-Forwarded-For, or the app is hit directly bypassing
+// the proxy). Rate-limiting call sites must treat this specially — keying a
+// per-IP bucket on the literal string "unknown" collapses every client with
+// no resolvable IP into one shared counter, which a single misconfigured
+// proxy hop turns into a site-wide false-positive rate limit. See
+// checkIPRateLimit() and enforceRateLimit() in rate-limit(-budgets).ts.
+export const UNKNOWN_IP = "unknown";
+
 export function getClientIP(req: NextRequest): string {
   return (
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
-    "unknown"
+    UNKNOWN_IP
   );
 }
 

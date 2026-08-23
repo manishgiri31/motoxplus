@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getRedis } from "@/lib/redis";
+import { UNKNOWN_IP } from "./middleware";
 import type Redis from "ioredis";
 
 const LOCK_THRESHOLD = 5;
@@ -82,6 +83,13 @@ function checkInMemory(key: string, maxRequests: number, windowSeconds: number):
   return { allowed: true, retryAfterSeconds };
 }
 
+function peekInMemory(key: string, maxRequests: number): { allowed: boolean; retryAfterSeconds: number } {
+  const now = Date.now();
+  const entry = memoryStore.get(key);
+  if (!entry || entry.resetAt < now) return { allowed: true, retryAfterSeconds: 0 };
+  return { allowed: entry.count < maxRequests, retryAfterSeconds: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)) };
+}
+
 // Atomic increment-and-expire in one round trip: without the Lua script, a
 // plain INCR followed by a separate EXPIRE call is two round trips and not
 // atomic — a crash or concurrent request between them can leave the key
@@ -156,6 +164,54 @@ export async function checkRateLimit(
 // rate-limit-budgets.ts, which adds per-identifier budgets, Retry-After, and
 // explicit fail-open/closed per route class.
 export async function checkIPRateLimit(ip: string, maxRequests = 10, windowSeconds = 60): Promise<boolean> {
+  if (ip === UNKNOWN_IP) {
+    console.warn("[RateLimit] Client IP unavailable (no X-Forwarded-For/X-Real-IP header) — skipping per-IP check rather than sharing one bucket across every unresolvable client. Verify Nginx sets `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`.");
+    return true;
+  }
   const { allowed } = await checkRateLimit(`ip:${ip}`, { max: maxRequests, windowSeconds, failMode: "open" });
   return allowed;
+}
+
+/**
+ * Read-only variant of checkRateLimit — reports whether `key` is currently
+ * over budget without incrementing it. Used by callers (login, OTP verify)
+ * that only want a genuine failure to count against the budget: gate on
+ * peekRateLimit() before attempting the operation, then call checkRateLimit()
+ * (to increment) only if the operation actually fails, and resetRateLimit()
+ * if it succeeds. A plain checkRateLimit() call up front would count every
+ * attempt — including successes and mere page-loads — against the same
+ * "N failures" budget.
+ */
+export async function peekRateLimit(
+  key: string,
+  opts: { max: number; windowSeconds: number }
+): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  const redis = getRedis();
+  if (!redis) return peekInMemory(key, opts.max);
+
+  await waitForReady(redis);
+  try {
+    const redisKey = `ratelimit:${key}`;
+    const [countRaw, ttl] = await Promise.all([redis.get(redisKey), redis.ttl(redisKey)]);
+    const count = countRaw ? Number(countRaw) : 0;
+    return { allowed: count < opts.max, retryAfterSeconds: ttl > 0 ? ttl : opts.windowSeconds };
+  } catch (err) {
+    console.error("[RateLimit] Redis error on peek:", err);
+    // A peek is advisory (the real gate is the increment in checkRateLimit),
+    // so degrade to the in-memory view rather than failing the request here.
+    return peekInMemory(key, opts.max);
+  }
+}
+
+/** Clears a rate-limit key outright — used to reset a bucket on success. */
+export async function resetRateLimit(key: string): Promise<void> {
+  memoryStore.delete(key);
+  const redis = getRedis();
+  if (!redis) return;
+  await waitForReady(redis);
+  try {
+    await redis.del(`ratelimit:${key}`);
+  } catch (err) {
+    console.error("[RateLimit] Redis error on reset:", err);
+  }
 }

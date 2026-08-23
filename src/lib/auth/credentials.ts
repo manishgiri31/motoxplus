@@ -1,8 +1,9 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit } from "./rate-limit";
+import { checkRateLimit, peekRateLimit, resetRateLimit } from "./rate-limit";
 import { recordFailedLogin, clearFailedLogins, isAccountLocked } from "./rate-limit";
 import { RATE_LIMITS } from "./rate-limit-budgets";
+import { UNKNOWN_IP } from "./middleware";
 import { resolveIdentifier, findUserByIdentifier, type UserWithRelations } from "./identity";
 
 export interface AuthenticateWithPasswordOptions {
@@ -15,7 +16,12 @@ export interface AuthenticateWithPasswordOptions {
 
 export type CredentialAuthResult =
   | { ok: true; user: UserWithRelations; method: "password-mobile" | "password-email" }
-  | { ok: false; code: "RATE_LIMITED" | "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED" | "ACCOUNT_LOCKED"; message: string };
+  | { ok: false; code: "RATE_LIMITED" | "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED" | "ACCOUNT_LOCKED"; message: string; retryAfterSeconds?: number };
+
+function formatRetryAfter(seconds: number): string {
+  const minutes = Math.ceil(seconds / 60);
+  return minutes <= 1 ? "a minute" : `${minutes} minutes`;
+}
 
 // The one place password login is actually verified. Previously duplicated
 // almost verbatim across /api/auth/login, /api/mobile/auth/login, and
@@ -29,11 +35,29 @@ export async function authenticateWithPassword(opts: AuthenticateWithPasswordOpt
 
   // Same "LOGIN" budget/keyspace regardless of entry point, so an attacker
   // can't dodge the throttle by switching which login endpoint they hit.
-  const rateLimitChecks = [checkRateLimit(`rl:LOGIN:id:${identifier.value}`, RATE_LIMITS.LOGIN.perIdentifier)];
-  if (opts.ipAddress) rateLimitChecks.push(checkRateLimit(`rl:LOGIN:ip:${opts.ipAddress}`, RATE_LIMITS.LOGIN.perIP));
-  const rateLimitResults = await Promise.all(rateLimitChecks);
-  if (rateLimitResults.some((r) => !r.allowed)) {
-    return { ok: false, code: "RATE_LIMITED", message: "Too many login attempts. Please try again later." };
+  const idKey = `rl:LOGIN:id:${identifier.value}`;
+  const hasKnownIP = !!opts.ipAddress && opts.ipAddress !== UNKNOWN_IP;
+  const ipKey = hasKnownIP ? `rl:LOGIN:ip:${opts.ipAddress}` : undefined;
+  if (opts.ipAddress && !hasKnownIP) {
+    // Keying on the literal "unknown" would put every client with no
+    // resolvable IP in one shared bucket instead of failing open for them.
+    console.warn("[RateLimit] LOGIN: client IP unavailable (no X-Forwarded-For/X-Real-IP) — skipping per-IP check.");
+  }
+
+  // Peek, don't increment: a legitimate login (even a slow/typo-prone one
+  // that eventually succeeds) shouldn't itself burn down the budget — only
+  // an actual failed attempt should (recorded below, after bcrypt runs).
+  const peekChecks = [peekRateLimit(idKey, RATE_LIMITS.LOGIN.perIdentifier)];
+  if (ipKey) peekChecks.push(peekRateLimit(ipKey, RATE_LIMITS.LOGIN.perIP));
+  const peekResults = await Promise.all(peekChecks);
+  const blocked = peekResults.find((r) => !r.allowed);
+  if (blocked) {
+    return {
+      ok: false,
+      code: "RATE_LIMITED",
+      message: `Too many login attempts. Please try again in ${formatRetryAfter(blocked.retryAfterSeconds)}.`,
+      retryAfterSeconds: blocked.retryAfterSeconds,
+    };
   }
 
   const user = await findUserByIdentifier(identifier);
@@ -45,11 +69,25 @@ export async function authenticateWithPassword(opts: AuthenticateWithPasswordOpt
     }).catch(() => null);
   };
 
+  // Only an actual failed attempt counts against the LOGIN budget — called
+  // from every ok:false branch below (unknown identifier, disabled/locked
+  // account, wrong password) so probing dead identifiers is throttled same
+  // as a wrong password, but a request that turns out to be fine (or that
+  // failed for a reason unrelated to the credentials, e.g. a DB hiccup
+  // upstream) never does.
+  const recordLoginFailure = () => {
+    const failures = [checkRateLimit(idKey, RATE_LIMITS.LOGIN.perIdentifier)];
+    if (ipKey) failures.push(checkRateLimit(ipKey, RATE_LIMITS.LOGIN.perIP));
+    return Promise.all(failures);
+  };
+
   if (!user || !user.password) {
+    await recordLoginFailure();
     return { ok: false, code: "INVALID_CREDENTIALS", message: "Invalid email/mobile or password" };
   }
 
   if (!user.isActive) {
+    await recordLoginFailure();
     await logFailure(user.id, "Account disabled");
     return { ok: false, code: "ACCOUNT_DISABLED", message: "Account has been disabled. Contact support." };
   }
@@ -63,15 +101,14 @@ export async function authenticateWithPassword(opts: AuthenticateWithPasswordOpt
 
   const isValid = await bcrypt.compare(opts.password, user.password);
   if (!isValid) {
-    const result = await recordFailedLogin(user.id);
-    await logFailure(user.id, "Incorrect password");
+    const [result] = await Promise.all([recordFailedLogin(user.id), recordLoginFailure(), logFailure(user.id, "Incorrect password")]);
     if (result.locked) {
       return { ok: false, code: "ACCOUNT_LOCKED", message: "Account locked after too many failed attempts. Try again in 30 minutes." };
     }
     return { ok: false, code: "INVALID_CREDENTIALS", message: `Invalid email/mobile or password. ${result.attemptsLeft} attempt(s) remaining.` };
   }
 
-  await clearFailedLogins(user.id);
+  await Promise.all([clearFailedLogins(user.id), resetRateLimit(idKey), ipKey ? resetRateLimit(ipKey) : Promise.resolve()]);
 
   await prisma.user.update({
     where: { id: user.id },
