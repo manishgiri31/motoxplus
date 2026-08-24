@@ -19,6 +19,7 @@ dotenv.config();
 import * as fs from "fs";
 import * as path from "path";
 import { delhiveryConfig } from "../src/lib/delhivery/config";
+import type { DelhiveryBulkWaybillResponse } from "../src/lib/delhivery/types";
 
 // ---------------------------------------------------------------------------
 // FILL THESE IN WITH A REAL, REACHABLE ADDRESS BEFORE RUNNING FOR REAL.
@@ -26,12 +27,12 @@ import { delhiveryConfig } from "../src/lib/delhivery/config";
 // ---------------------------------------------------------------------------
 const PLACEHOLDER = "REPLACE_ME";
 
-const DEST_NAME = PLACEHOLDER;
-const DEST_PHONE = PLACEHOLDER; // 10 digits, no country code
-const DEST_ADDRESS = PLACEHOLDER;
-const DEST_CITY = PLACEHOLDER;
-const DEST_STATE = PLACEHOLDER;
-const DEST_PINCODE = PLACEHOLDER; // 6 digits
+const DEST_NAME = "Manish Giri";
+const DEST_PHONE = "7206794749"; // 10 digits, no country code
+const DEST_ADDRESS = "Haryana";
+const DEST_CITY = "Yamunanagar";
+const DEST_STATE = "Haryana";
+const DEST_PINCODE = "135001"; // 6 digits
 const ADDRESS_TYPE: "home" | "office" = "home";
 const PRODUCT_DESC = "Capture test item";
 const HSN_CODE = "87141090";
@@ -208,19 +209,21 @@ async function main() {
     );
 
     // 2. Bulk waybill fetch
-    // NOTE: Delhivery's own docs (bulk-waybill.md) show this specific endpoint
-    // taking `cl` (client/HQ name) and `token` as query params, unlike every
-    // other endpoint here which authenticates via the Authorization header
-    // alone. We don't have a configured client/HQ name — delhivery-reference.md's
-    // Account section still has that field blank — so this call is header-auth
-    // only, matching the rest of the client. If Delhivery rejects it for that
-    // reason, that's a real, useful answer and gets captured below regardless.
-    await call(
+    // Delhivery's docs (bulk-waybill.md) show this endpoint taking `cl`
+    // (client/HQ name) as a query param alongside auth. `cl` is an account
+    // identifier, not a secret, so it's fine in the URL — the token itself
+    // stays in the Authorization header only, never in the query string,
+    // so it can't end up in access logs.
+    const { text: bulkWaybillText } = await call(
       "2. Bulk waybill fetch",
       "GET",
-      `${delhiveryConfig.baseUrl}/waybill/api/bulk/json/?count=1`,
+      `${delhiveryConfig.baseUrl}/waybill/api/bulk/json/?cl=${encodeURIComponent(delhiveryConfig.clientName)}&count=1`,
       { ...authHeaders, Accept: "application/json" }
     );
+    // Response is a bare JSON string (e.g. "57930810000011"), not an object —
+    // do not assume `.waybill` or similar on it.
+    const fetchedWaybill: DelhiveryBulkWaybillResponse = JSON.parse(bulkWaybillText);
+    console.log(`[2. Bulk waybill fetch] parsed waybill: ${fetchedWaybill}`);
 
     // 3. Create shipment — REAL
     const formBody = new URLSearchParams({ format: "json", data: JSON.stringify(payload) }).toString();
@@ -254,6 +257,8 @@ async function main() {
   } finally {
     if (awb) {
       shoutAwb(awb);
+      let cancelConfirmed = false;
+
       try {
         // 5. Cancel. Delhivery's Edit/Cancel Order API docs confirm
         // POST /api/p/edit with {"cancellation":"true"} but don't show a full
@@ -261,23 +266,58 @@ async function main() {
         // other Delhivery endpoint here, so that's what's sent. The captured
         // response below is the actual answer for whether that's correct.
         const cancelBody = JSON.stringify({ waybill: awb, cancellation: "true" });
-        const { status } = await call(
+        const { status: cancelStatus } = await call(
           "5. Cancel",
           "POST",
           `${delhiveryConfig.baseUrl}/api/p/edit`,
           { ...authHeaders, "Content-Type": "application/json" },
           cancelBody
         );
-        if (status >= 200 && status < 300) {
-          console.log(`\nCancellation request for AWB ${awb} returned ${status} — verify the outcome manually.`);
-        } else {
-          console.error(`\nCANCELLATION MAY HAVE FAILED (HTTP ${status}) — CANCEL AWB ${awb} MANUALLY.`);
+        console.log(
+          `\nCancel HTTP response: ${cancelStatus}. Not trusting that alone — re-checking tracking to confirm the shipment actually shows cancelled.`
+        );
+
+        try {
+          // 6. Re-track the same AWB. This, not the cancel call's HTTP
+          // status, is the source of truth.
+          const { text: trackText } = await call(
+            "6. Track (post-cancel, confirms cancellation)",
+            "GET",
+            `${delhiveryConfig.baseUrl}/api/v1/packages/json/?waybill=${awb}&verbose=0`,
+            { ...authHeaders, Accept: "application/json" }
+          );
+
+          const trackData = JSON.parse(trackText);
+          const statusStr: string = trackData?.ShipmentData?.[0]?.Shipment?.Status?.Status || "";
+          console.log(`\nPost-cancel status for AWB ${awb}: "${statusStr}"`);
+
+          // Per Delhivery's Cancel Order API docs: Prepaid/COD packages move
+          // to "Returned"; Pick Up packages move to "Cancelled". Match either.
+          if (/cancel|return/i.test(statusStr)) {
+            cancelConfirmed = true;
+            console.log(`\nCancellation CONFIRMED via tracking — AWB ${awb} status is "${statusStr}".`);
+          }
+        } catch (err) {
+          console.error(`\n[6. Track post-cancel] failed — could not confirm cancellation from tracking:`, err);
         }
       } catch (err) {
-        console.error(`\nCANCELLATION REQUEST THREW — CANCEL AWB ${awb} MANUALLY.`, err);
-      } finally {
-        shoutAwb(awb);
+        console.error(`\nCANCELLATION REQUEST THREW:`, err);
       }
+
+      if (!cancelConfirmed) {
+        const bang = "!".repeat(70);
+        console.error(
+          `\n${bang}\n` +
+            `  CANCELLATION NOT CONFIRMED — DO NOT ASSUME THIS SHIPMENT IS CANCELLED.\n` +
+            `  AWB: ${awb}\n` +
+            `  Public tracking: https://www.delhivery.com/track/package/${awb}\n` +
+            `  Log in to your Delhivery partner/seller dashboard now and cancel\n` +
+            `  this AWB manually.\n` +
+            `${bang}\n`
+        );
+      }
+
+      shoutAwb(awb);
     }
 
     if (captured.length > 0) {

@@ -1,17 +1,53 @@
 // ─── Serviceability ───────────────────────────────────────────────────────────
+// Shape below is transcribed exactly from a live-captured response
+// (delhivery-reference.md, "1. Pincode serviceability", 2026-08-23) — the
+// real response is `{ delivery_codes: [{ postal_code: {...} }] }`, not a
+// bare array, and several previously-assumed fields (express_capable,
+// delivery_days, a full "state" name, cod_amount_limit) don't exist at all.
 
-export interface DelhiveryPincodeData {
-  city: string;
-  state: string;
-  country: string;
-  pin: string;
-  express_capable: boolean;
-  cod: boolean;
-  pickup: boolean;
-  prepaid: boolean;
-  cod_amount_limit?: number;
-  delivery_days?: number;
+export interface DelhiveryPostalCodeCenter {
+  code: string;
+  cn: string;
+  sort_code: string;
+  s: string;
+  e: string;
+  u: string;
+  ud: string;
 }
+
+export interface DelhiveryPostalCode {
+  remarks: string;
+  pin: number;
+  country_code: string;
+  state_code: string;
+  cod: "Y" | "N";
+  pre_paid: "Y" | "N";
+  pickup: "Y" | "N";
+  cash: "Y" | "N";
+  repl: "Y" | "N";
+  district: string;
+  is_oda: "Y" | "N";
+  sort_code: string;
+  max_amount: number;
+  max_weight: number;
+  covid_zone: string;
+  inc: string;
+  center: DelhiveryPostalCodeCenter[];
+  city: string;
+  sun_tat: boolean;
+  protect_blacklist: boolean;
+  srv_wt_th: number;
+}
+
+export interface DelhiveryPincodeResponse {
+  delivery_codes: Array<{ postal_code: DelhiveryPostalCode }>;
+}
+
+// Bare JSON string, e.g. "57930810000011" — confirmed via live capture
+// (delhivery-reference.md, "2. Bulk waybill fetch", 2026-08-23) for
+// count=1. Behavior for count>1 is unconfirmed; do not assume an array or
+// an object with a `.waybill` field until that's captured too.
+export type DelhiveryBulkWaybillResponse = string;
 
 export interface ServiceabilityResult {
   serviceable: boolean;
