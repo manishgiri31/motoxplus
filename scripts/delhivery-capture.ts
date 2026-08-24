@@ -4,7 +4,14 @@
  * request/response pair to delhivery-reference.md, so that file can become
  * genuinely live-verified instead of the code-derived guesses currently in it.
  *
- * STEP 3 CREATES A REAL SHIPMENT. STEP 5 CANCELS IT (runs in a `finally`).
+ * The create.json payload itself is built via
+ * src/lib/delhivery/shipment.ts's buildCreateShipmentRequest — the same
+ * function real orders use — so this actually exercises the production
+ * payload-construction path, not a hand-rolled copy that can drift from it.
+ *
+ * STEP 3 CREATES A REAL SHIPMENT. STEP 5 CANCELS IT (runs in a `finally`) and
+ * is mandatory once a real AWB exists — if cancellation can't be confirmed,
+ * the script exits non-zero and prints a loud manual-cancellation warning.
  * Fill in the DEST_* constants below with a real address you control before
  * running for real — the script refuses to run (outside --dry-run) until
  * you do.
@@ -19,6 +26,7 @@ dotenv.config();
 import * as fs from "fs";
 import * as path from "path";
 import { delhiveryConfig } from "../src/lib/delhivery/config";
+import { buildCreateShipmentRequest } from "../src/lib/delhivery/shipment";
 import type { DelhiveryBulkWaybillResponse } from "../src/lib/delhivery/types";
 
 // ---------------------------------------------------------------------------
@@ -29,11 +37,14 @@ const PLACEHOLDER = "REPLACE_ME";
 
 const DEST_NAME = "Manish Giri";
 const DEST_PHONE = "7206794749"; // 10 digits, no country code
-const DEST_ADDRESS = "Haryana";
+const DEST_ADDRESS = "House No. 123, Model Town Road";
 const DEST_CITY = "Yamunanagar";
 const DEST_STATE = "Haryana";
 const DEST_PINCODE = "135001"; // 6 digits
-const ADDRESS_TYPE: "home" | "office" = "home";
+// Matches shipment.ts's production value exactly (see FIX 2: the capture
+// uses the same builder as real orders, so this must match what real orders
+// actually send, not what best describes this specific test address).
+const ADDRESS_TYPE: "home" | "office" = "office";
 const PRODUCT_DESC = "Capture test item";
 const HSN_CODE = "87141090";
 const ORDER_VALUE = 100; // Prepaid, so this is also total_amount; cod_amount stays 0
@@ -113,40 +124,28 @@ function assertRealConstants() {
   }
 }
 
-function buildCreatePayload() {
+function buildRequest() {
   const orderRef = `CAPTURE-${Date.now()}`;
   const orderDate = new Date().toISOString().split("T")[0];
 
-  const shipment = {
-    name: DEST_NAME,
-    add: DEST_ADDRESS,
-    pin: DEST_PINCODE,
-    city: DEST_CITY,
-    state: DEST_STATE,
-    country: "India",
-    phone: DEST_PHONE,
-    order: orderRef,
-    payment_mode: "Prepaid" as const,
-    return_pin: delhiveryConfig.pickup.pincode,
-    return_city: delhiveryConfig.pickup.city,
-    return_phone: delhiveryConfig.pickup.phone,
-    return_name: delhiveryConfig.pickup.name,
-    return_add: delhiveryConfig.pickup.address,
-    return_state: delhiveryConfig.pickup.state,
-    return_country: "India",
-    products_desc: PRODUCT_DESC,
-    hsn_code: HSN_CODE,
-    cod_amount: 0,
-    order_date: orderDate,
-    total_amount: ORDER_VALUE,
-    seller_gst_tin: delhiveryConfig.companyGst,
-    shipping_mode: "Surface" as const,
-    address_type: ADDRESS_TYPE,
+  return buildCreateShipmentRequest({
+    destName: DEST_NAME,
+    destAddress: DEST_ADDRESS,
+    destPincode: DEST_PINCODE,
+    destCity: DEST_CITY,
+    destState: DEST_STATE,
+    destPhone: DEST_PHONE,
+    orderRef,
+    paymentMode: "Prepaid",
+    codAmount: 0,
+    totalAmount: ORDER_VALUE,
+    productsDesc: PRODUCT_DESC,
+    hsnCode: HSN_CODE,
     quantity: 1,
-    weight: WEIGHT_KG,
-  };
-
-  return { shipments: [shipment] };
+    weightKg: WEIGHT_KG,
+    addressType: ADDRESS_TYPE,
+    orderDate,
+  });
 }
 
 function appendToReferenceFile() {
@@ -184,18 +183,18 @@ function appendToReferenceFile() {
 
 async function main() {
   if (IS_DRY_RUN) {
-    const payload = buildCreatePayload();
+    const request = buildRequest();
     console.log("--dry-run: no network calls will be made.\n");
-    console.log("Built create.json payload (shipments[0]):");
-    console.log(JSON.stringify(payload, null, 2));
+    console.log("Built create.json request (shipments + pickup_location):");
+    console.log(JSON.stringify(request, null, 2));
     console.log("\nEncoded form body (format=json&data=<urlencoded JSON>):");
-    console.log(new URLSearchParams({ format: "json", data: JSON.stringify(payload) }).toString());
+    console.log(new URLSearchParams({ format: "json", data: JSON.stringify(request) }).toString());
     console.log("\nPickup/return + GST fields above came from delhiveryConfig — nothing here is hardcoded.");
     return;
   }
 
   assertRealConstants();
-  const payload = buildCreatePayload();
+  const request = buildRequest();
   const authHeaders = { Authorization: `Token ${delhiveryConfig.token}` };
   let awb: string | null = null;
 
@@ -226,7 +225,7 @@ async function main() {
     console.log(`[2. Bulk waybill fetch] parsed waybill: ${fetchedWaybill}`);
 
     // 3. Create shipment — REAL
-    const formBody = new URLSearchParams({ format: "json", data: JSON.stringify(payload) }).toString();
+    const formBody = new URLSearchParams({ format: "json", data: JSON.stringify(request) }).toString();
     const { text: createText } = await call(
       "3. Create shipment (REAL)",
       "POST",
@@ -260,11 +259,12 @@ async function main() {
       let cancelConfirmed = false;
 
       try {
-        // 5. Cancel. Delhivery's Edit/Cancel Order API docs confirm
-        // POST /api/p/edit with {"cancellation":"true"} but don't show a full
-        // body example — "waybill" is the identifier field used by every
-        // other Delhivery endpoint here, so that's what's sent. The captured
-        // response below is the actual answer for whether that's correct.
+        // 5. Cancel — MANDATORY once a real AWB exists. Delhivery's Edit/
+        // Cancel Order API docs confirm POST /api/p/edit with
+        // {"cancellation":"true"} but don't show a full body example —
+        // "waybill" is the identifier field used by every other Delhivery
+        // endpoint here, so that's what's sent. The captured response below
+        // is the actual answer for whether that's correct.
         const cancelBody = JSON.stringify({ waybill: awb, cancellation: "true" });
         const { status: cancelStatus } = await call(
           "5. Cancel",
@@ -280,22 +280,43 @@ async function main() {
         try {
           // 6. Re-track the same AWB. This, not the cancel call's HTTP
           // status, is the source of truth.
-          const { text: trackText } = await call(
-            "6. Track (post-cancel, confirms cancellation)",
-            "GET",
-            `${delhiveryConfig.baseUrl}/api/v1/packages/json/?waybill=${awb}&verbose=0`,
-            { ...authHeaders, Accept: "application/json" }
-          );
+          //
+          // Confirmed empirically 2026-08-24 on a shipment cancelled before
+          // pickup: Status.Status stayed "Not Picked" throughout — it never
+          // became "Cancelled"/"Returned" as Delhivery's own Cancel Order API
+          // docs describe (that mapping appears to be for post-pickup
+          // cancellations only). The real signal was in Instructions/
+          // StatusCode ("Seller cancelled the order" / "DTUP-210"), and it
+          // took time to appear: the immediate re-track below still showed
+          // the generic "Shipment not received from client" / "X-PNP" — a
+          // check ~90s later (after a second cancel call) was the first to
+          // show the specific cancellation instruction. So this retries with
+          // increasing delay rather than checking once.
+          const delaysMs = [3000, 5000, 8000];
+          for (let attempt = 0; attempt < delaysMs.length && !cancelConfirmed; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, delaysMs[attempt]));
 
-          const trackData = JSON.parse(trackText);
-          const statusStr: string = trackData?.ShipmentData?.[0]?.Shipment?.Status?.Status || "";
-          console.log(`\nPost-cancel status for AWB ${awb}: "${statusStr}"`);
+            const { text: trackText } = await call(
+              `6. Track (post-cancel, attempt ${attempt + 1}/${delaysMs.length})`,
+              "GET",
+              `${delhiveryConfig.baseUrl}/api/v1/packages/json/?waybill=${awb}&verbose=0`,
+              { ...authHeaders, Accept: "application/json" }
+            );
 
-          // Per Delhivery's Cancel Order API docs: Prepaid/COD packages move
-          // to "Returned"; Pick Up packages move to "Cancelled". Match either.
-          if (/cancel|return/i.test(statusStr)) {
-            cancelConfirmed = true;
-            console.log(`\nCancellation CONFIRMED via tracking — AWB ${awb} status is "${statusStr}".`);
+            const trackData = JSON.parse(trackText);
+            const shipmentStatus = trackData?.ShipmentData?.[0]?.Shipment?.Status;
+            const statusStr: string = shipmentStatus?.Status || "";
+            const instructionsStr: string = shipmentStatus?.Instructions || "";
+            console.log(
+              `\nPost-cancel status for AWB ${awb}: Status="${statusStr}" Instructions="${instructionsStr}"`
+            );
+
+            if (/cancel|return/i.test(statusStr) || /cancel/i.test(instructionsStr)) {
+              cancelConfirmed = true;
+              console.log(
+                `\nCancellation CONFIRMED via tracking — AWB ${awb}: Status="${statusStr}" Instructions="${instructionsStr}".`
+              );
+            }
           }
         } catch (err) {
           console.error(`\n[6. Track post-cancel] failed — could not confirm cancellation from tracking:`, err);
@@ -315,6 +336,25 @@ async function main() {
             `  this AWB manually.\n` +
             `${bang}\n`
         );
+        // Do not move on silently — reflect the failure in the exit code.
+        process.exitCode = 1;
+      } else {
+        try {
+          // 7. Cancel again on the already-cancelled AWB. Production will
+          // hit "already cancelled" (retries, double-clicks, replayed jobs)
+          // far more often than the happy path, so this is worth capturing
+          // even though the first cancel already succeeded.
+          const secondCancelBody = JSON.stringify({ waybill: awb, cancellation: "true" });
+          await call(
+            "7. Cancel again (already-cancelled AWB)",
+            "POST",
+            `${delhiveryConfig.baseUrl}/api/p/edit`,
+            { ...authHeaders, "Content-Type": "application/json" },
+            secondCancelBody
+          );
+        } catch (err) {
+          console.error(`\n[7. Cancel again] threw (informational only — first cancel already confirmed):`, err);
+        }
       }
 
       shoutAwb(awb);

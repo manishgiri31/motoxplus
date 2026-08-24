@@ -1,7 +1,12 @@
 import { delhiveryPost } from "./client";
 import { delhiveryConfig } from "./config";
 import { prisma } from "@/lib/prisma";
-import type { DelhiveryCreateShipmentResponse, DelhiveryShipmentPayload } from "./types";
+import type {
+  DelhiveryCreateShipmentRequest,
+  DelhiveryCreateShipmentResponse,
+  DelhiveryPickupLocation,
+  DelhiveryShipmentPayload,
+} from "./types";
 
 const ORIGIN_PINCODE = delhiveryConfig.pickup.pincode;
 const PICKUP_NAME = delhiveryConfig.pickup.name;
@@ -10,6 +15,86 @@ const PICKUP_CITY = delhiveryConfig.pickup.city;
 const PICKUP_STATE = delhiveryConfig.pickup.state;
 const PICKUP_PHONE = delhiveryConfig.pickup.phone;
 const SELLER_GST = delhiveryConfig.companyGst;
+
+export interface BuildShipmentPayloadInput {
+  destName: string;
+  destAddress: string;
+  destPincode: string;
+  destCity: string;
+  destState: string;
+  destPhone: string;
+  orderRef: string;
+  paymentMode: "Prepaid" | "COD";
+  codAmount: number;
+  totalAmount: number;
+  productsDesc: string;
+  hsnCode: string;
+  quantity: number;
+  weightKg: number;
+  addressType: "home" | "office";
+  orderDate: string; // YYYY-MM-DD
+}
+
+/**
+ * Pure payload builder — no DB, no network. Shared by createDelhiveryShipment
+ * (real orders, below) and scripts/delhivery-capture.ts, so the capture
+ * script actually exercises the same payload-construction code production
+ * traffic goes through instead of a hand-rolled copy that can drift.
+ */
+export function buildShipmentPayload(input: BuildShipmentPayloadInput): DelhiveryShipmentPayload {
+  return {
+    name: input.destName,
+    add: input.destAddress,
+    pin: input.destPincode,
+    city: input.destCity,
+    state: input.destState,
+    country: "India",
+    phone: input.destPhone,
+    order: input.orderRef,
+    payment_mode: input.paymentMode,
+    return_pin: ORIGIN_PINCODE,
+    return_city: PICKUP_CITY,
+    return_phone: PICKUP_PHONE,
+    return_name: PICKUP_NAME,
+    return_add: PICKUP_ADDRESS,
+    return_state: PICKUP_STATE,
+    return_country: "India",
+    products_desc: input.productsDesc,
+    hsn_code: input.hsnCode,
+    cod_amount: input.codAmount,
+    order_date: input.orderDate,
+    total_amount: input.totalAmount,
+    seller_gst_tin: SELLER_GST,
+    shipping_mode: "Surface",
+    address_type: input.addressType,
+    quantity: input.quantity,
+    weight: input.weightKg,
+  };
+}
+
+/**
+ * pickup_location is a SIBLING of `shipments` in the create.json request body
+ * (confirmed missing entirely before the 2026-08-23 live capture — see
+ * delhivery-reference.md). `name` is the immutable registered pickup location
+ * on the Delhivery client, NOT the same value as return_name/PICKUP_NAME above.
+ */
+export function buildPickupLocation(): DelhiveryPickupLocation {
+  return {
+    name: delhiveryConfig.pickup.locationName,
+    add: PICKUP_ADDRESS,
+    city: PICKUP_CITY,
+    pin_code: ORIGIN_PINCODE,
+    country: "India",
+    phone: PICKUP_PHONE,
+  };
+}
+
+export function buildCreateShipmentRequest(input: BuildShipmentPayloadInput): DelhiveryCreateShipmentRequest {
+  return {
+    shipments: [buildShipmentPayload(input)],
+    pickup_location: buildPickupLocation(),
+  };
+}
 
 export async function createDelhiveryShipment(orderId: string): Promise<{
   waybill: string;
@@ -54,38 +139,28 @@ export async function createDelhiveryShipment(orderId: string): Promise<{
 
   const hsnCode = order.items[0]?.product.hsnCode || "87141090";
 
-  const payload: DelhiveryShipmentPayload = {
-    name: destName,
-    add: destAddress,
-    pin: destPincode,
-    city: destCity,
-    state: destState,
-    country: "India",
-    phone: destPhone.replace(/\D/g, "").slice(-10),
-    order: order.orderNumber,
-    payment_mode: paymentMode,
-    return_pin: ORIGIN_PINCODE,
-    return_city: PICKUP_CITY,
-    return_phone: PICKUP_PHONE,
-    return_name: PICKUP_NAME,
-    return_add: PICKUP_ADDRESS,
-    return_state: PICKUP_STATE,
-    return_country: "India",
-    products_desc: productDesc,
-    hsn_code: hsnCode,
-    cod_amount: codAmount,
-    order_date: order.createdAt.toISOString().split("T")[0],
-    total_amount: order.grandTotal,
-    seller_gst_tin: SELLER_GST,
-    shipping_mode: "Surface",
-    address_type: "office",
+  const request = buildCreateShipmentRequest({
+    destName,
+    destAddress,
+    destPincode,
+    destCity,
+    destState,
+    destPhone: destPhone.replace(/\D/g, "").slice(-10),
+    orderRef: order.orderNumber,
+    paymentMode,
+    codAmount,
+    totalAmount: order.grandTotal,
+    productsDesc: productDesc,
+    hsnCode,
     quantity: order.items.reduce((s, i) => s + i.quantity, 0),
-    weight: Math.max(0.5, totalWeight),
-  };
+    weightKg: Math.max(0.5, totalWeight),
+    addressType: "office",
+    orderDate: order.createdAt.toISOString().split("T")[0],
+  });
 
   const formData = {
     format: "json",
-    data: JSON.stringify({ shipments: [payload] }),
+    data: JSON.stringify(request),
   };
 
   const response = await delhiveryPost<DelhiveryCreateShipmentResponse>(

@@ -29,6 +29,10 @@ const envSchema = z.object({
     .regex(/^\d{6}$/, "DELHIVERY_ORIGIN_PINCODE must be exactly 6 digits"),
   COMPANY_GST: z.string().trim().min(1, "COMPANY_GST is required"),
   DELHIVERY_CLIENT_NAME: z.string().trim().min(1, "DELHIVERY_CLIENT_NAME is required"),
+  // Distinct from DELHIVERY_PICKUP_NAME (which feeds return_name — the RTO/
+  // return address contact). This is the immutable registered pickup_location
+  // name Delhivery matches against on create.json — a different real value.
+  DELHIVERY_PICKUP_LOCATION_NAME: z.string().trim().min(1, "DELHIVERY_PICKUP_LOCATION_NAME is required"),
 });
 
 const parsed = envSchema.safeParse({
@@ -42,6 +46,7 @@ const parsed = envSchema.safeParse({
   DELHIVERY_ORIGIN_PINCODE: process.env.DELHIVERY_ORIGIN_PINCODE,
   COMPANY_GST: process.env.COMPANY_GST,
   DELHIVERY_CLIENT_NAME: process.env.DELHIVERY_CLIENT_NAME,
+  DELHIVERY_PICKUP_LOCATION_NAME: process.env.DELHIVERY_PICKUP_LOCATION_NAME,
 });
 
 if (!parsed.success) {
@@ -61,6 +66,7 @@ export const delhiveryConfig = {
     state: parsed.data.DELHIVERY_PICKUP_STATE,
     phone: parsed.data.DELHIVERY_PICKUP_PHONE,
     pincode: parsed.data.DELHIVERY_ORIGIN_PINCODE,
+    locationName: parsed.data.DELHIVERY_PICKUP_LOCATION_NAME,
   },
   companyGst: parsed.data.COMPANY_GST,
   clientName: parsed.data.DELHIVERY_CLIENT_NAME,

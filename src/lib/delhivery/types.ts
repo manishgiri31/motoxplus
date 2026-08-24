@@ -121,10 +121,31 @@ export interface DelhiveryShipmentPayload {
   breadth?: number;
 }
 
+// Sibling of `shipments` in the create.json request body, not a field inside
+// the shipment object — this was missing entirely before the 2026-08-23 live
+// capture exposed it. `pin_code` (not `pin`) is per Delhivery's docs, not a
+// capture — untested; first thing to try changing if this key errors.
+export interface DelhiveryPickupLocation {
+  name: string;
+  add: string;
+  city: string;
+  pin_code: string;
+  country: string;
+  phone: string;
+}
+
+export interface DelhiveryCreateShipmentRequest {
+  shipments: DelhiveryShipmentPayload[];
+  pickup_location: DelhiveryPickupLocation;
+}
+
 export interface DelhiveryCreateShipmentResponse {
   packages: Array<{
     refnum: string;
-    status: "Success" | "Error";
+    // "Fail", not "Error" — confirmed via live capture (delhivery-reference.md,
+    // "3. Create shipment", 2026-08-23); the old "Error" value here was
+    // code-derived guesswork and never actually seen from the API.
+    status: "Success" | "Fail";
     waybill: string;
     sort_code?: string;
     remarks: string;
