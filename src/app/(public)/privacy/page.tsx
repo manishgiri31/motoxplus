@@ -10,32 +10,32 @@ export default function PrivacyPolicyPage() {
     // A plain div, not <main> — (public)/layout.tsx already renders the page's one
     // <main> landmark; this page previously imported Navbar/Footer directly and
     // nested a second <main> inside it, so it rendered the site chrome twice.
-    <div className="min-h-screen bg-[var(--bg-primary)] pt-24 pb-20">
+    <div className="min-h-screen bg-[var(--paper)] pt-24 pb-20">
         <div className="max-w-3xl mx-auto px-4 md:px-8">
           {/* Header */}
           <div className="mb-12">
-            <div className="flex items-center gap-2 text-[var(--text-muted)] text-xs uppercase tracking-widest mb-4">
+            <div className="flex items-center gap-2 text-[var(--muted)] text-xs uppercase tracking-widest mb-4">
               <Link href="/" className="hover:text-red-500 transition-colors">Home</Link>
               <span>/</span>
               <span>Privacy Policy</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-[var(--text-primary)] tracking-tight mb-4">
+            <h1 className="text-4xl md:text-5xl font-black text-[var(--ink)] tracking-tight mb-4">
               Privacy Policy
             </h1>
-            <p className="text-[var(--text-muted)] text-sm">
-              Last updated: <span className="text-[var(--text-secondary)]">June 1, 2025</span>
+            <p className="text-[var(--muted)] text-sm">
+              Last updated: <span className="text-[var(--muted)]">June 1, 2025</span>
             </p>
           </div>
 
           {/* Content */}
           {/* prose-motoxplus was never defined anywhere in the stylesheet — dead class, removed. */}
-          <div className="space-y-10 text-[var(--text-secondary)] leading-relaxed">
+          <div className="space-y-10 text-[var(--muted)] leading-relaxed">
             <section>
               <p>
                 MotoXPlus India Private Limited (&ldquo;MotoXPlus&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or
                 &ldquo;our&rdquo;) is committed to protecting your privacy. This Privacy Policy explains how we collect,
                 use, disclose, and safeguard your information when you visit our website{" "}
-                <strong className="text-[var(--text-primary)]">motoxplus.in</strong> or use our dealer portal.
+                <strong className="text-[var(--ink)]">motoxplus.in</strong> or use our dealer portal.
                 Please read this policy carefully. If you disagree with its terms, please discontinue use of our
                 platform.
               </p>
@@ -83,20 +83,20 @@ export default function PrivacyPolicyPage() {
                 following bases:
               </p>
               <ul>
-                <li><strong className="text-[var(--text-primary)]">Contract performance</strong> — processing necessary to fulfil orders placed through the dealer portal</li>
-                <li><strong className="text-[var(--text-primary)]">Legitimate interest</strong> — fraud prevention, platform security, and business analytics</li>
-                <li><strong className="text-[var(--text-primary)]">Legal obligation</strong> — GST compliance, tax record keeping under the Income Tax Act and GST Act</li>
-                <li><strong className="text-[var(--text-primary)]">Consent</strong> — where you have explicitly opted in to marketing communications</li>
+                <li><strong className="text-[var(--ink)]">Contract performance</strong> — processing necessary to fulfil orders placed through the dealer portal</li>
+                <li><strong className="text-[var(--ink)]">Legitimate interest</strong> — fraud prevention, platform security, and business analytics</li>
+                <li><strong className="text-[var(--ink)]">Legal obligation</strong> — GST compliance, tax record keeping under the Income Tax Act and GST Act</li>
+                <li><strong className="text-[var(--ink)]">Consent</strong> — where you have explicitly opted in to marketing communications</li>
               </ul>
             </Section>
 
             <Section title="4. Sharing of Information">
               <p>We do not sell, rent, or trade your personal information. We may share your data with:</p>
               <ul>
-                <li><strong className="text-[var(--text-primary)]">Razorpay Financial Solutions Pvt. Ltd.</strong> — for payment processing</li>
-                <li><strong className="text-[var(--text-primary)]">Cloudflare Inc.</strong> — for secure media storage (product images)</li>
-                <li><strong className="text-[var(--text-primary)]">Logistics partners</strong> — name, phone, and delivery address for order shipment</li>
-                <li><strong className="text-[var(--text-primary)]">Government / regulatory authorities</strong> — when required by law (e.g., GST filings, court orders)</li>
+                <li><strong className="text-[var(--ink)]">Razorpay Financial Solutions Pvt. Ltd.</strong> — for payment processing</li>
+                <li><strong className="text-[var(--ink)]">Cloudflare Inc.</strong> — for secure media storage (product images)</li>
+                <li><strong className="text-[var(--ink)]">Logistics partners</strong> — name, phone, and delivery address for order shipment</li>
+                <li><strong className="text-[var(--ink)]">Government / regulatory authorities</strong> — when required by law (e.g., GST filings, court orders)</li>
               </ul>
               <p>All third-party partners are contractually obligated to protect your data.</p>
             </Section>
@@ -104,7 +104,7 @@ export default function PrivacyPolicyPage() {
             <Section title="5. Data Retention">
               <p>
                 We retain your personal data for as long as your dealer account is active and for a period of{" "}
-                <strong className="text-[var(--text-primary)]">seven (7) years</strong> thereafter to comply with
+                <strong className="text-[var(--ink)]">seven (7) years</strong> thereafter to comply with
                 Indian tax and accounting laws. Order and invoice data is retained for the same period. You may
                 request deletion of non-statutory data by contacting us.
               </p>
@@ -118,9 +118,9 @@ export default function PrivacyPolicyPage() {
               </p>
               <p className="mt-2">We use the following types of cookies:</p>
               <ul>
-                <li><strong className="text-[var(--text-primary)]">Session cookies</strong> — required for authentication; deleted when you close your browser</li>
-                <li><strong className="text-[var(--text-primary)]">Preference cookies</strong> — store your dark/light mode setting (key: <code className="text-red-400">motoxplus-theme</code>)</li>
-                <li><strong className="text-[var(--text-primary)]">Analytics cookies</strong> — anonymous usage statistics to improve the platform</li>
+                <li><strong className="text-[var(--ink)]">Session cookies</strong> — required for authentication; deleted when you close your browser</li>
+                <li><strong className="text-[var(--ink)]">Preference cookies</strong> — store your dark/light mode setting (key: <code className="text-red-400">motoxplus-theme</code>)</li>
+                <li><strong className="text-[var(--ink)]">Analytics cookies</strong> — anonymous usage statistics to improve the platform</li>
               </ul>
             </Section>
 
@@ -133,7 +133,7 @@ export default function PrivacyPolicyPage() {
               <p className="mt-2">
                 Despite these measures, no internet transmission is 100% secure. If you suspect a security
                 breach affecting your account, notify us immediately at{" "}
-                <a href="mailto:info@motoxplus.in" className="text-red-500 hover:underline">info@motoxplus.in</a>.
+                <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>.
               </p>
             </Section>
 
@@ -148,7 +148,7 @@ export default function PrivacyPolicyPage() {
               </ul>
               <p className="mt-2">
                 To exercise these rights, email us at{" "}
-                <a href="mailto:info@motoxplus.in" className="text-red-500 hover:underline">info@motoxplus.in</a>{" "}
+                <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>{" "}
                 with the subject line &ldquo;Data Rights Request&rdquo;. We will respond within 30 days.
               </p>
             </Section>
@@ -178,21 +178,21 @@ export default function PrivacyPolicyPage() {
 
             <Section title="12. Contact Us">
               <p>If you have questions about this Privacy Policy, please contact:</p>
-              <div className="glass border border-[var(--border-color)] rounded-sm p-5 mt-4 not-prose">
-                <p className="text-[var(--text-primary)] font-bold mb-1">MotoXPlus India Private Limited</p>
-                <p className="text-[var(--text-muted)] text-sm">RZ-43/291, Nashirpur, New Delhi – 110045</p>
-                <p className="text-[var(--text-muted)] text-sm">
+              <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-5 mt-4 not-prose">
+                <p className="text-[var(--ink)] font-bold mb-1">MotoXPlus India Private Limited</p>
+                <p className="text-[var(--muted)] text-sm">RZ-43/291, Nashirpur, New Delhi – 110045</p>
+                <p className="text-[var(--muted)] text-sm">
                   Email:{" "}
-                  <a href="mailto:info@motoxplus.in" className="text-red-500 hover:underline">info@motoxplus.in</a>
+                  <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>
                 </p>
-                <p className="text-[var(--text-muted)] text-sm">Phone: +91 92171 31801</p>
-                <p className="text-[var(--text-muted)] text-sm">GSTIN: 07AAUCM5765B1Z4</p>
+                <p className="text-[var(--muted)] text-sm">Phone: +91 92171 31801</p>
+                <p className="text-[var(--muted)] text-sm">GSTIN: 07AAUCM5765B1Z4</p>
               </div>
             </Section>
           </div>
 
           {/* Back link */}
-          <div className="mt-14 pt-8 border-t border-[var(--border-color)]">
+          <div className="mt-14 pt-8 border-t border-[var(--line)]">
             <Link href="/" className="text-red-500 hover:text-red-400 text-sm font-semibold transition-colors">
               ← Back to Home
             </Link>
@@ -205,11 +205,11 @@ export default function PrivacyPolicyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex items-center gap-3">
+      <h2 className="text-xl font-bold text-[var(--ink)] mb-4 flex items-center gap-3">
         <span className="w-1 h-5 bg-red-600 rounded-full block flex-shrink-0" />
         {title}
       </h2>
-      <div className="space-y-3 pl-4 border-l border-[var(--border-color)]">{children}</div>
+      <div className="space-y-3 pl-4 border-l border-[var(--line)]">{children}</div>
     </section>
   );
 }
@@ -217,7 +217,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function SubSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-4">
-      <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">{title}</h3>
+      <h3 className="text-sm font-semibold text-[var(--ink)] mb-2">{title}</h3>
       <div className="pl-4 space-y-1 text-sm">{children}</div>
     </div>
   );

@@ -1,8 +1,6 @@
-"use client";
-
 import { ShieldCheck, Microscope, Award, Network } from "lucide-react";
-import { TiltCard } from "@/components/3d/tilt-card";
-import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
+import { Eyebrow } from "@/components/ui/technical";
+import { Card } from "@/components/ui/card";
 
 const features = [
   {
@@ -11,10 +9,6 @@ const features = [
     Icon: ShieldCheck,
     stat: "100%",
     statLabel: "OEM Fit",
-    accent: "from-red-500/10 to-transparent",
-    iconBg: "bg-red-500/10 group-hover:bg-red-500/15",
-    iconColor: "text-red-500 group-hover:text-red-600",
-    statColor: "text-red-500",
   },
   {
     title: "Quality Tested",
@@ -22,10 +16,6 @@ const features = [
     Icon: Microscope,
     stat: "ISO",
     statLabel: "Certified",
-    accent: "from-blue-500/10 to-transparent",
-    iconBg: "bg-blue-500/10 group-hover:bg-blue-500/15",
-    iconColor: "text-blue-500 group-hover:text-blue-600",
-    statColor: "text-blue-500",
   },
   {
     title: "Built to Last",
@@ -33,10 +23,6 @@ const features = [
     Icon: Award,
     stat: "3×",
     statLabel: "Lifespan",
-    accent: "from-amber-500/10 to-transparent",
-    iconBg: "bg-amber-500/10 group-hover:bg-amber-500/15",
-    iconColor: "text-amber-500 group-hover:text-amber-600",
-    statColor: "text-amber-500",
   },
   {
     title: "Dealer Network",
@@ -44,74 +30,52 @@ const features = [
     Icon: Network,
     stat: "18+",
     statLabel: "States",
-    accent: "from-green-500/10 to-transparent",
-    iconBg: "bg-green-500/10 group-hover:bg-green-500/15",
-    iconColor: "text-green-500 group-hover:text-green-600",
-    statColor: "text-green-500",
   },
 ];
 
 export function WhyMotoXPlus() {
   return (
-    <section className="py-24 px-4 md:px-8 bg-[var(--bg-secondary)] relative overflow-hidden">
-      {/* Background elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-red-500/10 rounded-full blur-[110px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-500/10 rounded-full blur-[80px] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+    <section className="py-20 md:py-28 px-4 md:px-8 bg-[var(--card)] border-y border-[var(--line)]">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-start">
           {/* Left */}
-          <Reveal>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-px bg-red-600" />
-              <span className="text-red-500 text-xs font-semibold uppercase tracking-widest">
-                Why Choose Us
-              </span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-black text-[var(--text-primary)] tracking-tight mb-6">
-              The MOTOXPLUS<br />
-              <span className="text-gradient-red">Advantage.</span>
+          <div>
+            <Eyebrow className="mb-4">Why Choose Us</Eyebrow>
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight mb-5">
+              The MOTOXPLUS advantage.
             </h2>
-            <p className="text-[var(--text-muted)] leading-relaxed text-lg mb-8">
+            <p className="text-[var(--muted)] leading-relaxed mb-8 max-w-md">
               We combine advanced manufacturing technology with deep domain expertise
               in two-wheeler engineering to deliver parts that perform when it matters most.
             </p>
 
-            <div className="flex items-center gap-6 glass border border-[var(--border-color)] shadow-sm rounded-2xl p-6 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent rounded-2xl" />
-              <div className="text-8xl font-black text-red-500/15 leading-none select-none relative z-10">15+</div>
-              <div className="relative z-10">
-                <div className="text-[var(--text-primary)] font-bold text-xl mb-1">Years of Excellence</div>
-                <div className="text-[var(--text-muted)] text-sm leading-relaxed">
+            <Card edge="accent" pad="lg" className="flex items-center gap-6">
+              <div className="tnum font-display text-7xl font-bold text-[var(--line)] leading-none select-none">
+                15+
+              </div>
+              <div>
+                <div className="text-[var(--ink)] font-bold text-lg mb-1">Years of Excellence</div>
+                <div className="text-[var(--muted)] text-sm leading-relaxed">
                   Trusted by thousands of dealers and workshops across India
                 </div>
               </div>
-            </div>
-          </Reveal>
+            </Card>
+          </div>
 
           {/* Right grid */}
-          <RevealGroup className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-px bg-[var(--line)] border border-[var(--line)]">
             {features.map((feature) => (
-              <RevealItem key={feature.title}>
-              <TiltCard intensity={10}>
-                <div className="group glass border border-[var(--border-color)] shadow-sm hover:shadow-md hover:border-red-900/40 rounded-2xl p-6 transition-all duration-300 relative overflow-hidden">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl`} />
-
-                  <div className={`relative z-10 w-11 h-11 rounded-xl flex items-center justify-center mb-5 transition-colors border border-transparent ${feature.iconBg}`}>
-                    <feature.Icon size={20} className={`transition-colors ${feature.iconColor}`} />
-                  </div>
-
-                  <div className="relative z-10 flex items-baseline gap-1 mb-1.5">
-                    <span className={`text-2xl font-black ${feature.statColor}`}>{feature.stat}</span>
-                    <span className="text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-wider">{feature.statLabel}</span>
-                  </div>
-                  <h3 className="relative z-10 text-[var(--text-primary)] font-bold mb-2 text-sm">{feature.title}</h3>
-                  <p className="relative z-10 text-[var(--text-muted)] text-xs leading-relaxed">{feature.description}</p>
+              <Card key={feature.title} pad="lg" className="rounded-none border-0">
+                <feature.Icon size={20} className="text-[var(--muted)] mb-4" />
+                <div className="flex items-baseline gap-1.5 mb-1.5">
+                  <span className="tnum font-display text-2xl font-bold text-[var(--red)]">{feature.stat}</span>
+                  <span className="text-[var(--muted)] text-[10px] font-bold uppercase tracking-wider">{feature.statLabel}</span>
                 </div>
-              </TiltCard>
-              </RevealItem>
+                <h3 className="text-[var(--ink)] font-bold mb-1.5 text-sm">{feature.title}</h3>
+                <p className="text-[var(--muted)] text-xs leading-relaxed">{feature.description}</p>
+              </Card>
             ))}
-          </RevealGroup>
+          </div>
         </div>
       </div>
     </section>

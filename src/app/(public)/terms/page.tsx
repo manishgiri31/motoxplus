@@ -10,26 +10,26 @@ export default function TermsPage() {
     // A plain div, not <main> — (public)/layout.tsx already renders the page's one
     // <main> landmark; this page previously imported Navbar/Footer directly and
     // nested a second <main> inside it, so it rendered the site chrome twice.
-    <div className="min-h-screen bg-[var(--bg-primary)] pt-24 pb-20">
+    <div className="min-h-screen bg-[var(--paper)] pt-24 pb-20">
         <div className="max-w-3xl mx-auto px-4 md:px-8">
           {/* Header */}
           <div className="mb-12">
-            <div className="flex items-center gap-2 text-[var(--text-muted)] text-xs uppercase tracking-widest mb-4">
+            <div className="flex items-center gap-2 text-[var(--muted)] text-xs uppercase tracking-widest mb-4">
               <Link href="/" className="hover:text-red-500 transition-colors">Home</Link>
               <span>/</span>
               <span>Terms &amp; Conditions</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-[var(--text-primary)] tracking-tight mb-4">
+            <h1 className="text-4xl md:text-5xl font-black text-[var(--ink)] tracking-tight mb-4">
               Terms &amp; Conditions
             </h1>
-            <p className="text-[var(--text-muted)] text-sm">
-              Last updated: <span className="text-[var(--text-secondary)]">June 1, 2025</span>
+            <p className="text-[var(--muted)] text-sm">
+              Last updated: <span className="text-[var(--muted)]">June 1, 2025</span>
             </p>
           </div>
 
           {/* Intro */}
-          <div className="glass border border-red-900/30 bg-red-900/5 rounded-sm p-5 mb-10">
-            <p className="text-[var(--text-secondary)] text-sm leading-relaxed">
+          <div className="border border-[var(--red)]/30 bg-[var(--red-soft)] rounded-sm p-5 mb-10">
+            <p className="text-[var(--muted)] text-sm leading-relaxed">
               Please read these Terms &amp; Conditions carefully before using the MotoXPlus India dealer portal or
               website. By registering as a dealer or placing an order, you agree to be bound by these terms. If you
               do not agree, do not use our services.
@@ -37,15 +37,15 @@ export default function TermsPage() {
           </div>
 
           {/* Content */}
-          <div className="space-y-10 text-[var(--text-secondary)] leading-relaxed">
+          <div className="space-y-10 text-[var(--muted)] leading-relaxed">
 
             <Section title="1. Definitions">
               <ul>
-                <li><strong className="text-[var(--text-primary)]">&ldquo;Company&rdquo;</strong> means MotoXPlus India Private Limited (GSTIN: 07AAUCM5765B1Z4), registered at RZ-43/291, Nashirpur, New Delhi – 110045.</li>
-                <li><strong className="text-[var(--text-primary)]">&ldquo;Dealer&rdquo;</strong> means a registered business entity approved by the Company to purchase products through the dealer portal.</li>
-                <li><strong className="text-[var(--text-primary)]">&ldquo;Platform&rdquo;</strong> means the website motoxplus.in and all associated web applications.</li>
-                <li><strong className="text-[var(--text-primary)]">&ldquo;Products&rdquo;</strong> means automotive spare parts listed on the Platform.</li>
-                <li><strong className="text-[var(--text-primary)]">&ldquo;Order&rdquo;</strong> means a confirmed purchase submitted by a Dealer through the Platform.</li>
+                <li><strong className="text-[var(--ink)]">&ldquo;Company&rdquo;</strong> means MotoXPlus India Private Limited (GSTIN: 07AAUCM5765B1Z4), registered at RZ-43/291, Nashirpur, New Delhi – 110045.</li>
+                <li><strong className="text-[var(--ink)]">&ldquo;Dealer&rdquo;</strong> means a registered business entity approved by the Company to purchase products through the dealer portal.</li>
+                <li><strong className="text-[var(--ink)]">&ldquo;Platform&rdquo;</strong> means the website motoxplus.in and all associated web applications.</li>
+                <li><strong className="text-[var(--ink)]">&ldquo;Products&rdquo;</strong> means automotive spare parts listed on the Platform.</li>
+                <li><strong className="text-[var(--ink)]">&ldquo;Order&rdquo;</strong> means a confirmed purchase submitted by a Dealer through the Platform.</li>
               </ul>
             </Section>
 
@@ -67,7 +67,7 @@ export default function TermsPage() {
               <p>
                 You are responsible for maintaining the confidentiality of your dealer account credentials.
                 All activities performed under your account are your responsibility. Notify us immediately at{" "}
-                <a href="mailto:info@motoxplus.in" className="text-red-500 hover:underline">info@motoxplus.in</a>{" "}
+                <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>{" "}
                 if you suspect unauthorised access. The Company will not be liable for losses resulting from
                 unauthorised account use.
               </p>
@@ -79,8 +79,8 @@ export default function TermsPage() {
                 and a binding contract is formed only when:
               </p>
               <ul>
-                <li>For <strong className="text-[var(--text-primary)]">online payments (Full / 20% Advance)</strong>: when payment is successfully verified and the order status changes to <em>Confirmed</em>.</li>
-                <li>For <strong className="text-[var(--text-primary)]">Cash on Delivery (COD)</strong>: when the order is submitted and immediately auto-confirmed by the system.</li>
+                <li>For <strong className="text-[var(--ink)]">online payments (Full / 20% Advance)</strong>: when payment is successfully verified and the order status changes to <em>Confirmed</em>.</li>
+                <li>For <strong className="text-[var(--ink)]">Cash on Delivery (COD)</strong>: when the order is submitted and immediately auto-confirmed by the system.</li>
               </ul>
               <p className="mt-3">
                 The Company reserves the right to cancel any order before dispatch due to stock unavailability,
@@ -100,18 +100,18 @@ export default function TermsPage() {
             <Section title="6. Payment Terms">
               <div className="space-y-4">
                 <div>
-                  <p className="font-semibold text-[var(--text-primary)] mb-1">6.1 Full Payment (100%)</p>
+                  <p className="font-semibold text-[var(--ink)] mb-1">6.1 Full Payment (100%)</p>
                   <p>The full invoice amount is due at the time of order placement via Razorpay.</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-[var(--text-primary)] mb-1">6.2 20% Advance Payment</p>
+                  <p className="font-semibold text-[var(--ink)] mb-1">6.2 20% Advance Payment</p>
                   <p>
                     A minimum 20% advance is due at order placement. The remaining 80% balance must be paid
                     before goods are dispatched. Orders will not be shipped until the full balance is settled.
                   </p>
                 </div>
                 <div>
-                  <p className="font-semibold text-[var(--text-primary)] mb-1">6.3 Cash on Delivery (COD)</p>
+                  <p className="font-semibold text-[var(--ink)] mb-1">6.3 Cash on Delivery (COD)</p>
                   <p>
                     For COD orders, the full invoice amount is payable in cash to the delivery agent at the
                     time of delivery. COD availability is subject to your delivery location and order value.
@@ -119,7 +119,7 @@ export default function TermsPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="font-semibold text-[var(--text-primary)] mb-1">6.4 Failed Payments</p>
+                  <p className="font-semibold text-[var(--ink)] mb-1">6.4 Failed Payments</p>
                   <p>
                     If an online payment fails, the order remains in <em>Pending</em> status and is not
                     processed. Contact support to retry or choose an alternate payment method.
@@ -140,7 +140,7 @@ export default function TermsPage() {
 
             <Section title="8. Returns &amp; Refunds">
               <p>
-                Returns are accepted within <strong className="text-[var(--text-primary)]">7 days</strong> of
+                Returns are accepted within <strong className="text-[var(--ink)]">7 days</strong> of
                 delivery for products that are:
               </p>
               <ul>
@@ -148,9 +148,9 @@ export default function TermsPage() {
                 <li>Incorrectly shipped (wrong SKU or part number)</li>
               </ul>
               <p className="mt-3">
-                Returns are <strong className="text-[var(--text-primary)]">not accepted</strong> for products
+                Returns are <strong className="text-[var(--ink)]">not accepted</strong> for products
                 that have been installed, modified, or are not in original packaging. To initiate a return,
-                email <a href="mailto:info@motoxplus.in" className="text-red-500 hover:underline">info@motoxplus.in</a>{" "}
+                email <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>{" "}
                 within the return window with your order number and photographic evidence.
               </p>
               <p className="mt-3">
@@ -202,7 +202,7 @@ export default function TermsPage() {
               <p>
                 These Terms are governed by and construed in accordance with the laws of India. Any disputes
                 arising from or relating to these Terms shall be subject to the exclusive jurisdiction of the
-                courts of <strong className="text-[var(--text-primary)]">New Delhi, India</strong>.
+                courts of <strong className="text-[var(--ink)]">New Delhi, India</strong>.
               </p>
               <p className="mt-3">
                 The parties shall first attempt to resolve disputes amicably. If unresolved within 30 days,
@@ -219,20 +219,20 @@ export default function TermsPage() {
             </Section>
 
             <Section title="15. Contact">
-              <div className="glass border border-[var(--border-color)] rounded-sm p-5 mt-4">
-                <p className="text-[var(--text-primary)] font-bold mb-1">MotoXPlus India Private Limited</p>
-                <p className="text-[var(--text-muted)] text-sm">RZ-43/291, Nashirpur, New Delhi – 110045</p>
-                <p className="text-[var(--text-muted)] text-sm">
+              <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-5 mt-4">
+                <p className="text-[var(--ink)] font-bold mb-1">MotoXPlus India Private Limited</p>
+                <p className="text-[var(--muted)] text-sm">RZ-43/291, Nashirpur, New Delhi – 110045</p>
+                <p className="text-[var(--muted)] text-sm">
                   Email:{" "}
-                  <a href="mailto:info@motoxplus.in" className="text-red-500 hover:underline">info@motoxplus.in</a>
+                  <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>
                 </p>
-                <p className="text-[var(--text-muted)] text-sm">Phone: +91 92171 31801</p>
+                <p className="text-[var(--muted)] text-sm">Phone: +91 92171 31801</p>
               </div>
             </Section>
           </div>
 
           {/* Back link */}
-          <div className="mt-14 pt-8 border-t border-[var(--border-color)]">
+          <div className="mt-14 pt-8 border-t border-[var(--line)]">
             <Link href="/" className="text-red-500 hover:text-red-400 text-sm font-semibold transition-colors">
               ← Back to Home
             </Link>
@@ -245,11 +245,11 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex items-center gap-3">
+      <h2 className="text-xl font-bold text-[var(--ink)] mb-4 flex items-center gap-3">
         <span className="w-1 h-5 bg-red-600 rounded-full block flex-shrink-0" />
         {title}
       </h2>
-      <div className="space-y-3 pl-4 border-l border-[var(--border-color)]">{children}</div>
+      <div className="space-y-3 pl-4 border-l border-[var(--line)]">{children}</div>
     </section>
   );
 }

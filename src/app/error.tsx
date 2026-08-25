@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function ErrorBoundary({
   error,
@@ -15,25 +16,17 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-xl font-semibold">Something went wrong</h1>
-      <p className="max-w-md text-sm text-[var(--text-muted)]">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center bg-[var(--paper)]">
+      <h1 className="font-display text-xl font-bold text-[var(--ink)]">Something went wrong</h1>
+      <p className="max-w-md text-sm text-[var(--muted)]">
         We hit an unexpected error loading this page. Your cart and account are safe — try again,
         or head back to the homepage.
       </p>
-      <div className="flex gap-3">
-        <button
-          onClick={() => reset()}
-          className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-        >
-          Try again
-        </button>
-        <Link
-          href="/"
-          className="rounded-md border border-[var(--border-color)] px-4 py-2 text-sm font-medium hover:bg-[var(--bg-card-hover)]"
-        >
-          Go home
-        </Link>
+      <div className="flex gap-3 mt-2">
+        <Button variant="brand" onClick={() => reset()}>Try again</Button>
+        <Button asChild variant="ghost">
+          <Link href="/">Go home</Link>
+        </Button>
       </div>
     </div>
   );

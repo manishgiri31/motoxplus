@@ -157,7 +157,7 @@ export default async function ProductDetailPage(
       : undefined;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
+    <div className="min-h-screen bg-[var(--paper)]">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -205,31 +205,31 @@ export default async function ProductDetailPage(
       />
 
       {/* Breadcrumb */}
-      <div className="border-b border-white/5 px-4 md:px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs text-[var(--text-muted)]">
-          <Link href="/" className="hover:text-red-400 transition-colors">Home</Link>
+      <div className="border-b border-[var(--line)] px-4 md:px-8 py-4">
+        <div className="max-w-7xl mx-auto flex items-center gap-2 text-xs text-[var(--muted)]">
+          <Link href="/" className="hover:text-[var(--red)] transition-colors">Home</Link>
           <span>/</span>
           {vehicleContext ? (
             <>
-              <Link href={`/products?vehicle=${vehicleContext.slug}`} className="hover:text-red-400 transition-colors">
+              <Link href={`/products?vehicle=${vehicleContext.slug}`} className="hover:text-[var(--red)] transition-colors">
                 {vehicleContext.name}
               </Link>
               <span>/</span>
             </>
           ) : (
             <>
-              <Link href="/products" className="hover:text-red-400 transition-colors">Products</Link>
+              <Link href="/products" className="hover:text-[var(--red)] transition-colors">Products</Link>
               <span>/</span>
             </>
           )}
           <Link
             href={`/products?category=${product.category.slug}${vehicleContext ? `&vehicle=${vehicleContext.slug}` : ""}`}
-            className="hover:text-red-400 transition-colors"
+            className="hover:text-[var(--red)] transition-colors"
           >
             {product.category.name}
           </Link>
           <span>/</span>
-          <span className="text-[var(--text-primary)]">{product.name}</span>
+          <span className="text-[var(--ink)]">{product.name}</span>
         </div>
       </div>
 

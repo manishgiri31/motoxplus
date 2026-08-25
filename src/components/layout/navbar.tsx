@@ -15,9 +15,9 @@ import {
   Truck,
   Wrench,
   ArrowRight,
-  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicle-categories";
 
@@ -121,10 +121,10 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+        "fixed top-0 left-0 right-0 z-50 transition-colors duration-300 border-b",
         scrolled || openMenu
-          ? "bg-[var(--bg-secondary)]/85 backdrop-blur-2xl border-b border-[var(--border-color)] shadow-[0_1px_30px_rgba(0,0,0,0.15)]"
-          : "bg-transparent border-b border-transparent"
+          ? "bg-[var(--paper)]/92 backdrop-blur-xl border-[var(--line)]"
+          : "bg-transparent border-transparent"
       )}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
@@ -136,14 +136,14 @@ export function Navbar() {
               alt="MOTOXPLUS India Private Limited"
               width={400}
               height={300}
-              className="h-[44px] md:h-[60px] w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_2px_10px_rgba(220,38,38,0.18)]"
+              className="h-[40px] md:h-[52px] w-auto object-contain"
               priority
             />
             <div className="hidden sm:block">
-              <span className="text-[var(--text-primary)] font-black text-xl md:text-2xl tracking-tight leading-none">
-                MOTOX<span className="text-red-600">PLUS</span>
+              <span className="font-display text-[var(--ink)] font-bold text-lg md:text-xl tracking-tight leading-none">
+                MOTOX<span className="text-[var(--red)]">PLUS</span>
               </span>
-              <div className="text-[9px] md:text-[10px] text-[var(--text-muted)] tracking-[0.2em] leading-none mt-1.5">
+              <div className="text-[9px] text-[var(--muted)] tracking-[0.18em] leading-none mt-1.5 font-medium">
                 INDIA PRIVATE LIMITED
               </div>
             </div>
@@ -151,7 +151,7 @@ export function Navbar() {
 
           {/* Desktop nav */}
           <nav className="hidden lg:flex items-center gap-1">
-            <Link href="/" className="nav-link px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            <Link href="/" className="nav-link px-4 py-2 text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
               Home
             </Link>
 
@@ -168,46 +168,46 @@ export function Navbar() {
                 aria-expanded={openMenu === "vehicles"}
                 className={cn(
                   "nav-link flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors",
-                  openMenu === "vehicles" ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  openMenu === "vehicles" ? "text-[var(--ink)]" : "text-[var(--muted)] hover:text-[var(--ink)]"
                 )}
               >
                 Vehicles
-                <ChevronDown size={14} className={cn("transition-transform duration-300", openMenu === "vehicles" && "rotate-180")} />
+                <ChevronDown size={14} className={cn("transition-transform duration-200", openMenu === "vehicles" && "rotate-180")} />
               </button>
 
               <AnimatePresence>
                 {openMenu === "vehicles" && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                     className="absolute top-full left-1/2 -translate-x-1/2 pt-3 w-[340px]"
                   >
-                    <div className="glass border border-[var(--border-color)] rounded-2xl shadow-2xl p-3 overflow-hidden">
+                    <div className="bg-[var(--card)] border border-[var(--line)] rounded-lg shadow-[var(--elev-3)] p-2 overflow-hidden">
                       {VEHICLE_CATEGORIES.map((cat) => {
                         const Icon = VEHICLE_ICON[cat.value];
                         return (
                           <Link
                             key={cat.slug}
                             href={`/vehicles/${cat.slug}`}
-                            className="group flex items-center gap-4 rounded-xl px-3 py-3 hover:bg-[var(--bg-card-hover)] transition-colors"
+                            className="group flex items-center gap-4 rounded-sm px-3 py-3 hover:bg-[var(--paper)] transition-colors"
                           >
-                            <div className="w-10 h-10 rounded-lg bg-red-600/10 border border-red-600/20 flex items-center justify-center flex-shrink-0 group-hover:bg-red-600/15 transition-colors">
-                              <Icon size={18} className="text-red-500" />
+                            <div className="w-9 h-9 rounded-sm border border-[var(--line)] flex items-center justify-center flex-shrink-0 group-hover:border-[var(--red)]/40 transition-colors">
+                              <Icon size={16} className="text-[var(--muted)] group-hover:text-[var(--red)] transition-colors" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-[var(--text-primary)] font-semibold text-sm">{cat.label}</div>
-                              <div className="text-[var(--text-muted)] text-xs truncate">{cat.tagline}</div>
+                              <div className="text-[var(--ink)] font-semibold text-sm">{cat.label}</div>
+                              <div className="text-[var(--muted)] text-xs truncate">{cat.tagline}</div>
                             </div>
-                            <ChevronRight size={15} className="text-[var(--text-muted)] group-hover:text-red-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                            <ChevronRight size={14} className="text-[var(--line)] group-hover:text-[var(--red)] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                           </Link>
                         );
                       })}
-                      <div className="mt-1 pt-2 border-t border-[var(--border-color)]">
+                      <div className="mt-1 pt-2 border-t border-[var(--line)]">
                         <Link
                           href="/vehicles"
-                          className="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-red-500 hover:text-red-600 text-xs font-bold uppercase tracking-wider transition-colors"
+                          className="flex items-center justify-center gap-2 rounded-sm px-3 py-2.5 text-[var(--red)] hover:text-[var(--red-hover)] text-xs font-bold uppercase tracking-wider transition-colors"
                         >
                           Browse All Vehicles
                           <ArrowRight size={13} />
@@ -232,40 +232,40 @@ export function Navbar() {
                 aria-expanded={openMenu === "products"}
                 className={cn(
                   "nav-link flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors",
-                  openMenu === "products" ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  openMenu === "products" ? "text-[var(--ink)]" : "text-[var(--muted)] hover:text-[var(--ink)]"
                 )}
               >
                 Products
-                <ChevronDown size={14} className={cn("transition-transform duration-300", openMenu === "products" && "rotate-180")} />
+                <ChevronDown size={14} className={cn("transition-transform duration-200", openMenu === "products" && "rotate-180")} />
               </button>
 
               <AnimatePresence>
                 {openMenu === "products" && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute top-full left-1/2 -translate-x-1/2 pt-3 w-[640px]"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute top-full left-1/2 -translate-x-1/2 pt-3 w-[600px]"
                   >
-                    <div className="glass border border-[var(--border-color)] rounded-2xl shadow-2xl p-6 grid grid-cols-5 gap-6 overflow-hidden">
+                    <div className="bg-[var(--card)] border border-[var(--line)] rounded-lg shadow-[var(--elev-3)] p-6 grid grid-cols-5 gap-6 overflow-hidden">
                       <div className="col-span-3">
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3 px-1">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted)] mb-3 px-1">
                           Shop by Category
                         </div>
                         <div className="grid grid-cols-2 gap-1">
                           {categories.length === 0
                             ? Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="h-11 rounded-lg skeleton" />
+                                <div key={i} className="h-11 rounded-sm skeleton" />
                               ))
                             : categories.map((cat) => (
                                 <Link
                                   key={cat.id}
                                   href={`/products?category=${cat.slug}`}
-                                  className="group flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-[var(--bg-card-hover)] transition-colors"
+                                  className="group flex items-center gap-3 rounded-sm px-3 py-2.5 hover:bg-[var(--paper)] transition-colors"
                                 >
-                                  <Wrench size={14} className="text-[var(--text-muted)] group-hover:text-red-500 transition-colors flex-shrink-0" />
-                                  <span className="text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] text-sm truncate transition-colors">
+                                  <Wrench size={13} className="text-[var(--line)] group-hover:text-[var(--red)] transition-colors flex-shrink-0" />
+                                  <span className="text-[var(--muted)] group-hover:text-[var(--ink)] text-sm truncate transition-colors">
                                     {cat.name}
                                   </span>
                                 </Link>
@@ -273,30 +273,30 @@ export function Navbar() {
                         </div>
                         <Link
                           href="/products"
-                          className="mt-3 inline-flex items-center gap-2 px-1 text-red-500 hover:text-red-600 text-xs font-bold uppercase tracking-wider transition-colors"
+                          className="mt-3 inline-flex items-center gap-2 px-1 text-[var(--red)] hover:text-[var(--red-hover)] text-xs font-bold uppercase tracking-wider transition-colors"
                         >
                           View All Products
                           <ArrowRight size={13} />
                         </Link>
                       </div>
 
-                      <div className="col-span-2 relative rounded-xl overflow-hidden bg-gradient-to-br from-red-700 via-red-600 to-red-800 p-6 flex flex-col justify-between min-h-[200px]">
-                        <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-                        <Package size={22} className="text-white/80 relative z-10" />
-                        <div className="relative z-10">
-                          <div className="text-white font-black text-lg leading-tight mb-1">
+                      <div className="col-span-2 relative border border-[var(--line)] rounded-sm p-6 flex flex-col justify-between min-h-[200px] bg-[var(--paper)]">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted)]">
+                          Dealer Access
+                        </div>
+                        <div>
+                          <div className="text-[var(--ink)] font-display font-bold text-lg leading-tight mb-1">
                             Become a Dealer
                           </div>
-                          <p className="text-white/75 text-xs leading-relaxed mb-4">
+                          <p className="text-[var(--muted)] text-xs leading-relaxed mb-4">
                             Get wholesale pricing and priority stock access.
                           </p>
-                          <Link
-                            href="/become-dealer"
-                            className="inline-flex items-center gap-2 bg-white text-red-700 text-xs font-bold px-4 py-2.5 rounded-lg hover:bg-white/90 transition-colors uppercase tracking-wider"
-                          >
-                            Apply Now
-                            <ArrowRight size={12} />
-                          </Link>
+                          <Button asChild variant="brand" size="sm">
+                            <Link href="/become-dealer">
+                              Apply Now
+                              <ArrowRight size={12} />
+                            </Link>
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -305,10 +305,10 @@ export function Navbar() {
               </AnimatePresence>
             </div>
 
-            <Link href="/about" className="nav-link px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            <Link href="/about" className="nav-link px-4 py-2 text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
               About
             </Link>
-            <Link href="/contact" className="nav-link px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            <Link href="/contact" className="nav-link px-4 py-2 text-sm font-medium text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
               Contact
             </Link>
           </nav>
@@ -317,34 +317,30 @@ export function Navbar() {
           <div className="hidden lg:flex items-center gap-2.5">
             <Link
               href="/become-vendor"
-              className="text-[var(--text-secondary)] hover:text-red-500 text-sm font-medium px-3.5 py-2 transition-colors"
+              className="text-[var(--muted)] hover:text-[var(--ink)] text-sm font-medium px-3.5 py-2 transition-colors"
             >
               Become a Vendor
             </Link>
-            <div className="w-px h-5 bg-[var(--border-color)]" />
+            <div className="w-px h-5 bg-[var(--line)]" />
             <ThemeToggle />
             {session ? (
-              <Link
-                href={dashboardHref}
-                className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 red-glow-sm"
-              >
-                Dashboard
-              </Link>
+              <Button asChild variant="brand" size="sm">
+                <Link href={dashboardHref}>Dashboard</Link>
+              </Button>
             ) : (
               <>
                 <Link
                   href="/login"
-                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors px-3.5 py-2"
+                  className="text-[var(--muted)] hover:text-[var(--ink)] text-sm font-medium transition-colors px-3.5 py-2"
                 >
                   Login
                 </Link>
-                <Link
-                  href="/become-dealer"
-                  className="group flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-all duration-200 red-glow-sm"
-                >
-                  Become a Dealer
-                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                </Link>
+                <Button asChild variant="brand" size="sm">
+                  <Link href="/become-dealer" className="group">
+                    Become a Dealer
+                    <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                </Button>
               </>
             )}
           </div>
@@ -354,7 +350,7 @@ export function Navbar() {
             <ThemeToggle />
             <button
               onClick={() => setIsOpen((v) => !v)}
-              className="text-[var(--text-primary)] p-2 rounded-lg hover:bg-[var(--bg-card-hover)] transition-colors"
+              className="text-[var(--ink)] p-2 rounded-sm hover:bg-[var(--paper)] transition-colors"
               aria-label="Toggle menu"
             >
               {isOpen ? <X size={22} /> : <Menu size={22} />}
@@ -370,8 +366,8 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:hidden bg-[var(--bg-secondary)]/98 backdrop-blur-2xl border-t border-[var(--border-color)] shadow-xl overflow-hidden max-h-[calc(100vh-72px)] overflow-y-auto"
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:hidden bg-[var(--paper)] border-t border-[var(--line)] overflow-hidden max-h-[calc(100vh-72px)] overflow-y-auto"
           >
             <nav className="flex flex-col px-4 py-5 gap-1">
               {simpleLinks.slice(0, 1).map((link) => (
@@ -379,7 +375,7 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-between font-medium py-3 px-3 rounded-xl text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  className="flex items-center justify-between font-medium py-3 px-3 rounded-sm text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--card)] transition-colors"
                 >
                   {link.label}
                   <ChevronRight size={14} className="opacity-40" />
@@ -389,10 +385,10 @@ export function Navbar() {
               {/* Vehicles accordion */}
               <button
                 onClick={() => setMobileGroup((g) => (g === "vehicles" ? null : "vehicles"))}
-                className="flex items-center justify-between font-medium py-3 px-3 rounded-xl text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                className="flex items-center justify-between font-medium py-3 px-3 rounded-sm text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--card)] transition-colors"
               >
                 Vehicles
-                <ChevronDown size={15} className={cn("transition-transform duration-300", mobileGroup === "vehicles" && "rotate-180 text-red-500")} />
+                <ChevronDown size={15} className={cn("transition-transform duration-200", mobileGroup === "vehicles" && "rotate-180 text-[var(--red)]")} />
               </button>
               <AnimatePresence>
                 {mobileGroup === "vehicles" && (
@@ -400,7 +396,7 @@ export function Navbar() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.18 }}
                     className="overflow-hidden pl-2"
                   >
                     {VEHICLE_CATEGORIES.map((cat) => (
@@ -408,9 +404,9 @@ export function Navbar() {
                         key={cat.slug}
                         href={`/vehicles/${cat.slug}`}
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm text-[var(--text-muted)] hover:text-red-500 transition-colors"
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-sm text-sm text-[var(--muted)] hover:text-[var(--red)] transition-colors"
                       >
-                        <span className="w-1 h-1 rounded-full bg-red-600" />
+                        <span className="w-1 h-1 bg-[var(--red)]" />
                         {cat.label}
                       </Link>
                     ))}
@@ -421,10 +417,10 @@ export function Navbar() {
               {/* Products accordion */}
               <button
                 onClick={() => setMobileGroup((g) => (g === "products" ? null : "products"))}
-                className="flex items-center justify-between font-medium py-3 px-3 rounded-xl text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                className="flex items-center justify-between font-medium py-3 px-3 rounded-sm text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--card)] transition-colors"
               >
                 Products
-                <ChevronDown size={15} className={cn("transition-transform duration-300", mobileGroup === "products" && "rotate-180 text-red-500")} />
+                <ChevronDown size={15} className={cn("transition-transform duration-200", mobileGroup === "products" && "rotate-180 text-[var(--red)]")} />
               </button>
               <AnimatePresence>
                 {mobileGroup === "products" && (
@@ -432,7 +428,7 @@ export function Navbar() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.18 }}
                     className="overflow-hidden pl-2"
                   >
                     {categories.slice(0, 6).map((cat) => (
@@ -440,16 +436,16 @@ export function Navbar() {
                         key={cat.id}
                         href={`/products?category=${cat.slug}`}
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm text-[var(--text-muted)] hover:text-red-500 transition-colors"
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-sm text-sm text-[var(--muted)] hover:text-[var(--red)] transition-colors"
                       >
-                        <span className="w-1 h-1 rounded-full bg-red-600" />
+                        <span className="w-1 h-1 bg-[var(--red)]" />
                         {cat.name}
                       </Link>
                     ))}
                     <Link
                       href="/products"
                       onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-2 py-2.5 px-3 text-red-500 text-xs font-bold uppercase tracking-wider"
+                      className="flex items-center gap-2 py-2.5 px-3 text-[var(--red)] text-xs font-bold uppercase tracking-wider"
                     >
                       View All Products
                       <ArrowRight size={12} />
@@ -463,7 +459,7 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center justify-between font-medium py-3 px-3 rounded-xl text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  className="flex items-center justify-between font-medium py-3 px-3 rounded-sm text-sm text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--card)] transition-colors"
                 >
                   {link.label}
                   <ChevronRight size={14} className="opacity-40" />
@@ -473,37 +469,25 @@ export function Navbar() {
               <Link
                 href="/become-vendor"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center justify-between font-medium py-3 px-3 rounded-xl text-sm text-red-500 hover:bg-red-950/20 transition-colors"
+                className="flex items-center justify-between font-medium py-3 px-3 rounded-sm text-sm text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors"
               >
                 Become a Vendor
                 <ChevronRight size={14} className="opacity-40" />
               </Link>
 
-              <div className="pt-4 mt-2 border-t border-[var(--border-color)]">
+              <div className="pt-4 mt-2 border-t border-[var(--line)]">
                 {session ? (
-                  <Link
-                    href={dashboardHref}
-                    className="flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors red-glow-sm"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Go to Dashboard
-                  </Link>
+                  <Button asChild variant="brand" block onClick={() => setIsOpen(false)}>
+                    <Link href={dashboardHref}>Go to Dashboard</Link>
+                  </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <Link
-                      href="/login"
-                      className="flex-1 flex items-center justify-center glass border border-[var(--border-color)] text-[var(--text-secondary)] font-semibold py-3 rounded-xl text-sm transition-colors hover:border-red-600/40"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      href="/become-dealer"
-                      className="flex-1 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl text-sm transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Become a Dealer
-                    </Link>
+                    <Button asChild variant="ghost" block onClick={() => setIsOpen(false)}>
+                      <Link href="/login">Login</Link>
+                    </Button>
+                    <Button asChild variant="brand" block onClick={() => setIsOpen(false)}>
+                      <Link href="/become-dealer">Become a Dealer</Link>
+                    </Button>
                   </div>
                 )}
               </div>

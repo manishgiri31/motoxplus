@@ -36,7 +36,7 @@ export function ResetPasswordForm() {
 
   if (!userId) {
     return (
-      <div className="glass border border-[var(--border-color)] rounded-sm p-8 text-center">
+      <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
         <p className="text-red-400 mb-4">This reset link is invalid or has expired.</p>
         <Link href="/forgot-password" className="text-red-400 hover:text-red-300 font-semibold">
           Request a new code
@@ -129,7 +129,7 @@ export function ResetPasswordForm() {
 
   if (step === "success") {
     return (
-      <div className="glass border border-[var(--border-color)] rounded-sm p-8 text-center">
+      <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
         <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
         <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Password reset successful</h1>
         <p className="text-[var(--text-muted)] text-sm mb-6">
@@ -146,7 +146,7 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <div className="glass border border-[var(--border-color)] rounded-sm p-8">
+    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8">
       {step === "enter-code" && (
         <form onSubmit={handleVerify} className="space-y-6">
           <div>

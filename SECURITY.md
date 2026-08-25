@@ -121,6 +121,6 @@ Prisma ORM uses parameterized queries exclusively. No raw SQL is used except for
 
 ## Security Contacts
 
-For security vulnerabilities, contact: **info@motoxplus.in**
+For security vulnerabilities, contact: **info@motoxplus.com**
 
 Please use responsible disclosure. Do not publish vulnerabilities before they are fixed.

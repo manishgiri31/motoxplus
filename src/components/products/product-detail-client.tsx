@@ -84,8 +84,8 @@ function isCssColor(str: string): boolean {
 }
 
 function getModelBadge(model: string): { label: string; cls: string } | null {
-  if (/\bN\/M\b/.test(model)) return { label: "NEW", cls: "bg-green-500/15 text-green-500 border border-green-500/30" };
-  if (/\bO\/M\b/.test(model)) return { label: "OLD", cls: "bg-amber-500/15 text-amber-500 border border-amber-500/30" };
+  if (/\bN\/M\b/.test(model)) return { label: "NEW", cls: "bg-[var(--sig-ok-bg)] text-[var(--sig-ok-fg)] border border-[var(--sig-ok-bd)]" };
+  if (/\bO\/M\b/.test(model)) return { label: "OLD", cls: "bg-[var(--sig-warn-bg)] text-[var(--sig-warn-fg)] border border-[var(--sig-warn-bd)]" };
   return null;
 }
 
@@ -298,8 +298,8 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
         {/* ── Gallery ── */}
         <div>
           <div
-            className="relative aspect-square rounded-xl overflow-hidden mb-4 transition-[background-color] duration-500"
-            style={{ background: !gallery[selectedIdx] && activeColorBg ? activeColorBg : "var(--bg-secondary)" }}
+            className="relative aspect-square rounded-sm overflow-hidden mb-4 border border-[var(--line)] transition-[background-color] duration-500"
+            style={{ background: !gallery[selectedIdx] && activeColorBg ? activeColorBg : "var(--card)" }}
           >
             {gallery[selectedIdx] ? (
               <Image
@@ -323,7 +323,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                     </span>
                   </>
                 ) : (
-                  <div className="text-8xl text-[var(--text-muted)] opacity-10 font-black select-none">◈</div>
+                  <div className="text-8xl text-[var(--muted)] opacity-10 font-black select-none">◈</div>
                 )}
               </div>
             )}
@@ -332,13 +332,13 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               <>
                 <button
                   onClick={prev}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-sm bg-[var(--card)] border border-[var(--line)] text-[var(--ink)] hover:border-[var(--red)]/40 transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                   onClick={next}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-sm bg-[var(--card)] border border-[var(--line)] text-[var(--ink)] hover:border-[var(--red)]/40 transition-colors"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -347,7 +347,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                     <button
                       key={i}
                       onClick={() => setSelectedIdx(i)}
-                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === selectedIdx ? "bg-red-500" : "bg-white/40"}`}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === selectedIdx ? "bg-[var(--red)]" : "bg-white/40"}`}
                     />
                   ))}
                 </div>
@@ -361,8 +361,8 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                 <button
                   key={i}
                   onClick={() => setSelectedIdx(i)}
-                  className={`relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border transition-colors ${
-                    i === selectedIdx ? "border-red-600" : "border-[var(--border-color)] opacity-60 hover:opacity-100"
+                  className={`relative w-16 h-16 flex-shrink-0 rounded-sm overflow-hidden border transition-colors ${
+                    i === selectedIdx ? "border-[var(--red)]" : "border-[var(--line)] opacity-60 hover:opacity-100"
                   }`}
                 >
                   <Image src={img} alt={`${product.name} ${i + 1}`} fill className="object-cover" sizes="64px" unoptimized />
@@ -379,32 +379,32 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
             {vehicleContext && (
               <Link
                 href={`/products?vehicle=${vehicleContext.slug}`}
-                className="glass border border-emerald-800/40 text-emerald-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl hover:border-emerald-600/60 transition-colors flex items-center gap-1.5"
+                className="border border-[var(--sig-ok-bd)] text-[var(--sig-ok-fg)] text-xs font-semibold uppercase tracking-wider px-3 py-1 hover:bg-[var(--sig-ok-bg)] transition-colors flex items-center gap-1.5"
               >
                 <CheckCircle className="w-3 h-3" />
                 Fits {vehicleContext.name}
               </Link>
             )}
-            <span className="glass border border-red-900/30 text-red-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl">
+            <span className="border border-[var(--red)]/30 text-[var(--red)] text-xs font-semibold uppercase tracking-wider px-3 py-1">
               {product.category.name}
             </span>
             {product.brand && (
-              <span className="glass border border-[var(--border-color)] text-[var(--text-secondary)] text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl">
+              <span className="border border-[var(--line)] text-[var(--muted)] text-xs font-semibold uppercase tracking-wider px-3 py-1">
                 {product.brand}
               </span>
             )}
             {product.warranty && product.warranty !== "No Warranty" && (
-              <span className="glass border border-green-900/40 text-green-400 text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-xl flex items-center gap-1">
+              <span className="border border-[var(--sig-ok-bd)] text-[var(--sig-ok-fg)] text-xs font-semibold uppercase tracking-wider px-3 py-1 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 {product.warranty}
               </span>
             )}
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-black text-[var(--text-primary)] tracking-tight mb-4">
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight mb-4">
             {product.name}
             {resolvedVariant && (
-              <span className="block text-lg font-semibold text-red-400 mt-1">{resolvedVariant.label}</span>
+              <span className="block text-lg font-semibold text-[var(--red)] mt-1">{resolvedVariant.label}</span>
             )}
           </h1>
 
@@ -421,8 +421,8 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               ...(product.countryOfOrigin ? [{ label: "Country of Origin", value: product.countryOfOrigin }] : []),
             ].map((item) => (
               <div key={item.label}>
-                <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">{item.label}</div>
-                <div className={`text-[var(--text-primary)] text-sm font-semibold ${"mono" in item && item.mono ? "font-mono" : ""}`}>
+                <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">{item.label}</div>
+                <div className={`tnum text-[var(--ink)] text-sm font-semibold ${"mono" in item && item.mono ? "font-mono" : ""}`}>
                   {item.value}
                 </div>
               </div>
@@ -431,14 +431,14 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
 
           {/* Package dims */}
           {(product.packageWeight || product.packageLength) && (
-            <div className="glass-dark border border-[var(--border-color)] rounded-xl p-4 mb-6 flex items-start gap-3">
-              <PackageOpen className="w-4 h-4 text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-4 mb-6 flex items-start gap-3">
+              <PackageOpen className="w-4 h-4 text-[var(--muted)] mt-0.5 flex-shrink-0" />
               <div>
-                <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Package Dimensions</div>
-                <div className="text-[var(--text-secondary)] text-sm">
+                <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Package Dimensions</div>
+                <div className="text-[var(--ink)]/80 text-sm">
                   {product.packageWeight && <span>{product.packageWeight} kg</span>}
                   {product.packageLength && (
-                    <span className="ml-2 text-[var(--text-muted)]">
+                    <span className="ml-2 text-[var(--muted)]">
                       {product.packageLength} × {product.packageWidth} × {product.packageHeight} cm
                     </span>
                   )}
@@ -448,15 +448,15 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
           )}
 
           {product.description && (
-            <p className="text-[var(--text-muted)] text-sm leading-relaxed mb-6">{product.description}</p>
+            <p className="text-[var(--muted)] text-sm leading-relaxed mb-6">{product.description}</p>
           )}
 
           {product.compatibility.length > 0 && (
             <div className="mb-6">
-              <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Compatible With</div>
+              <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-3">Compatible With</div>
               <div className="flex flex-wrap gap-2">
                 {product.compatibility.map((model) => (
-                  <span key={model} className="glass border border-[var(--border-color)] text-[var(--text-secondary)] text-xs px-3 py-1 rounded-xl">
+                  <span key={model} className="border border-[var(--line)] text-[var(--ink)]/80 text-xs px-3 py-1">
                     {model}
                   </span>
                 ))}
@@ -497,9 +497,9 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                 return (
                   <div key={dim}>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[var(--text-muted)] text-xs uppercase tracking-widest">{DIM_LABELS[dim]}</span>
+                      <span className="text-[var(--muted)] text-xs uppercase tracking-widest">{DIM_LABELS[dim]}</span>
                       {selectedVal && !useDropdown && (
-                        <span className="text-[var(--text-primary)] text-xs font-semibold">— {selectedVal}</span>
+                        <span className="text-[var(--ink)] text-xs font-semibold">— {selectedVal}</span>
                       )}
                     </div>
                     {isModelDim ? (
@@ -508,12 +508,12 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                         <button
                           type="button"
                           onClick={() => setModelDropdownOpen((o) => !o)}
-                          className="w-full glass border border-[var(--border-color)] rounded-xl px-4 py-3 text-sm text-left flex items-center justify-between gap-2 hover:border-red-600/50 transition-colors focus:outline-none focus:border-red-600"
+                          className="w-full bg-[var(--card)] border border-[var(--line)] rounded-sm px-4 py-3 text-sm text-left flex items-center justify-between gap-2 hover:border-[var(--red)]/50 transition-colors focus:outline-none focus:border-[var(--red)]"
                         >
                           <span className="flex items-center gap-2 min-w-0">
                             {selectedVal ? (
                               <>
-                                <span className="text-[var(--text-primary)] truncate">{selectedVal}</span>
+                                <span className="text-[var(--ink)] truncate">{selectedVal}</span>
                                 {getModelBadge(selectedVal) && (
                                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${getModelBadge(selectedVal)!.cls}`}>
                                     {getModelBadge(selectedVal)!.label}
@@ -521,15 +521,15 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                                 )}
                               </>
                             ) : (
-                              <span className="text-[var(--text-muted)]">Select Vehicle Model...</span>
+                              <span className="text-[var(--muted)]">Select Vehicle Model...</span>
                             )}
                           </span>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-[var(--text-muted)] flex-shrink-0 transition-transform ${modelDropdownOpen ? "rotate-180" : ""}`}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-[var(--muted)] flex-shrink-0 transition-transform ${modelDropdownOpen ? "rotate-180" : ""}`}>
                             <polyline points="6 9 12 15 18 9" />
                           </svg>
                         </button>
                         {modelDropdownOpen && (
-                          <div className="absolute z-50 top-full mt-1 w-full glass border border-[var(--border-color)] rounded-xl shadow-xl overflow-hidden">
+                          <div className="absolute z-50 top-full mt-1 w-full bg-[var(--card)] border border-[var(--line)] rounded-sm shadow-[var(--elev-3)] overflow-hidden">
                             <div className="max-h-64 overflow-y-auto">
                               {/* Show ALL vehicle models as selectable — picking one resets the color */}
                               {(dimOptions["vehicleModel"] ?? options).map((val) => {
@@ -542,8 +542,8 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                                     onClick={() => { selectAttr(dim, val); setModelDropdownOpen(false); }}
                                     className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors ${
                                       isSelected
-                                        ? "bg-red-600/20 text-red-400"
-                                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)]"
+                                        ? "bg-[var(--red-soft)] text-[var(--red)]"
+                                        : "text-[var(--ink)]/80 hover:bg-[var(--paper)]"
                                     }`}
                                   >
                                     <span className="truncate">{val}</span>
@@ -563,7 +563,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                       <select
                         value={selectedVal ?? ""}
                         onChange={(e) => e.target.value && selectAttr(dim, e.target.value)}
-                        className="w-full glass border border-[var(--border-color)] rounded-xl px-4 py-3 text-sm text-[var(--text-primary)] bg-[var(--bg-secondary)] appearance-none cursor-pointer focus:outline-none focus:border-red-600 transition-colors"
+                        className="w-full themed-select rounded-sm px-4 py-3 text-sm appearance-none cursor-pointer"
                         style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 1rem center" }}
                       >
                         <option value="">Select {DIM_LABELS[dim]}...</option>
@@ -587,12 +587,12 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                               key={val}
                               onClick={() => available && selectAttr(dim, val)}
                               disabled={!available}
-                              className={`relative px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                              className={`relative px-4 py-2 rounded-sm text-sm font-semibold border transition-colors ${
                                 isSelected
-                                  ? "bg-red-600 border-red-600 text-white shadow-lg shadow-red-900/30"
+                                  ? "bg-[var(--red)] border-[var(--red)] text-white"
                                   : available
-                                  ? "glass border-[var(--border-color)] text-[var(--text-secondary)] hover:border-red-700/50 hover:text-[var(--text-primary)]"
-                                  : "glass border-[var(--border-color)] text-gray-700 cursor-not-allowed opacity-50"
+                                  ? "bg-[var(--card)] border-[var(--line)] text-[var(--ink)]/80 hover:border-[var(--red)]/50 hover:text-[var(--ink)]"
+                                  : "bg-[var(--card)] border-[var(--line)] text-[var(--muted)] cursor-not-allowed opacity-50"
                               }`}
                             >
                               <span className="flex items-center gap-2">
@@ -606,7 +606,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                               </span>
                               {!available && (
                                 <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                  <span className="w-full h-px bg-gray-700 rotate-[20deg] absolute" />
+                                  <span className="w-full h-px bg-[var(--line)] rotate-[20deg] absolute" />
                                 </span>
                               )}
                             </button>
@@ -620,13 +620,13 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
 
               {/* No match / out of stock notice */}
               {!resolvedVariant && (
-                <div className="flex items-center gap-2 text-amber-400 text-xs bg-amber-900/10 border border-amber-900/30 rounded-xl px-3 py-2">
+                <div className="flex items-center gap-2 text-[var(--sig-warn-fg)] text-xs bg-[var(--sig-warn-bg)] border border-[var(--sig-warn-bd)] rounded-sm px-3 py-2">
                   <AlertTriangle size={12} />
                   This combination is unavailable. Please select a different option.
                 </div>
               )}
               {outOfStock && resolvedVariant && (
-                <div className="flex items-center gap-2 text-amber-400 text-xs bg-amber-900/10 border border-amber-900/30 rounded-xl px-3 py-2">
+                <div className="flex items-center gap-2 text-[var(--sig-warn-fg)] text-xs bg-[var(--sig-warn-bg)] border border-[var(--sig-warn-bd)] rounded-sm px-3 py-2">
                   <AlertTriangle size={12} />
                   This variant is currently out of stock.
                 </div>
@@ -636,71 +636,71 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
 
           {/* ── Pricing ── */}
           {isDealer ? (
-            <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-6">
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
               <div className="flex items-baseline gap-6 mb-3 flex-wrap">
                 <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Wholesale Price (excl. GST)</div>
-                  <div className="text-3xl font-black text-red-400">{formatCurrency(activePrice)}</div>
+                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Wholesale Price (excl. GST)</div>
+                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
                 </div>
                 <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Incl. {product.gstRate}% GST</div>
-                  <div className="text-xl font-bold text-[var(--text-primary)]">{formatCurrency(priceWithGST)}</div>
+                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Incl. {product.gstRate}% GST</div>
+                  <div className="tnum text-xl font-bold text-[var(--ink)]">{formatCurrency(priceWithGST)}</div>
                 </div>
                 {activeMrp && activeMrp > activePrice && (
                   <div>
-                    <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
-                    <div className="text-lg font-bold text-gray-500 line-through">{formatCurrency(activeMrp)}</div>
+                    <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
+                    <div className="tnum text-lg font-bold text-[var(--muted)] line-through">{formatCurrency(activeMrp)}</div>
                   </div>
                 )}
               </div>
               {activeMrp && activeMrp > activePrice && (
-                <div className="flex items-center gap-2 mb-3 bg-green-900/10 border border-green-900/30 rounded-xl px-3 py-1.5 w-fit">
-                  <Tag size={11} className="text-green-400" />
-                  <span className="text-green-400 text-xs font-semibold">
+                <div className="flex items-center gap-2 mb-3 bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-sm px-3 py-1.5 w-fit">
+                  <Tag size={11} className="text-[var(--sig-ok-fg)]" />
+                  <span className="text-[var(--sig-ok-fg)] text-xs font-semibold">
                     {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP — Exclusive wholesale price
                   </span>
                 </div>
               )}
-              <div className="border-t border-[var(--border-color)] pt-3 mt-1 space-y-1">
-                <div className="flex justify-between text-xs text-[var(--text-muted)]">
+              <div className="border-t border-[var(--line)] pt-3 mt-1 space-y-1">
+                <div className="flex justify-between text-xs text-[var(--muted)]">
                   <span>Base × {quantity} pcs</span>
-                  <span>{formatCurrency(activePrice * quantity)}</span>
+                  <span className="tnum">{formatCurrency(activePrice * quantity)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-[var(--text-muted)]">
+                <div className="flex justify-between text-xs text-[var(--muted)]">
                   <span>GST ({product.gstRate}%)</span>
-                  <span>{formatCurrency(activePrice * quantity * product.gstRate / 100)}</span>
+                  <span className="tnum">{formatCurrency(activePrice * quantity * product.gstRate / 100)}</span>
                 </div>
-                <div className="flex justify-between text-sm font-bold text-[var(--text-primary)] pt-1 border-t border-[var(--border-color)]">
+                <div className="flex justify-between text-sm font-bold text-[var(--ink)] pt-1 border-t border-[var(--line)]">
                   <span>Total for {quantity} pcs (excl. shipping)</span>
-                  <span className="text-red-400">{formatCurrency(priceWithGST * quantity)}</span>
+                  <span className="tnum text-[var(--red)]">{formatCurrency(priceWithGST * quantity)}</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-6">
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
               <div className="flex items-baseline gap-6 mb-3 flex-wrap">
                 <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">Wholesale Price</div>
-                  <div className="text-3xl font-black text-red-400">{formatCurrency(activePrice)}</div>
+                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Wholesale Price</div>
+                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
                 </div>
                 {activeMrp && activeMrp > activePrice && (
                   <div>
-                    <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
-                    <div className="text-xl font-bold text-gray-500 line-through">{formatCurrency(activeMrp)}</div>
+                    <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
+                    <div className="tnum text-xl font-bold text-[var(--muted)] line-through">{formatCurrency(activeMrp)}</div>
                   </div>
                 )}
               </div>
               {activeMrp && activeMrp > activePrice && (
-                <div className="flex items-center gap-2 mb-3 bg-green-900/10 border border-green-900/30 rounded-xl px-3 py-1.5 w-fit">
-                  <Tag size={11} className="text-green-400" />
-                  <span className="text-green-400 text-xs font-semibold">
+                <div className="flex items-center gap-2 mb-3 bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-sm px-3 py-1.5 w-fit">
+                  <Tag size={11} className="text-[var(--sig-ok-fg)]" />
+                  <span className="text-[var(--sig-ok-fg)] text-xs font-semibold">
                     {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP — Exclusive wholesale price
                   </span>
                 </div>
               )}
-              <div className="flex items-center gap-2 mt-3 glass border border-red-900/25 rounded-xl px-3 py-2 w-fit">
-                <Lock size={12} className="text-red-500 flex-shrink-0" />
-                <span className="text-red-400 text-xs font-semibold">Login as Dealer to place orders</span>
+              <div className="flex items-center gap-2 mt-3 border border-[var(--red)]/25 rounded-sm px-3 py-2 w-fit">
+                <Lock size={12} className="text-[var(--red)] flex-shrink-0" />
+                <span className="text-[var(--red)] text-xs font-semibold">Login as Dealer to place orders</span>
               </div>
             </div>
           )}
@@ -708,10 +708,10 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
           {/* ── Quantity + Add to Cart ── */}
           {isDealer && (
             <div className="flex items-center gap-4">
-              <div className="flex items-center glass border border-[var(--border-color)] rounded-xl overflow-hidden">
+              <div className="flex items-center bg-[var(--card)] border border-[var(--line)] rounded-sm overflow-hidden">
                 <button
                   onClick={() => setQuantity(Math.max(activeMoq, quantity - activeMoq))}
-                  className="px-4 py-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  className="px-4 py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition-colors"
                 >
                   <Minus size={14} />
                 </button>
@@ -731,11 +731,11 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                     const snapped = Math.max(activeMoq, Math.round(v / activeMoq) * activeMoq);
                     setQuantity(snapped);
                   }}
-                  className="w-16 text-center text-[var(--text-primary)] font-bold bg-transparent focus:outline-none py-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="tnum w-16 text-center text-[var(--ink)] font-bold bg-transparent focus:outline-none py-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   onClick={() => setQuantity(quantity + activeMoq)}
-                  className="px-4 py-3 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
+                  className="px-4 py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition-colors"
                 >
                   <Plus size={14} />
                 </button>
@@ -743,14 +743,14 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               <button
                 onClick={handleAddToCart}
                 disabled={loading || addedToCart || (hasVariants && !resolvedVariant) || !!outOfStock}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-xl transition-all text-sm uppercase tracking-wider ${
+                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider ${
                   addedToCart
-                    ? "bg-green-700 text-white"
+                    ? "bg-[var(--sig-ok-fg)] text-white"
                     : outOfStock
-                    ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    ? "bg-[var(--line)] text-[var(--muted)] cursor-not-allowed"
                     : hasVariants && !resolvedVariant
-                    ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                    : "bg-red-600 hover:bg-red-700 text-white"
+                    ? "bg-[var(--line)] text-[var(--muted)] cursor-not-allowed"
+                    : "bg-[var(--red)] hover:bg-[var(--red-hover)] text-white"
                 }`}
               >
                 {addedToCart ? (
@@ -765,7 +765,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
           {!isDealer && (
             <Link
               href="/login"
-              className="block w-full text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+              className="block w-full text-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
             >
               Login as Dealer to Order
             </Link>
@@ -777,43 +777,43 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
       {relatedProducts.length > 0 && (
         <div>
           <div className="flex items-end justify-between mb-8 gap-4 flex-wrap">
-            <h2 className="text-2xl font-black text-[var(--text-primary)]">
+            <h2 className="font-display text-2xl font-bold text-[var(--ink)]">
               {vehicleContext ? (
-                <>More parts for <span className="text-gradient-red">{vehicleContext.name}</span></>
+                <>More parts for <span className="text-[var(--red)]">{vehicleContext.name}</span></>
               ) : (
-                <>More from <span className="text-gradient-red">{product.category.name}</span></>
+                <>More from <span className="text-[var(--red)]">{product.category.name}</span></>
               )}
             </h2>
             {vehicleContext && (
               <Link
                 href={`/products?vehicle=${vehicleContext.slug}`}
-                className="text-red-400 hover:text-red-300 text-xs font-bold uppercase tracking-wider transition-colors"
+                className="text-[var(--red)] hover:text-[var(--red-hover)] text-xs font-bold uppercase tracking-wider transition-colors"
               >
                 View all →
               </Link>
             )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
             {relatedProducts.map((p) => {
               const thumb = getRelatedThumb(p);
               return (
                 <Link
                   key={p.id}
                   href={`/products/${p.slug}${vehicleContext ? `?vehicle=${vehicleContext.slug}` : ""}`}
-                  className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-xl overflow-hidden transition-all card-hover"
+                  className="group bg-[var(--card)] hover:bg-[var(--paper)] transition-colors block"
                 >
-                  <div className="relative h-36 bg-gradient-to-br from-zinc-900 to-black">
+                  <div className="relative h-36 bg-[var(--paper)] border-b border-[var(--line)]">
                     {thumb ? (
                       <Image src={thumb} alt={p.name} fill className="object-cover" sizes="300px" unoptimized />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <div className="text-4xl text-red-900/20 font-black">◈</div>
+                        <div className="text-4xl text-[var(--line)] font-black">◈</div>
                       </div>
                     )}
                   </div>
                   <div className="p-4">
-                    <div className="text-[var(--text-muted)] text-[10px] font-mono mb-1">{p.partNumber}</div>
-                    <h4 className="text-[var(--text-primary)] text-sm font-bold line-clamp-2 group-hover:text-red-100 transition-colors">
+                    <div className="text-[var(--muted)] text-[10px] font-mono mb-1">{p.partNumber}</div>
+                    <h4 className="text-[var(--ink)] text-sm font-bold line-clamp-2 group-hover:text-[var(--red)] transition-colors">
                       {p.name}
                     </h4>
                   </div>

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Bike, Zap, Truck, ArrowUpRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicle-categories";
+import { Eyebrow } from "@/components/ui/technical";
 
 export const metadata: Metadata = {
   title: "Select Your Vehicle",
@@ -56,17 +57,14 @@ export default async function VehiclesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      <section className="py-16 px-4 md:px-8 border-b border-[var(--border-color)]">
+    <div className="min-h-screen bg-[var(--paper)]">
+      <section className="py-14 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-px bg-red-600" />
-            <span className="text-red-500 text-xs font-semibold uppercase tracking-widest">Vehicle Explorer</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black text-[var(--text-primary)] tracking-tight">
-            Select Your <span className="text-gradient-red">Vehicle.</span>
+          <Eyebrow className="mb-4">Vehicle Explorer</Eyebrow>
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight">
+            Select your vehicle.
           </h1>
-          <p className="text-[var(--text-muted)] mt-4 max-w-xl">
+          <p className="text-[var(--muted)] mt-3 max-w-xl">
             Choose your vehicle first — we&apos;ll show only the parts that fit. No more guessing compatibility.
           </p>
         </div>
@@ -83,7 +81,7 @@ export default async function VehiclesPage() {
               <Link
                 key={cat.slug}
                 href={`/vehicles/${cat.slug}`}
-                className="group relative overflow-hidden rounded-3xl block h-[320px] md:h-[380px] shadow-lg hover:shadow-2xl hover:shadow-black/30 transition-shadow duration-500"
+                className="group relative overflow-hidden block h-[320px] md:h-[380px] border border-[var(--line)] transition-shadow duration-300"
               >
                 {/* Image or line-art placeholder */}
                 <div className="absolute inset-0">
@@ -114,10 +112,10 @@ export default async function VehiclesPage() {
                 {/* Top row: icon chip + arrow */}
                 <div className="relative z-10 h-full flex flex-col justify-between p-7 md:p-8">
                   <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/15">
+                    <div className="w-12 h-12 flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/15">
                       <Icon size={22} className="text-white" />
                     </div>
-                    <div className="w-11 h-11 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/15 group-hover:bg-red-600 group-hover:border-red-600 transition-all duration-300">
+                    <div className="w-11 h-11 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-md border border-white/15 group-hover:bg-[var(--red)] group-hover:border-[var(--red)] transition-colors duration-300">
                       <ArrowUpRight size={18} className="text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                     </div>
                   </div>

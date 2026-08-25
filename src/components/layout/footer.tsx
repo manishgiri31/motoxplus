@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Phone, Mail, Globe } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const socialLinks = [
   {
@@ -57,8 +58,8 @@ const socialLinks = [
 
 function FooterHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h4 className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-      <span className="w-5 h-[2px] bg-red-600 rounded-full" />
+    <h4 className="text-[var(--ink)] font-bold text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
+      <span className="w-5 h-[2px] bg-[var(--red)]" />
       {children}
     </h4>
   );
@@ -66,31 +67,25 @@ function FooterHeading({ children }: { children: React.ReactNode }) {
 
 export function Footer() {
   return (
-    <footer className="bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
+    <footer className="bg-[var(--paper)] border-t border-[var(--line)]">
       {/* CTA strip */}
-      <div className="border-b border-[var(--border-color)]">
+      <div className="border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-center md:text-left">
-            <h3 className="text-[var(--text-primary)] font-black text-xl md:text-2xl tracking-tight">
+            <h3 className="font-display text-[var(--ink)] font-bold text-xl md:text-2xl tracking-tight">
               Ready to stock MOTOXPLUS parts?
             </h3>
-            <p className="text-[var(--text-muted)] text-sm mt-1">
+            <p className="text-[var(--muted)] text-sm mt-1">
               Join 500+ dealers already growing with us.
             </p>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
-            <Link
-              href="/become-dealer"
-              className="bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors duration-200 red-glow-sm uppercase tracking-wider"
-            >
-              Become a Dealer
-            </Link>
-            <Link
-              href="/contact"
-              className="glass border border-[var(--border-color)] hover:border-red-600/40 text-[var(--text-secondary)] hover:text-red-500 text-sm font-bold px-6 py-3 rounded-xl transition-colors duration-200"
-            >
-              Contact Sales
-            </Link>
+            <Button asChild variant="brand">
+              <Link href="/become-dealer">Become a Dealer</Link>
+            </Button>
+            <Button asChild variant="ghost">
+              <Link href="/contact">Contact Sales</Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -100,30 +95,30 @@ export function Footer() {
 
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-3 mb-5 group">
+            <Link href="/" className="flex items-center gap-3 mb-5">
               <Image
                 src="/motoxplus/logo.png"
                 alt="MOTOXPLUS India Private Limited"
                 width={400}
                 height={300}
-                className="h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-300"
+                className="h-11 w-auto object-contain"
               />
               <div>
-                <span className="text-[var(--text-primary)] font-black text-lg tracking-wide leading-none">
-                  MOTOX<span className="text-red-500">PLUS</span>
+                <span className="font-display text-[var(--ink)] font-bold text-base tracking-tight leading-none">
+                  MOTOX<span className="text-[var(--red)]">PLUS</span>
                 </span>
-                <div className="text-[9px] text-[var(--text-muted)] tracking-widest leading-none mt-0.5">
+                <div className="text-[9px] text-[var(--muted)] tracking-widest leading-none mt-0.5">
                   India Private Limited
                 </div>
               </div>
             </Link>
-            <p className="text-[var(--text-muted)] text-sm leading-relaxed mb-6">
+            <p className="text-[var(--muted)] text-sm leading-relaxed mb-6">
               Premium automotive spare parts manufacturer. Engineered for reliability,
               built for every journey.
             </p>
 
             {/* Social links */}
-            <div className="flex gap-2.5 flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               {socialLinks.map((s) => (
                 <a
                   key={s.name}
@@ -131,7 +126,7 @@ export function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.name}
-                  className="w-9 h-9 rounded-xl glass border border-[var(--border-color)] hover:border-red-600/50 hover:text-red-500 hover:bg-red-900/10 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"
+                  className="w-9 h-9 rounded-sm border border-[var(--line)] hover:border-[var(--red)]/50 hover:text-[var(--red)] flex items-center justify-center text-[var(--muted)] transition-colors"
                 >
                   {s.icon}
                 </a>
@@ -153,9 +148,8 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors duration-200 flex items-center gap-2 group"
+                    className="text-[var(--muted)] hover:text-[var(--red)] text-sm transition-colors"
                   >
-                    <span className="w-0 group-hover:w-3 h-px bg-red-500 transition-all duration-200 rounded-full" />
                     {link.label}
                   </Link>
                 </li>
@@ -178,9 +172,8 @@ export function Footer() {
                 <li key={item.slug}>
                   <Link
                     href={`/products?category=${item.slug}`}
-                    className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors duration-200 flex items-center gap-2 group"
+                    className="text-[var(--muted)] hover:text-[var(--red)] text-sm transition-colors"
                   >
-                    <span className="w-0 group-hover:w-3 h-px bg-red-500 transition-all duration-200 rounded-full" />
                     {item.label}
                   </Link>
                 </li>
@@ -193,36 +186,36 @@ export function Footer() {
             <FooterHeading>Contact</FooterHeading>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
-                <MapPin size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
-                <span className="text-[var(--text-muted)] text-sm leading-relaxed">
+                <MapPin size={14} className="text-[var(--red)] mt-0.5 flex-shrink-0" />
+                <span className="text-[var(--muted)] text-sm leading-relaxed">
                   {process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "New Delhi, India"}
                 </span>
               </li>
               <li className="flex items-center gap-3">
-                <Phone size={14} className="text-red-500 flex-shrink-0" />
+                <Phone size={14} className="text-[var(--red)] flex-shrink-0" />
                 <a
                   href={`tel:${process.env.NEXT_PUBLIC_COMPANY_PHONE}`}
-                  className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors"
+                  className="text-[var(--muted)] hover:text-[var(--red)] text-sm transition-colors"
                 >
                   {process.env.NEXT_PUBLIC_COMPANY_PHONE || "+91 92171 31801"}
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <Mail size={14} className="text-red-500 flex-shrink-0" />
+                <Mail size={14} className="text-[var(--red)] flex-shrink-0" />
                 <a
                   href={`mailto:${process.env.NEXT_PUBLIC_COMPANY_EMAIL}`}
-                  className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors"
+                  className="text-[var(--muted)] hover:text-[var(--red)] text-sm transition-colors"
                 >
-                  {process.env.NEXT_PUBLIC_COMPANY_EMAIL || "info@motoxplus.in"}
+                  {process.env.NEXT_PUBLIC_COMPANY_EMAIL || "info@motoxplus.com"}
                 </a>
               </li>
               <li className="flex items-center gap-3">
-                <Globe size={14} className="text-red-500 flex-shrink-0" />
+                <Globe size={14} className="text-[var(--red)] flex-shrink-0" />
                 <a
                   href="https://www.motoxplus.in"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--text-muted)] hover:text-red-500 text-sm transition-colors"
+                  className="text-[var(--muted)] hover:text-[var(--red)] text-sm transition-colors"
                 >
                   www.motoxplus.in
                 </a>
@@ -232,32 +225,32 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-14 pt-8 border-t border-[var(--border-color)] flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-[var(--text-muted)] text-xs">
+        <div className="mt-14 pt-8 border-t border-[var(--line)] flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-[var(--muted)] text-xs">
             © {new Date().getFullYear()} MOTOXPLUS India Private Limited. All rights reserved.
           </p>
 
           <div className="flex gap-5">
-            <Link href="/privacy" className="text-[var(--text-muted)] hover:text-red-500 text-xs transition-colors">
+            <Link href="/privacy" className="text-[var(--muted)] hover:text-[var(--red)] text-xs transition-colors">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="text-[var(--text-muted)] hover:text-red-500 text-xs transition-colors">
+            <Link href="/terms" className="text-[var(--muted)] hover:text-[var(--red)] text-xs transition-colors">
               Terms of Service
             </Link>
-            <Link href="/cancellation-policy" className="text-[var(--text-muted)] hover:text-red-500 text-xs transition-colors">
+            <Link href="/cancellation-policy" className="text-[var(--muted)] hover:text-[var(--red)] text-xs transition-colors">
               Cancellation Policy
             </Link>
             {/* /sitemap has no page — only src/app/sitemap.ts, which serves /sitemap.xml */}
-            <a href="/sitemap.xml" className="text-[var(--text-muted)] hover:text-red-500 text-xs transition-colors">
+            <a href="/sitemap.xml" className="text-[var(--muted)] hover:text-[var(--red)] text-xs transition-colors">
               Sitemap
             </a>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <div className="w-3.5 h-3.5 bg-[#FF671F] rounded-sm" />
-            <div className="w-3.5 h-3.5 bg-white border border-gray-200 rounded-sm" />
-            <div className="w-3.5 h-3.5 bg-[#046A38] rounded-sm" />
-            <span className="text-[var(--text-muted)] text-xs ml-1">Made in India</span>
+            <div className="w-3.5 h-3.5 bg-[#FF671F]" />
+            <div className="w-3.5 h-3.5 bg-white border border-[var(--line)]" />
+            <div className="w-3.5 h-3.5 bg-[#046A38]" />
+            <span className="text-[var(--muted)] text-xs ml-1">Made in India</span>
           </div>
         </div>
       </div>

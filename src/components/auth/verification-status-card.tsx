@@ -47,7 +47,7 @@ export function VerificationStatusCard({
   }
 
   return (
-    <div className="glass border border-[var(--border-color)] rounded-xl p-6">
+    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6">
       <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
         Verification Status
       </h2>
@@ -73,13 +73,13 @@ export function VerificationStatusCard({
             required
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            className="flex-1 themed-input border focus:border-red-600/60 rounded-lg px-3 py-2 text-sm outline-none transition-colors"
+            className="flex-1 themed-input border focus:border-[var(--red)]/60 rounded-sm px-3 py-2 text-sm outline-none transition-colors"
             placeholder="new-email@company.com"
           />
           <button
             type="submit"
             disabled={status === "loading"}
-            className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-wider transition-colors"
+            className="bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-bold px-4 py-2 rounded-sm text-xs uppercase tracking-wider transition-colors"
           >
             {status === "loading" ? "Saving..." : "Save & Verify"}
           </button>
@@ -109,7 +109,7 @@ function StatusRow({
   neutralLabel?: string;
 }) {
   return (
-    <div className="flex items-center justify-between p-3 glass border border-[var(--border-color)] rounded-lg">
+    <div className="flex items-center justify-between p-3 bg-[var(--card)] border border-[var(--line)] rounded-sm">
       <div>
         <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider">{label}</div>
         {detail && <div className="text-[var(--text-primary)] text-xs mt-0.5">{detail}</div>}

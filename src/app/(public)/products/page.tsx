@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ProductCatalog } from "@/components/products/product-catalog";
 import { buildSearchWhere } from "@/lib/product-search";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
+import { Eyebrow } from "@/components/ui/technical";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -77,20 +78,17 @@ export default async function ProductsPage(
   ]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
+    <div className="min-h-screen bg-[var(--paper)]">
       {/* Header */}
-      <section className="py-16 px-4 md:px-8 border-b border-[var(--border-color)]">
+      <section className="py-14 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-px bg-red-600" />
-            <span className="text-red-500 text-xs font-semibold uppercase tracking-widest">Product Catalog</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black text-[var(--text-primary)] tracking-tight">
-            Premium <span className="text-gradient-red">Spare Parts.</span>
+          <Eyebrow className="mb-4">Product Catalog</Eyebrow>
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight">
+            Premium spare parts.
           </h1>
-          <p className="text-[var(--text-muted)] mt-4 max-w-xl">
+          <p className="text-[var(--muted)] mt-3 max-w-xl">
             {vehicleName ? (
-              <>Showing {totalProducts} part{totalProducts === 1 ? "" : "s"} compatible with <span className="text-[var(--text-primary)] font-semibold">{vehicleName}</span>.</>
+              <>Showing {totalProducts} part{totalProducts === 1 ? "" : "s"} compatible with <span className="text-[var(--ink)] font-semibold">{vehicleName}</span>.</>
             ) : (
               <>{totalProducts}+ products across all categories. Wholesale prices and MRP shown below — dealer login required to place orders.</>
             )}

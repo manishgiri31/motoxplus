@@ -50,7 +50,7 @@ export function VerifyEmailForm() {
 
   if (status === "success") {
     return (
-      <div className="glass border border-[var(--border-color)] rounded-sm p-8 text-center">
+      <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
         <div className="w-16 h-16 bg-green-900/30 border border-green-700/40 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -66,7 +66,7 @@ export function VerifyEmailForm() {
   }
 
   return (
-    <div className="glass border border-[var(--border-color)] rounded-sm p-8">
+    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8">
       <div className="text-center mb-8">
         <div className="w-14 h-14 bg-red-900/20 border border-red-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-7 h-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

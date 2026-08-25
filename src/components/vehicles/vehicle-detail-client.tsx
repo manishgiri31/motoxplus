@@ -16,14 +16,15 @@ import { PartsDiagram } from "@/components/vehicles/parts-diagram";
 import { Spin360Viewer } from "@/components/vehicles/spin-360-viewer";
 import { VehicleImage } from "@/components/vehicles/vehicle-image";
 import { categoryBySlug } from "@/lib/vehicle-categories";
+import { Button } from "@/components/ui/button";
 
 const VehicleViewer = dynamic(
   () => import("@/components/vehicles/vehicle-viewer").then((m) => m.VehicleViewer),
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[420px] md:h-[520px] rounded-2xl glass border border-[var(--border-color)] flex items-center justify-center">
-        <span className="text-[var(--text-muted)] text-sm">Loading 3D viewer…</span>
+      <div className="w-full h-[420px] md:h-[520px] rounded-sm bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
+        <span className="text-[var(--muted)] text-sm">Loading 3D viewer…</span>
       </div>
     ),
   }
@@ -211,10 +212,10 @@ const CONFIDENCE_BADGE: Record<
   FitmentData["confidence"],
   { label: string; className: string; Icon: typeof CheckCircle2 }
 > = {
-  VERIFIED: { label: "Verified Fit", className: "bg-emerald-500/10 border-emerald-500/30 text-emerald-500", Icon: CheckCircle2 },
-  LIKELY: { label: "Likely Fit", className: "bg-amber-500/10 border-amber-500/30 text-amber-500", Icon: AlertTriangle },
-  UNVERIFIED: { label: "Unverified", className: "bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-muted)]", Icon: HelpCircle },
-  INCOMPATIBLE: { label: "Not Compatible", className: "bg-red-500/10 border-red-500/30 text-red-500", Icon: AlertTriangle },
+  VERIFIED: { label: "Verified Fit", className: "bg-[var(--sig-ok-bg)] border-[var(--sig-ok-bd)] text-[var(--sig-ok-fg)]", Icon: CheckCircle2 },
+  LIKELY: { label: "Likely Fit", className: "bg-[var(--sig-warn-bg)] border-[var(--sig-warn-bd)] text-[var(--sig-warn-fg)]", Icon: AlertTriangle },
+  UNVERIFIED: { label: "Unverified", className: "bg-[var(--sig-neutral-bg)] border-[var(--sig-neutral-bd)] text-[var(--sig-neutral-fg)]", Icon: HelpCircle },
+  INCOMPATIBLE: { label: "Not Compatible", className: "bg-[var(--sig-danger-bg)] border-[var(--sig-danger-bd)] text-[var(--sig-danger-fg)]", Icon: AlertTriangle },
 };
 
 export function VehicleDetailClient({
@@ -333,28 +334,28 @@ export function VehicleDetailClient({
   );
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
+    <div className="min-h-screen bg-[var(--paper)]">
       {/* Hero */}
-      <section className="relative border-b border-[var(--border-color)]">
-        <div className="relative h-[46vh] min-h-[320px] bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
+      <section className="relative border-b border-[var(--line)]">
+        <div className="relative h-[46vh] min-h-[320px] bg-[var(--card)] flex items-center justify-center overflow-hidden">
           <VehicleImage src={heroSrc} alt={vehicle.name} priority logId={vehicle.slug} className="object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--paper)] via-transparent to-transparent" />
         </div>
         <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-16 relative z-10 pb-8">
           <nav aria-label="Breadcrumb" className="flex items-center flex-wrap gap-1.5 text-xs uppercase tracking-widest font-semibold mb-4">
-            <Link href="/" className="text-[var(--text-muted)] hover:text-red-500 transition-colors">
+            <Link href="/" className="text-[var(--muted)] hover:text-[var(--red)] transition-colors">
               Home
             </Link>
-            <ChevronRight size={12} className="text-[var(--text-muted)]/50 flex-shrink-0" />
-            <Link href="/vehicles" className="text-[var(--text-muted)] hover:text-red-500 transition-colors">
+            <ChevronRight size={12} className="text-[var(--muted)]/50 flex-shrink-0" />
+            <Link href="/vehicles" className="text-[var(--muted)] hover:text-[var(--red)] transition-colors">
               Vehicles
             </Link>
-            <ChevronRight size={12} className="text-[var(--text-muted)]/50 flex-shrink-0" />
-            <Link href={`/vehicles/${categorySlug}`} className="text-[var(--text-muted)] hover:text-red-500 transition-colors">
+            <ChevronRight size={12} className="text-[var(--muted)]/50 flex-shrink-0" />
+            <Link href={`/vehicles/${categorySlug}`} className="text-[var(--muted)] hover:text-[var(--red)] transition-colors">
               {categoryLabel}
             </Link>
-            <ChevronRight size={12} className="text-[var(--text-muted)]/50 flex-shrink-0" />
-            <span className="text-red-500">{vehicle.name}</span>
+            <ChevronRight size={12} className="text-[var(--muted)]/50 flex-shrink-0" />
+            <span className="text-[var(--red)]">{vehicle.name}</span>
           </nav>
           <div className="flex items-center gap-3 mb-2">
             {vehicle.manufacturer.logo && (
@@ -363,15 +364,15 @@ export function VehicleDetailClient({
                 alt={vehicle.manufacturer.name}
                 width={64}
                 height={24}
-                className="object-contain h-6 w-auto bg-white/90 rounded px-1.5 py-1"
+                className="object-contain h-6 w-auto bg-white/90 border border-[var(--line)] px-1.5 py-1"
                 unoptimized
               />
             )}
-            <span className="text-[var(--text-muted)] text-xs uppercase tracking-widest font-semibold">
+            <span className="text-[var(--muted)] text-xs uppercase tracking-widest font-semibold">
               {vehicle.manufacturer.name}
             </span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-black text-[var(--text-primary)] tracking-tight">
+          <h1 className="font-display text-4xl md:text-6xl font-bold text-[var(--ink)] tracking-tight">
             {vehicle.name}
           </h1>
         </div>
@@ -379,7 +380,7 @@ export function VehicleDetailClient({
 
       {/* Generation / Variant / Year selector */}
       {(vehicle.generations.length > 0 || vehicle.variants.length > 0) && (
-        <section className="py-8 px-4 md:px-8 border-b border-[var(--border-color)]">
+        <section className="py-8 px-4 md:px-8 border-b border-[var(--line)]">
           <div className="max-w-7xl mx-auto">
             <VariantSelector
               generations={vehicle.generations}
@@ -394,12 +395,12 @@ export function VehicleDetailClient({
 
       {/* Specs */}
       {specs.length > 0 && (
-        <section className="py-12 px-4 md:px-8 border-b border-[var(--border-color)]">
-          <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
+          <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
             {specs.map((s) => (
-              <div key={s.label} className="glass border border-[var(--border-color)] rounded-xl p-4">
-                <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest mb-1">{s.label}</div>
-                <div className="text-[var(--text-primary)] font-bold text-lg">{s.value}</div>
+              <div key={s.label} className="bg-[var(--card)] p-4">
+                <div className="text-[var(--muted)] text-[10px] uppercase tracking-widest mb-1">{s.label}</div>
+                <div className="tnum text-[var(--ink)] font-bold text-lg">{s.value}</div>
               </div>
             ))}
           </div>
@@ -407,11 +408,11 @@ export function VehicleDetailClient({
       )}
 
       {/* Colors */}
-      <section className="py-12 px-4 md:px-8 border-b border-[var(--border-color)]">
+      <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-5">Available Colors</h2>
+          <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-5">Available Colors</h2>
           {vehicle.colors.length === 0 ? (
-            <p className="text-[var(--text-muted)] text-sm">Color options coming soon.</p>
+            <p className="text-[var(--muted)] text-sm">Color options coming soon.</p>
           ) : (
             <div className="flex flex-wrap gap-4">
               {vehicle.colors.map((c) => (
@@ -421,20 +422,20 @@ export function VehicleDetailClient({
                   className="flex flex-col items-center gap-2 group"
                 >
                   <span
-                    className={`w-12 h-12 rounded-full border-2 transition-all ${
-                      selectedColorId === c.id ? "border-red-500 scale-110" : "border-[var(--border-color)]"
+                    className={`w-12 h-12 rounded-full border-2 transition-colors ${
+                      selectedColorId === c.id ? "border-[var(--red)]" : "border-[var(--line)]"
                     }`}
                     style={{ backgroundColor: c.hex }}
                   />
                   <span
                     className={`text-xs font-semibold ${
-                      selectedColorId === c.id ? "text-red-500" : "text-[var(--text-muted)]"
+                      selectedColorId === c.id ? "text-[var(--red)]" : "text-[var(--muted)]"
                     }`}
                   >
                     {c.name}
                   </span>
                   {c.oemColor?.paintCode && (
-                    <span className="text-[9px] text-[var(--text-muted)] font-mono">{c.oemColor.paintCode}</span>
+                    <span className="text-[9px] text-[var(--muted)] font-mono">{c.oemColor.paintCode}</span>
                   )}
                 </button>
               ))}
@@ -444,24 +445,24 @@ export function VehicleDetailClient({
       </section>
 
       {/* Gallery */}
-      <section className="py-12 px-4 md:px-8 border-b border-[var(--border-color)]">
+      <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-5">Gallery</h2>
+          <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-5">Gallery</h2>
           {vehicle.gallery.length === 0 ? (
-            <p className="text-[var(--text-muted)] text-sm">Gallery images coming soon.</p>
+            <p className="text-[var(--muted)] text-sm">Gallery images coming soon.</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
               {vehicle.gallery.map((g, i) => (
                 <button
                   key={g.id}
                   onClick={() => setLightboxIndex(i)}
-                  className="group relative h-40 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shadow-sm hover:shadow-lg transition-shadow duration-300"
+                  className="group relative h-40 overflow-hidden bg-[var(--card)]"
                 >
                   <Image
                     src={g.imageUrl}
                     alt={`${vehicle.name} — photo ${i + 1}`}
                     fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                     unoptimized
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
@@ -543,7 +544,7 @@ export function VehicleDetailClient({
                       setLightboxIndex(i);
                     }}
                     className={`h-1.5 rounded-full transition-all ${
-                      i === lightboxIndex ? "w-6 bg-red-500" : "w-1.5 bg-white/30 hover:bg-white/50"
+                      i === lightboxIndex ? "w-6 bg-[var(--red)]" : "w-1.5 bg-white/30 hover:bg-white/50"
                     }`}
                   />
                 ))}
@@ -557,9 +558,9 @@ export function VehicleDetailClient({
           entirely when neither exists; the Gallery section above already
           covers the "show real photos instead" fallback. */}
       {(activeModelUrl || activeSpin) && (
-        <section className="py-12 px-4 md:px-8 border-b border-[var(--border-color)]">
+        <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
           <div className="max-w-7xl mx-auto">
-            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-5">
+            <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-5">
               {activeModelUrl ? "Interactive 3D Viewer" : "360° View"}
             </h2>
             {activeModelUrl ? (
@@ -573,9 +574,9 @@ export function VehicleDetailClient({
 
       {/* Interactive parts diagram */}
       {vehicle.diagrams.length > 0 && (
-        <section className="py-12 px-4 md:px-8 border-b border-[var(--border-color)]">
+        <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
           <div className="max-w-7xl mx-auto">
-            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-5">Interactive Parts Diagram</h2>
+            <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-5">Interactive Parts Diagram</h2>
             <PartsDiagram diagrams={vehicle.diagrams} />
           </div>
         </section>
@@ -584,13 +585,13 @@ export function VehicleDetailClient({
       {/* Compatible Parts */}
       <section className="py-12 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="sticky top-[72px] md:top-[88px] z-30 -mx-4 md:-mx-8 px-4 md:px-8 py-4 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-color)] mb-6">
+          <div className="sticky top-[72px] md:top-[88px] z-30 -mx-4 md:-mx-8 px-4 md:px-8 py-4 bg-[var(--paper)]/92 backdrop-blur-xl border-b border-[var(--line)] mb-6">
             <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-              <h2 className="text-xl font-bold text-[var(--text-primary)]">Compatible Parts</h2>
+              <h2 className="font-display text-xl font-bold text-[var(--ink)]">Compatible Parts</h2>
               {compatibleCount > 0 && (
                 <Link
                   href={`/products?vehicle=${vehicle.slug}${selection.variantSlug ? `&variant=${selection.variantSlug}` : ""}${selection.sectionSlug ? `&section=${selection.sectionSlug}` : ""}`}
-                  className="group flex items-center gap-2 text-red-500 hover:text-red-600 font-semibold text-sm uppercase tracking-wider transition-colors"
+                  className="group flex items-center gap-2 text-[var(--red)] hover:text-[var(--red-hover)] font-semibold text-sm uppercase tracking-wider transition-colors"
                 >
                   View all {compatibleCount} compatible parts
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -602,9 +603,9 @@ export function VehicleDetailClient({
           </div>
 
           {compatibleProducts.length === 0 ? (
-            <p className="text-[var(--text-muted)] text-sm">No compatible parts found yet for this model.</p>
+            <p className="text-[var(--muted)] text-sm">No compatible parts found yet for this model.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
               {compatibleProducts.map((p) => {
                 const thumb =
                   p.productImages && p.productImages.length > 0 ? p.productImages[0].imageUrl : p.images[0];
@@ -613,9 +614,9 @@ export function VehicleDetailClient({
                   <Link
                     key={p.id}
                     href={`/products/${p.id}`}
-                    className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden transition-all duration-300 block"
+                    className="group bg-[var(--card)] hover:bg-[var(--paper)] transition-colors block"
                   >
-                    <div className="relative h-40 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
+                    <div className="relative h-40 bg-[var(--paper)] border-b border-[var(--line)] flex items-center justify-center overflow-hidden">
                       {thumb ? (
                         <Image
                           src={thumb}
@@ -626,16 +627,16 @@ export function VehicleDetailClient({
                           unoptimized
                         />
                       ) : (
-                        <div className="text-5xl text-red-500/20 font-black">◈</div>
+                        <div className="text-5xl text-[var(--line)] font-black">◈</div>
                       )}
                       <div className="absolute top-3 left-3">
-                        <span className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                        <span className="bg-[var(--card)]/95 border border-[var(--line)] text-[var(--ink)] text-[10px] font-bold uppercase tracking-widest px-2 py-1">
                           {p.category.name}
                         </span>
                       </div>
                     </div>
                     <div className="p-4">
-                      <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
+                      <h3 className="text-[var(--ink)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-[var(--red)] transition-colors">
                         {p.name}
                       </h3>
                       {badge && (
@@ -646,21 +647,21 @@ export function VehicleDetailClient({
                           {badge.label}
                         </div>
                       )}
-                      <div className="pt-3 border-t border-[var(--border-color)] flex items-end justify-between">
+                      <div className="pt-3 border-t border-[var(--line)] flex items-end justify-between">
                         <div>
-                          <div className="text-red-500 font-black text-base leading-tight">
+                          <div className="tnum text-[var(--red)] font-black text-base leading-tight">
                             ₹{p.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </div>
                           {p.mrp && p.mrp > p.price && (
-                            <span className="text-[var(--text-muted)] text-[10px] line-through">
+                            <span className="tnum text-[var(--muted)] text-[10px] line-through">
                               MRP ₹{p.mrp.toLocaleString("en-IN")}
                             </span>
                           )}
                         </div>
                         {!isDealer && (
-                          <div className="flex items-center gap-1.5 glass border border-red-500/20 rounded-full px-2 py-1">
-                            <Lock size={9} className="text-red-500" />
-                            <span className="text-red-500 text-[9px] font-bold">Login</span>
+                          <div className="flex items-center gap-1.5 border border-[var(--red)]/20 rounded-sm px-2 py-1">
+                            <Lock size={9} className="text-[var(--red)]" />
+                            <span className="text-[var(--red)] text-[9px] font-bold">Login</span>
                           </div>
                         )}
                       </div>
@@ -674,18 +675,18 @@ export function VehicleDetailClient({
       </section>
 
       {/* Recommended consumables */}
-      <section className="py-12 px-4 md:px-8 border-t border-[var(--border-color)]">
+      <section className="py-12 px-4 md:px-8 border-t border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Recommended For This Vehicle</h2>
+          <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-6">Recommended For This Vehicle</h2>
           {recommendations.length === 0 ? (
-            <div className="glass border border-[var(--border-color)] rounded-2xl p-8 text-center">
-              <PackageSearch size={24} className="text-[var(--text-muted)] mx-auto mb-3" />
-              <p className="text-[var(--text-muted)] text-sm">
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
+              <PackageSearch size={24} className="text-[var(--muted)] mx-auto mb-3" />
+              <p className="text-[var(--muted)] text-sm">
                 No recommended products have been mapped to this vehicle yet.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
               {recommendations.map((r) => (
                 <LinkedProductCard key={r.id} product={r.product} isDealer={isDealer} />
               ))}
@@ -695,18 +696,18 @@ export function VehicleDetailClient({
       </section>
 
       {/* Compatible accessories */}
-      <section className="py-12 px-4 md:px-8 border-t border-[var(--border-color)]">
+      <section className="py-12 px-4 md:px-8 border-t border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Compatible Accessories</h2>
+          <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-6">Compatible Accessories</h2>
           {accessories.length === 0 ? (
-            <div className="glass border border-[var(--border-color)] rounded-2xl p-8 text-center">
-              <Wrench size={24} className="text-[var(--text-muted)] mx-auto mb-3" />
-              <p className="text-[var(--text-muted)] text-sm">
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
+              <Wrench size={24} className="text-[var(--muted)] mx-auto mb-3" />
+              <p className="text-[var(--muted)] text-sm">
                 Compatible accessories will appear here once available.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
               {accessories.map((a) => (
                 <LinkedProductCard key={a.id} product={a.product} isDealer={isDealer} />
               ))}
@@ -716,34 +717,34 @@ export function VehicleDetailClient({
       </section>
 
       {/* Reviews */}
-      <section className="py-12 px-4 md:px-8 border-t border-[var(--border-color)]">
+      <section className="py-12 px-4 md:px-8 border-t border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Customer Reviews</h2>
+          <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-6">Customer Reviews</h2>
           {reviews.length === 0 ? (
-            <div className="glass border border-[var(--border-color)] rounded-2xl p-10 text-center">
-              <Star size={24} className="text-[var(--text-muted)] mx-auto mb-3" />
-              <p className="text-[var(--text-primary)] font-semibold mb-1">No customer reviews yet</p>
-              <p className="text-[var(--text-muted)] text-sm">Be the first to share your experience.</p>
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-10 text-center">
+              <Star size={24} className="text-[var(--muted)] mx-auto mb-3" />
+              <p className="text-[var(--ink)] font-semibold mb-1">No customer reviews yet</p>
+              <p className="text-[var(--muted)] text-sm">Be the first to share your experience.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--line)] border border-[var(--line)]">
               {reviews.map((r) => (
-                <div key={r.id} className="glass border border-[var(--border-color)] rounded-2xl p-6">
+                <div key={r.id} className="bg-[var(--card)] p-6">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex gap-0.5">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} size={13} className={i < r.rating ? "fill-red-500 text-red-500" : "text-[var(--border-color)]"} />
+                        <Star key={i} size={13} className={i < r.rating ? "fill-[var(--red)] text-[var(--red)]" : "text-[var(--line)]"} />
                       ))}
                     </div>
                     {r.verifiedPurchase && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-500/10 rounded-full px-2 py-0.5">
+                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-full px-2 py-0.5">
                         <CheckCircle2 size={10} /> Verified
                       </span>
                     )}
                   </div>
-                  {r.title && <h3 className="text-[var(--text-primary)] font-bold text-sm mb-1.5">{r.title}</h3>}
-                  <p className="text-[var(--text-secondary)] text-sm leading-relaxed mb-3">{r.body}</p>
-                  <div className="text-[var(--text-muted)] text-xs">
+                  {r.title && <h3 className="text-[var(--ink)] font-bold text-sm mb-1.5">{r.title}</h3>}
+                  <p className="text-[var(--ink)]/80 text-sm leading-relaxed mb-3">{r.body}</p>
+                  <div className="text-[var(--muted)] text-xs">
                     {r.user.name || "Anonymous"} · {new Date(r.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
                   </div>
                 </div>
@@ -755,20 +756,20 @@ export function VehicleDetailClient({
 
       {/* FAQ */}
       {faqs.length > 0 && (
-        <section className="py-12 px-4 md:px-8 border-t border-[var(--border-color)]">
+        <section className="py-12 px-4 md:px-8 border-t border-[var(--line)]">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Frequently Asked Questions</h2>
-            <div className="space-y-2">
+            <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-6">Frequently Asked Questions</h2>
+            <div className="divide-y divide-[var(--line)] border border-[var(--line)]">
               {faqs.map((f) => (
-                <div key={f.id} className="glass border border-[var(--border-color)] rounded-xl overflow-hidden">
+                <div key={f.id} className="bg-[var(--card)]">
                   <button
                     onClick={() => setOpenFaqId((id) => (id === f.id ? null : f.id))}
                     className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
                   >
-                    <span className="text-[var(--text-primary)] font-semibold text-sm">{f.question}</span>
+                    <span className="text-[var(--ink)] font-semibold text-sm">{f.question}</span>
                     <ChevronDown
                       size={16}
-                      className={`flex-shrink-0 text-[var(--text-muted)] transition-transform ${openFaqId === f.id ? "rotate-180" : ""}`}
+                      className={`flex-shrink-0 text-[var(--muted)] transition-transform ${openFaqId === f.id ? "rotate-180" : ""}`}
                     />
                   </button>
                   <AnimatePresence>
@@ -780,7 +781,7 @@ export function VehicleDetailClient({
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <p className="px-5 pb-4 text-[var(--text-muted)] text-sm leading-relaxed">{f.answer}</p>
+                        <p className="px-5 pb-4 text-[var(--muted)] text-sm leading-relaxed">{f.answer}</p>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -793,22 +794,22 @@ export function VehicleDetailClient({
 
       {/* Related vehicles */}
       {relatedVehicles.length > 0 && (
-        <section className="py-12 px-4 md:px-8 border-t border-[var(--border-color)]">
+        <section className="py-12 px-4 md:px-8 border-t border-[var(--line)]">
           <div className="max-w-7xl mx-auto">
-            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Related Vehicles</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-6">Related Vehicles</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
               {relatedVehicles.map((v) => (
                 <Link
                   key={v.id}
                   href={`/vehicles/${categorySlug}/${v.slug}`}
-                  className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden transition-all duration-300 block"
+                  className="group bg-[var(--card)] hover:bg-[var(--paper)] transition-colors block"
                 >
-                  <div className="relative h-32 bg-[var(--bg-secondary)]">
+                  <div className="relative h-32 bg-[var(--paper)] border-b border-[var(--line)]">
                     <VehicleImage src={v.heroImage} alt={v.name} logId={v.slug} />
                   </div>
                   <div className="p-3">
-                    <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">{v.manufacturer.name}</div>
-                    <h3 className="text-[var(--text-primary)] font-bold text-sm group-hover:text-red-600 transition-colors truncate">{v.name}</h3>
+                    <div className="text-[var(--muted)] text-[10px] uppercase tracking-widest font-semibold">{v.manufacturer.name}</div>
+                    <h3 className="text-[var(--ink)] font-bold text-sm group-hover:text-[var(--red)] transition-colors truncate">{v.name}</h3>
                   </div>
                 </Link>
               ))}
@@ -818,33 +819,29 @@ export function VehicleDetailClient({
       )}
 
       {/* Contact CTA */}
-      <section className="py-14 px-4 md:px-8 border-t border-[var(--border-color)] bg-[var(--bg-secondary)]">
+      <section className="py-14 px-4 md:px-8 border-t border-[var(--line)] bg-[var(--card)]">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-black text-[var(--text-primary)] mb-3">
+          <h2 className="font-display text-2xl md:text-3xl font-bold text-[var(--ink)] mb-3">
             Need help finding parts for your {vehicle.name}?
           </h2>
-          <p className="text-[var(--text-muted)] mb-8">Our team can help you identify the exact parts you need.</p>
+          <p className="text-[var(--muted)] mb-8">Our team can help you identify the exact parts you need.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a
               href={`https://wa.me/${(process.env.NEXT_PUBLIC_COMPANY_WHATSAPP || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I need help finding parts for my ${vehicle.name}`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+              className="inline-flex items-center gap-2 bg-[var(--sig-ok-fg)] hover:opacity-90 text-white font-bold px-6 py-3 rounded-sm transition-opacity text-sm uppercase tracking-wider"
             >
               <MessageCircle size={16} /> WhatsApp Us
             </a>
-            <a
-              href={`tel:${process.env.NEXT_PUBLIC_COMPANY_PHONE || ""}`}
-              className="flex items-center gap-2 glass border border-[var(--border-color)] hover:border-red-600/40 text-[var(--text-primary)] font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
-            >
-              <Phone size={16} /> Call Now
-            </a>
-            <Link
-              href="/contact"
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
-            >
-              Contact Dealer
-            </Link>
+            <Button asChild variant="ghost" size="lg">
+              <a href={`tel:${process.env.NEXT_PUBLIC_COMPANY_PHONE || ""}`}>
+                <Phone size={16} /> Call Now
+              </a>
+            </Button>
+            <Button asChild variant="brand" size="lg">
+              <Link href="/contact">Contact Dealer</Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -857,24 +854,24 @@ function LinkedProductCard({ product, isDealer }: { product: LinkedProductData; 
   return (
     <Link
       href={`/products/${product.id}`}
-      className="group glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden transition-all duration-300 block"
+      className="group bg-[var(--card)] hover:bg-[var(--paper)] transition-colors block"
     >
-      <div className="relative h-36 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
+      <div className="relative h-36 bg-[var(--paper)] border-b border-[var(--line)] flex items-center justify-center overflow-hidden">
         {thumb ? (
           <Image src={thumb} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="240px" unoptimized />
         ) : (
-          <div className="text-4xl text-red-500/20 font-black">◈</div>
+          <div className="text-4xl text-[var(--line)] font-black">◈</div>
         )}
       </div>
       <div className="p-3.5">
-        <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">{product.partNumber}</div>
-        <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{product.name}</h3>
+        <div className="text-[var(--muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">{product.partNumber}</div>
+        <h3 className="text-[var(--ink)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-[var(--red)] transition-colors">{product.name}</h3>
         <div className="flex items-center justify-between">
-          <span className="text-red-500 font-black text-sm">₹{product.price.toLocaleString("en-IN")}</span>
+          <span className="tnum text-[var(--red)] font-black text-sm">₹{product.price.toLocaleString("en-IN")}</span>
           {!isDealer && (
-            <div className="flex items-center gap-1 glass border border-red-500/20 rounded-full px-2 py-0.5">
-              <Lock size={8} className="text-red-500" />
-              <span className="text-red-500 text-[9px] font-bold">Login</span>
+            <div className="flex items-center gap-1 border border-[var(--red)]/20 rounded-sm px-2 py-0.5">
+              <Lock size={8} className="text-[var(--red)]" />
+              <span className="text-[var(--red)] text-[9px] font-bold">Login</span>
             </div>
           )}
         </div>

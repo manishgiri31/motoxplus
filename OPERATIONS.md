@@ -287,7 +287,7 @@ View cron: `crontab -l`
 
 | Role | Contact |
 |------|---------|
-| Tech Lead | info@motoxplus.in |
+| Tech Lead | info@motoxplus.com |
 | Hosting | Check VPS provider portal |
 | Cloudflare | https://dash.cloudflare.com |
 | Razorpay | https://dashboard.razorpay.com |

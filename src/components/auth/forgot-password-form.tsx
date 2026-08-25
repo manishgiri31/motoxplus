@@ -82,7 +82,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <div className="glass border border-[var(--border-color)] rounded-sm p-8">
+    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8">
       <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Forgot your password?</h1>
       <p className="text-[var(--text-muted)] text-sm mb-6">
         {method === "email"

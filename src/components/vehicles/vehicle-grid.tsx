@@ -24,12 +24,12 @@ export function VehicleGrid({ vehicles, categorySlug }: { vehicles: VehicleCardD
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search model or manufacturer…"
-          className="w-full pl-11 pr-10 py-3 rounded-full glass border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-red-500/50 transition-colors"
+          className="w-full pl-11 pr-10 py-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-red-500/50 transition-colors"
         />
         {query && (
           <button
             onClick={() => setQuery("")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-red-500"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--red)]"
           >
             <X size={16} />
           </button>

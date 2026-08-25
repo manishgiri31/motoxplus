@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, Lock, Package, ChevronLeft, ChevronRight, X, Clock, Zap, Heart, Eye, Scale, Check, Palette } from "lucide-react";
-import { TiltCard } from "@/components/3d/tilt-card";
 
 const RECENT_KEY = "motox_recent_searches";
 const WISHLIST_KEY = "motox_wishlist";
@@ -398,9 +397,9 @@ export function ProductCatalog({
             onFocus={() => { setInputFocused(true); setActiveSuggestion(-1); }}
             onKeyDown={handleKeyDown}
             placeholder="Search by name, part number, vehicle (e.g. Hero Glamour)..."
-            className={`w-full themed-input border rounded-2xl pl-14 pr-14 py-5 text-base md:text-lg font-medium transition-all duration-200 ${
+            className={`w-full themed-input border rounded-lg pl-14 pr-14 py-5 text-base md:text-lg font-medium transition-all duration-200 ${
               inputFocused
-                ? "border-red-600/60 shadow-[0_0_0_4px_rgba(220,38,38,0.1)]"
+                ? "border-[var(--red)]/60 shadow-[0_0_0_3px_var(--accent-ring)]"
                 : ""
             }`}
             autoComplete="off"
@@ -434,7 +433,7 @@ export function ProductCatalog({
             ref={dropdownRef}
             id="product-search-listbox"
             role="listbox"
-            className="absolute top-full left-0 right-0 mt-1.5 glass border border-[var(--border-color)] rounded-xl shadow-2xl z-50 overflow-x-hidden overflow-y-auto animate-dropdown-in max-h-[70vh]"
+            className="absolute top-full left-0 right-0 mt-1.5 bg-[var(--card)] border border-[var(--line)] rounded-lg shadow-[var(--elev-3)] z-50 overflow-x-hidden overflow-y-auto animate-dropdown-in max-h-[70vh]"
           >
               {/* Loading */}
               {suggestionsLoading && suggestions.length === 0 && search.length >= 2 && (
@@ -475,7 +474,7 @@ export function ProductCatalog({
                       }`}
                     >
                       {/* Thumb */}
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-zinc-800 to-black flex-shrink-0 overflow-hidden">
+                      <div className="w-8 h-8 rounded-sm bg-[var(--line)] flex-shrink-0 overflow-hidden">
                         {s.imageUrl ? (
                           <img src={s.imageUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -592,14 +591,14 @@ export function ProductCatalog({
           )}
         </div>
 
-      {/* Category pills */}
+      {/* Category filter chips */}
       <div className="flex flex-wrap gap-2 mb-8">
           <button
             onClick={() => handleCategory(null)}
-            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors duration-200 ${
               !currentCategory
-                ? "bg-red-600 text-white shadow-[0_0_12px_rgba(220,38,38,0.3)]"
-                : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-[var(--text-primary)]"
+                ? "bg-[var(--red)] text-white"
+                : "border border-[var(--line)] text-[var(--muted)] hover:border-[var(--red)]/50 hover:text-[var(--ink)]"
             }`}
           >
             All
@@ -608,10 +607,10 @@ export function ProductCatalog({
             <button
               key={cat.id}
               onClick={() => handleCategory(cat.slug)}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors duration-200 ${
                 currentCategory === cat.slug
-                  ? "bg-red-600 text-white shadow-[0_0_12px_rgba(220,38,38,0.3)]"
-                  : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-[var(--text-primary)]"
+                  ? "bg-[var(--red)] text-white"
+                  : "border border-[var(--line)] text-[var(--muted)] hover:border-[var(--red)]/50 hover:text-[var(--ink)]"
               }`}
             >
               {cat.name}
@@ -645,7 +644,7 @@ export function ProductCatalog({
       {/* Product Grid */}
       {products.length === 0 ? (
         <div className="text-center py-20">
-          <div className="w-16 h-16 bg-[var(--bg-card)] rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 border border-[var(--border-color)] flex items-center justify-center mx-auto mb-4">
             <Package size={28} className="text-[var(--text-muted)]" />
           </div>
           <h3 className="text-[var(--text-primary)] font-bold text-xl mb-2">No products found</h3>
@@ -681,10 +680,10 @@ export function ProductCatalog({
             const colors = colorCount(product);
 
             return (
-              <TiltCard key={product.id} intensity={8}>
               <Link
+                key={product.id}
                 href={detailHref(product.slug)}
-                className="group relative glass border border-[var(--border-color)] hover:border-red-900/40 rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-black/10 transition-all duration-300 block"
+                className="group relative bg-[var(--card)] border border-[var(--line)] hover:border-[var(--red)]/40 overflow-hidden transition-colors duration-200 block"
               >
                 {/* Image */}
                 <div className="relative h-48 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
@@ -704,16 +703,16 @@ export function ProductCatalog({
 
                   {/* Top-left badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
-                    <span className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                    <span className="bg-[var(--red)] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
                       {product.category.name}
                     </span>
                     {discountPct && discountPct > 0 && (
-                      <span className="bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                      <span className="bg-[var(--sig-ok-fg)] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
                         {discountPct}% OFF
                       </span>
                     )}
                     {outOfStock && (
-                      <span className="bg-zinc-800 text-white/80 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                      <span className="bg-[rgb(var(--carbon-950))] text-white/80 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
                         Out of Stock
                       </span>
                     )}
@@ -726,8 +725,8 @@ export function ProductCatalog({
                       aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
                       className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition-colors ${
                         isWishlisted
-                          ? "bg-red-600 border-red-600 text-white"
-                          : "bg-black/40 border-white/20 text-white hover:bg-red-600 hover:border-red-600"
+                          ? "bg-[var(--red)] border-[var(--red)] text-white"
+                          : "bg-black/40 border-white/20 text-white hover:bg-[var(--red)] hover:border-[var(--red)]"
                       }`}
                     >
                       <Heart size={13} className={isWishlisted ? "fill-current" : ""} />
@@ -735,7 +734,7 @@ export function ProductCatalog({
                     <button
                       onClick={(e) => handleQuickView(e, product)}
                       aria-label="Quick view"
-                      className="w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border bg-black/40 border-white/20 text-white hover:bg-red-600 hover:border-red-600 transition-colors"
+                      className="w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border bg-black/40 border-white/20 text-white hover:bg-[var(--red)] hover:border-[var(--red)] transition-colors"
                     >
                       <Eye size={13} />
                     </button>
@@ -744,8 +743,8 @@ export function ProductCatalog({
                       aria-label={isComparing ? "Remove from compare" : "Add to compare"}
                       className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition-colors ${
                         isComparing
-                          ? "bg-red-600 border-red-600 text-white"
-                          : "bg-black/40 border-white/20 text-white hover:bg-red-600 hover:border-red-600"
+                          ? "bg-[var(--red)] border-[var(--red)] text-white"
+                          : "bg-black/40 border-white/20 text-white hover:bg-[var(--red)] hover:border-[var(--red)]"
                       }`}
                     >
                       {isComparing ? <Check size={13} /> : <Scale size={13} />}
@@ -775,7 +774,7 @@ export function ProductCatalog({
                   <div className="pt-3 border-t border-[var(--border-color)]">
                     <div className="flex items-end justify-between gap-2">
                       <div>
-                        <div className="text-red-500 font-black text-xl leading-tight tracking-tight">
+                        <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
                           ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                         </div>
                         {product.mrp && product.mrp > product.price && (
@@ -784,26 +783,25 @@ export function ProductCatalog({
                           </div>
                         )}
                       </div>
-                      <span className="text-[var(--text-muted)] text-[9px] uppercase tracking-wide font-bold glass border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
+                      <span className="text-[var(--text-muted)] text-[9px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
                         MOQ {product.moq}
                       </span>
                     </div>
                     {colors > 0 && (
                       <div className="mt-2 flex items-center gap-1.5 text-[var(--text-muted)] text-[10px] font-semibold">
-                        <Palette size={11} className="text-red-400/80" />
+                        <Palette size={11} className="text-[var(--red)]/80" />
                         {colors} colour{colors === 1 ? "" : "s"} available
                       </div>
                     )}
                     {!isDealer && (
-                      <div className="mt-2 flex items-center gap-1.5 glass border border-red-500/20 rounded-full px-2.5 py-1 w-fit">
-                        <Lock size={9} className="text-red-500" />
-                        <span className="text-red-500 text-[9px] font-bold">Login to Order</span>
+                      <div className="mt-2 flex items-center gap-1.5 border border-[var(--red)]/25 bg-[var(--red-soft)] rounded-full px-2.5 py-1 w-fit">
+                        <Lock size={9} className="text-[var(--red)]" />
+                        <span className="text-[var(--red)] text-[9px] font-bold">Login to Order</span>
                       </div>
                     )}
                   </div>
                 </div>
               </Link>
-              </TiltCard>
             );
           })}
         </div>
@@ -817,10 +815,10 @@ export function ProductCatalog({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 glass border border-[var(--border-color)] rounded-2xl shadow-2xl px-5 py-3.5 flex items-center gap-4"
+            className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-[var(--card)] border border-[var(--line)] shadow-[var(--elev-3)] px-5 py-3.5 flex items-center gap-4"
           >
             <div className="flex items-center gap-2">
-              <Scale size={15} className="text-red-500" />
+              <Scale size={15} className="text-[var(--red)]" />
               <span className="text-[var(--text-primary)] text-sm font-semibold">
                 {compareIds.length} product{compareIds.length === 1 ? "" : "s"} selected
               </span>
@@ -828,14 +826,14 @@ export function ProductCatalog({
             <button
               onClick={() => setShowCompare(true)}
               disabled={compareIds.length < 2}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-lg transition-colors"
+              className="bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm transition-colors"
             >
               Compare
             </button>
             <button
               onClick={() => setCompareIds([])}
               aria-label="Clear compare selection"
-              className="text-[var(--text-muted)] hover:text-red-500 transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"
             >
               <X size={16} />
             </button>
@@ -858,7 +856,7 @@ export function ProductCatalog({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="glass border border-[var(--border-color)] rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto"
+              className="bg-[var(--card)] border border-[var(--line)] shadow-[var(--elev-4)] max-w-2xl w-full max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
@@ -878,11 +876,11 @@ export function ProductCatalog({
                 <div className="p-6 relative">
                   <button
                     onClick={() => setQuickView(null)}
-                    className="hidden md:flex absolute top-4 right-4 w-8 h-8 rounded-full glass border border-[var(--border-color)] items-center justify-center text-[var(--text-muted)] hover:text-red-500 transition-colors"
+                    className="hidden md:flex absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--card)] border border-[var(--line)] items-center justify-center text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"
                   >
                     <X size={16} />
                   </button>
-                  <span className="bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                  <span className="bg-[var(--red)] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
                     {quickView.category.name}
                   </span>
                   <h3 className="text-[var(--text-primary)] font-black text-xl mt-3 mb-1">{quickView.name}</h3>
@@ -893,7 +891,7 @@ export function ProductCatalog({
                     </p>
                   )}
                   <div className="flex items-end gap-3 mb-4">
-                    <span className="text-red-500 font-black text-2xl">
+                    <span className="text-[var(--red)] font-black text-2xl">
                       ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                     </span>
                     {quickView.mrp && quickView.mrp > quickView.price && (
@@ -903,16 +901,16 @@ export function ProductCatalog({
                     )}
                   </div>
                   <div className="flex items-center gap-2 mb-6">
-                    <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide font-bold glass border border-[var(--border-color)] rounded-full px-2.5 py-1">
+                    <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2.5 py-1">
                       MOQ {quickView.moq}
                     </span>
-                    <span className={`text-[10px] uppercase tracking-wide font-bold rounded-full px-2.5 py-1 ${quickView.stock > 0 ? "text-emerald-500 bg-emerald-500/10" : "text-[var(--text-muted)] bg-[var(--bg-secondary)]"}`}>
+                    <span className={`text-[10px] uppercase tracking-wide font-bold rounded-full px-2.5 py-1 ${quickView.stock > 0 ? "text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)]" : "text-[var(--text-muted)] bg-[var(--bg-secondary)]"}`}>
                       {quickView.stock > 0 ? "In Stock" : "Out of Stock"}
                     </span>
                   </div>
                   <Link
                     href={detailHref(quickView.slug)}
-                    className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-wider text-sm"
+                    className="flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 rounded-sm transition-colors uppercase tracking-wider text-sm"
                   >
                     View Full Details
                   </Link>
@@ -938,7 +936,7 @@ export function ProductCatalog({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
               transition={{ duration: 0.2 }}
-              className="glass border border-[var(--border-color)] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-auto"
+              className="bg-[var(--card)] border border-[var(--line)] shadow-[var(--elev-4)] max-w-4xl w-full max-h-[85vh] overflow-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
@@ -946,7 +944,7 @@ export function ProductCatalog({
                   <h3 className="text-[var(--text-primary)] font-black text-xl">Compare Products</h3>
                   <button
                     onClick={() => setShowCompare(false)}
-                    className="w-8 h-8 rounded-full glass border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-red-500 transition-colors"
+                    className="w-8 h-8 rounded-full bg-[var(--paper)] border border-[var(--line)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"
                   >
                     <X size={16} />
                   </button>
@@ -958,7 +956,7 @@ export function ProductCatalog({
                         <td className="py-2 pr-4 text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold align-top w-28">Image</td>
                         {compareProducts.map((p) => (
                           <td key={p.id} className="py-2 px-3">
-                            <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-[var(--bg-secondary)]">
+                            <div className="relative h-24 w-24 overflow-hidden bg-[var(--bg-secondary)] border border-[var(--border-color)]">
                               {productThumb(p) && (
                                 <Image src={productThumb(p)!} alt={p.name} fill className="object-cover" unoptimized />
                               )}
@@ -992,7 +990,7 @@ export function ProductCatalog({
                           <td key={p.id} className="py-3 px-3">
                             <Link
                               href={detailHref(p.slug)}
-                              className="inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors uppercase tracking-wider"
+                              className="inline-flex items-center justify-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white text-xs font-bold px-3 py-2 rounded-sm transition-colors uppercase tracking-wider"
                             >
                               View
                             </Link>
@@ -1014,7 +1012,7 @@ export function ProductCatalog({
           {currentPage > 1 && (
             <Link
               href={pageHref(currentPage - 1)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-[var(--text-primary)] transition-all"
+              className="w-9 h-9 flex items-center justify-center rounded-sm border border-[var(--border-color)] text-[var(--text-muted)] hover:border-[var(--red)]/50 hover:text-[var(--text-primary)] transition-colors"
             >
               <ChevronLeft size={16} />
             </Link>
@@ -1031,10 +1029,10 @@ export function ProductCatalog({
               <Link
                 key={p}
                 href={pageHref(p as number)}
-                className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
+                className={`w-9 h-9 flex items-center justify-center rounded-sm text-sm font-bold transition-colors ${
                   p === currentPage
-                    ? "bg-red-600 text-white shadow-[0_0_12px_rgba(220,38,38,0.3)]"
-                    : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-[var(--text-primary)]"
+                    ? "bg-[var(--red)] text-white"
+                    : "border border-[var(--border-color)] text-[var(--text-muted)] hover:border-[var(--red)]/50 hover:text-[var(--text-primary)]"
                 }`}
               >
                 {p}
@@ -1043,7 +1041,7 @@ export function ProductCatalog({
           {currentPage < totalPages && (
             <Link
               href={pageHref(currentPage + 1)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-[var(--text-primary)] transition-all"
+              className="w-9 h-9 flex items-center justify-center rounded-sm border border-[var(--border-color)] text-[var(--text-muted)] hover:border-[var(--red)]/50 hover:text-[var(--text-primary)] transition-colors"
             >
               <ChevronRight size={16} />
             </Link>
