@@ -278,6 +278,18 @@ export interface DelhiveryTrackNotFoundResponse {
   rmk: string;
 }
 
+// ─── Cancellation ─────────────────────────────────────────────────────────────
+// POST /api/p/edit's response is XML, not JSON — confirmed via live capture
+// (delhivery-reference.md, "5. Cancel" / "7. Cancel again", 2026-08-24). Kept
+// as a SEPARATE type from every JSON response type above so a call site
+// cannot type-confuse a cancel response with a create/track response.
+export interface DelhiveryCancelResponse {
+  status: boolean;
+  waybill: string;
+  orderId: string;
+  remark: string;
+}
+
 export interface TrackingEvent {
   status: string;
   location: string;
