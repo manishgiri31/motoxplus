@@ -1,24 +1,48 @@
 import { delhiveryFetch } from "./client";
 import { prisma } from "@/lib/prisma";
-import type { DelhiveryTrackResponse, TrackingResult } from "./types";
+import type {
+  DelhiveryShipment,
+  DelhiveryTrackNotFoundResponse,
+  DelhiveryTrackResponse,
+  TrackingResult,
+} from "./types";
 import { normalizeShipmentStatus } from "./types";
+
+/**
+ * Raw tracking lookup, typed against the real captured verbose=2 response.
+ * Returns null when Delhivery has no record of the waybill — confirmed via a
+ * live capture: HTTP 200 with `{Success:false, Error:"Data does not exists
+ * for provided Waybill(s)"}`, not a 404 (delhivery-reference.md, "12. Track,
+ * nonexistent AWB") — so callers can tell "unknown AWB" apart from "the API
+ * call itself failed" (which throws). Same treatment as isServiceable().
+ *
+ * Always requests verbose=2: verbose 0/1/2 are confirmed strict supersets of
+ * each other, so there's no cost, and Consignee lets us verify the
+ * destination without joining back to our own order record.
+ */
+export async function fetchTrackingDetail(waybill: string): Promise<DelhiveryShipment | null> {
+  const data = await delhiveryFetch<DelhiveryTrackResponse | DelhiveryTrackNotFoundResponse>(
+    `/api/v1/packages/json/?waybill=${waybill}&verbose=2`
+  );
+
+  if ("Success" in data && data.Success === false) return null;
+
+  const shipment = (data as DelhiveryTrackResponse).ShipmentData?.[0]?.Shipment;
+  return shipment ?? null;
+}
 
 export async function fetchLiveTracking(waybill: string): Promise<TrackingResult> {
   try {
-    const data = await delhiveryFetch<DelhiveryTrackResponse>(
-      `/api/v1/packages/json/?waybill=${waybill}&verbose=0`
-    );
+    const shipment = await fetchTrackingDetail(waybill);
 
-    const shipmentData = data?.ShipmentData?.[0];
-    if (!shipmentData) {
+    if (!shipment) {
       return { waybill, status: "PENDING", currentLocation: "", estimatedDelivery: null, events: [], error: "No tracking data" };
     }
 
-    const { Shipment, Scans } = shipmentData;
-    const currentStatus = Shipment.Status?.Status || "In Transit";
+    const currentStatus = shipment.Status?.Status || "In Transit";
     const normalizedStatus = normalizeShipmentStatus(currentStatus);
 
-    const events = (Scans || []).map((scan) => ({
+    const events = (shipment.Scans || []).map((scan) => ({
       status: scan.ScanDetail.Scan,
       location: scan.ScanDetail.ScannedLocation,
       activity: scan.ScanDetail.Instructions || scan.ScanDetail.Scan,
@@ -28,8 +52,8 @@ export async function fetchLiveTracking(waybill: string): Promise<TrackingResult
     return {
       waybill,
       status: normalizedStatus,
-      currentLocation: Shipment.Status?.StatusLocation || "",
-      estimatedDelivery: Shipment.ExpectedDeliveryDate || null,
+      currentLocation: shipment.Status?.StatusLocation || "",
+      estimatedDelivery: shipment.ExpectedDeliveryDate || null,
       events,
     };
   } catch (err) {

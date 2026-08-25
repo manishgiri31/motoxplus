@@ -158,50 +158,124 @@ export interface DelhiveryCreateShipmentResponse {
 }
 
 // ─── Tracking ─────────────────────────────────────────────────────────────────
+// Shape below is transcribed exactly from a live capture of AWB
+// 57930810000066 at verbose=2 (delhivery-reference.md, "11. Track verbose=2",
+// 2026-08-24). Production always requests verbose=2 — verbose 0/1/2 are
+// confirmed strict supersets of each other, so there's no cost, and
+// Consignee lets us verify the destination without joining back to our own
+// order record (src/lib/delhivery/tracking.ts sets this explicitly). This
+// type therefore models exactly that one response, not a hypothetical union
+// across verbosity levels.
+
+export interface DelhiveryScanDetail {
+  Instructions: string;
+  Scan: string;
+  ScanDateTime: string;
+  ScanType: string;
+  ScannedLocation: string;
+  // Confirmed present inside ScanDetail by the live capture — the old
+  // code-derived type didn't have it here.
+  StatusCode: string;
+  StatusDateTime: string;
+}
 
 export interface DelhiveryScan {
-  ScanDetail: {
-    Scan: string;
-    ScanDateTime: string;
-    ScanType: string;
-    ScannedLocation: string;
-    Instructions: string;
-    StatusDateTime: string;
-  };
+  ScanDetail: DelhiveryScanDetail;
+}
+
+export interface DelhiveryConsignee {
+  // Empty-array case is capture-observed. The populated case is UNVERIFIED —
+  // this shipment's create.json payload DID contain a real street address
+  // ("House No. 123, Model Town Road") and Address1/Address2 still came back
+  // as `[]`, so this may be a field Delhivery never echoes back at all,
+  // rather than one that's merely conditionally empty. Do not normalize `[]`
+  // to `""` in the parser — keep the wire shape honest, let call sites
+  // handle it. TODO: confirm the populated shape from the first real
+  // customer shipment.
+  Address1: string | [];
+  Address2: string | [];
+  Address3: string;
+  City: string;
+  Country: string;
+  Name: string;
+  // Number, not string — 135001, not "135001". Same numeric-pincode quirk
+  // seen in the serviceability endpoint.
+  PinCode: number;
+  State: string;
+  Telephone1: string;
+  Telephone2: string;
+}
+
+export interface DelhiveryShipmentStatus {
+  Instructions: string;
+  RecievedBy: string;
+  Status: string;
+  StatusCode: string;
+  StatusDateTime: string;
+  StatusLocation: string;
+  StatusType: string;
+}
+
+export interface DelhiveryShipment {
+  AWB: string;
+  CODAmount: number;
+  ChargedWeight: number | null;
+  Consignee: DelhiveryConsignee;
+  DeliveryDate: string | null;
+  DestRecieveDate: string | null;
+  Destination: string;
+  DispatchCount: number;
+  // Only ever observed empty. This order's value (₹100) was well under
+  // Delhivery's ₹50,000 e-waybill threshold, which plausibly explains why —
+  // but the populated shape is unverified, so this stays an empty tuple
+  // rather than a guessed-at `string[]`.
+  Ewaybill: [];
+  ExpectedDeliveryDate: string | null;
+  Extras: string;
+  FirstAttemptDate: string | null;
+  InvoiceAmount: number;
+  // Only "Pre-paid" has been observed — this integration's only real
+  // create.json call so far used payment_mode "Prepaid" (matches
+  // packages[0].payment from the create response). A real COD shipment
+  // capture is needed before adding another literal to this union.
+  OrderType: "Pre-paid";
+  Origin: string;
+  OriginRecieveDate: string | null;
+  OutDestinationDate: string | null;
+  // Populated immediately at manifest creation in every capture, before
+  // actual pickup occurred — nullability before that point is unconfirmed.
+  PickUpDate: string;
+  PickedupDate: string | null;
+  PickupLocation: string;
+  PromisedDeliveryDate: string | null;
+  // String, not number — "1", not 1. Modeled as captured.
+  Quantity: string;
+  RTOStartedDate: string | null;
+  ReferenceNo: string;
+  ReturnPromisedDeliveryDate: string | null;
+  ReturnedDate: string | null;
+  ReverseInTransit: boolean;
+  Scans: DelhiveryScan[];
+  SenderName: string;
+  Status: DelhiveryShipmentStatus;
 }
 
 export interface DelhiveryShipmentData {
-  Shipment: {
-    AWB: string;
-    Destination: string;
-    DestinationCity: string;
-    ExpectedDeliveryDate: string;
-    Origin: string;
-    OriginCity: string;
-    Consignee: {
-      Name: string;
-      Address1: string;
-      City: string;
-      State: string;
-      PinCode: string;
-    };
-    Status: {
-      Status: string;
-      StatusDateTime: string;
-      StatusLocation: string;
-      Instructions: string;
-      StatusType: string;
-    };
-    ReferenceNo: string;
-    PaymentMode: string;
-    TotalAmount: number;
-    CODAmount: number;
-  };
-  Scans: DelhiveryScan[];
+  Shipment: DelhiveryShipment;
 }
 
 export interface DelhiveryTrackResponse {
   ShipmentData: DelhiveryShipmentData[];
+}
+
+// Delhivery's response for a waybill it has no record of — confirmed via a
+// live capture on a nonexistent AWB (delhivery-reference.md, "12. Track,
+// nonexistent AWB", 2026-08-25). HTTP 200, not 404 — this shape, not the
+// status code, is the only way to detect it.
+export interface DelhiveryTrackNotFoundResponse {
+  Success: false;
+  Error: string;
+  rmk: string;
 }
 
 export interface TrackingEvent {
