@@ -26,11 +26,9 @@
 - Environment token works against: production (base URL `track.delhivery.com`)
 - Default pickup slot: Evening 14:00–18:00 IST. Shipments manifested after
   18:00 stay in Manifested until the next day's slot — not a tracking bug.
-- `pickup_location.city: "New Delhi"` (matching `return_city`) was accepted
-  without any warehouse/ClientWarehouse resolution error on a real successful
-  create.json call — the "try 'Delhi' instead" fallback was not needed.
-  Delhivery's own dashboard record for this facility shows city as "Delhi";
-  both values coexist without conflict because `name` is the actual match key.
+- `pickup_location.city`: `"New Delhi"` is capture-confirmed working; the
+  dashboard itself says `"Delhi"`. Didn't matter either way — don't
+  re-investigate.
 - **Second client on the same login: "MOTOXPLUS INDIA 7342 B2B" (B2B
   Surface)** — separate wallet, separate API surface. Nothing in this
   codebase or the capture script targets this client; every real call so far
@@ -85,52 +83,76 @@ fields themselves were valid before the pickup_location fix), not because
 they're stale.
 
 ### Track
-CONFIRMED — see "4. Track" (post-create) and "6. Track (post-cancel...)"
-entries below. **The real shape is substantially different from what
-`src/lib/delhivery/types.ts`'s `DelhiveryShipmentData` currently assumes —
-not yet fixed, flagging only:**
-- No `Consignee` object at all.
-- No `TotalAmount`, `PaymentMode`, `DestinationCity`, `OriginCity` — instead:
-  `InvoiceAmount`, `OrderType` (e.g. `"Pre-paid"`), `Destination`, `Origin`.
-- **No `Scans` array with `verbose=0`** — `tracking.ts` already defensively
-  handles a missing `Scans` via `(Scans || [])` so it doesn't crash, but it
-  means with `verbose=0` no scan/event history is ever populated today.
-  Unconfirmed whether `verbose=1` returns `Scans`.
-- Real fields actually present on `Shipment`: `AWB, CODAmount, ChargedWeight,
-  DeliveryDate, DestRecieveDate, Destination, DispatchCount, Ewaybill,
-  ExpectedDeliveryDate, Extras, FirstAttemptDate, InvoiceAmount, OrderType,
-  Origin, OriginRecieveDate, OutDestinationDate, PickUpDate, PickedupDate,
-  PickupLocation, PromisedDeliveryDate, Quantity, RTOStartedDate,
-  ReferenceNo, ReturnPromisedDeliveryDate, ReturnedDate, ReverseInTransit,
-  SenderName, Status:{Instructions, RecievedBy, Status, StatusCode,
-  StatusDateTime, StatusLocation, StatusType}`.
+CONFIRMED — see captures 4, 6, 9, 10, 11 below (verbose=0/1/2 on AWB
+`57930810000066`) and capture 12 (unknown AWB). Fixed in `types.ts`/
+`tracking.ts` on 2026-08-25 (`DelhiveryShipment`, `DelhiveryConsignee`,
+`DelhiveryScanDetail`, `fetchTrackingDetail`) — only fields confirmed by a
+capture are modeled:
+- No `Consignee` at `verbose=0/1`; present only at `verbose=2`. No
+  `TotalAmount`/`PaymentMode` at any verbosity — deleted, not aliased; real
+  fields are `InvoiceAmount`/`OrderType` (literal `"Pre-paid"` — only value
+  observed so far).
+- `Scans` absent at `verbose=0`, present at `1`/`2`, identical at both.
+  `ScanDetail` has `StatusCode` (old type didn't). **Production now requests
+  `verbose=2` explicitly** (`tracking.ts`) — `0`/`1`/`2` are confirmed strict
+  supersets of each other, so this costs nothing and additionally gets
+  `Consignee` for destination verification without joining back to our order.
+- `Consignee.Address1`/`Address2` are empty **arrays** (`[]`), not empty
+  strings, even though this shipment's create.json payload had a real street
+  address — typed as `string | []` (populated shape UNVERIFIED, TODO to
+  confirm from the first real customer shipment); the parser does not
+  normalize `[]` to `""`.
+- Unknown AWB → **HTTP 200**, shape `{Success:false, Error, rmk}`, no
+  `ShipmentData` key at all (capture 12) — not a 404. `fetchTrackingDetail`
+  returns `null` for this; only a real API failure throws.
 
 ### Cancel
-CONFIRMED, with a real surprise — see "5. Cancel" and "7. Cancel again"
-entries below (full cycle on AWB `57930810000066`).
-- `POST /api/p/edit` with JSON body `{"waybill":"<awb>","cancellation":"true"}`
-  is correct — confirmed twice (a fresh cancel and a repeat cancel on an
-  already-cancelled AWB).
-- **The response is XML, not JSON**: `<?xml version="1.0" encoding="utf-8"?>
-  <root><status>True</status><waybill>...</waybill><order_id>...</order_id>
-  <remark>Shipment has been cancelled.</remark></root>`. Code that calls this
-  must not `JSON.parse()` the response.
-- Calling cancel a **second time** on an already-cancelled AWB returns the
-  **identical** success response — same HTTP 200, same XML body, same
-  `"Shipment has been cancelled."` remark. There is no distinguishable
-  "already cancelled" error from the cancel call itself; code that needs to
-  know fresh-vs-repeat has to track that locally, not infer it from this response.
-- **Contradicts Delhivery's own Cancel Order API docs**: those describe
-  Prepaid/COD packages moving to status `"Returned"` on cancellation. For a
-  shipment cancelled *before pickup*, `Status.Status` stayed `"Not Picked"`
-  throughout and never became "Returned" or "Cancelled". The real signal
-  that cancellation took effect was in `Status.Instructions`
-  (`"Seller cancelled the order"`) and `Status.StatusCode` (`"DTUP-210"`) —
-  and that detail took roughly a minute+ to appear; an immediate re-track
-  still showed the generic `"Shipment not received from client"` / `"X-PNP"`.
-  Code that needs to confirm cancellation should poll with a delay, not check
-  once immediately (the capture script now retries 3x with increasing delay
-  for this reason, added 2026-08-25).
+CONFIRMED, with a real surprise — see captures 5, 7, 8 below (full cycle on
+AWB `57930810000066`). **Two deliberate findings, not undocumented gaps:**
+
+**1. The response is XML, not JSON — every other endpoint here is JSON.**
+`<?xml version="1.0" encoding="utf-8"?><root><status>True</status>
+<waybill>...</waybill><order_id>...</order_id><remark>Shipment has been
+cancelled.</remark></root>`. `src/lib/delhivery/cancel.ts` parses this with a
+small tag-walking parser (no regex, no `JSON.parse`) and types it separately
+(`DelhiveryCancelResponse`) so a call site cannot type-confuse it with a
+create/track response. The function's own doc comment carries this warning
+too, not just this file.
+
+**2. A second cancel on an already-cancelled AWB returns an IDENTICAL
+success — there is no "already cancelled" error, by design of this finding,
+not by omission.** Same HTTP 200, same XML, same `"Shipment has been
+cancelled."` remark (capture 7, ~90s after capture 5). Consequences, all
+implemented in `cancel.ts`:
+- `cancelDelhiveryShipment`'s return value means "Delhivery accepted the
+  request", **not** "this call is what newly cancelled it" — named and
+  documented so no caller can read it the second way.
+- Retries are safe (unlike `create.json`, which must never auto-retry) — say
+  so in code so nobody adds a defensive "already cancelled" guard that
+  solves a problem that doesn't exist here.
+- Cancellation state is OUR DB's responsibility, not Delhivery's, since the
+  API can't distinguish fresh-vs-repeat either. **Audit result**: no call
+  site does or can infer cancelled-ness from this API today —
+  `cancelDelhiveryShipment` didn't exist in production code before
+  2026-08-25; nothing calls it yet. This is a library primitive for a future
+  wiring phase, not wired into any route or order-status transition.
+
+**Propagation delay, confirmed ~1 minute**: `Status.Status` stayed
+`"Not Picked"` throughout (an immediate re-track still showed the generic
+`"Shipment not received from client"` / `"X-PNP"`) — it never became
+`"Returned"` or `"Cancelled"`. The real signal appeared roughly a minute
+later, in `Status.Instructions` (`"Seller cancelled the order"`) /
+`Status.StatusCode` (`"DTUP-210"`), not in `Status.Status`.
+**Delhivery's own Cancel Order API docs are WRONG here**: they describe
+Prepaid/COD packages moving to `"Returned"` on cancellation — observed
+behavior for a *pre-pickup* cancellation is `"Not Picked"`, never
+`"Returned"`. **Audit result for read-after-cancel**: no production code
+path reads tracking immediately after triggering a cancellation today, for
+the same reason as above — nothing calls `cancelDelhiveryShipment` yet. The
+capture script itself was the only place this delay ever mattered, and it
+now retries 3x with increasing delay rather than checking once (fixed
+2026-08-25). Whoever wires cancellation into a real flow next must not
+defeat this — `cancel.ts`'s doc comment says so directly.
 
 ## Known-good field values
 - `DELHIVERY_ORIGIN_PINCODE=110046`, `DELHIVERY_PICKUP_*`, `COMPANY_GST`,
@@ -140,8 +162,6 @@ entries below (full cycle on AWB `57930810000066`).
   `DELHIVERY_PICKUP_LOCATION_NAME` env var) — distinct from `return_name` /
   `DELHIVERY_PICKUP_NAME` (`"MotoXPlus India Pvt. Ltd."`). Confusing these
   two is what caused the missing-pickup_location bug in the first place.
-- `pickup_location.city: "New Delhi"` is accepted; no need for the "Delhi"
-  fallback that was considered before this was tested.
 - Bulk waybill fetch requires `cl` as a query param (client/HQ name); does
   not work with header-auth alone (untested whether it would 401/400 without
   `cl` — wasn't tried, since `cl` was already known to be needed from docs).
@@ -684,3 +704,321 @@ RESPONSE: 200 OK
 `Status.Status` is still `"Not Picked"` (never became "Cancelled"/"Returned"),
 but `Instructions` and `StatusCode` now clearly confirm the cancellation.
 AWB `57930810000066` is genuinely cancelled.
+
+---
+
+## CAPTURED — 2026-08-24T18:37:07.000Z (scripts/delhivery-track-verbosity-check.ts, manual — Part 1 discovery)
+
+Same AWB (`57930810000066`, cancelled), same endpoint, `verbose=0` vs `verbose=1`
+vs `verbose=2` — to determine the real, honest shape of the track response
+before touching `types.ts`/`tracking.ts`. No new shipment created.
+
+### 9. Track verbose=0
+
+REQUEST:
+```
+GET https://track.delhivery.com/api/v1/packages/json/?waybill=57930810000066&verbose=0
+Authorization: Token ***REDACTED***
+Accept: application/json
+```
+
+RESPONSE: 200 OK
+```
+{
+    "ShipmentData": [
+        {
+            "Shipment": {
+                "AWB": "57930810000066",
+                "CODAmount": 0,
+                "ChargedWeight": null,
+                "DeliveryDate": null,
+                "DestRecieveDate": null,
+                "Destination": "Yamunanagar",
+                "DispatchCount": 0,
+                "Ewaybill": [],
+                "ExpectedDeliveryDate": null,
+                "Extras": "",
+                "FirstAttemptDate": null,
+                "InvoiceAmount": 100,
+                "OrderType": "Pre-paid",
+                "Origin": "Delhi_Airport_GW (Delhi)",
+                "OriginRecieveDate": null,
+                "OutDestinationDate": null,
+                "PickUpDate": "2026-08-24T23:56:59.79",
+                "PickedupDate": null,
+                "PickupLocation": "Manish Giri",
+                "PromisedDeliveryDate": null,
+                "Quantity": "1",
+                "RTOStartedDate": null,
+                "ReferenceNo": "CAPTURE-1787596016179",
+                "ReturnPromisedDeliveryDate": null,
+                "ReturnedDate": null,
+                "ReverseInTransit": false,
+                "SenderName": "c80988-MOTOXPLUSINDIAPRIVAT-do",
+                "Status": {
+                    "Instructions": "Seller cancelled the order",
+                    "RecievedBy": "",
+                    "Status": "Not Picked",
+                    "StatusCode": "DTUP-210",
+                    "StatusDateTime": "2026-08-24T23:58:39.774",
+                    "StatusLocation": "Delhi_Airport_GW (Delhi)",
+                    "StatusType": "UD"
+                }
+            }
+        }
+    ]
+}
+```
+
+### 10. Track verbose=1
+
+REQUEST:
+```
+GET https://track.delhivery.com/api/v1/packages/json/?waybill=57930810000066&verbose=1
+Authorization: Token ***REDACTED***
+Accept: application/json
+```
+
+RESPONSE: 200 OK
+```
+{
+    "ShipmentData": [
+        {
+            "Shipment": {
+                "AWB": "57930810000066",
+                "CODAmount": 0,
+                "ChargedWeight": null,
+                "DeliveryDate": null,
+                "DestRecieveDate": null,
+                "Destination": "Yamunanagar",
+                "DispatchCount": 0,
+                "Ewaybill": [],
+                "ExpectedDeliveryDate": null,
+                "Extras": "",
+                "FirstAttemptDate": null,
+                "InvoiceAmount": 100,
+                "OrderType": "Pre-paid",
+                "Origin": "Delhi_Airport_GW (Delhi)",
+                "OriginRecieveDate": null,
+                "OutDestinationDate": null,
+                "PickUpDate": "2026-08-24T23:56:59.79",
+                "PickedupDate": null,
+                "PickupLocation": "Manish Giri",
+                "PromisedDeliveryDate": null,
+                "Quantity": "1",
+                "RTOStartedDate": null,
+                "ReferenceNo": "CAPTURE-1787596016179",
+                "ReturnPromisedDeliveryDate": null,
+                "ReturnedDate": null,
+                "ReverseInTransit": false,
+                "Scans": [
+                    {
+                        "ScanDetail": {
+                            "Instructions": "Manifest uploaded",
+                            "Scan": "Manifested",
+                            "ScanDateTime": "2026-08-24T23:56:59.828",
+                            "ScanType": "UD",
+                            "ScannedLocation": "Delhi_Airport_GW (Delhi)",
+                            "StatusCode": "X-UCI",
+                            "StatusDateTime": "2026-08-24T23:56:59.828"
+                        }
+                    },
+                    {
+                        "ScanDetail": {
+                            "Instructions": "Shipment not received from client",
+                            "Scan": "Not Picked",
+                            "ScanDateTime": "2026-08-24T23:57:00.373",
+                            "ScanType": "UD",
+                            "ScannedLocation": "Delhi_Airport_GW (Delhi)",
+                            "StatusCode": "X-PNP",
+                            "StatusDateTime": "2026-08-24T23:57:00.373"
+                        }
+                    },
+                    {
+                        "ScanDetail": {
+                            "Instructions": "Seller cancelled the order",
+                            "Scan": "Not Picked",
+                            "ScanDateTime": "2026-08-24T23:58:39.774",
+                            "ScanType": "UD",
+                            "ScannedLocation": "Delhi_Airport_GW (Delhi)",
+                            "StatusCode": "DTUP-210",
+                            "StatusDateTime": "2026-08-24T23:58:39.774"
+                        }
+                    }
+                ],
+                "SenderName": "c80988-MOTOXPLUSINDIAPRIVAT-do",
+                "Status": {
+                    "Instructions": "Seller cancelled the order",
+                    "RecievedBy": "",
+                    "Status": "Not Picked",
+                    "StatusCode": "DTUP-210",
+                    "StatusDateTime": "2026-08-24T23:58:39.774",
+                    "StatusLocation": "Delhi_Airport_GW (Delhi)",
+                    "StatusType": "UD"
+                }
+            }
+        }
+    ]
+}
+```
+
+### 11. Track verbose=2
+
+REQUEST:
+```
+GET https://track.delhivery.com/api/v1/packages/json/?waybill=57930810000066&verbose=2
+Authorization: Token ***REDACTED***
+Accept: application/json
+```
+
+RESPONSE: 200 OK
+```
+{
+    "ShipmentData": [
+        {
+            "Shipment": {
+                "AWB": "57930810000066",
+                "CODAmount": 0,
+                "ChargedWeight": null,
+                "Consignee": {
+                    "Address1": [],
+                    "Address2": [],
+                    "Address3": "",
+                    "City": "Yamunanagar",
+                    "Country": "India",
+                    "Name": "Manish Giri",
+                    "PinCode": 135001,
+                    "State": "Haryana",
+                    "Telephone1": "",
+                    "Telephone2": ""
+                },
+                "DeliveryDate": null,
+                "DestRecieveDate": null,
+                "Destination": "Yamunanagar",
+                "DispatchCount": 0,
+                "Ewaybill": [],
+                "ExpectedDeliveryDate": null,
+                "Extras": "",
+                "FirstAttemptDate": null,
+                "InvoiceAmount": 100,
+                "OrderType": "Pre-paid",
+                "Origin": "Delhi_Airport_GW (Delhi)",
+                "OriginRecieveDate": null,
+                "OutDestinationDate": null,
+                "PickUpDate": "2026-08-24T23:56:59.79",
+                "PickedupDate": null,
+                "PickupLocation": "Manish Giri",
+                "PromisedDeliveryDate": null,
+                "Quantity": "1",
+                "RTOStartedDate": null,
+                "ReferenceNo": "CAPTURE-1787596016179",
+                "ReturnPromisedDeliveryDate": null,
+                "ReturnedDate": null,
+                "ReverseInTransit": false,
+                "Scans": [
+                    {
+                        "ScanDetail": {
+                            "Instructions": "Manifest uploaded",
+                            "Scan": "Manifested",
+                            "ScanDateTime": "2026-08-24T23:56:59.828",
+                            "ScanType": "UD",
+                            "ScannedLocation": "Delhi_Airport_GW (Delhi)",
+                            "StatusCode": "X-UCI",
+                            "StatusDateTime": "2026-08-24T23:56:59.828"
+                        }
+                    },
+                    {
+                        "ScanDetail": {
+                            "Instructions": "Shipment not received from client",
+                            "Scan": "Not Picked",
+                            "ScanDateTime": "2026-08-24T23:57:00.373",
+                            "ScanType": "UD",
+                            "ScannedLocation": "Delhi_Airport_GW (Delhi)",
+                            "StatusCode": "X-PNP",
+                            "StatusDateTime": "2026-08-24T23:57:00.373"
+                        }
+                    },
+                    {
+                        "ScanDetail": {
+                            "Instructions": "Seller cancelled the order",
+                            "Scan": "Not Picked",
+                            "ScanDateTime": "2026-08-24T23:58:39.774",
+                            "ScanType": "UD",
+                            "ScannedLocation": "Delhi_Airport_GW (Delhi)",
+                            "StatusCode": "DTUP-210",
+                            "StatusDateTime": "2026-08-24T23:58:39.774"
+                        }
+                    }
+                ],
+                "SenderName": "c80988-MOTOXPLUSINDIAPRIVAT-do",
+                "Status": {
+                    "Instructions": "Seller cancelled the order",
+                    "RecievedBy": "",
+                    "Status": "Not Picked",
+                    "StatusCode": "DTUP-210",
+                    "StatusDateTime": "2026-08-24T23:58:39.774",
+                    "StatusLocation": "Delhi_Airport_GW (Delhi)",
+                    "StatusType": "UD"
+                }
+            }
+        }
+    ]
+}
+```
+
+### Part 1 findings
+
+- **Scans array**: absent at `verbose=0`, present at `verbose=1` and `verbose=2`
+  (identical 3-entry array at both). Real shape is
+  `{ ScanDetail: { Instructions, Scan, ScanDateTime, ScanType, ScannedLocation,
+  StatusCode, StatusDateTime } }` — note `StatusCode` **is** present inside
+  `ScanDetail` in the real response; the old code-derived type didn't have it.
+- **Consignee**: absent at `verbose=0` and `verbose=1`, present only at
+  `verbose=2`. Real shape: `{ Address1, Address2, Address3, City, Country,
+  Name, PinCode, State, Telephone1, Telephone2 }`. Quirk: `Address1` and
+  `Address2` came back as **empty arrays `[]`**, not empty strings, and
+  `Address3` as an empty string — despite the shipment having a real street
+  address (`"House No. 123, Model Town Road"`) in the original create.json
+  payload. Never observed non-empty, so the true populated type of
+  `Address1`/`Address2` (string? string[]?) is unconfirmed — typed
+  conservatively rather than guessed. `PinCode` is a **number** (`135001`),
+  same numeric-pincode quirk seen in the serviceability endpoint.
+- **PaymentMode / TotalAmount**: never appear at any verbosity, confirming
+  they are not real fields — the real equivalents are `OrderType`
+  (`"Pre-paid"`) and `InvoiceAmount` (`100`).
+- **Nothing present at `verbose=0` disappears at higher verbosity** — `1` and
+  `2` are strict supersets of `0` (verbose=1 adds `Scans`; verbose=2 adds
+  `Consignee` on top of that). No field was ever seen to vanish.
+- `verbose=2` was accepted normally (200 OK, no rejection, no error) —
+  contrary to what might be assumed, it's not an invalid/reserved value.
+
+---
+
+## CAPTURED — 2026-08-25 (scripts/delhivery-unknown-awb-check.ts, manual — Part 2 discovery)
+
+Read-only GET on a waybill that doesn't exist (`00000000000000`), needed to
+build honest "unknown AWB → null" handling instead of guessing the shape.
+No shipment created.
+
+### 12. Track, nonexistent AWB
+
+REQUEST:
+```
+GET https://track.delhivery.com/api/v1/packages/json/?waybill=00000000000000&verbose=2
+Authorization: Token ***REDACTED***
+Accept: application/json
+```
+
+RESPONSE: 200 OK
+```
+{
+    "Success": false,
+    "Error": "Data does not exists for provided Waybill(s)",
+    "rmk": "Some error has occurred. Please contact client.support@delhivery.com with error message- Data does not exists for provided Waybill(s)"
+}
+```
+
+**Important**: HTTP 200, not 404. Completely different top-level shape from
+the normal response (`{Success, Error, rmk}`, no `ShipmentData` key at all) —
+this is the only way to detect "unknown AWB" and it must be checked by shape,
+not by HTTP status.
