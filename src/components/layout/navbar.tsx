@@ -119,14 +119,18 @@ export function Navbar() {
       : "/login";
 
   return (
-    <header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-colors duration-300 border-b",
-        scrolled || openMenu
-          ? "bg-[var(--paper)]/92 backdrop-blur-xl border-[var(--line)]"
-          : "bg-transparent border-transparent"
-      )}
-    >
+    <header className="fixed top-0 left-0 right-0 z-50">
+      {/* backdrop-filter lives here, not on <header> — it establishes a new
+          containing block for position:fixed descendants, which would break
+          the mobile drawer's fixed top/bottom sizing against the viewport. */}
+      <div
+        className={cn(
+          "transition-colors duration-300 border-b",
+          scrolled || openMenu || isOpen
+            ? "bg-[var(--paper)]/92 backdrop-blur-xl border-[var(--line)]"
+            : "bg-transparent border-transparent"
+        )}
+      >
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="flex items-center justify-between h-[72px] md:h-[88px]">
           {/* Logo */}
@@ -358,16 +362,17 @@ export function Navbar() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Mobile drawer */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:hidden bg-[var(--paper)] border-t border-[var(--line)] overflow-hidden max-h-[calc(100vh-72px)] overflow-y-auto"
+            className="lg:hidden fixed left-0 right-0 top-[72px] md:top-[88px] bottom-0 z-40 bg-[var(--paper)] border-t border-[var(--line)] overflow-y-auto"
           >
             <nav className="flex flex-col px-4 py-5 gap-1">
               {simpleLinks.slice(0, 1).map((link) => (

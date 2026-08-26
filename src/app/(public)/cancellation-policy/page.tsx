@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCancellationPolicy } from "@/lib/orders/cancellation-policy";
+import { DEFAULT_CANCELLATION_POLICY } from "@/lib/orders/cancellation";
 
 export const metadata = {
   title: "Cancellation Policy | MotoXPlus India Pvt. Ltd.",
@@ -7,7 +8,12 @@ export const metadata = {
 };
 
 export default async function CancellationPolicyPage() {
-  const policy = await getCancellationPolicy();
+  // This is a static informational page, not the transactional cancel/refund
+  // path — falling back to the documented default on a transient DB error
+  // here is safe and keeps the page up; getCancellationPolicy() itself stays
+  // unguarded because api/orders/[id]/cancel relies on it throwing rather
+  // than silently charging a possibly-stale default.
+  const policy = await getCancellationPolicy().catch(() => DEFAULT_CANCELLATION_POLICY);
 
   return (
     // Same plain-div/no-<main> convention as terms/privacy — see the comment

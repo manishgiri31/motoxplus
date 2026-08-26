@@ -719,6 +719,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                   type="number"
                   value={quantity}
                   min={activeMoq}
+                  max={maxOrderQty > 0 ? maxOrderQty : undefined}
                   step={activeMoq}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
@@ -727,15 +728,16 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                   onBlur={(e) => {
                     const v = parseInt(e.target.value, 10);
                     if (isNaN(v) || v <= 0) { setQuantity(activeMoq); return; }
-                    // Snap to nearest multiple of MOQ, minimum 1× MOQ
+                    // Snap to nearest multiple of MOQ, minimum 1× MOQ, capped at available stock
                     const snapped = Math.max(activeMoq, Math.round(v / activeMoq) * activeMoq);
-                    setQuantity(snapped);
+                    setQuantity(maxOrderQty > 0 ? Math.min(snapped, maxOrderQty) : snapped);
                   }}
                   className="tnum w-16 text-center text-[var(--ink)] font-bold bg-transparent focus:outline-none py-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
-                  onClick={() => setQuantity(quantity + activeMoq)}
-                  className="px-4 py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition-colors"
+                  onClick={() => setQuantity(maxOrderQty > 0 ? Math.min(quantity + activeMoq, maxOrderQty) : quantity)}
+                  disabled={maxOrderQty > 0 && quantity >= maxOrderQty}
+                  className="px-4 py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
                 >
                   <Plus size={14} />
                 </button>
