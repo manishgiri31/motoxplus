@@ -43,6 +43,22 @@ The script locks `listen_addresses` to `localhost` and reports (doesn't auto-edi
 
 `ufw`: default-deny incoming, allow 80/443, rate-limited SSH, explicit deny on 5432 and 6379. The script prints `ss -tlnp` at the end — confirm nothing besides nginx (80/443) and sshd (22) is bound to a non-loopback address.
 
+**Known gap, not yet automated:** `ufw allow 80/tcp` / `443/tcp` accepts inbound from anywhere, not just Cloudflare. Combined with nginx trusting `CF-Connecting-IP` (see `cloudflare-ips.conf`), that means:
+- nginx's own `limit_req` zones (keyed on `$binary_remote_addr`, which `real_ip_header` only overwrites for peers in `cloudflare-ips.conf`) are **not** foolable this way — a direct connection that isn't actually from Cloudflare gets its own real IP, not a spoofed one.
+- The app layer is: `src/lib/auth/middleware.ts`'s `getClientIP()` (and the near-duplicate in `src/lib/auth.ts`) trusts the *first* entry of `X-Forwarded-For`, and nginx's `$proxy_add_x_forwarded_for` only *appends* — it never strips a client-supplied XFF from an untrusted peer. A request straight to the origin's IP (bypassing Cloudflare, which is easy to find — DNS history, Shodan, `.env`/deploy logs, etc.) can set its own `X-Forwarded-For` and forge the identity the app's per-IP rate limit keys on. This does NOT bypass the per-*identifier* budget or the DB-backed account lockout (both keyed on email/mobile, not IP), but it does defeat the per-IP layer and skips Cloudflare's own WAF/bot checks entirely.
+
+**Proposed fix** (not yet scripted into `harden.sh` — this changes live reachability and deserves a deliberate rollout, not a silent default): restrict `80`/`443` to Cloudflare's ranges only, reusing the same list `cloudflare-ips.conf` already tracks:
+```bash
+# after allowing 80/443 more broadly above, tighten to Cloudflare only:
+ufw delete allow 80/tcp
+ufw delete allow 443/tcp
+while read -r range; do
+  [[ "$range" =~ ^# ]] && continue
+  ufw allow from "$range" to any port 80,443 proto tcp comment "Cloudflare only"
+done < <(curl -s https://www.cloudflare.com/ips-v4; curl -s https://www.cloudflare.com/ips-v6)
+```
+Do this only after confirming nothing else needs direct origin access (uptime monitors, webhook senders that don't proxy through Cloudflare, etc. would need their own allow rules first) — and keep the ufw rules refreshed on the same schedule as `cloudflare-ips.conf` (`scripts/vps/refresh-cloudflare-ips.sh`), or a range rotation silently locks out real Cloudflare traffic instead of just attackers.
+
 ## 3. SSH (script step 3)
 
 Key-only auth, no root login, fail2ban on sshd (5 attempts / 10 min → 1 hour ban). **Before running**: confirm your own key is in `~/.ssh/authorized_keys` for the account you'll reconnect as — this script does not verify that, and getting locked out of a VPS with `PasswordAuthentication no` and no other access path means going through the hosting provider's console/rescue mode.

@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { AndroidAppButton } from "@/components/ui/android-app-button";
 import { HeroSection } from "@/components/home/hero-section";
 import { TrustStrip } from "@/components/home/trust-strip";
 import { CategoriesSection } from "@/components/home/categories-section";
@@ -42,6 +43,7 @@ export default async function HomePage() {
         <DealerProgram />
       </main>
       <Footer />
+      <AndroidAppButton />
     </>
   );
 }
