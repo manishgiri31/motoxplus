@@ -158,7 +158,13 @@ jobs:
             fi
             MISSING=()
             for v in "${REQUIRED_VARS[@]}"; do
-              VALUE=$(grep -E "^${v}=" "$ENV_FILE" | tail -n 1 | cut -d '=' -f2-)
+              # `grep` exits 1 when a variable is entirely absent from .env (as opposed to
+              # present-but-empty). Under `set -euo pipefail` that non-zero pipeline status
+              # would otherwise abort the whole script right here — silently, before the
+              # missing-variable reporting below ever runs. `|| true` lets an absent var
+              # fall through as an empty VALUE instead, so it's reported by name like any
+              # other missing/placeholder value.
+              VALUE=$(grep -E "^${v}=" "$ENV_FILE" | tail -n 1 | cut -d '=' -f2- || true)
               VALUE="${VALUE%\"}"; VALUE="${VALUE#\"}"
               VALUE="${VALUE%\'}"; VALUE="${VALUE#\'}"
               if [ -z "$VALUE" ] || [[ "$VALUE" == your_* ]] || [[ "$VALUE" == replace_with* ]]; then
