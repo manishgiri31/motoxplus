@@ -3,6 +3,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createDelhiveryShipment } from "@/lib/delhivery";
+import { DelhiveryConfigError } from "@/lib/delhivery/errors";
+
+// Route reads the session (cookies) on every request, so it was never a
+// static-render candidate — this just documents that explicitly. It does
+// NOT avoid `next build`'s "Collecting page data" step still importing this
+// module; that's what made the eager Delhivery env validation a build-time
+// failure. The real fix is that getDelhiveryConfig() is now lazy.
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -49,6 +57,13 @@ export async function POST(req: NextRequest) {
     const result = await createDelhiveryShipment(orderId);
     return NextResponse.json(result);
   } catch (err) {
+    if (err instanceof DelhiveryConfigError) {
+      console.error("[Admin] Delhivery is not configured:", err.message);
+      return NextResponse.json(
+        { error: "Shipping integration is not configured on the server" },
+        { status: 503 }
+      );
+    }
     console.error("[Admin] shipment creation error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Shipment creation failed" },

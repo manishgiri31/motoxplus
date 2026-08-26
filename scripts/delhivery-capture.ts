@@ -25,7 +25,7 @@ dotenv.config();
 
 import * as fs from "fs";
 import * as path from "path";
-import { delhiveryConfig } from "../src/lib/delhivery/config";
+import { getDelhiveryConfig } from "../src/lib/delhivery/config";
 import { buildCreateShipmentRequest } from "../src/lib/delhivery/shipment";
 import type { DelhiveryBulkWaybillResponse } from "../src/lib/delhivery/types";
 
@@ -55,7 +55,7 @@ const IS_DRY_RUN = process.argv.includes("--dry-run");
 const REFERENCE_FILE = path.resolve(__dirname, "../delhivery-reference.md");
 
 function redact(text: string): string {
-  return text.split(delhiveryConfig.token).join("***REDACTED***");
+  return text.split(getDelhiveryConfig().token).join("***REDACTED***");
 }
 
 function shoutAwb(awb: string) {
@@ -189,13 +189,14 @@ async function main() {
     console.log(JSON.stringify(request, null, 2));
     console.log("\nEncoded form body (format=json&data=<urlencoded JSON>):");
     console.log(new URLSearchParams({ format: "json", data: JSON.stringify(request) }).toString());
-    console.log("\nPickup/return + GST fields above came from delhiveryConfig — nothing here is hardcoded.");
+    console.log("\nPickup/return + GST fields above came from getDelhiveryConfig() — nothing here is hardcoded.");
     return;
   }
 
   assertRealConstants();
   const request = buildRequest();
-  const authHeaders = { Authorization: `Token ${delhiveryConfig.token}` };
+  const config = getDelhiveryConfig();
+  const authHeaders = { Authorization: `Token ${config.token}` };
   let awb: string | null = null;
 
   try {
@@ -203,7 +204,7 @@ async function main() {
     await call(
       "1. Pincode serviceability",
       "GET",
-      `${delhiveryConfig.baseUrl}/c/api/pin-codes/json/?filter_codes=${DEST_PINCODE}`,
+      `${config.baseUrl}/c/api/pin-codes/json/?filter_codes=${DEST_PINCODE}`,
       { ...authHeaders, Accept: "application/json" }
     );
 
@@ -216,7 +217,7 @@ async function main() {
     const { text: bulkWaybillText } = await call(
       "2. Bulk waybill fetch",
       "GET",
-      `${delhiveryConfig.baseUrl}/waybill/api/bulk/json/?cl=${encodeURIComponent(delhiveryConfig.clientName)}&count=1`,
+      `${config.baseUrl}/waybill/api/bulk/json/?cl=${encodeURIComponent(config.clientName)}&count=1`,
       { ...authHeaders, Accept: "application/json" }
     );
     // Response is a bare JSON string (e.g. "57930810000011"), not an object —
@@ -229,7 +230,7 @@ async function main() {
     const { text: createText } = await call(
       "3. Create shipment (REAL)",
       "POST",
-      `${delhiveryConfig.baseUrl}/api/cmu/create.json`,
+      `${config.baseUrl}/api/cmu/create.json`,
       { ...authHeaders, "Content-Type": "application/x-www-form-urlencoded" },
       formBody
     );
@@ -247,7 +248,7 @@ async function main() {
       await call(
         "4. Track",
         "GET",
-        `${delhiveryConfig.baseUrl}/api/v1/packages/json/?waybill=${awb}&verbose=0`,
+        `${config.baseUrl}/api/v1/packages/json/?waybill=${awb}&verbose=0`,
         { ...authHeaders, Accept: "application/json" }
       );
     } catch (err) {
@@ -269,7 +270,7 @@ async function main() {
         const { status: cancelStatus } = await call(
           "5. Cancel",
           "POST",
-          `${delhiveryConfig.baseUrl}/api/p/edit`,
+          `${config.baseUrl}/api/p/edit`,
           { ...authHeaders, "Content-Type": "application/json" },
           cancelBody
         );
@@ -299,7 +300,7 @@ async function main() {
             const { text: trackText } = await call(
               `6. Track (post-cancel, attempt ${attempt + 1}/${delaysMs.length})`,
               "GET",
-              `${delhiveryConfig.baseUrl}/api/v1/packages/json/?waybill=${awb}&verbose=0`,
+              `${config.baseUrl}/api/v1/packages/json/?waybill=${awb}&verbose=0`,
               { ...authHeaders, Accept: "application/json" }
             );
 
@@ -348,7 +349,7 @@ async function main() {
           await call(
             "7. Cancel again (already-cancelled AWB)",
             "POST",
-            `${delhiveryConfig.baseUrl}/api/p/edit`,
+            `${config.baseUrl}/api/p/edit`,
             { ...authHeaders, "Content-Type": "application/json" },
             secondCancelBody
           );

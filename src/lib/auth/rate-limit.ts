@@ -4,7 +4,7 @@ import { UNKNOWN_IP } from "./middleware";
 import type Redis from "ioredis";
 
 const LOCK_THRESHOLD = 5;
-const LOCK_DURATION_MINUTES = 30;
+export const LOCK_DURATION_MINUTES = 30;
 
 export async function recordFailedLogin(userId: string): Promise<{ locked: boolean; attemptsLeft: number }> {
   const user = await prisma.user.update({

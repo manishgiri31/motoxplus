@@ -1,5 +1,5 @@
 import { delhiveryPost } from "./client";
-import { delhiveryConfig } from "./config";
+import { getDelhiveryConfig } from "./config";
 import { prisma } from "@/lib/prisma";
 import type {
   DelhiveryCreateShipmentRequest,
@@ -7,14 +7,6 @@ import type {
   DelhiveryPickupLocation,
   DelhiveryShipmentPayload,
 } from "./types";
-
-const ORIGIN_PINCODE = delhiveryConfig.pickup.pincode;
-const PICKUP_NAME = delhiveryConfig.pickup.name;
-const PICKUP_ADDRESS = delhiveryConfig.pickup.address;
-const PICKUP_CITY = delhiveryConfig.pickup.city;
-const PICKUP_STATE = delhiveryConfig.pickup.state;
-const PICKUP_PHONE = delhiveryConfig.pickup.phone;
-const SELLER_GST = delhiveryConfig.companyGst;
 
 export interface BuildShipmentPayloadInput {
   destName: string;
@@ -42,6 +34,7 @@ export interface BuildShipmentPayloadInput {
  * traffic goes through instead of a hand-rolled copy that can drift.
  */
 export function buildShipmentPayload(input: BuildShipmentPayloadInput): DelhiveryShipmentPayload {
+  const { pickup, companyGst } = getDelhiveryConfig();
   return {
     name: input.destName,
     add: input.destAddress,
@@ -52,19 +45,19 @@ export function buildShipmentPayload(input: BuildShipmentPayloadInput): Delhiver
     phone: input.destPhone,
     order: input.orderRef,
     payment_mode: input.paymentMode,
-    return_pin: ORIGIN_PINCODE,
-    return_city: PICKUP_CITY,
-    return_phone: PICKUP_PHONE,
-    return_name: PICKUP_NAME,
-    return_add: PICKUP_ADDRESS,
-    return_state: PICKUP_STATE,
+    return_pin: pickup.pincode,
+    return_city: pickup.city,
+    return_phone: pickup.phone,
+    return_name: pickup.name,
+    return_add: pickup.address,
+    return_state: pickup.state,
     return_country: "India",
     products_desc: input.productsDesc,
     hsn_code: input.hsnCode,
     cod_amount: input.codAmount,
     order_date: input.orderDate,
     total_amount: input.totalAmount,
-    seller_gst_tin: SELLER_GST,
+    seller_gst_tin: companyGst,
     shipping_mode: "Surface",
     address_type: input.addressType,
     quantity: input.quantity,
@@ -79,13 +72,14 @@ export function buildShipmentPayload(input: BuildShipmentPayloadInput): Delhiver
  * on the Delhivery client, NOT the same value as return_name/PICKUP_NAME above.
  */
 export function buildPickupLocation(): DelhiveryPickupLocation {
+  const { pickup } = getDelhiveryConfig();
   return {
-    name: delhiveryConfig.pickup.locationName,
-    add: PICKUP_ADDRESS,
-    city: PICKUP_CITY,
-    pin_code: ORIGIN_PINCODE,
+    name: pickup.locationName,
+    add: pickup.address,
+    city: pickup.city,
+    pin_code: pickup.pincode,
     country: "India",
-    phone: PICKUP_PHONE,
+    phone: pickup.phone,
   };
 }
 

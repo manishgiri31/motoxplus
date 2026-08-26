@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-// cancel.ts imports delhiveryConfig directly (not through client.ts, which
-// every other test file mocks instead) — without this, config.ts's real
-// top-level env validation runs unmocked under vitest (which doesn't load
-// .env the way the ts-node capture scripts do) and throws before any test
-// can run.
+// cancel.ts calls getDelhiveryConfig() directly (not through client.ts, which
+// every other test file mocks instead). config.ts's real validation is lazy
+// now, so this mock isn't strictly required to avoid a throw — but it's kept
+// so tests don't depend on real env vars being set under vitest.
 vi.mock("./config", () => ({
-  delhiveryConfig: {
+  getDelhiveryConfig: () => ({
     token: "test-token-1234567890123456789",
     baseUrl: "https://track.delhivery.com",
     pickup: {
@@ -20,7 +19,7 @@ vi.mock("./config", () => ({
     },
     companyGst: "07AAUCM5765B1Z4",
     clientName: "test-client",
-  },
+  }),
 }));
 
 import { cancelDelhiveryShipment } from "./cancel";

@@ -18,6 +18,7 @@
     "db:seed-cables": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed-cables.ts",
     "db:fix-odd-prices": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/fix-odd-prices.ts",
     "db:studio": "prisma studio",
+    "unlock-logins": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/unlock-logins.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

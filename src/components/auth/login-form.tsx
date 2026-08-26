@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock, MessageCircle, ShieldCheck, ChevronRight, ChevronLeft } from "lucide-react";
@@ -52,12 +51,18 @@ export function LoginForm() {
 
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
+  // Set only for a 429/423 password-step response — drives the countdown +
+  // "Forgot password?" prompt instead of the plain error banner. Kept
+  // separate from `error` so the two states can't fight over which one
+  // renders (see handlePasswordLogin).
+  const [lockout, setLockout] = useState<{ message: string; retryAfterSeconds: number } | null>(null);
 
   const masked = kind === "mobile" ? maskMobile(resolvedIdentifier) : maskEmail(resolvedIdentifier);
 
   function resetTo(next: Step) {
     setStep(next);
     setError("");
+    setLockout(null);
     setStatus("idle");
   }
 
@@ -119,12 +124,53 @@ export function LoginForm() {
     e.preventDefault();
     setStatus("loading");
     setError("");
-    const result = await signIn("credentials", { identifier: resolvedIdentifier, password, redirect: false });
-    if (result?.error) {
-      setError(result.error);
+    setLockout(null);
+
+    // Hits the same REST endpoint the mobile app uses (and that OTP login on
+    // this very form already uses — see requestOtp/verifyOtp above) instead
+    // of NextAuth's signIn("credentials"). NextAuth's credentials flow always
+    // returns HTTP 401 for every authorize() failure — rate-limited, locked,
+    // wrong password, disabled, no exceptions — and only ever hands the
+    // client a bare error *string*, with no status code or Retry-After
+    // header to act on. That's what made a real 429 indistinguishable from
+    // a wrong password client-side, and made a countdown impossible: the
+    // server computes retryAfterSeconds but NextAuth's transport had nowhere
+    // to put it. This endpoint returns real status codes and headers.
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(kind === "mobile" ? { mobile: resolvedIdentifier, password } : { email: resolvedIdentifier, password }),
+      });
+    } catch {
+      setError("Network error. Check your connection and try again.");
       setStatus("error");
       return;
     }
+
+    let data: { error?: string; retryAfterSeconds?: number } = {};
+    try {
+      data = await res.json();
+    } catch {
+      // Non-JSON body (e.g. a proxy/CDN error page in front of the app) —
+      // fall through to the generic message below rather than throwing.
+    }
+
+    if (!res.ok) {
+      if (res.status === 429 || res.status === 423) {
+        const headerSeconds = Number(res.headers.get("Retry-After"));
+        const retryAfterSeconds = Number.isFinite(headerSeconds) && headerSeconds > 0 ? headerSeconds : (data.retryAfterSeconds ?? 60);
+        setLockout({ message: data.error || "Too many attempts.", retryAfterSeconds });
+      } else if (res.status === 401 || res.status === 400 || res.status === 403) {
+        setError(data.error || "Incorrect email/mobile or password.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+      setStatus("error");
+      return;
+    }
+
     // Full reload instead of router.push+refresh: those race against each
     // other on a slow backend, and refresh() can reapply the stale /login
     // segment after push() has already navigated, bouncing the user back
@@ -278,8 +324,12 @@ export function LoginForm() {
               </button>
             </div>
           </div>
-          {error && <ErrorBanner message={error} />}
-          <button type="submit" disabled={status === "loading"} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm mt-2">
+          {lockout ? (
+            <LockoutBanner message={lockout.message} retryAfterSeconds={lockout.retryAfterSeconds} onExpire={() => setLockout(null)} />
+          ) : (
+            error && <ErrorBanner message={error} />
+          )}
+          <button type="submit" disabled={status === "loading" || !!lockout} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm mt-2">
             {status === "loading" ? <><Spinner size={15} /> Signing in...</> : <>Sign In <ChevronRight size={15} /></>}
           </button>
           <button type="button" onClick={() => resetTo("method")} className="w-full flex items-center justify-center gap-1.5 text-[var(--muted)] hover:text-[var(--ink)] transition-colors text-xs">
@@ -342,6 +392,26 @@ function ErrorBanner({ message, center = false }: { message: string; center?: bo
     <div className={`bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-sm px-4 py-3 text-[var(--sig-danger-fg)] text-sm flex items-center gap-2 ${center ? "justify-center text-center" : ""}`} role="alert">
       <span className="w-1.5 h-1.5 rounded-full bg-[var(--sig-danger-fg)] flex-shrink-0" />
       {message}
+    </div>
+  );
+}
+
+// A 429 (rate limited) or 423 (account locked) password-step response gets
+// this instead of the plain ErrorBanner: unlike a wrong password, there's a
+// real wait time attached, and the account owner's actual way out is usually
+// a reset, not more guessing — so both get surfaced instead of leaving the
+// user staring at a dead end with no sense of when (or how) to try again.
+function LockoutBanner({ message, retryAfterSeconds, onExpire }: { message: string; retryAfterSeconds: number; onExpire: () => void }) {
+  return (
+    <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-sm px-4 py-3 text-[var(--sig-danger-fg)] text-sm space-y-2" role="alert">
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--sig-danger-fg)] flex-shrink-0" />
+        {message}
+      </div>
+      <CountdownTimer seconds={retryAfterSeconds} label="Try again" compact onComplete={onExpire} />
+      <Link href="/forgot-password" className="inline-block font-semibold underline hover:no-underline">
+        Reset your password instead →
+      </Link>
     </div>
   );
 }

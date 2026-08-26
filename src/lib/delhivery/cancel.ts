@@ -1,4 +1,4 @@
-import { delhiveryConfig } from "./config";
+import { getDelhiveryConfig } from "./config";
 import type { DelhiveryCancelResponse } from "./types";
 
 /**
@@ -117,10 +117,11 @@ export interface CancelResult {
  * it up must not defeat any of the properties documented above.
  */
 export async function cancelDelhiveryShipment(waybill: string): Promise<CancelResult> {
-  const response = await fetch(`${delhiveryConfig.baseUrl}/api/p/edit`, {
+  const { baseUrl, token } = getDelhiveryConfig();
+  const response = await fetch(`${baseUrl}/api/p/edit`, {
     method: "POST",
     headers: {
-      Authorization: `Token ${delhiveryConfig.token}`,
+      Authorization: `Token ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ waybill, cancellation: "true" }),

@@ -110,7 +110,6 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           timeout: 20m
           command_timeout: 20m
-          script_stop: true
           envs: TARGET_SHA
           script: |
             set -euo pipefail
@@ -122,6 +121,59 @@ jobs:
             echo " MotoXPlus Production Deployment"
             echo " Target commit: ${TARGET_SHA}"
             echo "====================================="
+
+            echo ""
+            echo "===== Preflight: Required Environment Variables ====="
+            # Keep this list in sync with src/lib/env.ts (REQUIRED_SERVER) and
+            # the zod schema in src/lib/delhivery/config.ts. DELHIVERY_BASE_URL
+            # is excluded — it has a working default in code.
+            REQUIRED_VARS=(
+              DATABASE_URL
+              NEXTAUTH_URL
+              NEXTAUTH_SECRET
+              JWT_SECRET
+              ENCRYPTION_KEY
+              R2_ACCOUNT_ID
+              R2_ACCESS_KEY_ID
+              R2_SECRET_ACCESS_KEY
+              R2_BUCKET_NAME
+              R2_PUBLIC_URL
+              RESEND_API_KEY
+              EMAIL_FROM
+              DELHIVERY_TOKEN
+              DELHIVERY_PICKUP_NAME
+              DELHIVERY_PICKUP_ADDRESS
+              DELHIVERY_PICKUP_CITY
+              DELHIVERY_PICKUP_STATE
+              DELHIVERY_PICKUP_PHONE
+              DELHIVERY_ORIGIN_PINCODE
+              COMPANY_GST
+              DELHIVERY_CLIENT_NAME
+              DELHIVERY_PICKUP_LOCATION_NAME
+            )
+            ENV_FILE="$APP_DIR/.env"
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "::error::$ENV_FILE not found — cannot verify required environment variables. Aborting before touching the database or building."
+              exit 1
+            fi
+            MISSING=()
+            for v in "${REQUIRED_VARS[@]}"; do
+              VALUE=$(grep -E "^${v}=" "$ENV_FILE" | tail -n 1 | cut -d '=' -f2-)
+              VALUE="${VALUE%\"}"; VALUE="${VALUE#\"}"
+              VALUE="${VALUE%\'}"; VALUE="${VALUE#\'}"
+              if [ -z "$VALUE" ] || [[ "$VALUE" == your_* ]] || [[ "$VALUE" == replace_with* ]]; then
+                MISSING+=("$v")
+              fi
+            done
+            if [ "${#MISSING[@]}" -gt 0 ]; then
+              echo "::error::Missing or placeholder environment variable(s) in $ENV_FILE (names only):"
+              for v in "${MISSING[@]}"; do
+                echo "::error::  - $v"
+              done
+              echo "::error::Aborting before touching the database or building."
+              exit 1
+            fi
+            echo "All ${#REQUIRED_VARS[@]} required environment variables are present in $ENV_FILE."
 
             PREV_SHA=$(git rev-parse HEAD)
             echo "$PREV_SHA" > "$APP_DIR/.deploy_prev_sha"
@@ -146,6 +198,19 @@ jobs:
             npx prisma generate
 
             echo ""
+            echo "===== Build Next.js ====="
+            # Deliberately runs BEFORE migrations: a build failure here leaves
+            # the database untouched and the old build still serving traffic.
+            # See the NOTE below the migration step for why the reverse order
+            # (the old order) was a problem.
+            if ! npm run build > "$APP_DIR/.build.log" 2>&1; then
+              echo "::error::Build failed"
+              tail -n 150 "$APP_DIR/.build.log"
+              exit 1
+            fi
+            tail -n 30 "$APP_DIR/.build.log"
+
+            echo ""
             echo "===== Run Prisma Migrations ====="
             echo "NOTE: from this point on, failures are NOT automatically rolled back."
             if ! npx prisma migrate deploy > "$APP_DIR/.migrate.log" 2>&1; then
@@ -154,15 +219,6 @@ jobs:
               exit 1
             fi
             cat "$APP_DIR/.migrate.log"
-
-            echo ""
-            echo "===== Build Next.js ====="
-            if ! npm run build > "$APP_DIR/.build.log" 2>&1; then
-              echo "::error::Build failed"
-              tail -n 150 "$APP_DIR/.build.log"
-              exit 1
-            fi
-            tail -n 30 "$APP_DIR/.build.log"
 
             echo ""
             echo "===== Reload PM2 (zero-downtime) ====="

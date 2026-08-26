@@ -429,6 +429,19 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
             ))}
           </div>
 
+          {/* Stock availability */}
+          {(!hasVariants || resolvedVariant) && (
+            <div
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-3 py-1 mb-6 border rounded-sm w-fit ${
+                getStockStatus(activeStock) === "in_stock"
+                  ? "bg-[var(--sig-ok-bg)] text-[var(--sig-ok-fg)] border-[var(--sig-ok-bd)]"
+                  : "bg-[var(--sig-warn-bg)] text-[var(--sig-warn-fg)] border-[var(--sig-warn-bd)]"
+              }`}
+            >
+              {stockStatusLabel(activeStock)}
+            </div>
+          )}
+
           {/* Package dims */}
           {(product.packageWeight || product.packageLength) && (
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-4 mb-6 flex items-start gap-3">

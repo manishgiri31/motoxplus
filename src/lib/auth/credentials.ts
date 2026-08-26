@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, peekRateLimit, resetRateLimit } from "./rate-limit";
+import { checkRateLimit, peekRateLimit, resetRateLimit, LOCK_DURATION_MINUTES } from "./rate-limit";
 import { recordFailedLogin, clearFailedLogins, isAccountLocked } from "./rate-limit";
 import { RATE_LIMITS } from "./rate-limit-budgets";
 import { UNKNOWN_IP } from "./middleware";
@@ -94,16 +94,17 @@ export async function authenticateWithPassword(opts: AuthenticateWithPasswordOpt
 
   const lockStatus = await isAccountLocked(user.id);
   if (lockStatus.locked) {
-    const minutesLeft = lockStatus.until ? Math.ceil((lockStatus.until.getTime() - Date.now()) / 60000) : 30;
+    const secondsLeft = lockStatus.until ? Math.max(1, Math.ceil((lockStatus.until.getTime() - Date.now()) / 1000)) : LOCK_DURATION_MINUTES * 60;
     await logFailure(user.id, "Account locked");
-    return { ok: false, code: "ACCOUNT_LOCKED", message: `Account locked. Try again in ${minutesLeft} minutes.` };
+    return { ok: false, code: "ACCOUNT_LOCKED", message: `Account locked. Try again in ${formatRetryAfter(secondsLeft)}.`, retryAfterSeconds: secondsLeft };
   }
 
   const isValid = await bcrypt.compare(opts.password, user.password);
   if (!isValid) {
     const [result] = await Promise.all([recordFailedLogin(user.id), recordLoginFailure(), logFailure(user.id, "Incorrect password")]);
     if (result.locked) {
-      return { ok: false, code: "ACCOUNT_LOCKED", message: "Account locked after too many failed attempts. Try again in 30 minutes." };
+      const secondsLeft = LOCK_DURATION_MINUTES * 60;
+      return { ok: false, code: "ACCOUNT_LOCKED", message: `Account locked after too many failed attempts. Try again in ${formatRetryAfter(secondsLeft)}.`, retryAfterSeconds: secondsLeft };
     }
     return { ok: false, code: "INVALID_CREDENTIALS", message: `Invalid email/mobile or password. ${result.attemptsLeft} attempt(s) remaining.` };
   }

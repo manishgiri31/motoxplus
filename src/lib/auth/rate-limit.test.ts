@@ -84,4 +84,74 @@ describe("checkRateLimit — cold-start Redis connection race", () => {
     const result = await checkRateLimit("test:key:open", { max: 5, windowSeconds: 60, failMode: "open" });
     expect(result.allowed).toBe(true); // in-memory fallback allows the first request
   });
+
+  it("falls open to in-memory when Redis is ready but the command itself throws (a mid-connection blip, not a cold start)", async () => {
+    fakeRedis = new FakeRedis(null);
+    fakeRedis.status = "ready";
+    fakeRedis.eval = async () => { throw new Error("READONLY You can't write against a read only replica."); };
+    const { checkRateLimit } = await import("./rate-limit");
+
+    const result = await checkRateLimit("test:key:blip", { max: 5, windowSeconds: 60, failMode: "open" });
+    expect(result.allowed).toBe(true);
+  });
+});
+
+describe("checkRateLimit / peekRateLimit — key isolation and window behavior (in-memory backend)", () => {
+  it("two different keys never share a bucket", async () => {
+    fakeRedis = null; // getRedis() returns null -> in-memory path
+    const { checkRateLimit } = await import("./rate-limit");
+
+    for (let i = 0; i < 5; i++) {
+      await checkRateLimit("isolation:key-a", { max: 5, windowSeconds: 60 });
+    }
+    const keyABlocked = await checkRateLimit("isolation:key-a", { max: 5, windowSeconds: 60 });
+    expect(keyABlocked.allowed).toBe(false);
+
+    // A completely different key must start from zero, not inherit key-a's count.
+    const keyBResult = await checkRateLimit("isolation:key-b", { max: 5, windowSeconds: 60 });
+    expect(keyBResult.allowed).toBe(true);
+  });
+
+  it("peekRateLimit reports blocked without incrementing — an unlimited number of peeks never trips the limit on their own", async () => {
+    fakeRedis = null;
+    const { peekRateLimit, checkRateLimit } = await import("./rate-limit");
+
+    for (let i = 0; i < 50; i++) {
+      const peeked = await peekRateLimit("isolation:peek-only", { max: 3, windowSeconds: 60 });
+      expect(peeked.allowed).toBe(true);
+    }
+    // Only an actual checkRateLimit() call (a real failure, in the login
+    // flow) should count against the budget.
+    await checkRateLimit("isolation:peek-only", { max: 3, windowSeconds: 60 });
+    const afterOneRealFailure = await peekRateLimit("isolation:peek-only", { max: 3, windowSeconds: 60 });
+    expect(afterOneRealFailure.allowed).toBe(true); // 1 of 3 used, still allowed
+  });
+
+  it("resetRateLimit clears the bucket immediately, independent of the window", async () => {
+    fakeRedis = null;
+    const { checkRateLimit, resetRateLimit } = await import("./rate-limit");
+
+    for (let i = 0; i < 5; i++) {
+      await checkRateLimit("isolation:reset-me", { max: 5, windowSeconds: 900 });
+    }
+    expect((await checkRateLimit("isolation:reset-me", { max: 5, windowSeconds: 900 })).allowed).toBe(false);
+
+    await resetRateLimit("isolation:reset-me");
+
+    expect((await checkRateLimit("isolation:reset-me", { max: 5, windowSeconds: 900 })).allowed).toBe(true);
+  });
+
+  it("the block expires once the window elapses — a lockout is never permanent", async () => {
+    fakeRedis = null;
+    const { checkRateLimit } = await import("./rate-limit");
+
+    for (let i = 0; i < 3; i++) {
+      await checkRateLimit("isolation:expiring", { max: 3, windowSeconds: 1 });
+    }
+    expect((await checkRateLimit("isolation:expiring", { max: 3, windowSeconds: 1 })).allowed).toBe(false);
+
+    await new Promise((r) => setTimeout(r, 1100));
+
+    expect((await checkRateLimit("isolation:expiring", { max: 3, windowSeconds: 1 })).allowed).toBe(true);
+  });
 });

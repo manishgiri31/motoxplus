@@ -1,7 +1,4 @@
-import { delhiveryConfig } from "./config";
-
-const BASE_URL = delhiveryConfig.baseUrl;
-const API_TOKEN = delhiveryConfig.token;
+import { getDelhiveryConfig } from "./config";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -19,9 +16,10 @@ export async function delhiveryFetch<T>(
   options: FetchOptions = {}
 ): Promise<T> {
   const { retries = MAX_RETRIES, ...fetchOptions } = options;
+  const { baseUrl, token } = getDelhiveryConfig();
 
   const headers: Record<string, string> = {
-    Authorization: `Token ${API_TOKEN}`,
+    Authorization: `Token ${token}`,
     Accept: "application/json",
     ...(fetchOptions.headers as Record<string, string>),
   };
@@ -30,7 +28,7 @@ export async function delhiveryFetch<T>(
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const response = await fetch(`${BASE_URL}${path}`, {
+      const response = await fetch(`${baseUrl}${path}`, {
         ...fetchOptions,
         headers,
         signal: AbortSignal.timeout(15000),
