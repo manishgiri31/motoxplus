@@ -80,7 +80,7 @@ const config: Config = {
         green: colorRamp("green"),
         emerald: colorRamp("emerald"),
         amber: colorRamp("amber"),
-        yellow: colorRamp("yellow"),
+        yellow: colorRamp("pink"),
         orange: colorRamp("orange"),
         blue: colorRamp("blue"),
         cyan: colorRamp("cyan"),
