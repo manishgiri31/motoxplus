@@ -7,6 +7,8 @@ import { restockItems } from "@/lib/orders/stock";
 import {
   evaluateCancellation,
   calculateCancellation,
+  isDealerPostShipBlocked,
+  DEALER_POST_SHIP_BLOCK_MESSAGE,
   type CancellationStage,
   type OrderStatusForCancellation,
   type PaymentTypeForCancellation,
@@ -35,9 +37,18 @@ interface CancelBody {
   waive?: boolean;
 }
 
-async function buildPreviewPayload(orderId: string) {
+async function buildPreviewPayload(orderId: string, isDealerActor: boolean) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return null;
+  // TEMPORARY STOPGAP — see docs/delhivery-open-items.md item 1.
+  if (isDealerPostShipBlocked(order.status as OrderStatusForCancellation, isDealerActor)) {
+    return {
+      allowed: false as const,
+      grandTotal: order.grandTotal,
+      amountPaid: order.amountPaid,
+      reason: DEALER_POST_SHIP_BLOCK_MESSAGE,
+    };
+  }
   const policy = await getCancellationPolicy();
   const eligibility = evaluateCancellation({
     status: order.status as OrderStatusForCancellation,
@@ -99,6 +110,11 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }
   }
 
+  // TEMPORARY STOPGAP — see docs/delhivery-open-items.md item 1.
+  if (isDealerPostShipBlocked(order.status as OrderStatusForCancellation, isDealerActor)) {
+    return NextResponse.json({ allowed: false, reason: DEALER_POST_SHIP_BLOCK_MESSAGE }, { status: 422 });
+  }
+
   const policy = await getCancellationPolicy();
   const eligibility = evaluateCancellation({
     status: order.status as OrderStatusForCancellation,
@@ -113,7 +129,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   // Order moved stage between the dealer/admin's preview and this confirm —
   // reject and hand back fresh numbers rather than charging a fee they never saw.
   if (body.expectedStage && body.expectedStage !== eligibility.stage) {
-    const preview = await buildPreviewPayload(order.id);
+    const preview = await buildPreviewPayload(order.id, isDealerActor);
     return NextResponse.json({ error: "Order status changed", preview }, { status: 409 });
   }
 
@@ -176,7 +192,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     });
   } catch (err) {
     if (err instanceof OrderChangedError) {
-      const preview = await buildPreviewPayload(order.id);
+      const preview = await buildPreviewPayload(order.id, isDealerActor);
       return NextResponse.json({ error: "Order status changed", preview }, { status: 409 });
     }
     throw err;

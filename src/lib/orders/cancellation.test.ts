@@ -3,6 +3,7 @@ import {
   evaluateCancellation,
   calculateCancellation,
   stageOf,
+  isDealerPostShipBlocked,
   DEFAULT_CANCELLATION_POLICY,
 } from "./cancellation";
 
@@ -112,6 +113,36 @@ describe("already cancelled / returned — blocked", () => {
       ok: false,
       code: "RETURNED",
     });
+  });
+});
+
+describe("isDealerPostShipBlocked — stopgap pending cancelDelhiveryShipment wiring (docs/delhivery-open-items.md item 1)", () => {
+  it("blocks a dealer cancelling a SHIPPED order", () => {
+    expect(isDealerPostShipBlocked("SHIPPED", true)).toBe(true);
+  });
+
+  it("does not block a dealer cancelling pre-shipment (PENDING/CONFIRMED/PROCESSING) — unchanged", () => {
+    for (const status of ["PENDING", "CONFIRMED", "PROCESSING"] as const) {
+      expect(isDealerPostShipBlocked(status, true)).toBe(false);
+    }
+  });
+
+  it("does not block admin-initiated cancellation of a SHIPPED order", () => {
+    expect(isDealerPostShipBlocked("SHIPPED", false)).toBe(false);
+  });
+
+  it("does not additionally block DELIVERED/CANCELLED/RETURNED for a dealer — evaluateCancellation already blocks those for everyone", () => {
+    for (const status of ["DELIVERED", "CANCELLED", "RETURNED"] as const) {
+      expect(isDealerPostShipBlocked(status, true)).toBe(false);
+    }
+  });
+
+  it("leaves evaluateCancellation's own SHIPPED eligibility untouched (admin-usable 20% post-ship rate still computed correctly)", () => {
+    // Confirms the stopgap is purely additive: evaluateCancellation itself
+    // still returns exactly what it did before, for whoever isn't blocked
+    // by isDealerPostShipBlocked at the call site (i.e. admins).
+    const eligibility = evaluateCancellation({ status: "SHIPPED", paymentType: "FULL_100", policy });
+    expect(eligibility).toEqual({ ok: true, stage: "POST_SHIP", feePercent: 20 });
   });
 });
 

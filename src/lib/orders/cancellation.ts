@@ -139,3 +139,31 @@ export function calculateCancellation(params: {
 }
 
 export const CANCELLABLE_STATUSES: OrderStatusForCancellation[] = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED"];
+
+/**
+ * TEMPORARY STOPGAP — see docs/delhivery-open-items.md item 1. Does NOT
+ * touch evaluateCancellation/calculateCancellation above: those still
+ * correctly return ok:true/POST_SHIP/20% for a SHIPPED FULL_100 or
+ * ADVANCE_20 order (see cancellation.test.ts) — that's the real,
+ * admin-usable eligibility. This is a separate, additive check callers use
+ * to block the DEALER path specifically, on top of that.
+ *
+ * Why: cancelDelhiveryShipment (src/lib/delhivery/cancel.ts) exists but is
+ * not wired to any route yet. Today, a dealer self-cancelling a SHIPPED
+ * order gets a refund computed and nothing cancels the real Delhivery
+ * parcel — it keeps moving. Block dealer self-cancellation once SHIPPED
+ * until that's wired in properly; leave admin-initiated cancellation
+ * untouched (admins can still act as needed).
+ *
+ * Only SHIPPED is checked, not "SHIPPED and later": OrderStatus has no
+ * separate "out for delivery"/"in transit" value between SHIPPED and
+ * DELIVERED (shipment-leg tracking lives on the separate Shipment model),
+ * and DELIVERED/CANCELLED/RETURNED are already blocked for everyone by
+ * evaluateCancellation above regardless of actor.
+ */
+export function isDealerPostShipBlocked(status: OrderStatusForCancellation, isDealerActor: boolean): boolean {
+  return isDealerActor && status === "SHIPPED";
+}
+
+export const DEALER_POST_SHIP_BLOCK_MESSAGE =
+  "This order has already shipped and can no longer be cancelled online. Please contact support.";

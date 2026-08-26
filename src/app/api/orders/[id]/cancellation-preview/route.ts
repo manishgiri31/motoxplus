@@ -4,6 +4,8 @@ import { getCurrentUserId } from "@/lib/auth/current-user";
 import {
   evaluateCancellation,
   calculateCancellation,
+  isDealerPostShipBlocked,
+  DEALER_POST_SHIP_BLOCK_MESSAGE,
   type OrderStatusForCancellation,
   type PaymentTypeForCancellation,
 } from "@/lib/orders/cancellation";
@@ -26,13 +28,25 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
   const order = await prisma.order.findUnique({ where: { id: params.id } });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  if (authUser.role === "DEALER") {
+  const isDealerActor = authUser.role === "DEALER";
+
+  if (isDealerActor) {
     const dealer = await prisma.dealer.findUnique({ where: { userId } });
     if (!dealer || order.dealerId !== dealer.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   } else if (!["ADMIN", "SUPER_ADMIN", "ACCOUNTS"].includes(authUser.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // TEMPORARY STOPGAP — see docs/delhivery-open-items.md item 1.
+  if (isDealerPostShipBlocked(order.status as OrderStatusForCancellation, isDealerActor)) {
+    return NextResponse.json({
+      allowed: false,
+      grandTotal: order.grandTotal,
+      amountPaid: order.amountPaid,
+      reason: DEALER_POST_SHIP_BLOCK_MESSAGE,
+    });
   }
 
   const policy = await getCancellationPolicy();
