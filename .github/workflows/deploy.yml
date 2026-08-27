@@ -158,18 +158,15 @@ jobs:
               DELHIVERY_CLIENT_NAME
               DELHIVERY_PICKUP_LOCATION_NAME
             )
-            ENV_FILE="$APP_DIR/.env"
+            ENV_FILE="/var/www/motoxplus/.env"
 
-            # ----- TEMP DIAGNOSTIC (safe: no secret values ever printed) -----
-            # Remove this block once the preflight check is confirmed reliable
-            # on production again.
+            # ----- Diagnostic (safe: no secret values ever printed) -----
             echo "----- Diagnostic -----"
             echo "whoami:   $(whoami)"
             echo "hostname: $(hostname)"
             echo "pwd:      $(pwd)"
             echo "APP_DIR:  $APP_DIR"
             echo "ENV_FILE: $ENV_FILE"
-            # ----- END TEMP DIAGNOSTIC (part 1; per-variable status below) -----
 
             if [ ! -f "$ENV_FILE" ]; then
               echo "::error::$ENV_FILE not found — cannot verify required environment variables. Aborting before touching the database or building."
@@ -182,6 +179,11 @@ jobs:
             fi
             ls -l "$ENV_FILE"
             stat -c 'owner=%U group=%G perms=%A size=%sB mtime=%y' "$ENV_FILE" 2>/dev/null || stat "$ENV_FILE"
+            # `file` reveals encoding/line-ending surprises (BOM, CRLF) that
+            # silently corrupt line-based parsing without leaking content.
+            file "$ENV_FILE" 2>/dev/null || true
+            echo "Total lines in file: $(wc -l < "$ENV_FILE")"
+            echo "----- END file diagnostic -----"
 
             # Pure-bash whitespace trim (no sed/awk subprocess, nothing that can
             # itself fail a pipeline under `set -e`).
@@ -208,12 +210,25 @@ jobs:
             #      whole file format (KEY=VALUE, one per line).
             # A single `while read` loop over the file has no pipe, so
             # pipefail/grep's exit code are simply not in the picture.
+            #
+            # FIX (this pass): a line written as `export KEY="value"` (a .env
+            # meant to also be `source`-able) previously parsed to a KEY of
+            # literally "export KEY" — which never matches anything in
+            # REQUIRED_VARS, so a genuinely-present, valid value was reported
+            # MISSING. Strip a leading `export` keyword before using the key.
             declare -A ENV_VALUES=()
+            declare -A ENV_COUNTS=()
             while IFS='=' read -r key rest || [ -n "$key" ]; do
               key="${key%$'\r'}"
               key="$(_trim "$key")"
               [ -z "$key" ] && continue
               case "$key" in \#*) continue ;; esac
+              # Strip an optional leading `export ` (any amount of whitespace
+              # after it) so `export KEY=...` and `KEY=...` parse identically.
+              case "$key" in
+                export[[:space:]]*) key="${key#export}"; key="$(_trim "$key")" ;;
+              esac
+              [ -z "$key" ] && continue
               value="${rest%$'\r'}"
               value="$(_trim "$value")"
               # Strip exactly one layer of matching surrounding quotes.
@@ -222,10 +237,25 @@ jobs:
               elif [[ "$value" == \'*\' && ${#value} -ge 2 ]]; then
                 value="${value:1:${#value}-2}"
               fi
-              # Last definition of a key wins, matching the previous script's
-              # `tail -n 1` behavior for a file with a duplicate key.
+              # Last definition of a key wins, matching both the previous
+              # script's `tail -n 1` behavior and how dotenv/shell sourcing
+              # itself resolves a duplicate key (later assignment overwrites).
               ENV_VALUES["$key"]="$value"
+              ENV_COUNTS["$key"]=$(( ${ENV_COUNTS["$key"]:-0} + 1 ))
             done < "$ENV_FILE"
+
+            echo ""
+            echo "----- Diagnostic: duplicate key definitions (counts only, no values) -----"
+            DUPES_FOUND=0
+            for v in "${REQUIRED_VARS[@]}"; do
+              c="${ENV_COUNTS[$v]:-0}"
+              if [ "$c" -gt 1 ]; then
+                echo "  $v defined $c times in $ENV_FILE — using the LAST definition"
+                DUPES_FOUND=1
+              fi
+            done
+            [ "$DUPES_FOUND" -eq 0 ] && echo "  (none of the required variables are defined more than once)"
+            echo "----- END duplicate-key diagnostic -----"
 
             echo ""
             echo "----- Per-variable status (values withheld) -----"
