@@ -110,6 +110,10 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           timeout: 20m
           command_timeout: 20m
+          # Pin the interpreter explicitly (appleboy/ssh-action defaults to
+          # bash already, but this removes any ambiguity — the script below
+          # uses bash-only features: arrays, `[[ ]]`, associative arrays).
+          shell: bash
           envs: TARGET_SHA
           script: |
             set -euo pipefail
@@ -124,9 +128,12 @@ jobs:
 
             echo ""
             echo "===== Preflight: Required Environment Variables ====="
-            # Keep this list in sync with src/lib/env.ts (REQUIRED_SERVER) and
-            # the zod schema in src/lib/delhivery/config.ts. DELHIVERY_BASE_URL
-            # is excluded — it has a working default in code.
+            # Keep this list in sync with the zod schema in
+            # src/lib/delhivery/config.ts. DELHIVERY_BASE_URL is excluded —
+            # it has a working default in code. (src/lib/env.ts's
+            # REQUIRED_SERVER is a *separate*, shorter list that doesn't
+            # cover the Delhivery/GST vars at all — it is not a source of
+            # truth for this block.)
             REQUIRED_VARS=(
               DATABASE_URL
               NEXTAUTH_URL
@@ -152,25 +159,92 @@ jobs:
               DELHIVERY_PICKUP_LOCATION_NAME
             )
             ENV_FILE="$APP_DIR/.env"
+
+            # ----- TEMP DIAGNOSTIC (safe: no secret values ever printed) -----
+            # Remove this block once the preflight check is confirmed reliable
+            # on production again.
+            echo "----- Diagnostic -----"
+            echo "whoami:   $(whoami)"
+            echo "hostname: $(hostname)"
+            echo "pwd:      $(pwd)"
+            echo "APP_DIR:  $APP_DIR"
+            echo "ENV_FILE: $ENV_FILE"
+            # ----- END TEMP DIAGNOSTIC (part 1; per-variable status below) -----
+
             if [ ! -f "$ENV_FILE" ]; then
               echo "::error::$ENV_FILE not found — cannot verify required environment variables. Aborting before touching the database or building."
               exit 1
             fi
+            if [ ! -r "$ENV_FILE" ]; then
+              echo "::error::$ENV_FILE exists but is not readable by the deploying SSH user ($(whoami))."
+              ls -l "$ENV_FILE" || true
+              exit 1
+            fi
+            ls -l "$ENV_FILE"
+            stat -c 'owner=%U group=%G perms=%A size=%sB mtime=%y' "$ENV_FILE" 2>/dev/null || stat "$ENV_FILE"
+
+            # Pure-bash whitespace trim (no sed/awk subprocess, nothing that can
+            # itself fail a pipeline under `set -e`).
+            _trim() {
+              local s="$1"
+              s="${s#"${s%%[![:space:]]*}"}"
+              s="${s%"${s##*[![:space:]]}"}"
+              printf '%s' "$s"
+            }
+
+            # Parse .env ourselves in a single pass instead of running
+            # `grep -E "^${v}=" | tail -n1 | cut -d= -f2-` once per required
+            # variable. The old grep-pipeline approach had two real problems
+            # under `set -euo pipefail`:
+            #   1. grep exits 1 when a variable has zero matches (as opposed
+            #      to present-but-empty); depending on exactly how that exit
+            #      status is consumed, that can abort the whole script before
+            #      the missing-variable report ever runs, or otherwise behave
+            #      inconsistently across shells/environments.
+            #   2. A `grep | tail | cut` pipeline per variable is three
+            #      subprocesses and three chances for something environmental
+            #      (locale, a shell alias, a differently-behaving grep) to
+            #      change the result — for no benefit, since we control the
+            #      whole file format (KEY=VALUE, one per line).
+            # A single `while read` loop over the file has no pipe, so
+            # pipefail/grep's exit code are simply not in the picture.
+            declare -A ENV_VALUES=()
+            while IFS='=' read -r key rest || [ -n "$key" ]; do
+              key="${key%$'\r'}"
+              key="$(_trim "$key")"
+              [ -z "$key" ] && continue
+              case "$key" in \#*) continue ;; esac
+              value="${rest%$'\r'}"
+              value="$(_trim "$value")"
+              # Strip exactly one layer of matching surrounding quotes.
+              if [[ "$value" == \"*\" && ${#value} -ge 2 ]]; then
+                value="${value:1:${#value}-2}"
+              elif [[ "$value" == \'*\' && ${#value} -ge 2 ]]; then
+                value="${value:1:${#value}-2}"
+              fi
+              # Last definition of a key wins, matching the previous script's
+              # `tail -n 1` behavior for a file with a duplicate key.
+              ENV_VALUES["$key"]="$value"
+            done < "$ENV_FILE"
+
+            echo ""
+            echo "----- Per-variable status (values withheld) -----"
             MISSING=()
             for v in "${REQUIRED_VARS[@]}"; do
-              # `grep` exits 1 when a variable is entirely absent from .env (as opposed to
-              # present-but-empty). Under `set -euo pipefail` that non-zero pipeline status
-              # would otherwise abort the whole script right here — silently, before the
-              # missing-variable reporting below ever runs. `|| true` lets an absent var
-              # fall through as an empty VALUE instead, so it's reported by name like any
-              # other missing/placeholder value.
-              VALUE=$(grep -E "^${v}=" "$ENV_FILE" | tail -n 1 | cut -d '=' -f2- || true)
-              VALUE="${VALUE%\"}"; VALUE="${VALUE#\"}"
-              VALUE="${VALUE%\'}"; VALUE="${VALUE#\'}"
-              if [ -z "$VALUE" ] || [[ "$VALUE" == your_* ]] || [[ "$VALUE" == replace_with* ]]; then
+              if [ -z "${ENV_VALUES[$v]+set}" ] || [ -z "${ENV_VALUES[$v]}" ]; then
+                STATUS="MISSING"
                 MISSING+=("$v")
+              elif [[ "${ENV_VALUES[$v]}" == your_* ]] || [[ "${ENV_VALUES[$v]}" == replace_with* ]]; then
+                STATUS="PLACEHOLDER"
+                MISSING+=("$v")
+              else
+                STATUS="FOUND"
               fi
+              echo "$v = $STATUS"
             done
+            echo "----- END diagnostic -----"
+            echo ""
+
             if [ "${#MISSING[@]}" -gt 0 ]; then
               echo "::error::Missing or placeholder environment variable(s) in $ENV_FILE (names only):"
               for v in "${MISSING[@]}"; do
