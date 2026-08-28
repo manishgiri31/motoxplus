@@ -22,11 +22,10 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           port: ${{ secrets.VPS_PORT }}
           timeout: 20m
           command_timeout: 20m
-
-          envs: TARGET_SHA
 
           script: |
             set -euo pipefail
@@ -36,7 +35,6 @@ jobs:
 
             echo "====================================="
             echo " MotoXPlus Production Deployment"
-            echo " Target commit: ${TARGET_SHA}"
             echo "====================================="
 
             cd "$APP_DIR"
@@ -46,6 +44,7 @@ jobs:
             echo "User: $(whoami)"
             echo "Hostname: $(hostname)"
             echo "Directory: $(pwd)"
+            echo "Public IP: $(curl -4 -s https://api.ipify.org || true)"
 
             echo ""
             echo "===== Environment File ====="
@@ -100,8 +99,8 @@ jobs:
 
             if [ "$MISSING" -ne 0 ]; then
               echo ""
-              echo "ERROR: One or more required environment variables are missing."
-              echo "Deployment stopped before database migration or build."
+              echo "ERROR: Required environment variables are missing."
+              echo "Deployment stopped."
               exit 1
             fi
 
@@ -113,9 +112,9 @@ jobs:
 
             git fetch origin main
 
-            git checkout --force "$TARGET_SHA"
+            git checkout --force "${{ github.sha }}"
 
-            echo "Current commit:"
+            echo "Deployed commit:"
             git rev-parse HEAD
 
             echo ""
@@ -142,7 +141,7 @@ jobs:
               if pm2 list | grep -q "motoxplus"; then
                 pm2 reload motoxplus --update-env
               else
-                echo "ERROR: PM2 is installed but 'motoxplus' process was not found."
+                echo "ERROR: PM2 process 'motoxplus' was not found."
                 pm2 list
                 exit 1
               fi
@@ -152,10 +151,7 @@ jobs:
               systemctl restart motoxplus.service
 
             else
-              echo "ERROR: Could not find a MotoXPlus PM2 process or systemd service."
-              echo ""
-              echo "Available PM2 processes:"
-              command -v pm2 >/dev/null 2>&1 && pm2 list || true
+              echo "ERROR: Could not find MotoXPlus PM2 process or systemd service."
               exit 1
             fi
 
