@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * Configurable APK download link. Override by setting NEXT_PUBLIC_APK_DOWNLOAD_URL
- * in .env — see .env.example for the documented placeholder.
+ * APK download link. Defaults to the same-origin /downloads/motoxplus.apk path,
+ * which next.config.mjs rewrites to the file in Cloudflare R2 (bucket
+ * motoxplus-assets). Same-origin keeps the <a download> attribute working.
+ * Override with NEXT_PUBLIC_APK_DOWNLOAD_URL if the file moves.
  */
 const APK_DOWNLOAD_URL =
-  process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL || "https://example.com/motoxplus.apk";
+  process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL || "/downloads/motoxplus.apk";
 
 function AndroidIcon({ className }: { className?: string }) {
   return (
