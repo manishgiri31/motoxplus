@@ -6,53 +6,191 @@ on:
       - main
   workflow_dispatch:
 
+# Queue deployments instead of running them concurrently.
+concurrency:
+  group: motoxplus-production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    name: Deploy
+    name: Deploy to VPS
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-
-    permissions:
-      contents: read
+    timeout-minutes: 40
 
     steps:
-      - name: Deploy via SSH
+      - name: Show deployment target
+        run: |
+          echo "Repository : ${{ github.repository }}"
+          echo "Ref        : ${{ github.ref_name }}"
+          echo "Commit     : ${{ github.sha }}"
+          echo "Actor      : ${{ github.actor }}"
+          echo "Run ID     : ${{ github.run_id }}"
+
+      - name: Check required deployment secrets are present
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_PASSPHRASE: ${{ secrets.VPS_SSH_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in VPS_HOST VPS_USER VPS_PORT VPS_SSH_KEY VPS_SSH_PASSPHRASE; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Repository secret '${name}' is missing or empty."
+              missing=1
+            else
+              echo "${name} = SET"
+            fi
+          done
+          if [ "${missing}" -ne 0 ]; then
+            echo "Aborting before SSH connection."
+            exit 1
+          fi
+
+      - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          # These are forwarded into the remote shell by the 'envs:' input below.
+          # Do NOT name this GITHUB_SHA: the GITHUB_ prefix is reserved by the
+          # Actions runner and must not be redefined in a workflow env block.
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_REF: ${{ github.ref_name }}
+          DEPLOY_ACTOR: ${{ github.actor }}
+          DEPLOY_RUN_ID: ${{ github.run_id }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           port: ${{ secrets.VPS_PORT }}
-          timeout: 20m
+          # 'timeout' is the TCP/SSH connection timeout, not the script timeout.
+          timeout: 60s
           command_timeout: 20m
-
+          envs: DEPLOY_SHA,DEPLOY_REF,DEPLOY_ACTOR,DEPLOY_RUN_ID
           script: |
-            set -euo pipefail
+            # -E only makes the ERR trap inherit into functions; -euo pipefail preserved.
+            set -Eeuo pipefail
 
             APP_DIR="/var/www/motoxplus"
-            ENV_FILE="$APP_DIR/.env"
+            ENV_FILE="${APP_DIR}/.env"
+            APP_NAME="motoxplus"
+            HEALTH_URL="http://127.0.0.1:3000/"
+            HEALTH_RETRIES=12
+            HEALTH_DELAY=5
 
-            cd "$APP_DIR"
+            CURRENT_STEP="startup"
+            step() {
+              CURRENT_STEP="$1"
+              echo ""
+              echo "=== ${1} ==="
+            }
+            on_error() {
+              echo ""
+              echo "::error::Deployment FAILED during: ${CURRENT_STEP}"
+              echo "Host        : $(hostname)"
+              echo "Target SHA  : ${DEPLOY_SHA:-<not forwarded>}"
+              echo "No automatic rollback was performed (by design)."
+              echo "Use .github/workflows/rollback.yml if a rollback is required."
+              exit 1
+            }
+            trap on_error ERR
 
-            echo "====================================="
+            echo "=============================================="
             echo " MotoXPlus Production Deployment"
-            echo " Target commit: $GITHUB_SHA"
-            echo "====================================="
+            echo "=============================================="
 
-            echo ""
-            echo "===== Server Information ====="
+            # ---------------------------------------------------------------
+            # 0. The triggering commit, forwarded from GitHub Actions.
+            #    Fails with a readable message instead of 'unbound variable'.
+            # ---------------------------------------------------------------
+            : "${DEPLOY_SHA:?DEPLOY_SHA was not forwarded. Check the step env block and the 'envs:' input.}"
 
-            echo "Hostname:"
-            hostname
+            case "${DEPLOY_SHA}" in
+              *[!0-9a-f]* | "" )
+                echo "DEPLOY_SHA is not a valid hex commit id."
+                exit 1
+                ;;
+            esac
+            if [ "${#DEPLOY_SHA}" -ne 40 ]; then
+              echo "DEPLOY_SHA is not a full 40-character commit id."
+              exit 1
+            fi
 
-            echo ""
-            echo "Public IP:"
-            curl -4 -s https://api.ipify.org || true
-            echo ""
+            echo "Target commit : ${DEPLOY_SHA}"
+            echo "Branch        : ${DEPLOY_REF:-unknown}"
+            echo "Triggered by  : ${DEPLOY_ACTOR:-unknown}"
+            echo "Run ID        : ${DEPLOY_RUN_ID:-unknown}"
+            echo "Deploy user   : $(id -un)"
 
-            echo ""
-            echo "===== Environment Verification ====="
+            # ---------------------------------------------------------------
+            # 1. Toolchain availability (non-interactive shells often lack nvm)
+            # ---------------------------------------------------------------
+            step "Checking toolchain"
+            export PATH="${PATH}:/usr/local/bin:/usr/bin:/usr/local/sbin"
+            if [ -s "${HOME}/.nvm/nvm.sh" ]; then
+              # nvm's own script is not written for 'set -u'.
+              set +u
+              . "${HOME}/.nvm/nvm.sh"
+              set -u
+            fi
+
+            for bin in git node npm pm2 curl; do
+              if ! command -v "${bin}" >/dev/null 2>&1; then
+                echo "Required command not found in PATH: ${bin}"
+                echo "PATH=${PATH}"
+                exit 1
+              fi
+            done
+            echo "node : $(node --version)"
+            echo "npm  : $(npm --version)"
+            echo "pm2  : $(pm2 --version)"
+
+            # ---------------------------------------------------------------
+            # 2. Application directory
+            # ---------------------------------------------------------------
+            step "Entering application directory"
+            if [ ! -d "${APP_DIR}" ]; then
+              echo "Application directory does not exist: ${APP_DIR}"
+              exit 1
+            fi
+            cd "${APP_DIR}"
+            echo "Working directory: $(pwd)"
+
+            # ---------------------------------------------------------------
+            # 3. Validate production .env BEFORE touching the database
+            # ---------------------------------------------------------------
+            step "Validating production environment file"
+
+            if [ ! -f "${ENV_FILE}" ]; then
+              echo "Environment file not found: ${ENV_FILE}"
+              exit 1
+            fi
+            if [ ! -r "${ENV_FILE}" ]; then
+              echo "Environment file exists but is NOT readable by user '$(id -un)'."
+              echo "The file is root-owned with mode 600, so the deploy user must be root,"
+              echo "or the file must be made readable by the deploy user's group."
+              exit 1
+            fi
+
+            if grep -q $'\r' "${ENV_FILE}"; then
+              echo "WARNING: ${ENV_FILE} contains CRLF line endings. Values may carry a trailing CR."
+            fi
+
+            # Reads a value, tolerating leading whitespace, an 'export ' prefix,
+            # surrounding quotes and a trailing CR. Never echoes the value.
+            read_env_value() {
+              local key="$1" line value
+              line="$(grep -E "^[[:space:]]*(export[[:space:]]+)?${key}=" "${ENV_FILE}" | tail -n 1 || true)"
+              value="${line#*=}"
+              value="${value%$'\r'}"
+              case "${value}" in
+                \"*\") value="${value#\"}"; value="${value%\"}" ;;
+                \'*\') value="${value#\'}"; value="${value%\'}" ;;
+              esac
+              printf '%s' "${value}"
+            }
 
             REQUIRED_VARS=(
               DATABASE_URL
@@ -68,6 +206,8 @@ jobs:
               RESEND_API_KEY
               EMAIL_FROM
               DELHIVERY_TOKEN
+              DELHIVERY_CLIENT_NAME
+              DELHIVERY_PICKUP_LOCATION_NAME
               DELHIVERY_PICKUP_NAME
               DELHIVERY_PICKUP_ADDRESS
               DELHIVERY_PICKUP_CITY
@@ -75,89 +215,149 @@ jobs:
               DELHIVERY_PICKUP_PHONE
               DELHIVERY_ORIGIN_PINCODE
               COMPANY_GST
-              DELHIVERY_CLIENT_NAME
-              DELHIVERY_PICKUP_LOCATION_NAME
             )
 
-            if [ ! -f "$ENV_FILE" ]; then
-              echo "ERROR: $ENV_FILE does not exist."
-              exit 1
-            fi
-
-            echo "Environment file:"
-            ls -lh "$ENV_FILE"
-
-            echo ""
-            echo "Checking required variables..."
-
-            MISSING=()
-
-            for VAR in "${REQUIRED_VARS[@]}"; do
-              if ! grep -qE "^${VAR}=.+" "$ENV_FILE"; then
-                MISSING+=("$VAR")
-                echo "$VAR = MISSING"
+            MISSING_VARS=()
+            for var in "${REQUIRED_VARS[@]}"; do
+              if [ -z "$(read_env_value "${var}")" ]; then
+                MISSING_VARS+=("${var}")
+                echo "  ${var} = MISSING or EMPTY"
               else
-                echo "$VAR = FOUND"
+                echo "  ${var} = SET"
               fi
             done
 
-            if [ "${#MISSING[@]}" -ne 0 ]; then
+            if [ "${#MISSING_VARS[@]}" -gt 0 ]; then
               echo ""
-              echo "ERROR: Missing environment variables:"
-              printf ' - %s\n' "${MISSING[@]}"
+              echo "Preflight failed. These variables are missing or empty in ${ENV_FILE}:"
+              printf '  - %s\n' "${MISSING_VARS[@]}"
               echo ""
-              echo "Deployment aborted before database migration or build."
+              echo "Nothing was changed. The database was not touched."
+              exit 1
+            fi
+            echo "All required environment variables are present."
+
+            # ---------------------------------------------------------------
+            # 4. Fetch and check out the exact triggering commit
+            # ---------------------------------------------------------------
+            step "Updating repository to ${DEPLOY_SHA}"
+
+            git config --global --add safe.directory "${APP_DIR}" >/dev/null 2>&1 || true
+
+            PREVIOUS_SHA="$(git rev-parse HEAD)"
+            echo "Current commit  : ${PREVIOUS_SHA}"
+            echo "Requested commit: ${DEPLOY_SHA}"
+
+            DIRTY="$(git status --porcelain --untracked-files=no)"
+            if [ -n "${DIRTY}" ]; then
+              echo "WARNING: tracked files were modified on the server. They will be overwritten:"
+              echo "${DIRTY}"
+            fi
+
+            git fetch --prune --no-tags origin "+refs/heads/*:refs/remotes/origin/*"
+
+            if ! git cat-file -e "${DEPLOY_SHA}^{commit}" 2>/dev/null; then
+              echo "Commit ${DEPLOY_SHA} was not found after fetching from origin."
+              echo "Check that the VPS remote points at the same repository:"
+              git remote -v
               exit 1
             fi
 
-            echo ""
-            echo "===== Environment verification PASSED ====="
+            git checkout --detach --force "${DEPLOY_SHA}"
+            echo "Now at: $(git rev-parse HEAD)"
+            echo "Subject: $(git log -1 --pretty=%s)"
 
-            echo ""
-            echo "===== Updating Repository ====="
-
-            git fetch origin main
-            git checkout main
-            git reset --hard origin/main
-
-            echo ""
-            echo "Current commit:"
-            git rev-parse HEAD
-
-            echo ""
-            echo "===== Installing Dependencies ====="
-
-            npm ci
-
-            echo ""
-            echo "===== Database Migration ====="
-
-            npx prisma migrate deploy
-
-            echo ""
-            echo "===== Building Application ====="
-
-            npm run build
-
-            echo ""
-            echo "===== Reloading Application ====="
-
-            if command -v pm2 >/dev/null 2>&1; then
-              pm2 reload all --update-env
-            elif command -v systemctl >/dev/null 2>&1 && systemctl list-units --type=service | grep -q "motoxplus"; then
-              systemctl restart motoxplus
+            # ---------------------------------------------------------------
+            # 5. Dependencies
+            # ---------------------------------------------------------------
+            step "Installing dependencies"
+            # --include=dev is required: the Next.js build needs devDependencies
+            # even when NODE_ENV=production is inherited by this shell.
+            if [ -f package-lock.json ]; then
+              npm ci --include=dev --no-audit --no-fund
             else
-              echo "WARNING: No PM2 or motoxplus systemd service detected."
-              echo "Application was built successfully, but no process manager was reloaded."
+              echo "WARNING: package-lock.json not found, falling back to 'npm install'."
+              npm install --include=dev --no-audit --no-fund
             fi
 
-            echo ""
-            echo "===== Deployment Complete ====="
+            # ---------------------------------------------------------------
+            # 6. Prisma: generate client, then apply migrations
+            # ---------------------------------------------------------------
+            step "Running Prisma migrations"
+            # Exported explicitly so the CLI does not depend on dotenv auto-loading.
+            # The value is never printed.
+            export DATABASE_URL="$(read_env_value DATABASE_URL)"
 
-            echo "Commit:"
-            git rev-parse HEAD
+            npx --no-install prisma generate
 
+            if ! npx --no-install prisma migrate deploy; then
+              echo ""
+              echo "prisma migrate deploy FAILED."
+              echo "The database may be partially migrated and the application code is now at ${DEPLOY_SHA}."
+              echo "NO automatic rollback was performed: reverting code after a schema change"
+              echo "can leave the schema and the application incompatible."
+              echo "Previous commit was ${PREVIOUS_SHA}. Inspect the database before deciding."
+              exit 1
+            fi
+
+            # ---------------------------------------------------------------
+            # 7. Build
+            # ---------------------------------------------------------------
+            step "Building application"
+            npm run build
+
+            # ---------------------------------------------------------------
+            # 8. Reload the process manager
+            # ---------------------------------------------------------------
+            step "Reloading ${APP_NAME}"
+            if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
+              pm2 reload "${APP_NAME}" --update-env
+            elif [ -f ecosystem.config.js ]; then
+              echo "pm2 process '${APP_NAME}' not running, starting from ecosystem.config.js"
+              pm2 start ecosystem.config.js --only "${APP_NAME}" --update-env
+            else
+              echo "pm2 process '${APP_NAME}' not running and no ecosystem.config.js found."
+              echo "Start it manually once, then re-run this deployment."
+              pm2 list
+              exit 1
+            fi
+            pm2 save --force >/dev/null 2>&1 || true
+            pm2 list
+
+            # ---------------------------------------------------------------
+            # 9. Health check
+            # ---------------------------------------------------------------
+            step "Health check"
+            healthy=0
+            attempt=1
+            while [ "${attempt}" -le "${HEALTH_RETRIES}" ]; do
+              if curl -fsS -o /dev/null --max-time 10 "${HEALTH_URL}"; then
+                healthy=1
+                echo "Healthy after ${attempt} attempt(s): ${HEALTH_URL}"
+                break
+              fi
+              echo "Attempt ${attempt}/${HEALTH_RETRIES} failed, retrying in ${HEALTH_DELAY}s..."
+              attempt=$((attempt + 1))
+              sleep "${HEALTH_DELAY}"
+            done
+
+            if [ "${healthy}" -ne 1 ]; then
+              echo ""
+              echo "Application did not respond at ${HEALTH_URL}."
+              echo "Recent pm2 logs:"
+              pm2 logs "${APP_NAME}" --lines 60 --nostream || true
+              echo ""
+              echo "Migrations already ran. NO automatic rollback was performed."
+              exit 1
+            fi
+
+            # ---------------------------------------------------------------
+            # 10. Done
+            # ---------------------------------------------------------------
+            trap - ERR
             echo ""
-            echo "====================================="
-            echo " MotoXPlus deployment finished"
-            echo "====================================="
+            echo "=============================================="
+            echo " Deployment SUCCESSFUL"
+            echo " Deployed commit : ${DEPLOY_SHA}"
+            echo " Previous commit : ${PREVIOUS_SHA}"
+            echo "=============================================="
