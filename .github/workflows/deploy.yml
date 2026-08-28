@@ -33,31 +33,26 @@ jobs:
             APP_DIR="/var/www/motoxplus"
             ENV_FILE="$APP_DIR/.env"
 
+            cd "$APP_DIR"
+
             echo "====================================="
             echo " MotoXPlus Production Deployment"
+            echo " Target commit: $GITHUB_SHA"
             echo "====================================="
-
-            cd "$APP_DIR"
 
             echo ""
             echo "===== Server Information ====="
-            echo "User: $(whoami)"
-            echo "Hostname: $(hostname)"
-            echo "Directory: $(pwd)"
-            echo "Public IP: $(curl -4 -s https://api.ipify.org || true)"
+
+            echo "Hostname:"
+            hostname
 
             echo ""
-            echo "===== Environment File ====="
-
-            if [ ! -f "$ENV_FILE" ]; then
-              echo "ERROR: $ENV_FILE does not exist."
-              exit 1
-            fi
-
-            ls -lh "$ENV_FILE"
+            echo "Public IP:"
+            curl -4 -s https://api.ipify.org || true
+            echo ""
 
             echo ""
-            echo "===== Required Environment Variables ====="
+            echo "===== Environment Verification ====="
 
             REQUIRED_VARS=(
               DATABASE_URL
@@ -84,37 +79,49 @@ jobs:
               DELHIVERY_PICKUP_LOCATION_NAME
             )
 
-            MISSING=0
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "ERROR: $ENV_FILE does not exist."
+              exit 1
+            fi
+
+            echo "Environment file:"
+            ls -lh "$ENV_FILE"
+
+            echo ""
+            echo "Checking required variables..."
+
+            MISSING=()
 
             for VAR in "${REQUIRED_VARS[@]}"; do
-              VALUE=$(grep -E "^${VAR}=" "$ENV_FILE" | head -n 1 | cut -d '=' -f 2- || true)
-
-              if [ -z "$VALUE" ]; then
+              if ! grep -qE "^${VAR}=.+" "$ENV_FILE"; then
+                MISSING+=("$VAR")
                 echo "$VAR = MISSING"
-                MISSING=1
               else
                 echo "$VAR = FOUND"
               fi
             done
 
-            if [ "$MISSING" -ne 0 ]; then
+            if [ "${#MISSING[@]}" -ne 0 ]; then
               echo ""
-              echo "ERROR: Required environment variables are missing."
-              echo "Deployment stopped."
+              echo "ERROR: Missing environment variables:"
+              printf ' - %s\n' "${MISSING[@]}"
+              echo ""
+              echo "Deployment aborted before database migration or build."
               exit 1
             fi
 
             echo ""
-            echo "===== Environment Verification PASSED ====="
+            echo "===== Environment verification PASSED ====="
 
             echo ""
             echo "===== Updating Repository ====="
 
             git fetch origin main
+            git checkout main
+            git reset --hard origin/main
 
-            git checkout --force "${{ github.sha }}"
-
-            echo "Deployed commit:"
+            echo ""
+            echo "Current commit:"
             git rev-parse HEAD
 
             echo ""
@@ -136,25 +143,21 @@ jobs:
             echo "===== Reloading Application ====="
 
             if command -v pm2 >/dev/null 2>&1; then
-              echo "PM2 detected."
-
-              if pm2 list | grep -q "motoxplus"; then
-                pm2 reload motoxplus --update-env
-              else
-                echo "ERROR: PM2 process 'motoxplus' was not found."
-                pm2 list
-                exit 1
-              fi
-
-            elif command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files | grep -q "motoxplus.service"; then
-              echo "systemd service detected."
-              systemctl restart motoxplus.service
-
+              pm2 reload all --update-env
+            elif command -v systemctl >/dev/null 2>&1 && systemctl list-units --type=service | grep -q "motoxplus"; then
+              systemctl restart motoxplus
             else
-              echo "ERROR: Could not find MotoXPlus PM2 process or systemd service."
-              exit 1
+              echo "WARNING: No PM2 or motoxplus systemd service detected."
+              echo "Application was built successfully, but no process manager was reloaded."
             fi
 
             echo ""
             echo "===== Deployment Complete ====="
-            echo "Commit deployed: $(git rev-parse HEAD)"
+
+            echo "Commit:"
+            git rev-parse HEAD
+
+            echo ""
+            echo "====================================="
+            echo " MotoXPlus deployment finished"
+            echo "====================================="
