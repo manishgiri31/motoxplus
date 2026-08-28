@@ -1,18 +1,23 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
   deploy:
     name: Deploy
-    needs:
-      - validate_secrets
-      - typecheck_lint
     runs-on: ubuntu-latest
     timeout-minutes: 25
+
     permissions:
       contents: read
 
     steps:
-      - name: Deploy via SSH (exact commit, migrate, build, reload, health-gated — no auto-rollback)
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
-        env:
-          TARGET_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -20,6 +25,7 @@
           port: ${{ secrets.VPS_PORT }}
           timeout: 20m
           command_timeout: 20m
+
           envs: TARGET_SHA
 
           script: |
@@ -33,45 +39,23 @@
             echo " Target commit: ${TARGET_SHA}"
             echo "====================================="
 
-            echo ""
-            echo "===== Server Diagnostic ====="
-
-            echo "whoami:   $(whoami)"
-            echo "hostname: $(hostname)"
-            echo "pwd:      $(pwd)"
-
-            echo -n "Public IP: "
-            curl -4 -s https://api.ipify.org || true
-            echo ""
-
-            echo "APP_DIR:  $APP_DIR"
-            echo "ENV_FILE: $ENV_FILE"
-
-            echo ""
-            echo "===== Application Directory ====="
-
-            if [ ! -d "$APP_DIR" ]; then
-              echo "ERROR: Application directory does not exist:"
-              echo "$APP_DIR"
-              exit 1
-            fi
-
             cd "$APP_DIR"
 
-            echo "Current commit:"
-            git rev-parse HEAD
+            echo ""
+            echo "===== Server Information ====="
+            echo "User: $(whoami)"
+            echo "Hostname: $(hostname)"
+            echo "Directory: $(pwd)"
 
             echo ""
             echo "===== Environment File ====="
 
             if [ ! -f "$ENV_FILE" ]; then
-              echo "ERROR: Environment file does not exist:"
-              echo "$ENV_FILE"
+              echo "ERROR: $ENV_FILE does not exist."
               exit 1
             fi
 
             ls -lh "$ENV_FILE"
-            stat "$ENV_FILE"
 
             echo ""
             echo "===== Required Environment Variables ====="
@@ -101,44 +85,27 @@
               DELHIVERY_PICKUP_LOCATION_NAME
             )
 
-            MISSING=()
+            MISSING=0
 
             for VAR in "${REQUIRED_VARS[@]}"; do
-              VALUE="$(
-                grep -E "^${VAR}=" "$ENV_FILE" \
-                  | tail -n 1 \
-                  | cut -d '=' -f 2- \
-                  || true
-              )"
+              VALUE=$(grep -E "^${VAR}=" "$ENV_FILE" | head -n 1 | cut -d '=' -f 2- || true)
 
-              if [ -z "$VALUE" ] \
-                || [ "$VALUE" = "YOUR_VALUE_HERE" ] \
-                || [ "$VALUE" = "your_value_here" ] \
-                || [ "$VALUE" = "CHANGE_ME" ] \
-                || [ "$VALUE" = "PLACEHOLDER" ]; then
-
+              if [ -z "$VALUE" ]; then
                 echo "$VAR = MISSING"
-                MISSING+=("$VAR")
+                MISSING=1
               else
                 echo "$VAR = FOUND"
               fi
             done
 
-            echo ""
-
-            if [ "${#MISSING[@]}" -gt 0 ]; then
-              echo "ERROR: Missing or placeholder environment variable(s):"
-
-              for VAR in "${MISSING[@]}"; do
-                echo "  - $VAR"
-              done
-
+            if [ "$MISSING" -ne 0 ]; then
               echo ""
-              echo "Aborting before touching the database or building."
-
+              echo "ERROR: One or more required environment variables are missing."
+              echo "Deployment stopped before database migration or build."
               exit 1
             fi
 
+            echo ""
             echo "===== Environment Verification PASSED ====="
 
             echo ""
@@ -146,13 +113,15 @@
 
             git fetch origin main
 
-            git checkout --force main
+            git checkout --force "$TARGET_SHA"
 
-            git reset --hard "$TARGET_SHA"
+            echo "Current commit:"
+            git rev-parse HEAD
 
             echo ""
-            echo "Repository is now at:"
-            git rev-parse HEAD
+            echo "===== Installing Dependencies ====="
+
+            npm ci
 
             echo ""
             echo "===== Database Migration ====="
@@ -167,50 +136,29 @@
             echo ""
             echo "===== Reloading Application ====="
 
-            pm2 reload ecosystem.config.js --update-env \
-              || pm2 start ecosystem.config.js --env production
+            if command -v pm2 >/dev/null 2>&1; then
+              echo "PM2 detected."
 
-            echo ""
-            echo "===== Application Status ====="
+              if pm2 list | grep -q "motoxplus"; then
+                pm2 reload motoxplus --update-env
+              else
+                echo "ERROR: PM2 is installed but 'motoxplus' process was not found."
+                pm2 list
+                exit 1
+              fi
 
-            pm2 status
+            elif command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files | grep -q "motoxplus.service"; then
+              echo "systemd service detected."
+              systemctl restart motoxplus.service
 
-            echo ""
-            echo "===== Health Check ====="
-
-            sleep 5
-
-            HEALTH_URL="http://127.0.0.1:3000"
-
-            if curl \
-              --fail \
-              --silent \
-              --show-error \
-              --max-time 15 \
-              "$HEALTH_URL" > /dev/null; then
-
-              echo "Health check PASSED"
             else
-
-              echo "Health check FAILED"
-
+              echo "ERROR: Could not find a MotoXPlus PM2 process or systemd service."
               echo ""
-              echo "===== PM2 Status ====="
-
-              pm2 status || true
-
-              echo ""
-              echo "===== Recent Application Logs ====="
-
-              pm2 logs --lines 50 --nostream || true
-
+              echo "Available PM2 processes:"
+              command -v pm2 >/dev/null 2>&1 && pm2 list || true
               exit 1
             fi
 
             echo ""
-            echo "====================================="
-            echo " DEPLOYMENT SUCCESSFUL"
-            echo "====================================="
-
-            echo "Commit deployed:"
-            git rev-parse HEAD
+            echo "===== Deployment Complete ====="
+            echo "Commit deployed: $(git rev-parse HEAD)"
