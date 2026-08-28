@@ -212,12 +212,12 @@ export function Footer() {
               <li className="flex items-center gap-3">
                 <Globe size={14} className="text-[var(--red)] flex-shrink-0" />
                 <a
-                  href="https://www.motoxplus.in"
+                  href="https://www.motoxplus.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[var(--muted)] hover:text-[var(--red)] text-sm transition-colors"
                 >
-                  www.motoxplus.in
+                  www.motoxplus.com
                 </a>
               </li>
             </ul>

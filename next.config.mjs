@@ -103,6 +103,25 @@ const nextConfig = {
     ];
   },
 
+  async rewrites() {
+    return [
+      // Android APK — the file lives in the Cloudflare R2 bucket (motoxplus-assets)
+      // but is served under our own origin so the floating "Get the Android App"
+      // badge's `download` attribute works (same-origin) and the URL stays on-brand.
+      // R2 sets Content-Type + Content-Disposition: attachment, so one click saves
+      // the file. Upload a new build with:
+      //   wrangler r2 object put motoxplus-assets/downloads/motoxplus.apk \
+      //     --file app-release.apk \
+      //     --content-type application/vnd.android.package-archive \
+      //     --content-disposition 'attachment; filename="motoxplus.apk"' --remote
+      {
+        source: "/downloads/motoxplus.apk",
+        destination:
+          "https://pub-966fa80d99d64e388b250232523a507f.r2.dev/downloads/motoxplus.apk",
+      },
+    ];
+  },
+
   images: {
     // Use WebP/AVIF for all Next.js optimized images
     formats: ["image/avif", "image/webp"],
