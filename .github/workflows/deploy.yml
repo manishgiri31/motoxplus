@@ -354,10 +354,10 @@ jobs:
             # ---------------------------------------------------------------
             step "Reloading ${APP_NAME}"
             if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
-              pm2 reload "${APP_NAME}" --update-env
+              pm2 reload "${APP_NAME}" --update-env --env production
             elif [ -f ecosystem.config.js ]; then
               echo "pm2 process '${APP_NAME}' not running, starting from ecosystem.config.js"
-              pm2 start ecosystem.config.js --only "${APP_NAME}" --update-env
+              pm2 start ecosystem.config.js --only "${APP_NAME}" --update-env --env production
             else
               echo "pm2 process '${APP_NAME}' not running and no ecosystem.config.js found."
               echo "Start it manually once, then re-run this deployment."
