@@ -354,7 +354,12 @@ jobs:
             # ---------------------------------------------------------------
             step "Reloading ${APP_NAME}"
             if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
-              pm2 reload "${APP_NAME}" --update-env --env production
+              # `--env` only takes effect when ecosystem.config.js is passed —
+              # `pm2 reload <app_name> --env production` errors out with
+              # "Using --env [env] without passing the ecosystem.config.js
+              # does not work" and aborts the deploy before the health check
+              # ever runs (confirmed live on 2026-08-28, two deploys in a row).
+              pm2 reload ecosystem.config.js --only "${APP_NAME}" --update-env --env production
             elif [ -f ecosystem.config.js ]; then
               echo "pm2 process '${APP_NAME}' not running, starting from ecosystem.config.js"
               pm2 start ecosystem.config.js --only "${APP_NAME}" --update-env --env production
