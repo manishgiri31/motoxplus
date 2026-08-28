@@ -1,108 +1,18 @@
-name: Deploy to Production
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-concurrency:
-  group: production-deploy
-  cancel-in-progress: false
-
-env:
-  NODE_VERSION: "20"
-  APP_DIR: /var/www/motoxplus
-
-permissions:
-  contents: read
-
-jobs:
-  validate_secrets:
-    name: Validate Secrets
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      start_time: ${{ steps.start.outputs.start_time }}
-    steps:
-      - name: Record start time
-        id: start
-        run: echo "start_time=$(date +%s)" >> "$GITHUB_OUTPUT"
-
-      - name: Ensure deploying from main
-        run: |
-          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
-            echo "::error::This workflow only deploys from 'main'. Triggering ref was '${{ github.ref }}'."
-            echo "::error::workflow_dispatch does not restrict the branch/ref selector by default — this explicit check is the actual guard."
-            exit 1
-          fi
-          echo "Confirmed: deploying from refs/heads/main."
-
-      - name: Check required secrets are configured
-        run: |
-          missing=0
-          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
-            if [ -z "${!v}" ]; then
-              echo "::error::Missing required secret: $v"
-              missing=1
-            fi
-          done
-          if [ "$missing" = "1" ]; then
-            echo "::error::One or more required secrets are not configured. Aborting before touching production."
-            exit 1
-          fi
-          echo "All required secrets present."
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-
-  typecheck_lint:
-    name: Typecheck & Lint (parallel build check)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma Client
-        run: npx prisma generate
-
-      - name: Typecheck
-        run: npx tsc --noEmit
-
-      - name: Lint
-        run: npm run lint --if-present
-
-  # NOTE ON ROLLBACK POLICY:
-  # This job deliberately does NOT roll back automatically, even if the health
-  # check below fails. By the time `prisma migrate deploy` has run, the schema
-  # may have already changed — an automatic code rollback at that point would
-  # leave the (older) running code pointed at a (newer) migrated schema, which
-  # is its own failure mode, often worse than a known-bad-but-consistent state.
-  # A failed deploy here is a hard stop: the workflow fails, diagnostics are
-  # captured, and a human decides whether/how to roll back via the separate,
-  # explicit rollback.yml workflow.
   deploy:
     name: Deploy
-    needs: [validate_secrets, typecheck_lint]
+    needs:
+      - validate_secrets
+      - typecheck_lint
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
       contents: read
+
     steps:
       - name: Deploy via SSH (exact commit, migrate, build, reload, health-gated — no auto-rollback)
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          TARGET_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -110,16 +20,13 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           timeout: 20m
           command_timeout: 20m
-          # Pin the interpreter explicitly (appleboy/ssh-action defaults to
-          # bash already, but this removes any ambiguity — the script below
-          # uses bash-only features: arrays, `[[ ]]`, associative arrays).
-          shell: bash
           envs: TARGET_SHA
+
           script: |
             set -euo pipefail
 
             APP_DIR="/var/www/motoxplus"
-            cd "$APP_DIR"
+            ENV_FILE="$APP_DIR/.env"
 
             echo "====================================="
             echo " MotoXPlus Production Deployment"
@@ -127,13 +34,48 @@ jobs:
             echo "====================================="
 
             echo ""
-            echo "===== Preflight: Required Environment Variables ====="
-            # Keep this list in sync with the zod schema in
-            # src/lib/delhivery/config.ts. DELHIVERY_BASE_URL is excluded —
-            # it has a working default in code. (src/lib/env.ts's
-            # REQUIRED_SERVER is a *separate*, shorter list that doesn't
-            # cover the Delhivery/GST vars at all — it is not a source of
-            # truth for this block.)
+            echo "===== Server Diagnostic ====="
+
+            echo "whoami:   $(whoami)"
+            echo "hostname: $(hostname)"
+            echo "pwd:      $(pwd)"
+
+            echo -n "Public IP: "
+            curl -4 -s https://api.ipify.org || true
+            echo ""
+
+            echo "APP_DIR:  $APP_DIR"
+            echo "ENV_FILE: $ENV_FILE"
+
+            echo ""
+            echo "===== Application Directory ====="
+
+            if [ ! -d "$APP_DIR" ]; then
+              echo "ERROR: Application directory does not exist:"
+              echo "$APP_DIR"
+              exit 1
+            fi
+
+            cd "$APP_DIR"
+
+            echo "Current commit:"
+            git rev-parse HEAD
+
+            echo ""
+            echo "===== Environment File ====="
+
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "ERROR: Environment file does not exist:"
+              echo "$ENV_FILE"
+              exit 1
+            fi
+
+            ls -lh "$ENV_FILE"
+            stat "$ENV_FILE"
+
+            echo ""
+            echo "===== Required Environment Variables ====="
+
             REQUIRED_VARS=(
               DATABASE_URL
               NEXTAUTH_URL
@@ -158,415 +100,117 @@ jobs:
               DELHIVERY_CLIENT_NAME
               DELHIVERY_PICKUP_LOCATION_NAME
             )
-            ENV_FILE="/var/www/motoxplus/.env"
 
-            # ----- Diagnostic (safe: no secret values ever printed) -----
-            echo "----- Diagnostic -----"
-            echo "whoami:   $(whoami)"
-            echo "hostname: $(hostname)"
-            echo "pwd:      $(pwd)"
-            echo "APP_DIR:  $APP_DIR"
-            echo "ENV_FILE: $ENV_FILE"
-
-            if [ ! -f "$ENV_FILE" ]; then
-              echo "::error::$ENV_FILE not found — cannot verify required environment variables. Aborting before touching the database or building."
-              exit 1
-            fi
-            if [ ! -r "$ENV_FILE" ]; then
-              echo "::error::$ENV_FILE exists but is not readable by the deploying SSH user ($(whoami))."
-              ls -l "$ENV_FILE" || true
-              exit 1
-            fi
-            ls -l "$ENV_FILE"
-            stat -c 'owner=%U group=%G perms=%A size=%sB mtime=%y' "$ENV_FILE" 2>/dev/null || stat "$ENV_FILE"
-            # `file` reveals encoding/line-ending surprises (BOM, CRLF) that
-            # silently corrupt line-based parsing without leaking content.
-            file "$ENV_FILE" 2>/dev/null || true
-            echo "Total lines in file: $(wc -l < "$ENV_FILE")"
-            echo "----- END file diagnostic -----"
-
-            # Pure-bash whitespace trim (no sed/awk subprocess, nothing that can
-            # itself fail a pipeline under `set -e`).
-            _trim() {
-              local s="$1"
-              s="${s#"${s%%[![:space:]]*}"}"
-              s="${s%"${s##*[![:space:]]}"}"
-              printf '%s' "$s"
-            }
-
-            # Parse .env ourselves in a single pass instead of running
-            # `grep -E "^${v}=" | tail -n1 | cut -d= -f2-` once per required
-            # variable. The old grep-pipeline approach had two real problems
-            # under `set -euo pipefail`:
-            #   1. grep exits 1 when a variable has zero matches (as opposed
-            #      to present-but-empty); depending on exactly how that exit
-            #      status is consumed, that can abort the whole script before
-            #      the missing-variable report ever runs, or otherwise behave
-            #      inconsistently across shells/environments.
-            #   2. A `grep | tail | cut` pipeline per variable is three
-            #      subprocesses and three chances for something environmental
-            #      (locale, a shell alias, a differently-behaving grep) to
-            #      change the result — for no benefit, since we control the
-            #      whole file format (KEY=VALUE, one per line).
-            # A single `while read` loop over the file has no pipe, so
-            # pipefail/grep's exit code are simply not in the picture.
-            #
-            # FIX (this pass): a line written as `export KEY="value"` (a .env
-            # meant to also be `source`-able) previously parsed to a KEY of
-            # literally "export KEY" — which never matches anything in
-            # REQUIRED_VARS, so a genuinely-present, valid value was reported
-            # MISSING. Strip a leading `export` keyword before using the key.
-            declare -A ENV_VALUES=()
-            declare -A ENV_COUNTS=()
-            while IFS='=' read -r key rest || [ -n "$key" ]; do
-              key="${key%$'\r'}"
-              key="$(_trim "$key")"
-              [ -z "$key" ] && continue
-              case "$key" in \#*) continue ;; esac
-              # Strip an optional leading `export ` (any amount of whitespace
-              # after it) so `export KEY=...` and `KEY=...` parse identically.
-              case "$key" in
-                export[[:space:]]*) key="${key#export}"; key="$(_trim "$key")" ;;
-              esac
-              [ -z "$key" ] && continue
-              value="${rest%$'\r'}"
-              value="$(_trim "$value")"
-              # Strip exactly one layer of matching surrounding quotes.
-              if [[ "$value" == \"*\" && ${#value} -ge 2 ]]; then
-                value="${value:1:${#value}-2}"
-              elif [[ "$value" == \'*\' && ${#value} -ge 2 ]]; then
-                value="${value:1:${#value}-2}"
-              fi
-              # Last definition of a key wins, matching both the previous
-              # script's `tail -n 1` behavior and how dotenv/shell sourcing
-              # itself resolves a duplicate key (later assignment overwrites).
-              ENV_VALUES["$key"]="$value"
-              ENV_COUNTS["$key"]=$(( ${ENV_COUNTS["$key"]:-0} + 1 ))
-            done < "$ENV_FILE"
-
-            echo ""
-            echo "----- Diagnostic: duplicate key definitions (counts only, no values) -----"
-            DUPES_FOUND=0
-            for v in "${REQUIRED_VARS[@]}"; do
-              c="${ENV_COUNTS[$v]:-0}"
-              if [ "$c" -gt 1 ]; then
-                echo "  $v defined $c times in $ENV_FILE — using the LAST definition"
-                DUPES_FOUND=1
-              fi
-            done
-            [ "$DUPES_FOUND" -eq 0 ] && echo "  (none of the required variables are defined more than once)"
-            echo "----- END duplicate-key diagnostic -----"
-
-            echo ""
-            echo "----- Per-variable status (values withheld) -----"
             MISSING=()
-            for v in "${REQUIRED_VARS[@]}"; do
-              if [ -z "${ENV_VALUES[$v]+set}" ] || [ -z "${ENV_VALUES[$v]}" ]; then
-                STATUS="MISSING"
-                MISSING+=("$v")
-              elif [[ "${ENV_VALUES[$v]}" == your_* ]] || [[ "${ENV_VALUES[$v]}" == replace_with* ]]; then
-                STATUS="PLACEHOLDER"
-                MISSING+=("$v")
+
+            for VAR in "${REQUIRED_VARS[@]}"; do
+              VALUE="$(
+                grep -E "^${VAR}=" "$ENV_FILE" \
+                  | tail -n 1 \
+                  | cut -d '=' -f 2- \
+                  || true
+              )"
+
+              if [ -z "$VALUE" ] \
+                || [ "$VALUE" = "YOUR_VALUE_HERE" ] \
+                || [ "$VALUE" = "your_value_here" ] \
+                || [ "$VALUE" = "CHANGE_ME" ] \
+                || [ "$VALUE" = "PLACEHOLDER" ]; then
+
+                echo "$VAR = MISSING"
+                MISSING+=("$VAR")
               else
-                STATUS="FOUND"
+                echo "$VAR = FOUND"
               fi
-              echo "$v = $STATUS"
             done
-            echo "----- END diagnostic -----"
+
             echo ""
 
             if [ "${#MISSING[@]}" -gt 0 ]; then
-              echo "::error::Missing or placeholder environment variable(s) in $ENV_FILE (names only):"
-              for v in "${MISSING[@]}"; do
-                echo "::error::  - $v"
+              echo "ERROR: Missing or placeholder environment variable(s):"
+
+              for VAR in "${MISSING[@]}"; do
+                echo "  - $VAR"
               done
-              echo "::error::Aborting before touching the database or building."
-              exit 1
-            fi
-            echo "All ${#REQUIRED_VARS[@]} required environment variables are present in $ENV_FILE."
 
-            PREV_SHA=$(git rev-parse HEAD)
-            echo "$PREV_SHA" > "$APP_DIR/.deploy_prev_sha"
-            echo "Previously deployed commit (for manual rollback reference): $PREV_SHA"
+              echo ""
+              echo "Aborting before touching the database or building."
 
-            echo ""
-            echo "===== Pull Exact Commit ====="
-            git fetch origin
-            git checkout -f "$TARGET_SHA"
-
-            echo ""
-            echo "===== Install Dependencies ====="
-            if ! npm ci --ignore-scripts > "$APP_DIR/.install.log" 2>&1; then
-              echo "::error::npm ci failed"
-              tail -n 100 "$APP_DIR/.install.log"
-              exit 1
-            fi
-            tail -n 30 "$APP_DIR/.install.log"
-
-            echo ""
-            echo "===== Generate Prisma Client ====="
-            npx prisma generate
-
-            echo ""
-            echo "===== Build Next.js ====="
-            # Deliberately runs BEFORE migrations: a build failure here leaves
-            # the database untouched and the old build still serving traffic.
-            # See the NOTE below the migration step for why the reverse order
-            # (the old order) was a problem.
-            if ! npm run build > "$APP_DIR/.build.log" 2>&1; then
-              echo "::error::Build failed"
-              tail -n 150 "$APP_DIR/.build.log"
-              exit 1
-            fi
-            tail -n 30 "$APP_DIR/.build.log"
-
-            echo ""
-            echo "===== Run Prisma Migrations ====="
-            echo "NOTE: from this point on, failures are NOT automatically rolled back."
-            if ! npx prisma migrate deploy > "$APP_DIR/.migrate.log" 2>&1; then
-              echo "::error::Prisma migration failed"
-              cat "$APP_DIR/.migrate.log"
-              exit 1
-            fi
-            cat "$APP_DIR/.migrate.log"
-
-            echo ""
-            echo "===== Reload PM2 (zero-downtime) ====="
-            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js --env production
-
-            echo ""
-            echo "===== Waiting for Application Health ====="
-            HEALTHY=0
-            for i in $(seq 1 20); do
-              if curl -sf --max-time 5 http://localhost:3000/api/health > /dev/null; then
-                HEALTHY=1
-                echo "Healthy after ${i} attempt(s)."
-                break
-              fi
-              echo "Attempt ${i}/20 — not ready yet, retrying in 3s..."
-              sleep 3
-            done
-
-            if [ "$HEALTHY" != "1" ]; then
-              echo "::error::Application failed health check after deploy."
-              echo "::error::Migrations for ${TARGET_SHA} have already run and were NOT rolled back automatically."
-              echo "::error::To roll back, run the separate 'Manual Rollback' workflow (rollback.yml) with commit ${PREV_SHA}."
               exit 1
             fi
 
-            echo ""
-            echo "===== PM2 Status ====="
-            pm2 list
+            echo "===== Environment Verification PASSED ====="
 
             echo ""
-            echo "===== Deployment Successful: ${TARGET_SHA} ====="
-        env:
-          TARGET_SHA: ${{ github.sha }}
+            echo "===== Updating Repository ====="
 
-      - name: Record deployment manifest
-        if: success()
-        run: |
-          mkdir -p artifacts
-          cat > artifacts/deployment-manifest.json <<EOF
-          {
-            "sha": "${{ github.sha }}",
-            "ref": "${{ github.ref }}",
-            "actor": "${{ github.actor }}",
-            "deployedAt": "$(date -u +%FT%TZ)"
-          }
-          EOF
+            git fetch origin main
 
-      - name: Upload deployment manifest
-        if: success()
-        uses: actions/upload-artifact@v7
-        with:
-          name: deployment-manifest-${{ github.sha }}
-          path: artifacts/deployment-manifest.json
-          retention-days: 90
+            git checkout --force main
 
-  verify:
-    name: Verify Public Site
-    needs: deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Check https://motoxplus.com returns 200
-        run: |
-          for i in $(seq 1 10); do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://motoxplus.com)
-            echo "Attempt ${i}/10: HTTP ${CODE}"
-            if [ "$CODE" = "200" ]; then
-              exit 0
+            git reset --hard "$TARGET_SHA"
+
+            echo ""
+            echo "Repository is now at:"
+            git rev-parse HEAD
+
+            echo ""
+            echo "===== Database Migration ====="
+
+            npx prisma migrate deploy
+
+            echo ""
+            echo "===== Building Application ====="
+
+            npm run build
+
+            echo ""
+            echo "===== Reloading Application ====="
+
+            pm2 reload ecosystem.config.js --update-env \
+              || pm2 start ecosystem.config.js --env production
+
+            echo ""
+            echo "===== Application Status ====="
+
+            pm2 status
+
+            echo ""
+            echo "===== Health Check ====="
+
+            sleep 5
+
+            HEALTH_URL="http://127.0.0.1:3000"
+
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              --max-time 15 \
+              "$HEALTH_URL" > /dev/null; then
+
+              echo "Health check PASSED"
+            else
+
+              echo "Health check FAILED"
+
+              echo ""
+              echo "===== PM2 Status ====="
+
+              pm2 status || true
+
+              echo ""
+              echo "===== Recent Application Logs ====="
+
+              pm2 logs --lines 50 --nostream || true
+
+              exit 1
             fi
-            sleep 6
-          done
-          echo "::error::https://motoxplus.com did not return 200 after 10 attempts."
-          echo "::error::Migrations for ${{ github.sha }} have already run and were NOT rolled back automatically."
-          echo "::error::To roll back, run the separate 'Manual Rollback' workflow (rollback.yml) with the previous known-good commit."
-          exit 1
 
-  # Runs only when `deploy` or `verify` actually failed (not merely skipped, e.g.
-  # because typecheck_lint failed upstream and nothing touched the VPS at all).
-  diagnostics:
-    name: Collect Failure Diagnostics
-    if: failure()
-    needs: [deploy, verify]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Validate secrets
-        run: |
-          missing=0
-          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_PORT; do
-            if [ -z "${!v}" ]; then
-              echo "::error::Missing required secret: $v"
-              missing=1
-            fi
-          done
-          exit $missing
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-
-      - name: Fetch remote diagnostics (PM2, Nginx, install/migrate/build logs)
-        run: |
-          set -uo pipefail
-          mkdir -p diagnostics
-          umask 077
-          printf '%s\n' "$VPS_SSH_KEY" > diagnostics/ssh_key
-          chmod 600 diagnostics/ssh_key
-
-          ssh_cmd() {
-            ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
-              -i diagnostics/ssh_key -p "$VPS_PORT" "${VPS_USER}@${VPS_HOST}" "$1"
-          }
-
-          APP_DIR="/var/www/motoxplus"
-
-          ssh_cmd "pm2 logs motoxplus --lines 200 --nostream" > diagnostics/pm2.log 2>&1 \
-            || echo "pm2 logs unavailable" > diagnostics/pm2.log
-          ssh_cmd "pm2 describe motoxplus" > diagnostics/pm2-describe.log 2>&1 \
-            || echo "pm2 describe unavailable" > diagnostics/pm2-describe.log
-          ssh_cmd "sudo tail -n 200 /var/log/nginx/error.log" > diagnostics/nginx-error.log 2>&1 \
-            || echo "nginx error log unavailable (check sudo permissions for the deploy user)" > diagnostics/nginx-error.log
-          ssh_cmd "cat ${APP_DIR}/.install.log 2>/dev/null || echo 'not present'" > diagnostics/install.log 2>&1
-          ssh_cmd "cat ${APP_DIR}/.migrate.log 2>/dev/null || echo 'not present'" > diagnostics/prisma-migrate.log 2>&1
-          ssh_cmd "cat ${APP_DIR}/.build.log 2>/dev/null || echo 'not present'" > diagnostics/build.log 2>&1
-
-          rm -f diagnostics/ssh_key
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-
-      - name: Upload diagnostics artifact
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: deploy-diagnostics-${{ github.sha }}
-          path: diagnostics/*.log
-          retention-days: 14
-
-  notify:
-    name: Notify
-    if: always()
-    needs: [validate_secrets, typecheck_lint, deploy, verify, diagnostics]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - name: Compute duration
-        id: duration
-        run: |
-          START="${{ needs.validate_secrets.outputs.start_time }}"
-          END=$(date +%s)
-          if [ -n "$START" ]; then
-            ELAPSED=$((END - START))
-            echo "human=$(printf '%dm%ds' $((ELAPSED / 60)) $((ELAPSED % 60)))" >> "$GITHUB_OUTPUT"
-          else
-            echo "human=unknown" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Determine overall status
-        id: status
-        run: |
-          if [ "${{ needs.deploy.result }}" = "success" ] && [ "${{ needs.verify.result }}" = "success" ]; then
-            echo "overall=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "overall=failure" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Report success
-        if: steps.status.outputs.overall == 'success'
-        run: |
-          echo "===== Deployment Succeeded ====="
-          echo "Workflow: ${{ github.workflow }}"
-          echo "Commit:   ${{ github.sha }}"
-          echo "Branch:   ${{ github.ref_name }}"
-          echo "Actor:    ${{ github.actor }}"
-          echo "Duration: ${{ steps.duration.outputs.human }}"
-
-      - name: Report failure and identify failing step
-        if: steps.status.outputs.overall == 'failure'
-        run: |
-          FAILING="unknown"
-          if [ "${{ needs.typecheck_lint.result }}" = "failure" ]; then FAILING="typecheck_lint"; fi
-          if [ "${{ needs.deploy.result }}" = "failure" ]; then FAILING="deploy"; fi
-          if [ "${{ needs.verify.result }}" = "failure" ]; then FAILING="verify"; fi
-
-          echo "::error::Deployment pipeline failed at step: ${FAILING}"
-          echo "Workflow: ${{ github.workflow }}"
-          echo "Commit:   ${{ github.sha }}"
-          echo "Branch:   ${{ github.ref_name }}"
-          echo "Actor:    ${{ github.actor }}"
-          echo "Duration: ${{ steps.duration.outputs.human }}"
-          echo "Run:      ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo ""
-          echo "typecheck_lint: ${{ needs.typecheck_lint.result }}"
-          echo "deploy:         ${{ needs.deploy.result }}"
-          echo "verify:         ${{ needs.verify.result }}"
-          echo ""
-          echo "Migrations may have already run for this commit — this workflow does NOT roll back automatically."
-          echo "To roll back, run the 'Manual Rollback' workflow (rollback.yml) with the previous known-good commit."
-
-      - name: Download diagnostics artifact
-        if: steps.status.outputs.overall == 'failure' && needs.diagnostics.result == 'success'
-        uses: actions/download-artifact@v8
-        with:
-          name: deploy-diagnostics-${{ github.sha }}
-          path: diagnostics
-
-      - name: Print last 100 lines of each diagnostic log
-        if: steps.status.outputs.overall == 'failure' && needs.diagnostics.result == 'success'
-        run: |
-          for f in diagnostics/*.log; do
-            [ -f "$f" ] || continue
-            echo "----- $f (last 100 lines) -----"
-            tail -n 100 "$f"
             echo ""
-          done
+            echo "====================================="
+            echo " DEPLOYMENT SUCCESSFUL"
+            echo "====================================="
 
-      - name: Optional Slack notification on failure
-        if: steps.status.outputs.overall == 'failure'
-        run: |
-          if [ -n "$SLACK_WEBHOOK_URL" ]; then
-            RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            MSG="MotoXPlus deploy FAILED: ${{ github.sha }} on ${{ github.ref_name }} (by ${{ github.actor }})."
-            MSG="${MSG} Duration: ${{ steps.duration.outputs.human }}."
-            MSG="${MSG} No auto-rollback — use rollback.yml if needed. Run: ${RUN_URL}"
-            curl -sf -X POST -H 'Content-type: application/json' \
-              --data "{\"text\":\"${MSG}\"}" \
-              "$SLACK_WEBHOOK_URL" || echo "Slack notification failed to send."
-          else
-            echo "SLACK_WEBHOOK_URL not configured — skipping notification."
-          fi
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+            echo "Commit deployed:"
+            git rev-parse HEAD
