@@ -32,11 +32,10 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_SSH_PASSPHRASE: ${{ secrets.VPS_SSH_PASSPHRASE }}
         run: |
           set -euo pipefail
           missing=0
-          for name in VPS_HOST VPS_USER VPS_PORT VPS_SSH_KEY VPS_SSH_PASSPHRASE; do
+          for name in VPS_HOST VPS_USER VPS_PORT VPS_SSH_KEY; do
             if [ -z "${!name:-}" ]; then
               echo "::error::Repository secret '${name}' is missing or empty."
               missing=1
@@ -63,7 +62,6 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           port: ${{ secrets.VPS_PORT }}
           # 'timeout' is the TCP/SSH connection timeout, not the script timeout.
           timeout: 60s
