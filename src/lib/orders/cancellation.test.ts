@@ -4,6 +4,9 @@ import {
   calculateCancellation,
   stageOf,
   isDealerPostShipBlocked,
+  evaluateDealerGateLocal,
+  resolveDealerGateFromCarrier,
+  defaultAdminStageFromCarrier,
   DEFAULT_CANCELLATION_POLICY,
 } from "./cancellation";
 
@@ -143,6 +146,67 @@ describe("isDealerPostShipBlocked — stopgap pending cancelDelhiveryShipment wi
     // by isDealerPostShipBlocked at the call site (i.e. admins).
     const eligibility = evaluateCancellation({ status: "SHIPPED", paymentType: "FULL_100", policy });
     expect(eligibility).toEqual({ ok: true, stage: "POST_SHIP", feePercent: 20 });
+  });
+});
+
+describe("evaluateDealerGateLocal — carrier-aware dealer gate (F-02 / F-04)", () => {
+  const STALE = 3;
+
+  it("ALLOWs when there is no shipment (nothing dispatched)", () => {
+    expect(evaluateDealerGateLocal({ orderStatus: "CONFIRMED", shipment: null, carrierStaleDays: STALE })).toBe("ALLOW");
+  });
+
+  it("BLOCKs when Order.status is already SHIPPED (unchanged fast-path)", () => {
+    expect(evaluateDealerGateLocal({ orderStatus: "SHIPPED", shipment: null, carrierStaleDays: STALE })).toBe("BLOCK");
+  });
+
+  it("NEEDS_CARRIER_CHECK for a fresh PENDING/MANIFESTED shipment", () => {
+    for (const status of ["PENDING", "MANIFESTED"] as const) {
+      expect(
+        evaluateDealerGateLocal({ orderStatus: "PROCESSING", shipment: { status, ageDays: 0.5 }, carrierStaleDays: STALE })
+      ).toBe("NEEDS_CARRIER_CHECK");
+    }
+  });
+
+  it("BLOCKs locally when the shipment status is already past pickup — no fetch needed", () => {
+    for (const status of ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "RETURNED"] as const) {
+      expect(
+        evaluateDealerGateLocal({ orderStatus: "PROCESSING", shipment: { status, ageDays: 0.1 }, carrierStaleDays: STALE })
+      ).toBe("BLOCK");
+    }
+  });
+
+  it("BLOCKs via the age backstop once a MANIFESTED shipment is older than carrierStaleDays", () => {
+    expect(
+      evaluateDealerGateLocal({ orderStatus: "PROCESSING", shipment: { status: "MANIFESTED", ageDays: 3.01 }, carrierStaleDays: STALE })
+    ).toBe("BLOCK");
+    // exactly at the threshold still needs the check
+    expect(
+      evaluateDealerGateLocal({ orderStatus: "PROCESSING", shipment: { status: "MANIFESTED", ageDays: 3 }, carrierStaleDays: STALE })
+    ).toBe("NEEDS_CARRIER_CHECK");
+  });
+});
+
+describe("resolveDealerGateFromCarrier — fail closed", () => {
+  it("ALLOWs only PRE_SHIP; blocks POST_SHIP and FETCH_FAILED", () => {
+    expect(resolveDealerGateFromCarrier("PRE_SHIP")).toBe("ALLOW");
+    expect(resolveDealerGateFromCarrier("POST_SHIP")).toBe("BLOCK");
+    expect(resolveDealerGateFromCarrier("FETCH_FAILED")).toBe("BLOCK");
+  });
+});
+
+describe("defaultAdminStageFromCarrier — tier defaulted from raw carrier data, not Order.status", () => {
+  it("uses the carrier tier when a shipment exists", () => {
+    expect(defaultAdminStageFromCarrier({ hasShipment: true, carrierTier: "PRE_SHIP", orderStatusStage: "POST_SHIP" })).toBe("PRE_SHIP");
+    expect(defaultAdminStageFromCarrier({ hasShipment: true, carrierTier: "POST_SHIP", orderStatusStage: "PRE_SHIP" })).toBe("POST_SHIP");
+  });
+
+  it("fails closed to POST_SHIP when the carrier fetch failed but a shipment exists", () => {
+    expect(defaultAdminStageFromCarrier({ hasShipment: true, carrierTier: "FETCH_FAILED", orderStatusStage: "PRE_SHIP" })).toBe("POST_SHIP");
+  });
+
+  it("falls back to the Order.status-derived stage only when there is no shipment", () => {
+    expect(defaultAdminStageFromCarrier({ hasShipment: false, carrierTier: null, orderStatusStage: "PRE_SHIP" })).toBe("PRE_SHIP");
   });
 });
 

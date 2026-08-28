@@ -66,7 +66,8 @@ export async function delhiveryFetch<T>(
 
 export async function delhiveryPost<T>(
   path: string,
-  formData: Record<string, string>
+  formData: Record<string, string>,
+  opts?: { retries?: number }
 ): Promise<T> {
   const body = new URLSearchParams(formData).toString();
 
@@ -74,5 +75,6 @@ export async function delhiveryPost<T>(
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
+    ...(opts?.retries !== undefined ? { retries: opts.retries } : {}),
   });
 }

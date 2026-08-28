@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { getAuthUser } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
-  if (!token) {
+  // F-14b: getAuthUser now cross-checks UserSession.isActive/expiresAt, so a
+  // disabled account / logout-all / password reset invalidates the Bearer path
+  // here too (previously this hand-rolled verifyAccessToken and never checked).
+  const payload = await getAuthUser(req);
+  if (!payload) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const payload = await verifyAccessToken(token);
-    if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       include: { dealer: true },

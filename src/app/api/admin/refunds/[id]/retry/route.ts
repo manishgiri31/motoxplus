@@ -37,6 +37,22 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     );
   }
 
+  // F-07: atomically claim this retry (FAILED → INITIATED) BEFORE calling
+  // Razorpay. refundPayment has no idempotency key, so two concurrent retries
+  // (double-click, two admins) would otherwise both pass the read-then-check
+  // above and both issue a refund. updateMany-with-guard is the same
+  // concurrency pattern the cancel/payment paths use.
+  const claimed = await prisma.orderCancellation.updateMany({
+    where: { id: cancellation.id, refundStatus: "FAILED" },
+    data: { refundStatus: "INITIATED", refundError: null },
+  });
+  if (claimed.count === 0) {
+    return NextResponse.json(
+      { error: "This refund is already being processed or has completed" },
+      { status: 409 }
+    );
+  }
+
   try {
     const result = await refundPayment(paidPayment.razorpayPaymentId, Math.round(cancellation.refundAmount * 100), {
       orderId: cancellation.orderId,
@@ -51,9 +67,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   } catch (err) {
     console.error(`[Refund Retry] Failed for cancellation ${cancellation.id}:`, err);
     const message = err instanceof Error ? err.message : "Refund retry failed";
+    // Release the claim so a later retry can pick it up again.
     await prisma.orderCancellation.update({
       where: { id: cancellation.id },
-      data: { refundError: message },
+      data: { refundStatus: "FAILED", refundError: message },
     });
     return NextResponse.json({ error: message }, { status: 502 });
   }

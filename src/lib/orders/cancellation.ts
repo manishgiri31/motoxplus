@@ -1,4 +1,6 @@
 import { roundToPaise } from "@/lib/utils";
+import { POST_PICKUP_SHIPMENT_STATUSES } from "@/lib/delhivery/carrier-status";
+import type { CarrierTier } from "@/lib/delhivery/carrier-cancellation";
 
 /**
  * Stage-based cancellation fee: the later a dealer cancels, the more it
@@ -167,3 +169,88 @@ export function isDealerPostShipBlocked(status: OrderStatusForCancellation, isDe
 
 export const DEALER_POST_SHIP_BLOCK_MESSAGE =
   "This order has already shipped and can no longer be cancelled online. Please contact support.";
+
+// ─── Carrier-aware dealer cancellation gate (F-02 / F-04) ─────────────────────
+//
+// AWB creation is EARLY in this system — COD at order placement, prepaid at
+// capture — so "a waybill exists" is NOT a usable post-shipment trigger, and
+// Order.status lags real carrier state (often indefinitely: DELHIVERY_WEBHOOK_
+// SECRET is unset, so Shipment.status is stale from the same cause). The gate:
+//
+//   1. Order.status SHIPPED                         → BLOCK   (unchanged fast-path)
+//   2. no Shipment row                              → ALLOW   (nothing dispatched)
+//   3. Shipment.status past pickup                  → BLOCK   (local, no fetch)
+//   4. Shipment older than carrierStaleDays         → BLOCK   (backstop, no fetch)
+//   5. Shipment.status PENDING/MANIFESTED, fresh    → NEEDS_CARRIER_CHECK
+//
+// For (5) the caller runs classifyCarrierTier() once and feeds the result to
+// resolveDealerGateFromCarrier(). Fail closed everywhere: FETCH_FAILED blocks.
+
+export type ShipmentStatusValue =
+  | "PENDING"
+  | "MANIFESTED"
+  | "PICKED_UP"
+  | "IN_TRANSIT"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "FAILED_DELIVERY"
+  | "RETURNED"
+  | "CANCELLED";
+
+export type DealerGateDecision = "ALLOW" | "BLOCK" | "NEEDS_CARRIER_CHECK";
+
+export interface DealerGateShipmentFacts {
+  status: ShipmentStatusValue;
+  /** Whole or fractional days since the Shipment row was created. */
+  ageDays: number;
+}
+
+/**
+ * Pure, no I/O. Decides as far as local data allows; returns
+ * NEEDS_CARRIER_CHECK when only a live carrier fetch can settle it.
+ */
+export function evaluateDealerGateLocal(params: {
+  orderStatus: OrderStatusForCancellation;
+  shipment: DealerGateShipmentFacts | null;
+  carrierStaleDays: number;
+}): DealerGateDecision {
+  const { orderStatus, shipment, carrierStaleDays } = params;
+
+  if (orderStatus === "SHIPPED") return "BLOCK";
+  if (!shipment) return "ALLOW";
+
+  if (POST_PICKUP_SHIPMENT_STATUSES.has(shipment.status)) return "BLOCK";
+  if (shipment.ageDays > carrierStaleDays) return "BLOCK";
+
+  if (shipment.status === "PENDING" || shipment.status === "MANIFESTED") {
+    return "NEEDS_CARRIER_CHECK";
+  }
+
+  // Any status not covered above — fail closed.
+  return "BLOCK";
+}
+
+/** Pure. Turns a carrier classification into the final dealer decision. */
+export function resolveDealerGateFromCarrier(tier: CarrierTier): "ALLOW" | "BLOCK" {
+  return tier === "PRE_SHIP" ? "ALLOW" : "BLOCK";
+}
+
+// ─── Admin tier defaulting from carrier data (F-02) ───────────────────────────
+
+/**
+ * Pure. The admin cancellation tier is defaulted from RAW carrier data, never
+ * from Order.status. FETCH_FAILED / no-shipment fall back to the passed
+ * `orderStatusStage` (evaluateCancellation's Order.status-derived stage) only
+ * when there is genuinely nothing better — and FETCH_FAILED with a shipment
+ * present defaults to POST_SHIP (fail closed).
+ */
+export function defaultAdminStageFromCarrier(params: {
+  hasShipment: boolean;
+  carrierTier: CarrierTier | null;
+  orderStatusStage: CancellationStage;
+}): CancellationStage {
+  const { hasShipment, carrierTier, orderStatusStage } = params;
+  if (!hasShipment || carrierTier === null) return orderStatusStage;
+  if (carrierTier === "PRE_SHIP") return "PRE_SHIP";
+  return "POST_SHIP"; // POST_SHIP or FETCH_FAILED
+}

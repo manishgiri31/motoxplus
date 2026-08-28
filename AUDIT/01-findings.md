@@ -281,6 +281,15 @@ the other half of the H2 P0.
 | F-14 | **P2** | A | `src/lib/auth/session.ts:85-90` (`revokeAllSessions`); `src/middleware.ts:76-84`; `src/lib/auth/current-user.ts`; `src/lib/auth/middleware.ts:5-11` | Session revocation is incomplete. (a) NextAuth JWT sessions are stateless (8 h `maxAge`, `auth.ts:30`) and have **no `UserSession` cross-check** — `revokeAllSessions` / `admin/users/[id]/disable` / `reset-password` / `logout-all` don't invalidate them; middleware's `authorized` is just `!!token`. (b) `getCurrentUserId`/`getAuthUser` (every dealer/mobile API route) **never check `UserSession.isActive`** — only `requireAuth` does (used by just 3 routes). | A disabled or just-password-reset dealer keeps full web portal + API access for up to 8 h (web) / 15 min (mobile access token). `disable`'s "sessions revoked" message is false for the web session. | code trace |
 | F-15 | **P2** | A | `src/app/api/auth/change-email/route.ts:483-505` | Account email can be changed with only a valid session + `checkIPRateLimit(5,60)` — no password/OTP step-up. `user.email` is updated immediately; verification OTP goes to the new (attacker-controlled) address. | A hijacked session → change email → verify → `forgot-password` to that email → full account takeover. | code trace |
 | F-16 | **P3** | A/E | `src/app/api/auth/verify-email/route.ts` | Unauthenticated, takes `userId` from body, and has **no IP or identifier rate limit** (only the per-code 5-attempt cap in `verifyOTP`). Every sibling verify route uses `enforceRateLimit`/`checkIPRateLimit`. | Low practical risk (can't mint new codes without the IP-limited send route) but an unbounded guessing surface and an inconsistency. | code trace |
+| F-17 | **P2** | C | `src/lib/delhivery/types.ts:328-350` (`normalizeShipmentStatus` / `DELHIVERY_STATUS_MAP`); consumers `webhook.ts:5-12,26,60-65` and `tracking.ts:43` → `syncTrackingToDb` `tracking.ts:108,117-129` | `normalizeShipmentStatus` has **no mapping for raw Delhivery `"Not Picked"`** (the pre-pickup / pre-pickup-cancelled state, confirmed via live capture — `delhivery-open-items.md` item 3). It falls through to the `IN_TRANSIT` default. Both consumers then write `Shipment.status = IN_TRANSIT` **and** transition `Order.status → SHIPPED` for a parcel the courier has not collected. Complete consumer list: only `webhook.ts:26` and `tracking.ts:43` call it; `fetchLiveTracking` feeds `syncTrackingToDb` (writes) and `GET /api/orders/[id]/tracking:56` (display only). | On the first tracking-page open >30 min after manifest (`tracking/route.ts:44-48`), a pre-pickup order flips to `SHIPPED` → dealer self-cancel blocked (`isDealerPostShipBlocked`) and cancellation quoted at POST_SHIP **20%** instead of PRE_SHIP 2%. Over-charge / over-block — the mirror of F-02's under-charge. Same via the (dormant) webhook once `DELHIVERY_WEBHOOK_SECRET` is configured. | code trace + `docs/delhivery-open-items.md` item 3 + `src/lib/delhivery/tracking.test.ts:207-210` |
+
+> **F-17 handling in the emergency batch:** the `normalizeShipmentStatus` gap itself is deliberately **not** fixed (blast radius — mapping `"Not Picked"` → `MANIFESTED` changes `Order.status` transitions in webhook + tracking-sync, outside the batch's F-02/F-04 tier scope; left for **Phase 3** / the Phase 5 DB-driven `delhivery_status_map` redesign). Instead:
+> - **Item 1c (shipped):** `syncTrackingToDb` now guards the `Order.status → SHIPPED` write with `isPreShipCarrierStatus()` against the RAW carrier fields — a "Not Picked"/manifested parcel no longer records a false `SHIPPED`. Narrow: `Shipment.status`, `normalizeShipmentStatus`, `ORDER_STATUS_MAP` and the webhook are untouched. The webhook path still has the F-17 bug (dormant — `DELHIVERY_WEBHOOK_SECRET` unset); Phase 3.
+> - The cancellation tier decision (dealer + admin) uses a **read-only carrier classifier** (`classifyCarrierTier`), never the normalizer or `Order.status`.
+
+| F-18 | **P2 (a) / P3 (b)** | A | (a) `src/lib/auth.ts:125-139` (`session` callback), `src/middleware.ts`; (b) `src/lib/auth.ts:27-32` + no web caller of `/api/auth/refresh` | Split finding, both about the web (NextAuth-cookie) session, which the F-14 batch fix (Option 1) does **not** cover. **(a) No `UserSession` cross-check on the web branch:** `getCurrentUserId` for a web dealer past the 15-min `mx_access` window resolves via `getServerSession`, and the `session` callback never copies `token.sessionId` onto `session.user`, so `UserSession.isActive` can't be checked there. `revokeAllSessions` (disable / logout-all / both reset-password routes) therefore leaves the web session live for up to the NextAuth `maxAge`. Closing it needs the `session`-callback change (+ next-auth type aug) and touches every `getServerSession` call site → out of batch scope (DECISION-RULES §3, "could take the portal down"). **(b) Web session lifetime is effectively unbounded:** `updateAge: 3600` rolls the 8 h JWT forward on every request, the web client never calls `/api/auth/refresh`, so `rotateSession()` never runs for a web session and `UserSession.expiresAt` (login + 7 d) is decorative on web — a daily-active dealer's session never ends. Independent of revocation. Also: `mx_access` expires at 15 min and is never renewed on web, `mx_refresh` is never used — the custom-JWT machinery is half-wired on the web path; Phase 3 decides wire-up vs. removal. | (a) disabled/reset web dealer keeps portal + `getServerSession`-gated API access until the NextAuth cookie's `maxAge`; (b) sessions never expire by time on the web. | code trace; F-14 blast-radius report (this session) |
+
+**Interim mitigation for F-14a (shipped this batch):** `SECRET-ROTATION.md` now documents rotating `NEXTAUTH_SECRET` as the break-glass for an urgent web disable (invalidates every web session immediately), and `admin/users/[id]/disable` carries a code comment that its "sessions revoked" message is accurate for Bearer/mobile clients only until F-18 lands.
 
 ---
 
@@ -402,3 +411,99 @@ finish Area J (PM2/health/backup) + Area K unused-export sweep.
 
 **Deliverable state:** `AUDIT/01-findings.md` is the running log; `AUDIT/02-report.md` (Phase 2)
 not started.
+
+---
+
+## 6. Emergency batch — changes shipped (2026-08-28)
+
+Scope was fixed: F-02/F-04 (+ new Item 1c), F-03, F-14 (Option 1), F-07. Everything
+else noticed is logged unfixed above. One commit per item, each with a
+failing-then-passing test targeting the extracted lib function (no route-test
+infra in this repo — DECISION-RULES §2).
+
+### F-02 + F-04 — cancellation fee tier + Delhivery-cancel wiring — **STOPGAP → mostly real**
+
+New pure logic in `src/lib/orders/cancellation.ts` + `cancellation-gate.ts`;
+`classifyCarrierTier` in `src/lib/delhivery/carrier-cancellation.ts`
+(one live track call, `retries:1`, 10 s timeout, **no DB writes**, reads raw
+`Status.Status`/`StatusCode`/`PickedupDate` only — never `normalizeShipmentStatus`
+or `Order.status`, DECISION-RULES §3).
+
+- **Dealer path** (`POST /api/orders/[id]/cancel`, `cancellation-preview`): gate =
+  local decision first (Order.status SHIPPED → block; no shipment → allow;
+  `Shipment.status` past pickup → block; shipment older than
+  `Setting["cancellation.carrierStaleDays"]`, default **3** → block), then ONE
+  `classifyCarrierTier` call only when the shipment is fresh + PENDING/MANIFESTED.
+  `PRE_SHIP` → allow at pre-ship %; `POST_SHIP` / `FETCH_FAILED` → 422, route to
+  admin. Fails closed throughout.
+- **Admin path**: fee tier defaulted from `classifyCarrierTier` (not Order.status);
+  `FETCH_FAILED` → POST_SHIP; `body.tierOverride` (`PRE_SHIP|POST_SHIP`) honoured
+  and any deviation from the defaulted tier logged to `OrderEvent`
+  (`type: "CANCELLATION_TIER_OVERRIDE"`).
+- **F-04 (real fix)**: `cancelDelhiveryShipment(waybill)` is now called **before**
+  any mutation whenever the order has a Shipment row (dealer-allowed or admin). If
+  it throws or returns `accepted !== true` → **422, nothing mutated** (no CANCELLED,
+  no OrderCancellation, no refund). Idempotent + retry-safe per `cancel.ts` docs.
+- **Still open (Phase 3)**: the `defaultAdminStageFromCarrier` UI (admin toggle to
+  pick the tier) is API-only in this batch — the shared `CancelOrderAction`
+  component shows `preview.carrierStatus` but has no override control yet.
+  `DELHIVERY_WEBHOOK_SECRET` still unset → the gate's carrier fetch is the primary
+  mechanism, not a backstop, until Delhivery configures the push URL (out of batch,
+  needs carrier-side action). The concurrent-`create.json` double-manifest race
+  (F-03) is unaffected by this item.
+
+### Item 1c — F-17 `Order.status → SHIPPED` write-guard — **partial (tracking-sync path only)**
+
+`syncTrackingToDb` now checks `isPreShipCarrierStatus()` against the raw carrier
+fields before writing a `SHIPPED` transition — a "Not Picked"/manifested parcel no
+longer records a false `SHIPPED` (which drove the 20% over-charge + dealer block).
+`Shipment.status`, `normalizeShipmentStatus`, `ORDER_STATUS_MAP` and the **webhook**
+are untouched (blast radius). **Still open**: the webhook path has the identical
+F-17 bug (dormant — secret unset); `normalizeShipmentStatus` itself; both Phase 3.
+
+### F-03 — duplicate AWB — **STOPGAP (retry variant closed, concurrent variant open)**
+
+- `delhiveryPost` gained an optional `{ retries }`; `createDelhiveryShipment` passes
+  `{ retries: 1 }` for `POST /api/cmu/create.json` (one attempt, no auto-retry).
+  Read-only Delhivery calls keep the default 3.
+- `Shipment.orderId`/`waybill` unique constraints **verified** in
+  `prisma/migrations/0_init/migration.sql:1310,1313`. The transaction is now wrapped:
+  a `P2002` (concurrent create won the race) is caught, logged as
+  `DUPLICATE AWB LIKELY … Reconcile with Delhivery`, and the existing Shipment row
+  returned instead of a 500.
+- **Still open (Phase 3)**: the concurrent-call variant (two `finalize`s, webhook +
+  admin click) still hits `create.json` twice before the DB constraint bites — needs
+  an advisory lock. Carrier-side reconciliation of already-orphaned AWBs needs
+  Delhivery data (Step 3 note).
+
+### F-14 — session revocation — **Option 1 (Bearer/mobile path) shipped; web path → F-18**
+
+- `getAuthUser` now cross-checks `UserSession.isActive`/`expiresAt` (one indexed-PK
+  query per authenticated request) — every `getCurrentUserId` caller gets what only
+  `requireAuth`'s 3 routes had. `mobile/auth/me` rewritten onto `getAuthUser`
+  (closes F-14b).
+- `getCurrentUserId` **fallthrough guard**: if an `mx_access`/Bearer token is
+  present, its result is authoritative — no fall-through to the NextAuth cookie
+  (which the web REST-login also sets). A revoked Bearer session can no longer slip
+  through as a web session in the first 15 min.
+- **Behaviour change to watch**: a web user whose `mx_access` is present-but-invalid
+  (e.g. `JWT_SECRET` rotated) gets 401 on API routes for ≤15 min until the cookie
+  expires and the NextAuth fallback resumes. Rare; acceptable.
+- **Web (NextAuth-cookie) path unchanged** → **F-18** (a: no UserSession
+  cross-check; b: unbounded web session lifetime). Interim: `SECRET-ROTATION.md`
+  break-glass + `disable` route comment (both shipped).
+
+### F-07 — concurrent refund retry double-pay — **real fix (cheap, in scope)**
+
+`admin/refunds/[id]/retry`: added an atomic `updateMany` guard
+(`refundStatus: "FAILED" → "INITIATED"`) that **claims** the retry before calling
+Razorpay; `count === 0` → 409. Catch block now resets `FAILED` so a genuine failure
+stays retryable. Two concurrent retries can no longer both issue a refund.
+
+### Not run (waiting on inputs)
+
+- **Step 3** (data-state queries) and **Step 4** (H6 migration diff) — need the Neon
+  branch URL. Step 3 mirror query (over-charged POST_SHIP cancels whose parcel was
+  never picked up, per Amendment 2) is queued.
+- Prod config unconfirmed: `NEXT_PUBLIC_RAZORPAY_ENABLED`, `RAZORPAY_KEY_ID` prefix,
+  `DELHIVERY_WEBHOOK_SECRET`. None of the shipped code assumes a value.

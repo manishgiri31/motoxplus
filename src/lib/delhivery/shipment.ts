@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { delhiveryPost } from "./client";
 import { getDelhiveryConfig } from "./config";
 import { prisma } from "@/lib/prisma";
@@ -157,9 +158,14 @@ export async function createDelhiveryShipment(orderId: string): Promise<{
     data: JSON.stringify(request),
   };
 
+  // F-03: create.json must NEVER be auto-retried — Delhivery can accept
+  // attempt 1 before a client timeout/5xx, and a retry then creates a SECOND
+  // real AWB that our Shipment.orderId unique constraint hides. retries:1 = one
+  // attempt, no repeat. (Read-only Delhivery calls keep the default retries.)
   const response = await delhiveryPost<DelhiveryCreateShipmentResponse>(
     "/api/cmu/create.json",
-    formData
+    formData,
+    { retries: 1 }
   );
 
   if (!response.success || !response.packages?.[0]) {
@@ -177,21 +183,47 @@ export async function createDelhiveryShipment(orderId: string): Promise<{
   const waybill = pkg.waybill;
   const trackingUrl = `https://www.delhivery.com/track/package/${waybill}`;
 
-  await prisma.$transaction([
-    prisma.shipment.create({
-      data: {
-        orderId: order.id,
-        waybill,
-        status: "MANIFESTED",
-        trackingUrl,
-        weight: Math.max(0.5, totalWeight),
-      },
-    }),
-    prisma.order.update({
-      where: { id: order.id },
-      data: { status: "PROCESSING" },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.shipment.create({
+        data: {
+          orderId: order.id,
+          waybill,
+          status: "MANIFESTED",
+          trackingUrl,
+          weight: Math.max(0.5, totalWeight),
+        },
+      }),
+      prisma.order.update({
+        where: { id: order.id },
+        data: { status: "PROCESSING" },
+      }),
+    ]);
+  } catch (err) {
+    // A concurrent createDelhiveryShipment won the race and already wrote the
+    // Shipment row; the unique constraint (Shipment_orderId_key /
+    // Shipment_waybill_key — both verified in 0_init) stopped the second row.
+    // Handle it instead of 500ing. NOTE: both callers already hit
+    // POST /api/cmu/create.json, so a DUPLICATE AWB may now exist at Delhivery
+    // — the retries:1 fix above closes the retry variant of F-03, but the
+    // concurrent variant still needs an advisory lock (logged for Phase 3).
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      console.error(
+        `[Delhivery] DUPLICATE AWB LIKELY — order ${orderId}: create.json returned waybill ${waybill}, ` +
+          `but a Shipment row already exists (P2002 on ${JSON.stringify(err.meta?.target)}). ` +
+          `Reconcile with Delhivery (cancel the orphaned AWB).`
+      );
+      const existing = await prisma.shipment.findUnique({ where: { orderId: order.id } });
+      if (existing) {
+        return {
+          waybill: existing.waybill,
+          trackingUrl:
+            existing.trackingUrl ?? `https://www.delhivery.com/track/package/${existing.waybill}`,
+        };
+      }
+    }
+    throw err;
+  }
 
   return { waybill, trackingUrl };
 }

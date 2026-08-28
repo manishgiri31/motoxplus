@@ -1,10 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { fetchTrackingDetail, fetchLiveTracking } from "./tracking";
+import { fetchTrackingDetail, fetchLiveTracking, syncTrackingToDb } from "./tracking";
 import { delhiveryFetch } from "./client";
 import type { DelhiveryTrackResponse, DelhiveryTrackNotFoundResponse } from "./types";
 
 vi.mock("./client", () => ({
   delhiveryFetch: vi.fn(),
+}));
+
+// syncTrackingToDb touches prisma; the other tests in this file don't.
+const shipmentFindUnique = vi.fn();
+const txOrderUpdate = vi.fn();
+const txShipmentUpdate = vi.fn();
+const txEventUpsert = vi.fn();
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    shipment: { findUnique: (...a: unknown[]) => shipmentFindUnique(...a) },
+    $transaction: async (fn: (tx: unknown) => unknown) =>
+      fn({
+        shipmentTrackingEvent: { upsert: (...a: unknown[]) => txEventUpsert(...a) },
+        shipment: { update: (...a: unknown[]) => txShipmentUpdate(...a) },
+        order: { update: (...a: unknown[]) => txOrderUpdate(...a) },
+      }),
+  },
 }));
 
 // Transcribed verbatim from delhivery-reference.md, "11. Track verbose=2"
@@ -260,5 +277,49 @@ describe("fetchLiveTracking", () => {
 
     expect(result.error).toBe("Unable to fetch live tracking. Please try again later.");
     expect(result.events).toEqual([]);
+  });
+});
+
+describe("syncTrackingToDb — F-17 Order.status write-guard", () => {
+  beforeEach(() => {
+    shipmentFindUnique.mockResolvedValue({ id: "shp_1", waybill: "57930810000066" });
+  });
+
+  it("does NOT write Order.status = SHIPPED for a raw 'Not Picked' (pre-pickup) parcel", async () => {
+    // TRACK_VERBOSE2_FIXTURE: Status.Status = "Not Picked", StatusCode "DTUP-210",
+    // PickedupDate null. normalizeShipmentStatus falls through to IN_TRANSIT,
+    // which the order map would send to SHIPPED — the guard must stop that.
+    vi.mocked(delhiveryFetch).mockResolvedValue(TRACK_VERBOSE2_FIXTURE);
+
+    await syncTrackingToDb("order_1");
+
+    expect(txShipmentUpdate).toHaveBeenCalled(); // Shipment.status write is left alone
+    expect(txOrderUpdate).not.toHaveBeenCalled(); // ...but Order.status is guarded
+  });
+
+  it("DOES write Order.status = SHIPPED once the parcel is genuinely picked up", async () => {
+    const pickedUp: DelhiveryTrackResponse = {
+      ShipmentData: [
+        {
+          Shipment: {
+            ...TRACK_VERBOSE2_FIXTURE.ShipmentData[0].Shipment,
+            PickedupDate: "2026-08-25T09:00:00",
+            Scans: [],
+            Status: {
+              ...TRACK_VERBOSE2_FIXTURE.ShipmentData[0].Shipment.Status,
+              Status: "In Transit",
+              StatusCode: "S-IT",
+            },
+          },
+        },
+      ],
+    };
+    vi.mocked(delhiveryFetch).mockResolvedValue(pickedUp);
+
+    await syncTrackingToDb("order_1");
+
+    expect(txOrderUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: "SHIPPED" } })
+    );
   });
 });

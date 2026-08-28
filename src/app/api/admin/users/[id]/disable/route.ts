@@ -27,5 +27,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await revokeAllSessions(id);
   }
 
+  // NOTE (F-14a / F-18): "sessions revoked" is accurate for Bearer/mobile
+  // clients and for web clients within 15 min of login. An established web
+  // (NextAuth-cookie) session is NOT invalidated here yet — getServerSession
+  // has no UserSession cross-check (Phase 3). For an urgent web cut-off, use
+  // the NEXTAUTH_SECRET break-glass in SECRET-ROTATION.md §0b.
   return NextResponse.json({ user, message: user.isActive ? "Account enabled" : "Account disabled and sessions revoked" });
 }

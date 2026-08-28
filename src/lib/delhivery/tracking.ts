@@ -7,6 +7,7 @@ import type {
   TrackingResult,
 } from "./types";
 import { normalizeShipmentStatus } from "./types";
+import { isPreShipCarrierStatus } from "./carrier-status";
 
 /**
  * Raw tracking lookup, typed against the real captured verbose=2 response.
@@ -20,15 +21,45 @@ import { normalizeShipmentStatus } from "./types";
  * each other, so there's no cost, and Consignee lets us verify the
  * destination without joining back to our own order record.
  */
-export async function fetchTrackingDetail(waybill: string): Promise<DelhiveryShipment | null> {
-  const data = await delhiveryFetch<DelhiveryTrackResponse | DelhiveryTrackNotFoundResponse>(
-    `/api/v1/packages/json/?waybill=${waybill}&verbose=2`
-  );
+export async function fetchTrackingDetail(
+  waybill: string,
+  opts?: { retries?: number }
+): Promise<DelhiveryShipment | null> {
+  const path = `/api/v1/packages/json/?waybill=${waybill}&verbose=2`;
+  const data =
+    opts?.retries !== undefined
+      ? await delhiveryFetch<DelhiveryTrackResponse | DelhiveryTrackNotFoundResponse>(path, { retries: opts.retries })
+      : await delhiveryFetch<DelhiveryTrackResponse | DelhiveryTrackNotFoundResponse>(path);
 
   if ("Success" in data && data.Success === false) return null;
 
   const shipment = (data as DelhiveryTrackResponse).ShipmentData?.[0]?.Shipment;
   return shipment ?? null;
+}
+
+/**
+ * Pure map from a raw Delhivery shipment to our TrackingResult. Extracted so
+ * syncTrackingToDb can hold the raw shipment (for the F-17 write-guard) while
+ * still reusing exactly the same mapping the display path uses.
+ */
+export function mapTrackingDetail(waybill: string, shipment: DelhiveryShipment): TrackingResult {
+  const currentStatus = shipment.Status?.Status || "In Transit";
+  const normalizedStatus = normalizeShipmentStatus(currentStatus);
+
+  const events = (shipment.Scans || []).map((scan) => ({
+    status: scan.ScanDetail.Scan,
+    location: scan.ScanDetail.ScannedLocation,
+    activity: scan.ScanDetail.Instructions || scan.ScanDetail.Scan,
+    timestamp: scan.ScanDetail.ScanDateTime || scan.ScanDetail.StatusDateTime,
+  }));
+
+  return {
+    waybill,
+    status: normalizedStatus,
+    currentLocation: shipment.Status?.StatusLocation || "",
+    estimatedDelivery: shipment.ExpectedDeliveryDate || null,
+    events,
+  };
 }
 
 export async function fetchLiveTracking(waybill: string): Promise<TrackingResult> {
@@ -39,23 +70,7 @@ export async function fetchLiveTracking(waybill: string): Promise<TrackingResult
       return { waybill, status: "PENDING", currentLocation: "", estimatedDelivery: null, events: [], error: "No tracking data" };
     }
 
-    const currentStatus = shipment.Status?.Status || "In Transit";
-    const normalizedStatus = normalizeShipmentStatus(currentStatus);
-
-    const events = (shipment.Scans || []).map((scan) => ({
-      status: scan.ScanDetail.Scan,
-      location: scan.ScanDetail.ScannedLocation,
-      activity: scan.ScanDetail.Instructions || scan.ScanDetail.Scan,
-      timestamp: scan.ScanDetail.ScanDateTime || scan.ScanDetail.StatusDateTime,
-    }));
-
-    return {
-      waybill,
-      status: normalizedStatus,
-      currentLocation: shipment.Status?.StatusLocation || "",
-      estimatedDelivery: shipment.ExpectedDeliveryDate || null,
-      events,
-    };
+    return mapTrackingDetail(waybill, shipment);
   } catch (err) {
     console.error("[Delhivery] tracking fetch failed:", err);
     return {
@@ -75,8 +90,18 @@ export async function syncTrackingToDb(orderId: string): Promise<void> {
   });
   if (!shipment) return;
 
-  const tracking = await fetchLiveTracking(shipment.waybill);
-  if (tracking.error && tracking.events.length === 0) return;
+  // Fetch the RAW shipment (not fetchLiveTracking's normalized result) so the
+  // F-17 write-guard below can read Status.Status / StatusCode / PickedupDate
+  // directly — no second network call, one response covers both needs.
+  let detail: DelhiveryShipment | null;
+  try {
+    detail = await fetchTrackingDetail(shipment.waybill);
+  } catch {
+    return; // fetch failed — leave DB untouched, same as the old error guard
+  }
+  if (!detail) return; // unknown AWB — nothing to sync
+
+  const tracking = mapTrackingDetail(shipment.waybill, detail);
 
   const newStatus = tracking.status as any;
 
@@ -122,10 +147,27 @@ export async function syncTrackingToDb(orderId: string): Promise<void> {
       RETURNED: "RETURNED",
     };
 
-    if (orderStatusMap[newStatus]) {
+    const orderTarget = orderStatusMap[newStatus];
+
+    // F-17 write-guard (AUDIT/01-findings.md). normalizeShipmentStatus has no
+    // mapping for raw "Not Picked" and falls through to IN_TRANSIT → this map
+    // would then record Order.status = SHIPPED for a parcel the courier never
+    // collected, over-charging a pre-pickup cancellation at 20%. Before writing
+    // a SHIPPED transition, confirm against the RAW carrier fields that the
+    // parcel actually left. Deliberately narrow: does not touch the
+    // Shipment.status write above, normalizeShipmentStatus, or the webhook.
+    const rawSaysPreShip =
+      orderTarget === "SHIPPED" &&
+      isPreShipCarrierStatus({
+        statusText: detail.Status?.Status,
+        statusCode: detail.Status?.StatusCode,
+        pickedUpDate: detail.PickedupDate,
+      });
+
+    if (orderTarget && !rawSaysPreShip) {
       await tx.order.update({
         where: { id: orderId },
-        data: { status: orderStatusMap[newStatus] as any },
+        data: { status: orderTarget as any },
       });
     }
   });

@@ -4,21 +4,26 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { refundPayment } from "@/lib/razorpay";
 import { restockItems } from "@/lib/orders/stock";
+import { cancelDelhiveryShipment } from "@/lib/delhivery";
+import { classifyCarrierTier } from "@/lib/delhivery/carrier-cancellation";
 import {
   evaluateCancellation,
   calculateCancellation,
-  isDealerPostShipBlocked,
-  DEALER_POST_SHIP_BLOCK_MESSAGE,
+  defaultAdminStageFromCarrier,
   type CancellationStage,
   type OrderStatusForCancellation,
   type PaymentTypeForCancellation,
 } from "@/lib/orders/cancellation";
 import { getCancellationPolicy } from "@/lib/orders/cancellation-policy";
+import { resolveDealerGate, buildCancellationQuote, type GateOrder } from "@/lib/orders/cancellation-gate";
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
 
 const WAIVE_ROLES = ["SUPER_ADMIN", "ACCOUNTS"];
 const CANCEL_ROLES = ["ADMIN", "SUPER_ADMIN", "ACCOUNTS"];
 const REASON_CODES: CancelReasonCode[] = ["CHANGED_MIND", "ORDERED_BY_MISTAKE", "FOUND_BETTER_PRICE", "DELIVERY_TOO_SLOW", "OTHER"];
+
+const MSG_CARRIER_CANCEL_FAILED =
+  "We couldn't cancel the courier shipment for this order, so nothing was changed. Please contact support.";
 
 /** Thrown inside the transaction when the guarded status update matches zero
  *  rows (order changed between our read and this write) — caught outside to
@@ -35,40 +40,9 @@ interface CancelBody {
   expectedStage?: CancellationStage;
   /** SUPER_ADMIN/ACCOUNTS only — silently ignored for any other role. */
   waive?: boolean;
-}
-
-async function buildPreviewPayload(orderId: string, isDealerActor: boolean) {
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) return null;
-  // TEMPORARY STOPGAP — see docs/delhivery-open-items.md item 1.
-  if (isDealerPostShipBlocked(order.status as OrderStatusForCancellation, isDealerActor)) {
-    return {
-      allowed: false as const,
-      grandTotal: order.grandTotal,
-      amountPaid: order.amountPaid,
-      reason: DEALER_POST_SHIP_BLOCK_MESSAGE,
-    };
-  }
-  const policy = await getCancellationPolicy();
-  const eligibility = evaluateCancellation({
-    status: order.status as OrderStatusForCancellation,
-    paymentType: order.paymentType as PaymentTypeForCancellation,
-    policy,
-  });
-  if (!eligibility.ok) {
-    return { allowed: false as const, grandTotal: order.grandTotal, amountPaid: order.amountPaid, reason: eligibility.message };
-  }
-  const quote = calculateCancellation({ feePercent: eligibility.feePercent, amountPaid: order.amountPaid });
-  return {
-    allowed: true as const,
-    stage: eligibility.stage,
-    chargePercent: quote.feePercent,
-    chargeAmount: quote.feeAmount,
-    grandTotal: order.grandTotal,
-    amountPaid: order.amountPaid,
-    refundAmount: quote.refundAmount,
-    waived: quote.waived,
-  };
+  /** Admin (CANCEL_ROLES) only. Overrides the carrier-defaulted fee tier;
+   *  any deviation from the defaulted tier is logged to OrderEvent. */
+  tierOverride?: CancellationStage;
 }
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -96,10 +70,18 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     : "OTHER";
   const reason = body.reason?.slice(0, 500);
   const wantsWaive = body.waive === true && WAIVE_ROLES.includes(authUser.role);
+  const tierOverride: CancellationStage | undefined =
+    !isDealerActor && (body.tierOverride === "PRE_SHIP" || body.tierOverride === "POST_SHIP")
+      ? body.tierOverride
+      : undefined;
 
   const order = await prisma.order.findUnique({
     where: { id: params.id },
-    include: { items: true, payments: true },
+    include: {
+      items: true,
+      payments: true,
+      shipment: { select: { waybill: true, status: true, createdAt: true } },
+    },
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
@@ -110,9 +92,22 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }
   }
 
-  // TEMPORARY STOPGAP — see docs/delhivery-open-items.md item 1.
-  if (isDealerPostShipBlocked(order.status as OrderStatusForCancellation, isDealerActor)) {
-    return NextResponse.json({ allowed: false, reason: DEALER_POST_SHIP_BLOCK_MESSAGE }, { status: 422 });
+  const gateOrder: GateOrder = {
+    id: order.id,
+    status: order.status,
+    paymentType: order.paymentType,
+    grandTotal: order.grandTotal,
+    amountPaid: order.amountPaid,
+    shipment: order.shipment,
+  };
+
+  // Carrier-aware dealer gate (F-02 / F-04). Replaces the Order.status-only
+  // isDealerPostShipBlocked stopgap.
+  if (isDealerActor) {
+    const blocked = await resolveDealerGate(gateOrder);
+    if (blocked) {
+      return NextResponse.json({ error: blocked.reason, allowed: false, reason: blocked.reason }, { status: 422 });
+    }
   }
 
   const policy = await getCancellationPolicy();
@@ -121,31 +116,66 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     paymentType: order.paymentType as PaymentTypeForCancellation,
     policy,
   });
-
   if (!eligibility.ok) {
-    return NextResponse.json({ allowed: false, reason: eligibility.message }, { status: 422 });
+    return NextResponse.json({ error: eligibility.message, allowed: false, reason: eligibility.message }, { status: 422 });
   }
 
-  // Order moved stage between the dealer/admin's preview and this confirm —
-  // reject and hand back fresh numbers rather than charging a fee they never saw.
-  if (body.expectedStage && body.expectedStage !== eligibility.stage) {
-    const preview = await buildPreviewPayload(order.id, isDealerActor);
+  // Effective fee tier. Dealer: always PRE_SHIP (the gate guarantees Order.status
+  // is pre-shipment when a dealer is let through). Admin: defaulted from RAW
+  // carrier data (never Order.status), overridable, override audited.
+  let effectiveStage: CancellationStage = eligibility.stage;
+  let defaultedStage: CancellationStage = eligibility.stage;
+  let carrierStatusForLog = "";
+  if (!isDealerActor && order.shipment) {
+    const classification = await classifyCarrierTier(order.shipment.waybill);
+    defaultedStage = defaultAdminStageFromCarrier({
+      hasShipment: true,
+      carrierTier: classification.tier,
+      orderStatusStage: eligibility.stage,
+    });
+    carrierStatusForLog = `${classification.rawStatusText || "?"} / ${classification.rawStatusCode || "?"} (${classification.tier})`;
+    effectiveStage = tierOverride ?? defaultedStage;
+  }
+
+  const effectiveFeePercent =
+    effectiveStage === "PRE_SHIP" ? policy.preShipChargePercent : policy.postShipChargePercent;
+
+  // Order moved stage between preview and confirm — reject with fresh numbers
+  // rather than charging a fee they never saw.
+  if (body.expectedStage && body.expectedStage !== effectiveStage) {
+    const preview = await buildCancellationQuote(gateOrder, isDealerActor);
     return NextResponse.json({ error: "Order status changed", preview }, { status: 409 });
   }
 
-  const quote = calculateCancellation({ feePercent: eligibility.feePercent, amountPaid: order.amountPaid });
+  const quote = calculateCancellation({ feePercent: effectiveFeePercent, amountPaid: order.amountPaid });
   const feeAmount = wantsWaive ? 0 : quote.feeAmount;
   const refundAmount = wantsWaive ? order.amountPaid : quote.refundAmount;
 
+  // ── Cancel the real Delhivery parcel FIRST (F-04) ──────────────────────────
+  // Delhivery before money (docs/delhivery-open-items.md item 1). If the carrier
+  // won't accept the cancellation, mutate NOTHING — no CANCELLED, no
+  // OrderCancellation, no refund. cancelDelhiveryShipment is idempotent and safe
+  // to retry, so a later manual retry is fine.
+  if (order.shipment) {
+    let accepted = false;
+    try {
+      const res = await cancelDelhiveryShipment(order.shipment.waybill);
+      accepted = res.accepted === true;
+    } catch (err) {
+      console.error(`[Cancel] Delhivery cancel threw for order ${order.id}:`, err);
+    }
+    if (!accepted) {
+      return NextResponse.json(
+        { error: MSG_CARRIER_CANCEL_FAILED, code: "CARRIER_CANCEL_FAILED" },
+        { status: 422 }
+      );
+    }
+  }
+
   try {
     await prisma.$transaction(async (tx) => {
-      // Guarded update: only proceeds if status is still what we just
-      // evaluated against. Mirrors decrementStock's updateMany-guard pattern
-      // in lib/orders/stock.ts — count 0 means someone else changed the order
-      // between our read and this write (a true concurrent-request race,
-      // distinct from the expectedStage check above which catches the
-      // preview-vs-confirm gap). Runs inside this transaction, not before it,
-      // so a status flip can't happen between the guard and the writes below.
+      // Guarded update: only proceeds if status is still what we evaluated
+      // against — count 0 means a concurrent request changed the order.
       const guarded = await tx.order.updateMany({
         where: { id: order.id, status: order.status },
         data: { status: "CANCELLED", amountDue: 0, stockReserved: false },
@@ -163,7 +193,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
         data: {
           orderId: order.id,
           fromStatus: order.status,
-          feePercent: eligibility.feePercent,
+          feePercent: effectiveFeePercent,
           feeAmount,
           amountPaidAtCancellation: order.amountPaid,
           refundAmount,
@@ -189,29 +219,37 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
           reason,
         },
       });
+
+      if (tierOverride && tierOverride !== defaultedStage) {
+        await tx.orderEvent.create({
+          data: {
+            orderId: order.id,
+            type: "CANCELLATION_TIER_OVERRIDE",
+            actorId: userId,
+            actorRole: authUser.role,
+            reason: `carrier: ${carrierStatusForLog}; defaulted: ${defaultedStage}; chosen: ${tierOverride}`,
+          },
+        });
+      }
     });
   } catch (err) {
     if (err instanceof OrderChangedError) {
-      const preview = await buildPreviewPayload(order.id, isDealerActor);
+      const preview = await buildCancellationQuote(gateOrder, isDealerActor);
       return NextResponse.json({ error: "Order status changed", preview }, { status: 409 });
     }
     throw err;
   }
 
-  // Refund happens outside the transaction — it's an external call to Razorpay,
-  // and a slow/hung request there shouldn't hold the DB transaction open.
-  // If it throws, the cancellation itself has already committed (correct: the
-  // order IS cancelled) but refundStatus stays INITIATED with no refundId,
-  // which the admin refund-ops "Retry refund" action picks up and re-drives.
+  // Refund happens outside the transaction — external call to Razorpay. If it
+  // throws, the cancellation has already committed (correct: the order IS
+  // cancelled) but refundStatus stays INITIATED with no refundId, which the
+  // admin "Retry refund" action picks up and re-drives.
   if (refundAmount > 0) {
     const paidPayment = order.payments
       .filter((p) => p.status === "PAID" && p.razorpayPaymentId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
 
     if (!paidPayment?.razorpayPaymentId) {
-      // No Razorpay-captured payment to refund against (e.g. balance paid via
-      // UPI proof submission, not Razorpay) — flag for manual handling rather
-      // than silently leaving refundStatus stuck at INITIATED forever.
       await prisma.orderCancellation.update({
         where: { orderId: order.id },
         data: { refundStatus: "FAILED", refundError: "No Razorpay-captured payment found for this order" },
@@ -243,8 +281,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   const cancellation = await prisma.orderCancellation.findUnique({ where: { orderId: order.id } });
   return NextResponse.json({
     success: true,
-    stage: eligibility.stage,
-    chargePercent: eligibility.feePercent,
+    stage: effectiveStage,
+    chargePercent: effectiveFeePercent,
     chargeAmount: feeAmount,
     refundAmount,
     refundStatus: cancellation?.refundStatus,

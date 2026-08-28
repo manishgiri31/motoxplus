@@ -2,26 +2,43 @@ import { NextRequest } from "next/server";
 import { verifyAccessToken, COOKIE_ACCESS, JWTPayload } from "./jwt";
 import { prisma } from "@/lib/prisma";
 
-export async function getAuthUser(req: NextRequest): Promise<JWTPayload | null> {
-  const token = req.cookies.get(COOKIE_ACCESS)?.value
-    || req.headers.get("authorization")?.replace("Bearer ", "");
-
-  if (!token) return null;
-  return verifyAccessToken(token);
+/** The raw custom-JWT access token, from the mx_access cookie or a Bearer
+ *  header. Presence (even of an invalid token) tells getCurrentUserId this is
+ *  an API/mobile client, so it must NOT fall through to the NextAuth cookie. */
+export function extractAccessToken(req: NextRequest): string | null {
+  return (
+    req.cookies.get(COOKIE_ACCESS)?.value ||
+    req.headers.get("authorization")?.replace("Bearer ", "") ||
+    null
+  );
 }
 
-export async function requireAuth(req: NextRequest) {
-  const user = await getAuthUser(req);
-  if (!user) return null;
+export async function getAuthUser(req: NextRequest): Promise<JWTPayload | null> {
+  const token = extractAccessToken(req);
+  if (!token) return null;
 
-  // Verify session is still active
+  const payload = await verifyAccessToken(token);
+  if (!payload?.sessionId) return null;
+
+  // F-14: `disable`, `logout-all`, and both password-reset routes flip
+  // UserSession.isActive = false, but the access token stays cryptographically
+  // valid for up to its 15-min lifetime. requireAuth already cross-checked the
+  // session row; doing it here means every getCurrentUserId caller (i.e. every
+  // dealer/mobile API route) gets that guarantee, not just the 3 routes on
+  // requireAuth. One indexed-PK lookup per authenticated request.
   const session = await prisma.userSession.findUnique({
-    where: { id: user.sessionId },
+    where: { id: payload.sessionId },
     select: { isActive: true, expiresAt: true },
   });
+  if (!session || !session.isActive || session.expiresAt < new Date()) return null;
 
-  if (!session?.isActive || session.expiresAt < new Date()) return null;
-  return user;
+  return payload;
+}
+
+/** Retained for the routes that call it directly (logout, logout-all, auth/me,
+ *  auth/sessions). getAuthUser now performs the same session cross-check. */
+export async function requireAuth(req: NextRequest) {
+  return getAuthUser(req);
 }
 
 // Sentinel returned by getClientIP() when neither header is present (e.g.

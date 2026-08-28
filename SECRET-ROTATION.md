@@ -62,6 +62,39 @@ leaked credentials are included (§5, §6); Shiprocket is covered separately in
 
 ---
 
+## §0b — Break-glass: force-log-out every web session immediately (F-14a)
+
+Use this when a web account (admin/staff/dealer/vendor panel) must lose access
+**now** and you cannot wait — a compromised admin session, a terminated employee,
+a leaked laptop.
+
+**Why it's needed:** `admin/users/[id]/disable`, `logout-all`, and the
+password-reset routes call `revokeAllSessions()`, which flips
+`UserSession.isActive = false`. As of the 2026-08-28 emergency batch that
+reliably cuts off **Bearer/mobile** clients (and web clients within 15 min of
+login). It does **not** yet cut off an established **web** (NextAuth-cookie)
+session — `getServerSession` has no `UserSession` cross-check (finding **F-18**
+in `AUDIT/01-findings.md`; fix scheduled for Phase 3). A disabled web dealer/admin
+keeps portal + `getServerSession`-gated API access until their NextAuth cookie
+hits its `maxAge` (8 h in production, rolling).
+
+**Break-glass procedure — rotating `NEXTAUTH_SECRET` invalidates every web
+session in the process, instantly:**
+
+- [ ] 0b.1 Generate a new value: `openssl rand -base64 32`
+- [ ] 0b.2 On the VPS, edit `.env`, replace `NEXTAUTH_SECRET` only.
+- [ ] 0b.3 `pm2 reload ecosystem.config.js --env production`
+- [ ] 0b.4 Confirm: an existing web session cookie now bounces to `/login`.
+
+**Cost:** every web user (all panels) is signed out and must log in again — see
+§2's "what breaks" notes. Mobile/Bearer clients are unaffected (they verify
+against `JWT_SECRET`, not `NEXTAUTH_SECRET`). This is a blunt instrument; for a
+single account, prefer `disable` + this only if the 8 h residual window is
+unacceptable. Once F-18 lands, `disable` alone will be sufficient and this
+section becomes redundant.
+
+---
+
 ## §1 — Postgres password (Hostinger VPS, `postgresql@16-main`) + `DATABASE_URL`
 
 **Issued/changed:** directly on the VPS via `psql`, not a third-party dashboard.
