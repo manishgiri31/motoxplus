@@ -238,6 +238,52 @@ jobs:
             echo "All required environment variables are present."
 
             # ---------------------------------------------------------------
+            # 3b. Database reachability, BEFORE anything on disk is changed.
+            #     A down database now costs nothing instead of leaving new
+            #     code and new node_modules against an unmigrated schema.
+            # ---------------------------------------------------------------
+            step "Checking database reachability"
+
+            # prisma.config.ts disables Prisma's own .env loading
+            # ("Prisma config detected, skipping environment variable loading"),
+            # so the CLI depends on this export. The value is never printed.
+            export DATABASE_URL="$(read_env_value DATABASE_URL)"
+
+            DB_ENDPOINT="${DATABASE_URL#*://}"
+            DB_ENDPOINT="${DB_ENDPOINT#*@}"
+            DB_ENDPOINT="${DB_ENDPOINT%%/*}"
+            DB_ENDPOINT="${DB_ENDPOINT%%\?*}"
+            DB_HOST="${DB_ENDPOINT%%:*}"
+            DB_PORT="${DB_ENDPOINT##*:}"
+            if [ "${DB_PORT}" = "${DB_HOST}" ]; then
+              DB_PORT="5432"
+            fi
+            echo "Database endpoint from .env: ${DB_HOST}:${DB_PORT}"
+
+            tcp_open() {
+              timeout 5 bash -c "exec 3<>/dev/tcp/${1}/${2}" >/dev/null 2>&1
+            }
+
+            if ! tcp_open "${DB_HOST}" "${DB_PORT}"; then
+              echo "Cannot open a TCP connection to ${DB_HOST}:${DB_PORT}."
+              if [ "${DB_HOST}" = "localhost" ] && tcp_open "127.0.0.1" "${DB_PORT}"; then
+                echo ""
+                echo "However 127.0.0.1:${DB_PORT} IS reachable."
+                echo "'localhost' is resolving to ::1 while the server listens on IPv4 only."
+                echo "Fix: use 127.0.0.1 instead of localhost in DATABASE_URL."
+              fi
+              echo ""
+              echo "PostgreSQL-like sockets currently listening on this host:"
+              (ss -lnt 2>/dev/null || netstat -lnt 2>/dev/null) \
+                | grep -E ':(5432|5433|5434)\b' \
+                || echo "  none listening on 5432, 5433 or 5434"
+              echo ""
+              echo "Nothing was changed. Repository is still at $(git rev-parse HEAD)."
+              exit 1
+            fi
+            echo "TCP connection to ${DB_HOST}:${DB_PORT} succeeded."
+
+            # ---------------------------------------------------------------
             # 4. Fetch and check out the exact triggering commit
             # ---------------------------------------------------------------
             step "Updating repository to ${DEPLOY_SHA}"
@@ -284,10 +330,9 @@ jobs:
             # 6. Prisma: generate client, then apply migrations
             # ---------------------------------------------------------------
             step "Running Prisma migrations"
-            # Exported explicitly so the CLI does not depend on dotenv auto-loading.
-            # The value is never printed.
-            export DATABASE_URL="$(read_env_value DATABASE_URL)"
-
+            # DATABASE_URL was already exported during the reachability check.
+            # 'npm ci' runs prisma generate via postinstall; this repeat is
+            # cheap, idempotent, and guarantees the client matches the checkout.
             npx --no-install prisma generate
 
             if ! npx --no-install prisma migrate deploy; then
