@@ -33,10 +33,10 @@ export function AdminDealerActions({ dealerId, currentStatus }: Props) {
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
         >
           {loadingStatus === "ACTIVE" ? <Spinner size={12} /> : null}
-          Approve
+          Activate
         </button>
       )}
-      {currentStatus !== "REJECTED" && currentStatus !== "PENDING" && (
+      {currentStatus !== "SUSPENDED" && (
         <button
           onClick={() => updateStatus("SUSPENDED")}
           disabled={!!loadingStatus}
@@ -44,16 +44,6 @@ export function AdminDealerActions({ dealerId, currentStatus }: Props) {
         >
           {loadingStatus === "SUSPENDED" ? <Spinner size={12} /> : null}
           Suspend
-        </button>
-      )}
-      {currentStatus === "PENDING" && (
-        <button
-          onClick={() => updateStatus("REJECTED")}
-          disabled={!!loadingStatus}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
-        >
-          {loadingStatus === "REJECTED" ? <Spinner size={12} /> : null}
-          Reject
         </button>
       )}
     </div>

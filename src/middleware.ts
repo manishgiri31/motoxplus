@@ -30,9 +30,13 @@ export default withAuth(
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
 
-    // Mandatory email/mobile verification + approval gating — dealers and vendors only.
+    // Mandatory email/mobile verification — dealers and vendors both.
     // A correct password always issues a session (see src/lib/auth.ts); this is
-    // where we actually route unverified/unapproved users, instead of blocking login.
+    // where we actually route unverified users, instead of blocking login.
+    //
+    // Approval gating differs by role:
+    //   - VENDOR: still requires admin approval — blocked until status === APPROVED.
+    //   - DEALER: no sign-up approval. Only an admin SUSPEND/REJECT locks them out.
     if (
       (role === "DEALER" || role === "VENDOR") &&
       (pathname.startsWith("/dealer") || pathname.startsWith("/vendor")) &&
@@ -44,8 +48,11 @@ export default withAuth(
       if (!token?.mobileVerified) {
         return NextResponse.redirect(new URL("/verify-mobile", req.url));
       }
-      const status = role === "DEALER" ? token?.dealerStatus : token?.vendorStatus;
-      if (status !== "ACTIVE" && status !== "APPROVED") {
+      if (role === "VENDOR") {
+        if (token?.vendorStatus !== "APPROVED") {
+          return NextResponse.redirect(new URL("/pending-approval", req.url));
+        }
+      } else if (token?.dealerStatus === "SUSPENDED" || token?.dealerStatus === "REJECTED") {
         return NextResponse.redirect(new URL("/pending-approval", req.url));
       }
     }

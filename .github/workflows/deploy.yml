@@ -74,7 +74,7 @@ jobs:
             APP_DIR="/var/www/motoxplus"
             ENV_FILE="${APP_DIR}/.env"
             APP_NAME="motoxplus"
-            HEALTH_URL="http://127.0.0.1:3000/"
+            HEALTH_URL="http://127.0.0.1:3000/api/health/ready"
             HEALTH_RETRIES=12
             HEALTH_DELAY=5
 

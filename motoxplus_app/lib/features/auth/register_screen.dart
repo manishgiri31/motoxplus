@@ -73,9 +73,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         context: context,
         barrierDismissible: false,
         builder: (_) => AlertDialog(
-          title: const Text('Application Submitted'),
+          title: const Text('Account Created'),
           content: const Text(
-            'Your dealer application has been submitted. We\'ll review it and notify you by email once approved.',
+            'Your dealer account has been created. Verify your email and mobile number, then sign in to start ordering.',
           ),
           actions: [
             TextButton(
@@ -211,7 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Text('Dealer Information', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
-            Text('Your application will be reviewed by our team', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
+            Text('No approval wait — verify your details and start ordering', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
             const SizedBox(height: 28),
             _field(_companyCtrl, 'Company Name', Icons.business_outlined, validator: _required),
             const SizedBox(height: 14),
@@ -241,7 +241,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 keyboard: TextInputType.number, validator: _required),
             const SizedBox(height: 28),
             AppButton(
-              label: 'Submit Application',
+              label: 'Create Account',
               onPressed: _submit,
               loading: _loading,
               icon: const Icon(Icons.send, size: 16, color: Colors.white),

@@ -42,7 +42,7 @@ export default function TermsPage() {
             <Section title="1. Definitions">
               <ul>
                 <li><strong className="text-[var(--ink)]">&ldquo;Company&rdquo;</strong> means MotoXPlus India Private Limited (GSTIN: 07AAUCM5765B1Z4), registered at RZ-43/291, Nashirpur, New Delhi – 110045.</li>
-                <li><strong className="text-[var(--ink)]">&ldquo;Dealer&rdquo;</strong> means a registered business entity approved by the Company to purchase products through the dealer portal.</li>
+                <li><strong className="text-[var(--ink)]">&ldquo;Dealer&rdquo;</strong> means a registered business entity that has created an account to purchase products through the dealer portal.</li>
                 <li><strong className="text-[var(--ink)]">&ldquo;Platform&rdquo;</strong> means the website motoxplus.in and all associated web applications.</li>
                 <li><strong className="text-[var(--ink)]">&ldquo;Products&rdquo;</strong> means automotive spare parts listed on the Platform.</li>
                 <li><strong className="text-[var(--ink)]">&ldquo;Order&rdquo;</strong> means a confirmed purchase submitted by a Dealer through the Platform.</li>
@@ -50,14 +50,15 @@ export default function TermsPage() {
             </Section>
 
             <Section title="2. Dealer Registration &amp; Eligibility">
-              <p>To become an authorised dealer you must:</p>
+              <p>To register as a dealer you must:</p>
               <ul>
                 <li>Be a legally incorporated business entity in India with a valid GSTIN</li>
                 <li>Provide accurate company details, owner information, and contact data during registration</li>
-                <li>Receive written approval from the Company before accessing the dealer portal</li>
+                <li>Verify your email address and mobile number to activate the account</li>
               </ul>
               <p className="mt-3">
-                The Company reserves the right to approve, reject, or suspend any dealer account at its sole
+                Dealer accounts are activated on registration without a prior approval step. The Company
+                nevertheless reserves the right to suspend or terminate any dealer account at its sole
                 discretion. False or misleading information provided during registration is grounds for immediate
                 account termination.
               </p>

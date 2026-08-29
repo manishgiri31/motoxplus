@@ -48,7 +48,7 @@ export default async function AdminDealersPage(
 
       {/* Status filters */}
       <div className="flex gap-2 mb-6">
-        {[null, "PENDING", "ACTIVE", "REJECTED", "SUSPENDED"].map((s) => (
+        {[null, "ACTIVE", "SUSPENDED"].map((s) => (
           <Link
             key={s || "all"}
             href={`/admin/dealers${s ? `?status=${s}` : ""}`}

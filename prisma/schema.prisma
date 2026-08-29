@@ -132,7 +132,7 @@ model Dealer {
   city               String
   address            String?
   pincode            String?
-  status             DealerStatus        @default(PENDING)
+  status             DealerStatus        @default(ACTIVE)
   creditLimit        Float               @default(0)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -144,6 +144,7 @@ model Dealer {
   shopAddress        String?
   cart               Cart?
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceTokens       DeviceToken[]
   documents          DealerDocument[]
   invoices           Invoice[]
   orders             Order[]
@@ -431,6 +432,25 @@ model OrderEvent {
   order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId, createdAt])
+}
+
+/**
+ * Expo push tokens for the dealer mobile app. One row per physical device —
+ * a dealer signed in on a phone and a tablet has two rows. The app registers
+ * a token on login (POST /api/mobile/push-token) and deletes it on logout
+ * (DELETE /api/mobile/push-token); the send helper (lib/push/send.ts) also
+ * prunes any token Expo reports back as DeviceNotRegistered.
+ */
+model DeviceToken {
+  id        String         @id @default(cuid())
+  dealerId  String
+  token     String         @unique
+  platform  DevicePlatform
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  dealer    Dealer         @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  @@index([dealerId])
 }
 
 model OrderItem {
@@ -1453,4 +1473,9 @@ enum VehicleDetectionInput {
   VIN
   PLATE
   MANUAL
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
 }

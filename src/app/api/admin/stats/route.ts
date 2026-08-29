@@ -11,14 +11,14 @@ export async function GET() {
 
   const [
     totalDealers,
-    pendingDealers,
+    suspendedDealers,
     totalOrders,
     pendingOrders,
     totalProducts,
     totalRevenue,
   ] = await Promise.all([
     prisma.dealer.count({ where: { status: "ACTIVE" } }),
-    prisma.dealer.count({ where: { status: "PENDING" } }),
+    prisma.dealer.count({ where: { status: "SUSPENDED" } }),
     prisma.order.count(),
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.product.count({ where: { isActive: true } }),
@@ -49,7 +49,7 @@ export async function GET() {
 
   return NextResponse.json({
     totalDealers,
-    pendingDealers,
+    suspendedDealers,
     totalOrders,
     pendingOrders,
     totalProducts,

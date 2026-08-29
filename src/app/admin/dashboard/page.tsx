@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { Users, Package, ClipboardList, TrendingUp, ArrowRight, Clock, Ban, Receipt } from "lucide-react";
+import { Users, Package, ClipboardList, TrendingUp, ArrowRight, Ban, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatGrid, StatCard } from "@/components/ui/stat-card";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,7 @@ export default async function AdminDashboardPage() {
 
   const [
     totalDealers,
-    pendingDealers,
+    suspendedDealers,
     totalOrders,
     pendingOrders,
     totalProducts,
@@ -32,7 +32,7 @@ export default async function AdminDashboardPage() {
     chargesThisMonth,
   ] = await Promise.all([
     prisma.dealer.count({ where: { status: "ACTIVE" } }),
-    prisma.dealer.count({ where: { status: "PENDING" } }),
+    prisma.dealer.count({ where: { status: "SUSPENDED" } }),
     prisma.order.count(),
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.product.count({ where: { isActive: true } }),
@@ -43,7 +43,6 @@ export default async function AdminDashboardPage() {
       include: { dealer: { include: { user: true } } },
     }),
     prisma.dealer.findMany({
-      where: { status: "PENDING" },
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { user: true },
@@ -65,7 +64,7 @@ export default async function AdminDashboardPage() {
           icon={Users}
           label="Active Dealers"
           value={totalDealers}
-          sub={`${pendingDealers} pending`}
+          sub={suspendedDealers > 0 ? `${suspendedDealers} suspended` : "all active"}
           href="/admin/dealers"
           tone="info"
         />
@@ -138,18 +137,18 @@ export default async function AdminDashboardPage() {
           </div>
         </Card>
 
-        {/* Pending Dealers */}
+        {/* Recent Dealers */}
         <Card pad="lg">
           <CardHeader>
-            <CardTitle>Pending Dealers</CardTitle>
+            <CardTitle>Recent Dealers</CardTitle>
             <Button asChild variant="link" size="sm">
-              <Link href="/admin/dealers?status=PENDING">
+              <Link href="/admin/dealers">
                 View All <ArrowRight size={12} />
               </Link>
             </Button>
           </CardHeader>
           {recentDealers.length === 0 ? (
-            <EmptyState title="No pending applications" />
+            <EmptyState title="No dealers yet" />
           ) : (
             <div className="space-y-2">
               {recentDealers.map((dealer) => (
@@ -158,8 +157,8 @@ export default async function AdminDashboardPage() {
                   href={`/admin/dealers/${dealer.id}`}
                   className="flex items-center gap-3 p-3 rounded-sm border border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-card-hover)] transition-colors group"
                 >
-                  <div data-tone="warn" className="w-8 h-8 rounded-sm bg-[var(--tone-bg)] flex items-center justify-center flex-shrink-0">
-                    <Clock size={13} className="text-[var(--tone-fg)]" />
+                  <div data-tone="info" className="w-8 h-8 rounded-sm bg-[var(--tone-bg)] flex items-center justify-center flex-shrink-0">
+                    <Users size={13} className="text-[var(--tone-fg)]" />
                   </div>
                   <div className="min-w-0">
                     <div className="text-[var(--text-primary)] text-xs font-bold truncate">{dealer.companyName}</div>
@@ -169,11 +168,6 @@ export default async function AdminDashboardPage() {
                 </Link>
               ))}
             </div>
-          )}
-          {pendingDealers > 0 && (
-            <Button asChild variant="outline" size="sm" block className="mt-4">
-              <Link href="/admin/dealers?status=PENDING">Review {pendingDealers} Applications</Link>
-            </Button>
           )}
         </Card>
       </div>

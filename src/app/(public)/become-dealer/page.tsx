@@ -30,7 +30,7 @@ export default function BecomeDealerPage() {
               <p className="text-[var(--muted)] text-lg leading-relaxed mb-10">
                 Become an authorized MotoXPlus India dealer and gain access to
                 500+ premium products, competitive pricing, and dedicated support.
-                Applications are reviewed within 2 business days.
+                Sign up, verify your email and mobile, and you&apos;re in — no approval wait.
               </p>
 
               <div className="grid grid-cols-2 gap-px bg-[var(--line)] border border-[var(--line)]">

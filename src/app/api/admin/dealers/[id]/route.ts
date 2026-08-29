@@ -24,13 +24,15 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
     include: { user: true },
   });
 
-  if (status === "ACTIVE" && before?.status !== "ACTIVE") {
+  // Dealers no longer need sign-up approval, so this only fires when an admin
+  // lifts a suspension (or clears a legacy PENDING/REJECTED account).
+  if (status === "ACTIVE" && before?.status && before.status !== "ACTIVE") {
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
     await sendEmail({
       to: dealer.user.email,
-      subject: "Your Dealer Account is Approved — MOTOXPLUS",
+      subject: "Your Dealer Account is Active — MOTOXPLUS",
       html: dealerApprovedTemplate(dealer.user.name || dealer.ownerName, dealer.companyName, loginUrl),
-    }).catch((err) => console.error("[AdminDealerUpdate] Failed to send approval email:", err));
+    }).catch((err) => console.error("[AdminDealerUpdate] Failed to send activation email:", err));
   }
 
   return NextResponse.json(dealer);

@@ -92,7 +92,8 @@ export async function POST(req: NextRequest) {
                   city,
                   address: address || null,
                   pincode: pincode || null,
-                  status: "PENDING",
+                  // No admin approval step — a verified dealer is active immediately.
+                  status: "ACTIVE",
                 },
               },
             }

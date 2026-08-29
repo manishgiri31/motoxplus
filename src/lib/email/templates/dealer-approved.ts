@@ -2,9 +2,9 @@ import { baseTemplate } from "./base";
 
 export function dealerApprovedTemplate(name: string, companyName: string, loginUrl: string) {
   const content = `
-    <div class="title">Your Dealer Account is Approved!</div>
-    <p class="text">Congratulations, ${name}!</p>
-    <p class="text">Your dealer account for <strong style="color:#fff;">${companyName}</strong> has been approved. You can now access the MOTOXPLUS dealer portal to browse products, place orders, and manage your account.</p>
+    <div class="title">Your Dealer Account is Active</div>
+    <p class="text">Hi ${name},</p>
+    <p class="text">Your dealer account for <strong style="color:#fff;">${companyName}</strong> is active. You can now access the MOTOXPLUS dealer portal to browse products, place orders, and manage your account.</p>
     <div style="text-align:center;">
       <a href="${loginUrl}" class="btn">Access Dealer Portal</a>
     </div>
@@ -18,5 +18,5 @@ export function dealerApprovedTemplate(name: string, companyName: string, loginU
     </ul>
     <p class="small">For assistance, contact your account manager at sales@motoxplus.in</p>
   `;
-  return baseTemplate("Account Approved — MOTOXPLUS Dealer Portal", content);
+  return baseTemplate("Account Active — MOTOXPLUS Dealer Portal", content);
 }

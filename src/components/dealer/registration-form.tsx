@@ -79,18 +79,17 @@ export function DealerRegistrationForm() {
         <div className="w-16 h-16 bg-green-900/20 border border-green-700/30 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle size={32} className="text-green-500" />
         </div>
-        <h2 className="text-2xl font-black text-[var(--text-primary)] mb-3">Application Submitted!</h2>
+        <h2 className="text-2xl font-black text-[var(--text-primary)] mb-3">Account Created!</h2>
         <p className="text-[var(--text-muted)] mb-6 leading-relaxed">
-          Thank you for applying to become a MotoXPlus dealer.
-          Please verify your email to continue — we&apos;ve sent a code to {formData.email}.
+          Welcome to MotoXPlus. Verify your email to continue — we&apos;ve sent a
+          code to {formData.email}.
         </p>
         <div className="glass border border-[var(--border-color)] rounded-xl p-4 text-left mb-6">
           <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-2">What happens next?</div>
           {[
             "Verify your email address",
             "Verify your mobile number",
-            "Application review by our dealer team",
-            "Approval email — then access to dealer portal and pricing",
+            "You're in — access the dealer portal and pricing right away",
           ].map((step, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-[var(--border-color)] last:border-0">
               <span className="text-red-600 font-black text-sm">{i + 1}</span>
@@ -111,8 +110,8 @@ export function DealerRegistrationForm() {
 
   return (
     <div className="glass border border-[var(--border-color)] rounded-xl p-8">
-      <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">Dealer Application</h2>
-      <p className="text-[var(--text-muted)] text-sm mb-8">Fill in your business details to get started.</p>
+      <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">Dealer Sign Up</h2>
+      <p className="text-[var(--text-muted)] text-sm mb-8">Fill in your business details to get started — no approval wait.</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Company Name */}
@@ -327,11 +326,11 @@ export function DealerRegistrationForm() {
           disabled={status === "loading"}
           className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors uppercase tracking-wider text-sm mt-2"
         >
-          {status === "loading" ? "Submitting Application..." : "Submit Application"}
+          {status === "loading" ? "Creating Account..." : "Create Account"}
         </button>
 
         <p className="text-gray-600 text-xs text-center">
-          By submitting, you agree to our terms. Applications are reviewed within 2 business days.
+          By signing up, you agree to our terms.
         </p>
       </form>
     </div>

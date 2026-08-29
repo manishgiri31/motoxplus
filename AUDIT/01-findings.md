@@ -27,12 +27,12 @@ Legend: ✅ fully read · 🟡 partially read / key files only · ⬜ not yet
 ### Areas
 | Area | Status | Notes |
 |---|---|---|
-| A auth/authz — helper modules | ✅ | `auth.ts`, `lib/auth/*`, `middleware.ts`, `staff-access.ts` all read |
-| A route matrix (~146 routes) | 🟡 ~40/146 | all `auth/*` + `mobile/auth/*`, orders, cart, payments, uploads, files, admin/payments, admin/shipments read. **~106 routes not yet in the matrix.** |
+| A auth/authz — helper modules | ✅ | `auth.ts`, `lib/auth/*`, `middleware.ts`, `staff-access.ts`, `require-admin.ts`, `verified-account.ts`, `identity.ts`, `current-user.ts` all read |
+| A route matrix (~146 routes) | ✅ 146/146 | segment 1 (§4b) + segment 2 (§4c, 2026-08-29). All non-uniform routes full-file read; every `route.ts` authz line grep-confirmed. **Area A DONE.** |
 | B money | 🟡 | Order-create, Razorpay verify/create, UPI submit, admin verify/reject/retry, cancellation lib read. Refund tiers + GST-on-fee traced. Not read: `payments/upi/qr`, `payments/upi/[orderId]`, invoice generation/PDF. |
 | C shipping | ✅ code / 🟡 vs live | `client/shipment/tracking/cancel/webhook/serviceability/rates` read; reconciled with `docs/delhivery-audit.md`. |
-| D data layer | 🟡 | Transactions in order/payment/cancel paths traced; index audit from map §3 not yet confirmed query-by-query; N+1 sweep of admin list pages ⬜ |
-| E API surface (validation/errors/rate-limit table) | ⬜ | needs the full route matrix first |
+| D data layer | 🟡 | §4e done: `Order.status` writers/state-machine (F-24), N+1 (clear in API routes), index gaps (F-25), `decrementStock` atomic-guard confirmed. Owed: H6 manual migration diff, txn sweep (procurement/convert), admin RSC page query cost (Area H). |
+| E API surface (validation/errors/rate-limit table) | 🟡 | §4d done: validation coverage (7/~120 use zod → F-22), rate-limit tier table (E-2), error-handling spot notes (E-3). Per-route error-leak pass still owed. |
 | F Next.js 15 | ⬜ | not started |
 | G Redis | 🟡 | `redis.ts`, `rate-limit.ts` read; cache-invalidation map ⬜ (need to find all `unstable_cache`/`redis.get` cached reads) |
 | H web UI | ⬜ | app not yet run |
@@ -269,7 +269,7 @@ the other half of the H2 P0.
 | F-02 | **P0** | C/B | `src/lib/orders/cancellation.ts:76-116,165-167` + `webhook.ts` + `tracking.ts` + `cancel/route.ts` | Cancellation fee tier keys off `Order.status`, which lags real shipment state (often indefinitely). Dealer cancels a physically-in-transit `PROCESSING` order at 2% (98% refund) and, per H8b, the parcel is never cancelled with Delhivery. | Dealer keeps the goods and gets 98% of the money back. | code trace + `docs/delhivery-open-items.md` item 1 |
 | F-03 | **P0** | C | `src/lib/delhivery/client.ts:3,33-60,74-84` | `create.json` inherits 3 auto-retries; Delhivery may accept attempt 1 before a client timeout → duplicate real AWB. No path/method exclusion; no advisory lock for the concurrent-call variant. | Two parcels dispatched and billed for one order; the second is invisible to the app. | code trace + `delhivery-audit.md` / `delhivery-open-items.md` (flagged 3×) |
 | F-04 | **P0** | C/B | `src/app/api/orders/[id]/cancel/route.ts` (whole flow) | `cancelDelhiveryShipment` exists but is called nowhere. Any cancellation of an order that has an AWB (dealer *or* admin) issues a refund and leaves the parcel moving. | Refund + goods, every post-manifest cancellation. | `grep`; function header comment; `delhivery-open-items.md` item 1 |
-| F-05 | **P1** | B | `src/lib/payments/finalize.ts:288-333` | `Payment→PAID` write is outside the `$transaction`; if the txn throws (`InsufficientStockError`), Payment is `PAID` but order stays `PENDING`, and every later webhook delivery no-ops on `status==="PAID"`. Webhook returns 200 on processing error (`webhooks/razorpay/route.ts:118-123`) → no Razorpay retry. | (Razorpay live) Dealer's money captured, order never confirmed, silent — only a `console.error`. | code trace |
+| F-05 | **P1** | B | `src/lib/payments/finalize.ts:41-48` (the `prisma.payment.updateMany(... → "PAID")` **before** the `$transaction` at :52) | `Payment→PAID` write is outside the `$transaction`; if the txn throws, Payment is `PAID` but order stays `PENDING`, and every later webhook delivery no-ops on `dbPayment.status==="PAID"` (`webhooks/razorpay/route.ts`). Webhook returns 200 on processing error → no Razorpay retry. **Concrete trigger confirmed 2026-08-29:** prepaid orders do NOT reserve/decrement stock at creation (`orders/route.ts:184` `stockReserved: isCOD`), so two dealers can both check out the last unit, both pay, and the 2nd dealer's `finalize` hits `decrementStock`'s atomic `stock:{gte:qty}` guard → `InsufficientStockError` thrown from inside the txn *after* their Payment row is already committed `PAID`. | (Razorpay live) 2nd dealer's money captured, order never confirmed, permanently stuck, silent — only a `console.error`. | code trace (`finalize.ts`, `stock.ts`, `orders/route.ts`) |
 | F-06 | **P2** | A | `src/app/api/admin/payments/[id]/verify/route.ts:11,16` (also `review`, `reject`) | `ADMIN_ROLES` here is `["ADMIN","SUPER_ADMIN","STAFF"]` with **no department check** — any STAFF (SALES, MARKETING, PRODUCTION) can verify/reject dealer payments and confirm orders. `staff-access.ts` scopes invoices/accounts work to `ACCOUNTS` dept, but this route doesn't use `requireSectionAccess`. | A marketing staffer can mark any dealer's payment verified → order goes to production with no money received. | code trace; contrast with `staff-access.ts:6-13` |
 | F-07 | **P2** | B | `src/app/api/admin/refunds/[id]/retry/route.ts:263-283` | `refundStatus !== "FAILED"` is a read-then-write check with no atomic guard; two concurrent retries both pass and both call `refundPayment` (Razorpay refund API, no idempotency key). | Double refund issued to the dealer on a double-click / concurrent admin action. | code trace |
 | F-08 | **P2** | J | `npm audit` (10 vulns: 2 critical, 7 high, 1 low) | `xlsx@0.18.5` prototype pollution (CVSS 7.8, admin import path, no npm-registry fix available); `@auth/core` homoglyph email bypass (critical, via next-auth chain); `next`→`postcss` XSS; `sharp`/libvips CVEs; `deepmerge-ts` DoS via `@prisma/config`. | `xlsx`: an admin importing a crafted `.xlsx` could pollute `Object.prototype` in the Node process. Others mostly build-time / low-reachability. | `npm audit --json` |
@@ -313,14 +313,15 @@ the other half of the H2 P0.
   number; an attacker rotating target numbers gets a fresh 10/15-min bucket each time, leaving
   per-IP (8/60s) as the only cross-number bound — *but* `checkResendLimit` caps a single
   authenticated user to 10 OTP/hour total. Net spend bound per account ≈ 10/hr. Likely P3.
-- **S-06 (D):** `Order.status` is written from three uncoordinated places (admin PATCH,
-  Delhivery webhook, `syncTrackingToDb`) with different maps and no ordering guard — a
-  late/out-of-order webhook can move `Shipment.status` *and* `Order.status` backwards
-  (`delhivery-audit.md` "MEDIUM — webhook has no dedupe or out-of-order protection"). Interacts
-  with F-02. Rate after the full state-machine enumeration in Area B.
+- **S-06 (D): PROMOTED → F-24** (2026-08-29, after the state-machine enumeration in §4e D-1).
 - **S-07 (J):** Brief says "Hostinger VPS PostgreSQL"; git history (`df12334 connect neon db`)
   and the leaked `DATABASE_URL` shape suggest **Neon**. Affects backup/restore assumptions.
   Needs confirmation from the team / current `.env` value (not read).
+- **S-08 (A):** `procurement/*` routes (requests, purchase-orders, grn) all require
+  `["ADMIN","SUPER_ADMIN"]`, but `staff-access.ts` maps `procurement/grn → ["PRODUCTION"]` and
+  `STAFF_NAV.PRODUCTION` renders a "GRN" link. PRODUCTION staff get a nav link to a page whose
+  API 401s them. Same family as S-03 / O-1. Confirm in Area H (page-level guard may also 401,
+  in which case it's just a dead nav link, not a broken flow). P3.
 
 ---
 
@@ -390,27 +391,224 @@ check; **none** = unauthenticated.
 
 ---
 
+## 4c. Route matrix — segment 2 (admin / vendor / procurement / CRM / catalogue / misc) — 2026-08-29
+
+Completes Area A. Traced by full-file read of the non-uniform routes and a grep sweep of the
+auth/authz line of **every** `route.ts` (all ~146). Segment-1 conventions apply.
+
+### Auth-pattern groups (uniform — spot-read + grep-confirmed)
+
+| Group | Routes | Guard | Notes |
+|---|---|---|---|
+| Vehicle CMS | `admin/vehicles/**` (manufacturers, colors, generations, variants, sections, diagrams+hotspots, gallery, faqs, spins, models-3d, recommendations, accessories, vin-patterns, detection-log, options), `admin/vehicle-types/**`, `admin/reviews/**`, `admin/products/[id]/compatibility/**` | `requireAdmin()` = `["ADMIN","SUPER_ADMIN"]` (`src/lib/auth/require-admin.ts`) | ~45 routes. Consistent. No STAFF path. No ownership concept (global catalogue). Input validation is ad-hoc per route (mostly `await req.json()` destructure, no zod) — fold into Area E. |
+| Admin products (non-CMS) | `admin/products/{import,import/template,consolidate,auto-groups,model-images}`, `admin/products/[id]/variants/**`, `products/[id]` PATCH/DELETE, `products` POST, `categories` POST | inline `["ADMIN","SUPER_ADMIN"]` (some via local `requireAdmin()` copies) | `products` POST / `vendor/products` are the only zod-validated writes in the catalogue surface. |
+| Admin misc | `admin/dealers/**`, `admin/users/[id]/**`, `admin/settings/**`, `admin/stats`, `admin/shipments`, `admins/**` (SUPER_ADMIN via `isSuperAdmin`) | inline `["ADMIN","SUPER_ADMIN"]`; `admin/settings/verification` POST correctly tightens to `SUPER_ADMIN` | `admin/settings/upi` writes the UPI VPA that dealers pay into — admin-only, no 4-eyes. Logged as observation O-3. |
+| Procurement | `procurement/{requests,requests/[id],purchase-orders,purchase-orders/[id],grn}` | local `ADMIN_ROLES = ["ADMIN","SUPER_ADMIN"]` | **No PRODUCTION/STAFF access** though `staff-access.ts` maps `procurement/grn → ["PRODUCTION"]`. Nav-vs-API mismatch → **S-08**. |
+| Vendor admin | `vendors`, `vendors/[id]`, `vendors/[id]/{status,contacts,payments,ratings,gst-verify}` | local `ADMIN_ROLES = ["ADMIN","SUPER_ADMIN"]` | `vendors/[id]/payments` (records money paid to a vendor) is ADMIN-only — no ACCOUNTS, unlike `admin/refunds/[id]/retry` which allows ACCOUNTS. Minor inconsistency O-4. |
+| CRM | `crm/leads`, `crm/leads/[id]`, `crm/leads/[id]/{activities,notes}`, `crm/stats` | `requireSectionAccess(role, dept, "crm")` → ADMIN/SUPER_ADMIN or STAFF∈{SALES,MARKETING} | Consistent. |
+| Vendor self-service | `vendor/profile` GET, `vendor/products` GET/POST, `vendor/purchase-orders` GET, `vendor/purchase-orders/[id]/{accept,reject}` | `role === "VENDOR"` + `vendor.findUnique({userId})` | `vendor/products` POST **does** gate `vendor.status === "APPROVED"` (403) and sets `Product.isActive = false` → **map §D2 vendor-injection concern REFUTED.** `accept/reject` are `vendorId`-scoped + state-guarded (`status === "SENT"`); a SUSPENDED/BLACKLISTED vendor can still accept a PO it was sent (low impact, O-5). |
+| Public / unauthenticated | `products/search` GET, `shipping/serviceability` GET, `vehicles` GET (IP-limited 60/60), `categories` GET, `products` GET, `products/[id]` GET, `contact` POST (IP-limited 5/60), `auth/*` unauth set (segment 1) | none | `products/search` and `shipping/serviceability` have **no rate limit** → **F-19, F-20**. |
+
+### New findings from segment 2
+
+| ID | Sev | Area | Location | What's wrong | Manifestation | Verified by |
+|---|---|---|---|---|---|---|
+| F-19 | **P3** | E/C | `src/app/api/shipping/serviceability/route.ts` (whole file — 12 lines) | `GET /api/shipping/serviceability?pincode=` is **unauthenticated and unrate-limited**, and calls `checkServiceability()` → a live Delhivery API request per hit. **Confirmed no cache** (`src/lib/delhivery/serviceability.ts` — direct `delhiveryFetch`, no memo/Redis/TTL), and `delhiveryFetch` default `retries=3` with 1s/2s backoff → one abusive request can be **3 outbound Delhivery calls** and hold the handler ~3s. Sibling `shipping/estimate` requires `getCurrentUserId`. | Anon caller drives unbounded (×3-amplified) outbound calls to Delhivery — quota burn / carrier-side IP ban that would break real shipment creation — and enumerates serviceable pincodes. | file read (route + `serviceability.ts` + `client.ts`) |
+| F-20 | **P3** | E/D | `src/app/api/products/search/route.ts` | `GET /api/products/search?q=` is unauthenticated + unrate-limited and, per request, runs a Prisma `contains` OR-scan **plus** a `$queryRaw` doing `EXISTS (SELECT 1 FROM unnest(p.compatibility) WHERE compat ILIKE '%q%')` — a full scan of the `Product.compatibility` text[] on every ≥2-char keystroke (no GIN index; `Product` has no text-search index). `${pattern}` is parameterised (no SQLi). | Cheap unauthenticated DB-CPU amplification on a keystroke-frequency endpoint. | file read |
+| F-21 | **P2** | C/E | `src/app/api/orders/route.ts:98-101,252-257` + `src/lib/delhivery/shipment.ts` (no serviceability call) | **No server-side pincode-serviceability validation anywhere in the order → manifest path.** `POST /api/orders` validates only `/^\d{6}$/` on `deliveryPincode`. The checkout page's `<PincodeChecker>` is client-side + advisory (and `checkout/page.tsx:210` deliberately decouples shipping cost from it). `createDelhiveryShipment` (contrary to its own doc-comment "createShipment() will call this to re-check serviceability") **never calls `isServiceable`**. COD shipment creation is fire-and-forget with only `console.error` on failure (`orders/route.ts:254`); the prepaid path is the same in `finalize.ts:99`. | A dealer in a non-serviceable pincode places and pays for an order → order goes `CONFIRMED`, stock decremented, invoice issued, **AWB creation fails silently**, no shipment row, no retry, no alert, nothing shown to dealer or admin. Order sits "confirmed, never ships". | code trace (`orders/route.ts`, `shipment.ts`, `finalize.ts`, `serviceability.ts`, `checkout/page.tsx`) |
+| F-22 | **P3** | E | ~90 route handlers (full list-method in §4d E-1) | Systemic: no input-validation layer. ~90 mutating routes destructure `await req.json()` with no zod schema, no try/catch, no type/range/length/enum checks. Malformed body → unhandled 500 (not 400); out-of-domain but in-type values pass straight to Prisma; Prisma `P2025` on bad id → 500 not 404. F-13 (`parseInt(page)` NaN) is the query-param analogue. | Users/integrations get 500s for what should be 400/404; log noise; a few genuinely unbounded fields (`creditLimit`, oversized strings) reach the DB. No stack leak (Next hides in prod). | grep sweep (zod/req.json/try across all 146) + spot reads |
+| F-23 | **P3** | E/J | `src/app/api/health/route.ts:19`; `src/app/api/upload/dealer-document/route.ts:100` (+ 3 admin upload routes) | Routes echo raw `err.message`/`String(err)` to the caller. `/api/health` is **public** and leaks the DB driver error string (host/driver disclosure on failure); `upload/dealer-document` leaks R2/S3 SDK error text to a dealer. Admin upload/import/refund routes do the same but to trusted actors. | Internal infra detail disclosed to unauthenticated (`/api/health`) or semi-trusted (dealer) callers on error. | grep + file spot-reads |
+| F-24 | **P2** | D/C | `src/lib/delhivery/webhook.ts:60-66`, `src/lib/delhivery/tracking.ts:141-169` (vs `orders/[id]/route.ts:64-95`) | Carrier-driven `Order.status` writes bypass the fulfilment state machine: unconditional `update({data:{status}})`, no transition check, no compare-and-swap, no event dedupe, two drifted status maps. Webhook auth is `?token=` in URL, no HMAC. | Out-of-order/replayed/forged Delhivery event moves `Order.status` backward or `CANCELLED → SHIPPED` — silently un-cancels an already-refunded order in every UI. | code trace (promotes S-06) |
+| F-25 | **P3** | D | `prisma/schema.prisma` — `OrderItem` (no indexes), `ProductVariant.productId`, `Shipment.status`, `Review.userId`, `StorageAuditLog` | Hot FK/filter columns unindexed. `OrderItem WHERE orderId IN (...)` (every order read) and `ProductVariant WHERE productId` (every PDP) are seq scans. | Slow order lists / PDPs as data grows; unbounded `StorageAuditLog`. Fix = new migration → Phase 3, blocked by H6. | code trace vs catalogued queries |
+| O-1..O-6 | — | A/E | see "Observations" below | Consistency observations, not defects — logged so Phase 2 can decide. | — | code trace |
+
+**Observations (unrated):**
+- **O-1 — nav-vs-API section mismatch (generalises S-03).** `staff-access.ts` advertises sections to STAFF departments (`orders`→SALES/PRODUCTION/ACCOUNTS, `products`→MARKETING/PRODUCTION, `dealers`→SALES, `procurement/grn`→PRODUCTION) and `STAFF_NAV` renders links for them, but the matching **API** routes largely accept only `["ADMIN","SUPER_ADMIN"]`: `GET /api/orders` 401s STAFF (S-03), all `procurement/*` 401 PRODUCTION (S-08), all `admin/products/*` writes 401 MARKETING/PRODUCTION, `admin/dealers/[id]` PATCH 401s SALES. Net: several staff portal pages render with dead/erroring actions. Rate in Area H once the app runs.
+- **O-2 — `crm/leads/[id]/convert` requires ADMIN/SUPER_ADMIN** while the rest of CRM accepts SALES/MARKETING staff. A SALES rep can run a lead through the whole pipeline but not convert it to a dealer. Plausibly intentional (account creation) — Phase 2 to confirm with product.
+- **O-3 — `admin/settings/upi` POST** (sets the UPI VPA dealers pay into) is single-admin, no second-approver, no audit event. A compromised/rogue admin can redirect all manual payments. Contrast: cancellation-policy % changes write `updatedById`.
+- **O-4 — `vendors/[id]/payments` POST** (record a payment to a vendor) is ADMIN-only; `admin/refunds/[id]/retry` allows ACCOUNTS. Pick one convention for "accounts staff touches money-out".
+- **O-5 — vendor status not re-checked on `vendor/purchase-orders/[id]/accept|reject`** — a SUSPENDED/BLACKLISTED vendor keeps PO-response ability. Low impact.
+- **O-6 — `GET /api/admin/settings/upi` and `GET /api/admin/settings/cancellation-policy` are intentionally public** (unauthenticated) — checkout + the public policy page consume them. Result: the company UPI VPA and the cancellation-fee % are world-readable. By design, low sensitivity; noted so Phase 2 doesn't re-flag it.
+
+**Positive confirmations (close open map/hypothesis items):**
+- `requireAdmin()` (`["ADMIN","SUPER_ADMIN"]`) is used uniformly across the entire ~45-route vehicle-CMS + reviews surface — no STAFF leakage, no `requireAuth`-style gap.
+- Every account-creating route (`dealer/register`, `vendors` POST, `staff` POST, `crm/leads/[id]/convert`, `admins` POST) hashes passwords with `bcrypt.hash(pw, 12)`. Consistent.
+- `crm/leads/[id]/convert` creates the dealer `status: "ACTIVE"` but the new `User` has `emailVerified: null` / `mobileVerified: false`, so `getVerifiedDealer` still blocks ordering until the dealer verifies — no verification bypass.
+
+### Area A — DONE. Route matrix complete (~146/146 at the authz line; full-file reads for all non-uniform routes).
+
+---
+
+## 4d. Area E — input validation / error handling / rate limiting — 2026-08-29 (started)
+
+Method: grep sweep for `z.object`/`safeParse`/`parse`, `await req.json()`, `try {` across all
+~146 `route.ts`, plus the segment-1/2 rate-limit column.
+
+### E-1 — systemic: no input-validation layer → **F-22**
+
+| Metric | Count |
+|---|---|
+| Mutating routes total | ~120 (POST/PATCH/PUT/DELETE handlers) |
+| Use zod (`z.object` + parse/safeParse) | **7** — `admin/test-email`, `auth/change-email`, `dealer/register`, `vendor/register`, `products` POST, `vendor/products` POST, `webhooks/razorpay` |
+| Bare `await req.json()` with **no** try/catch and **no** schema | **~90** |
+| Manual field checks (`if (!x) return 400`) only | most of the rest |
+
+**F-22 (P3, E) — systemic missing input validation.** ~90 mutating routes destructure
+`await req.json()` directly with no schema, no try/catch, no type/range/length/enum checks.
+Two concrete consequences:
+1. **Malformed/empty body → `SyntaxError` from `req.json()` → unhandled → generic HTTP 500** (not
+   400). Every one of the ~90. Not a stack leak (Next hides it in prod) but wrong status + log
+   noise + trivial to trigger en masse. The query-param analogue is **F-13** (`parseInt(page)`
+   NaN → Prisma throw → 500), confirmed in every `admin/*` list route.
+2. **Unchecked values reach Prisma**: e.g. `admin/dealers/[id]` PATCH takes `creditLimit`
+   unvalidated (negative / 1e308 accepted); `admins` POST takes `userId` from body with no
+   existence/current-role check (can promote any user, or 500 on bad id); `vendors/[id]/status`
+   PATCH, `procurement/*`, the whole vehicle-CMS write surface — all bare. Prisma rejects
+   genuinely malformed enum/FK values but with an unhandled 500, and accepts every
+   in-type-but-out-of-domain value (huge numbers, 10 MB strings, wrong-but-valid IDs).
+
+**Not affected / already correct:**
+- `admin/settings/cancellation-policy` POST **does** bounds-check `0 ≤ pct ≤ 100` + `Number.isFinite` (money path — good), though its `req.json()` still throws on bad body.
+- `orders` POST re-checks cart availability + `getVerifiedDealer`; `payments/*` verify Razorpay + Payment-row replay guards; `webhooks/*` HMAC. The critical money paths have *semantic* guards even without zod schemas.
+- `rejectOversizedBody`/`JSON_BODY_MAX_BYTES` is applied on `orders` POST, `orders/[id]/cancel`, and all `auth/*` OTP routes — body-size DoS is bounded there, not elsewhere.
+
+### E-2 — rate-limit coverage (from the matrix)
+
+| Tier | Routes |
+|---|---|
+| Full budget + DB backstop (`enforceRateLimit`) | `auth/*` OTP/login/reset, `orders` POST, `orders/[id]/cancel` |
+| Legacy per-IP only (`checkIPRateLimit`, fail-open, no DB backstop) | `auth/register`, `auth/send-email-verification`, `auth/change-email`, `contact`, `dealer/register`, `vendor/register`, `payments/upi/submit` (F-05 residual), `payments/upi/qr`, `admin/test-email`, `vehicles` GET |
+| **None** | `products/search` (F-20), `shipping/serviceability` (F-19), `shipping/estimate`, `auth/verify-email` (F-16), every `admin/**` mutation, every `vendor/**` / `vendors/**` / `procurement/**` / `crm/**` route, `cart` GET/POST/DELETE, `orders/[id]` PATCH, `products/[id]` PATCH/DELETE |
+
+Admin routes being unthrottled is normal (authenticated trusted actors). The gaps that matter
+are the **unauthenticated** ones: `products/search`, `shipping/serviceability`, `shipping/estimate`
+(needs a session but no rate limit — an authed dealer can hammer Delhivery rate calls).
+
+### E-3 — error handling notes
+
+- `webhooks/*` deliberately `catch → 200` (F-03, logged).
+- `orders/route.ts`, `payments/verify`, `payments/create-order`, `products/[id]`,
+  `orders/[id]/cancel` have real try/catch with typed error branches. Good.
+- `admin/payments/[id]/verify` catches only `InsufficientStockError` — a `P2002` on
+  `Invoice.orderId` (concurrent verify / double-UTR) rolls back with an unhandled 500 (**S-01**).
+- The ~90 no-try routes: any Prisma `P2025` (update/delete on missing id) → unhandled 500
+  instead of 404. Pervasive; rate as one P3 with F-22.
+- **Positive:** grep for client-returned exception text — only `products` POST and
+  `vendor/products` POST return `error.issues` (zod, expected/safe). **No route echoes raw
+  Prisma error messages to clients.**
+- **F-23 (P3, E/J) — a few routes echo `err.message` / `String(err)` to the caller:**
+  - `GET /api/health` (`route.ts:19`) returns the DB driver's `err.message` — and `/api/health`
+    is **public** (hit by `health.yml` cron; nginx exposure to confirm). A connection failure
+    string can disclose DB host / driver. Return a generic string; keep detail in the log.
+  - `POST /api/upload/dealer-document` (`:100`) returns `String(err)` to a **dealer** — leaks
+    R2/S3 SDK error text (bucket, key prefix, AWS error codes). Same in `upload/product-image`,
+    `upload/vehicle-image`, `upload/vehicle-type-image` (admin-only, lower concern).
+  - `admin/products/import`, `admin/refunds/[id]/retry`, `admin/shipments`, `admin/test-email`
+    return `err.message` but to **admins only** — acceptable, low priority.
+
+**Area E status:** 🟡 — validation + rate-limit + error-leak done (F-22, F-23); per-route
+mis-status pass folded into F-22.
+
+---
+
+## 4e. Area D — data layer — 2026-08-29 (started)
+
+### D-1 — `Order.status` / `Shipment.status` writers → **F-24** (promotes S-06)
+
+Three writers of `Order.status`, **three divergent state models**:
+
+| Writer | File | Transition rule | CAS guard | Notes |
+|---|---|---|---|---|
+| Admin manual | `orders/[id]/route.ts:64-95` | explicit `FULFILLMENT_TRANSITIONS` DAG, forward-only, 409 on illegal | ✅ `updateMany({where:{status:current}})` | The correct one. Also the only `req.json()` here with `.catch(() => ({}))`. |
+| Delhivery webhook | `src/lib/delhivery/webhook.ts:5-11,60-66` | `ORDER_STATUS_MAP` (6 entries incl. `CANCELLED`), unconditional `tx.order.update` | ❌ none | No transition check, no dedupe on `ShipmentTrackingEvent`, **no F-17 raw-status guard** (dormant — secret unset). |
+| Tracking sync | `src/lib/delhivery/tracking.ts:141-169` | inline `orderStatusMap` (5 entries, **no `CANCELLED`** — already drifted from the webhook's), unconditional `tx.order.update` | ❌ none | Has the F-17 `rawSaysPreShip` guard (Item 1c) but still no transition/CAS guard. |
+
+**F-24 (P2, D/C) — carrier-driven `Order.status` writes bypass the fulfilment state machine.**
+The two Delhivery writers do unconditional `update({data:{status}})` with no check of the
+current status and no compare-and-swap. Consequences:
+- **Backward / illegal transitions.** A delayed, replayed, or out-of-order Delhivery event
+  (there is no dedupe — `ShipmentTrackingEvent` rows are created unconditionally, no idempotency
+  key) can move `Order.status` `DELIVERED → SHIPPED`, or `CANCELLED → SHIPPED/DELIVERED`,
+  silently "un-cancelling" an order in every UI while its `OrderCancellation` row + refund
+  already stand.
+- **Two drifted copies of the map** (`ORDER_STATUS_MAP` vs the inline `orderStatusMap`) — a
+  `CANCELLED` carrier status updates the order via the webhook but not via tracking-sync.
+- **Webhook has no HMAC** — only `?token=` in the URL (`webhooks/delhivery/route.ts`). A token
+  that leaks via proxy logs / Referer lets anyone POST arbitrary status transitions for any
+  known waybill, and F-24's missing guards mean those writes land unvalidated.
+Interacts with F-02/F-17 (all three are "carrier data drives Order.status without a guard").
+S-06 is now F-24.
+
+### D-2 — N+1 — **largely NOT a problem in the API routes**
+
+Every list route checked (`orders`, `admin/shipments`, `admin/payments`, `vendors`,
+`procurement/purchase-orders`) uses a single `findMany` + nested `include`/`_count`, which
+Prisma resolves in a bounded number of `IN (...)` queries — not per-row. No `for`-loop or
+`.map(async …)` issuing per-row queries found in the list paths. `orders` GET does 3 sequential
+awaits (user→dealer→orders) that could be `Promise.all`'d — micro, P3 at most. **Admin RSC
+pages** (`src/app/admin/**/page.tsx`) not yet checked — deferred to Area H.
+
+### D-3 — index gaps → **F-25**
+
+Confirmed against real query patterns now catalogued:
+
+| Missing index | Query that hits it | Where |
+|---|---|---|
+| `OrderItem` — **zero indexes** (`orderId`, `productId`, `variantId`) | `orders` GET list + every order-detail: `include:{items:{include:{product}}}` → `OrderItem WHERE orderId IN (...)` = seq scan | `orders/route.ts:37,53`, `orders/[id]/route.ts`, `finalize.ts` |
+| `ProductVariant.productId` | every PDP + admin product edit loads `variants` by `productId` | `products/[id]` GET, `admin/products/[id]/variants` |
+| `Shipment.status` | `admin/shipments` list filter/sort | `admin/shipments/route.ts:29` |
+| `Review.userId` | user's reviews / "already reviewed?" checks | review routes |
+| `StorageAuditLog` — zero indexes, **unbounded table** | any lookup + it only grows | `src/lib/storage/audit.ts` |
+| `Payment.orderId` (has `@@index([orderId])` ✅) / `razorpayOrderId` (✅) | — OK, no gap | webhook `findFirst` |
+
+**F-25 (P3, D) — missing indexes on hot FK/filter columns**, chiefly `OrderItem` (loaded on
+every order read) and `ProductVariant.productId` (every PDP). Needs a new migration → **Phase 3
++ blocked by H6** (DECISION-RULES §1.5: no migrations while drift is unresolved). Log only.
+
+### D-4 — still owed
+- H6 manual migration diff (blocked on shadow DB — manual line-diff is the fallback, not done).
+- Transaction-boundary sweep beyond order/payment/cancel (procurement PO→PR, GRN→PO receivedQty,
+  `crm/leads/[id]/convert` User+Dealer+Lead — is convert wrapped in `$transaction`?).
+- `admin/*` RSC page query cost (Area H).
+
+**Area D status:** 🟡 — writers/state-machine (F-24), N+1 (clear), index gaps (F-25) done;
+H6 + txn sweep + RSC pages owed.
+
+Open sub-items: the `parseInt(page)` NaN crash (F-13) confirmed also in `admin/dealers/route.ts:19`
+and every `admin/*` list route.
+
+---
+
 ## 5. RESUME POINTER
 
-**Next area:** finish **Area A — the route matrix**. ~40 of ~146 route handlers are traced
-(matrix segment 1 in §4b); ~106 remain.
+**Area A (auth/authz route matrix): COMPLETE** (segments 1 + 2, §4b/§4c).
 
-**Next unreviewed files (start here):**
-1. `src/app/api/admin/**` — the entire tree except `payments/*` and `shipments` (≈70 routes):
-   start with `admin/dealers/*`, `admin/users/[id]/*`, `admin/settings/*`, `admin/stats`,
-   `admins/*`, `staff/*`, then the vehicle-CMS tree (`admin/vehicles/**`, ~40 routes — these
-   all go through `requireAdmin()` which is `["ADMIN","SUPER_ADMIN"]`, so spot-check for
-   deviations rather than reading all 40).
-3. `src/app/api/vendors/**`, `vendor/**`, `procurement/**`, `crm/**`.
-4. `src/app/api/products/**`, `categories`, `vehicles`, `contact`, `dealer/**`.
-5. `payments/upi/qr`, `payments/upi/[orderId]`.
+**Done this session (2026-08-29):** Area A (route matrix complete, §4b/§4c), Area E partial
+(§4d — F-22/F-23), Area D partial (§4e — F-24/F-25). Next: finish D, then G, H, I, J, K.
 
-**Then:** Area D manual migration diff (H6) → Area E rate-limit + validation table (falls out
-of the matrix) → Area G cache-invalidation map → run the app for Area H → Area I Flutter →
-finish Area J (PM2/health/backup) + Area K unused-export sweep.
+1. **Area D — H6 manual migration diff** (blocked on shadow DB; manual line-diff of
+   `prisma/migrations/0_init/migration.sql` + 4 later vs `schema.prisma` is the fallback, not
+   done). Suspect columns listed under H6 above.
+2. **Area D — txn sweep:** `crm/leads/[id]/convert` (User+Dealer+Lead — wrapped?),
+   procurement PO→PR conversion, GRN `receivedQty` updates.
+3. **Area G:** 3 cached-read surfaces only (`api/vehicles` `revalidate=86400`, `products/[id]`
+   `revalidatePath`, `sitemap`); Redis used only by `rate-limit.ts` + dead `shiprocket/auth.ts`.
+   Confirm no `unstable_cache`; map each cached read → its invalidation (or absence).
+4. **Area H:** run the app (`npm run dev`), walk every route; specifically test O-1/S-03/S-08
+   (staff nav links → do the pages 401 or render-with-dead-actions?), and the admin RSC page
+   query cost (D-2 deferral).
+5. **Area I:** Flutter app — `motoxplus_app/lib/**` (22 .dart files): `core/api/api_client.dart`
+   token storage (`flutter_secure_storage`), `razorpay_flutter` flow, deep links / nav dead
+   ends, any secret bundled in `android/app/`.
+6. **Area J:** PM2 (`instances:"max"` cluster × in-memory rate-limit fallback — H5 residual),
+   `/api/health` only checks DB `SELECT 1` (not Redis/R2/Delhivery) + leaks err (F-23),
+   `scripts/db/backup.sh` + `restore.sh`, logging-of-secrets grep (OTP/token/phone in
+   `console.log`).
+7. **Area K:** `src/lib/r2.ts` vs `src/lib/storage/r2.ts` duplicate; `@cashfreepayments/cashfree-js`
+   unused; `src/lib/shiprocket/*` dead (F-10); unused-export sweep.
 
-**Deliverable state:** `AUDIT/01-findings.md` is the running log; `AUDIT/02-report.md` (Phase 2)
-not started.
+**Deliverable state:** `AUDIT/01-findings.md` is the running log. `AUDIT/02-report.md` (Phase 2)
+not started. Findings now **F-01…F-25 + S-01…S-08 (S-06 promoted→F-24) + O-1…O-6**.
 
 ---
 
@@ -507,3 +705,82 @@ stays retryable. Two concurrent retries can no longer both issue a refund.
   never picked up, per Amendment 2) is queued.
 - Prod config unconfirmed: `NEXT_PUBLIC_RAZORPAY_ENABLED`, `RAZORPAY_KEY_ID` prefix,
   `DELHIVERY_WEBHOOK_SECRET`. None of the shipped code assumes a value.
+
+---
+
+## 7. `normalizeShipmentStatus` "Not Picked" — blast-radius report (requested, v2 §"Not Picked")
+
+The v2 prompt asked: fix the missing "Not Picked" mapping *in* `normalizeShipmentStatus`,
+but first enumerate every consumer and report what else changes; if the effect reaches
+beyond the tier decision, fall back to a narrower fix and log the normalizer gap.
+
+**Consumers of `normalizeShipmentStatus` (grepped, whole repo):**
+
+| # | Call site | Result feeds |
+|---|---|---|
+| 1 | `webhook.ts:26` | `Shipment.status` write (`:54`); `deliveredAt` (`:56`); `ORDER_STATUS_MAP[…]` → **`Order.status` write** (`:60-66`) |
+| 2 | `tracking.ts:47` (`mapTrackingDetail`) | `TrackingResult.status` → (a) `fetchLiveTracking` return → **tracking page display** (`orders/[id]/tracking`), (b) `syncTrackingToDb` `newStatus` → `Shipment.status` write (`:133`), `deliveredAt` (`:137`), `orderStatusMap[…]` → **`Order.status` write** (`:167`, now F-17-guarded) |
+| 3 | `tracking.test.ts` | assertions pinning current behaviour |
+
+**What adding `"not picked": "MANIFESTED"` to `DELHIVERY_STATUS_MAP` would change:**
+
+- `normalizeShipmentStatus("Not Picked")`: `"IN_TRANSIT"` → `"MANIFESTED"`.
+- **webhook path** — an inbound "Not Picked" webhook: `Shipment.status` IN_TRANSIT→MANIFESTED,
+  and `ORDER_STATUS_MAP["MANIFESTED"]` is `undefined` so the **`Order.status = SHIPPED`
+  write stops happening**. That is an `Order.status` transition change — **beyond the tier
+  decision.**
+- **tracking display** — a pre-pickup parcel's tracking page status flips IN_TRANSIT→MANIFESTED
+  for every viewer, not just the cancellation flow.
+- **`syncTrackingToDb`** — `Shipment.status` write changes IN_TRANSIT→MANIFESTED (the
+  `Order.status` SHIPPED write is already prevented here by the F-17 guard, so no *further*
+  change on that line — but the `Shipment.status` column value does change).
+- **ordering hazard** — `normalizeShipmentStatus` returns the *first* `DELHIVERY_STATUS_MAP`
+  key whose lowercased string is `includes()`-contained in the raw status. `"not picked up"`
+  already contains the existing key `"picked up"` → today returns `PICKED_UP`. Whether a new
+  `"not picked"` key wins depends on its **insertion position** relative to `"picked up"`.
+  Silent, position-dependent correctness — the signature of a function that should not be
+  extended piecemeal.
+- **test** — the `tracking.test.ts` assertion documenting the IN_TRANSIT fall-through breaks.
+
+**Verdict: blast radius exceeds the tier decision.** Per the instruction, the narrower fix
+was taken instead and shipped in the batch:
+1. tier decisions read **raw** carrier fields (`carrier-status.ts` / `carrier-cancellation.ts`),
+   never `normalizeShipmentStatus` — DECISION-RULES §3;
+2. the one place `normalizeShipmentStatus`'s gap actually writes bad state
+   (`syncTrackingToDb` → `Order.status = SHIPPED`) got the narrow F-17 write-guard.
+
+**Logged for Phase 3 (F-19):** `normalizeShipmentStatus` still (a) maps unknown/`"Not Picked"`
+to `IN_TRANSIT` rather than a distinct `UNKNOWN`/`MANIFESTED`, (b) has the `"not picked up"`
+→ `PICKED_UP` substring collision, (c) the **webhook** path has the same unguarded
+`Order.status = SHIPPED` write as the pre-F-17 tracking path (dormant only because
+`DELHIVERY_WEBHOOK_SECRET` is unset). The Phase-5 DB-driven status-map redesign
+(`docs/delhivery-open-items.md` item 3) is the real home for (a)/(b).
+
+---
+
+## 8. Post-commit verification run (session 2026-08-29, no Neon branch / no prod config)
+
+Re-ran the batch's checks on a clean tree at `25f4797`:
+
+| Check | Result |
+|---|---|
+| `npx vitest run` | **168 passed / 168**, 18 files (incl. `carrier-status`, `carrier-cancellation`, `cancellation`, `auth/middleware`, `shipment`, `tracking`) |
+| `npx tsc --noEmit` | **1 error** → fixed (see below) → **clean** |
+| `npx next lint` | **pass** — only pre-existing `no-explicit-any` / `no-console` warnings, none in batch files beyond the repo baseline |
+| `npm run build` | TypeScript + route-module collection **compile clean**; `next build` then fails at **static prerender** of DB-backed admin pages (`/admin/products/new` etc.) because no local Postgres is running (`localhost:5433` refused). Environment limitation, not a code defect — will complete once the Neon branch is the build `DATABASE_URL`. |
+
+**Fixed this session:** `scripts/security/cancellation-exploit-test.ts:204` — the seeded
+`prisma.payment.create` used `method: "RAZORPAY" as any` (no such field on `Payment`) and
+omitted the required `paymentType`. Was both a typecheck failure and a guaranteed runtime
+failure of the F-07 section of the script (which the prior session could not run — no DB).
+Changed to `paymentType: "FULL_100"`.
+
+**Found, not fixed — needs a call (logged as F-20, minor):** `cancel/route.ts` — when an
+**admin** cancels an order that has **no `Shipment` row**, `body.tierOverride` is ignored for
+the fee calculation (the override is only applied inside `if (!isDealerActor && order.shipment)`,
+`:129-138`) but the `CANCELLATION_TIER_OVERRIDE` `OrderEvent` is still written (`:223`, guarded
+only on `tierOverride !== defaultedStage`). Net: the audit log records an override that was
+not actually applied to the charge. Edge case (admin overriding tier on a shipment-less order).
+Options: (i) ignore `tierOverride` entirely + skip the event when `!order.shipment`, or
+(ii) honour the override for shipment-less orders too. (ii) is a small policy question —
+deferred.
