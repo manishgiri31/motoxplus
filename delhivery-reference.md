@@ -29,6 +29,30 @@
 - `pickup_location.city`: `"New Delhi"` is capture-confirmed working; the
   dashboard itself says `"Delhi"`. Didn't matter either way — don't
   re-investigate.
+- **2026-08-29 re-verification**: the registered pickup address was changed
+  in the Delhivery dashboard (new physical location: Khasra No. 4443,
+  Nasirpur Village, Palam, New Delhi 45). The dashboard's Pickup Locations
+  list shows a single row with "Created On: 28 Aug, 2026" and a display name
+  of "Motoxplus" (Facility Name), which raised a real concern that the old
+  location had been deleted and recreated with a different
+  `pickup_location.name`. **Live-tested and confirmed false**: a real
+  create.json call with `pickup_location.name: "Manish Giri"` still
+  succeeded (AWB `57930810000081`, track response `"PickupLocation": "Manish
+  Giri"`) — the name join key survived the address edit unchanged. The
+  dashboard's "Facility Name" / list display name is cosmetic and unrelated
+  to the API's `pickup_location.name`. `DELHIVERY_PICKUP_ADDRESS` /
+  `return_add` were updated in both local and production `.env` to the new
+  address; `DELHIVERY_PICKUP_LOCATION_NAME` was left untouched (still
+  correct).
+- **Cancel confirmation caveat (2026-08-29)**: on AWB `57930810000081`, the
+  cancel call itself returned the normal
+  `<status>True</status><remark>Shipment has been cancelled.</remark>`
+  (twice, idempotently), but the tracking API's `Status.Instructions` never
+  flipped to "Seller cancelled the order"/`DTUP-210` even after ~2 minutes
+  (vs. ~90s on the 2026-08-24 capture). Treat the cancel endpoint's own
+  `<status>True</status>` response as authoritative; don't assume failure
+  just because `Status.Instructions` on the tracking endpoint is slow or
+  never updates for a given shipment.
 - **Second client on the same login: "MOTOXPLUS INDIA 7342 B2B" (B2B
   Surface)** — separate wallet, separate API surface. Nothing in this
   codebase or the capture script targets this client; every real call so far
@@ -1022,3 +1046,355 @@ RESPONSE: 200 OK
 the normal response (`{Success, Error, rmk}`, no `ShipmentData` key at all) —
 this is the only way to detect "unknown AWB" and it must be checked by shape,
 not by HTTP status.
+
+---
+
+## CAPTURED — 2026-08-29T04:47:07.454Z (scripts/delhivery-capture.ts)
+
+### 1. Pincode serviceability
+
+REQUEST:
+```
+GET https://track.delhivery.com/c/api/pin-codes/json/?filter_codes=135001
+Authorization: Token ***REDACTED***
+Accept: application/json
+
+```
+
+RESPONSE: 200 OK
+```
+{
+    "delivery_codes": [
+        {
+            "postal_code": {
+                "remarks": "",
+                "pin": 135001,
+                "country_code": "IN",
+                "state_code": "HR",
+                "cod": "Y",
+                "pre_paid": "Y",
+                "pickup": "Y",
+                "cash": "Y",
+                "repl": "Y",
+                "district": "Yamuna Nagar",
+                "is_oda": "N",
+                "sort_code": "CHA/RAM",
+                "max_amount": 0.0,
+                "max_weight": 0.0,
+                "covid_zone": "G",
+                "inc": "Yamunanagar_Veerngrcly_D (Haryana)",
+                "center": [
+                    {
+                        "code": "IND135001AAA",
+                        "e": "2019-03-14T10:29:36.678",
+                        "cn": "YamunaNagar_DC (Haryana)",
+                        "s": "2015-04-23T19:16:36.970",
+                        "u": "Aayush.Agarwal",
+                        "ud": "2015-04-23T19:16:36.970",
+                        "sort_code": "JUD/JUD"
+                    },
+                    {
+                        "code": "IND135003A1A",
+                        "cn": "Yamunanagar_Veerngrcly_D (Haryana)",
+                        "s": "2019-03-14T10:29:36.678",
+                        "u": "akshay.soni3",
+                        "sort_code": "IXC/MDP",
+                        "ud": "2019-03-14T10:29:36.678",
+                        "e": "2026-05-25T12:51:45.297"
+                    },
+                    {
+                        "code": "INHRBGFW",
+                        "sort_code": "CHA/RAM",
+                        "cn": "Yamunanagar_Jagadhri_D (Haryana)",
+                        "s": "2026-05-25T12:51:45.297",
+                        "u": "meenakshi.negi",
+                        "ud": "2026-05-25T12:51:45.297"
+                    }
+                ],
+                "city": "Yamuna Nagar",
+                "sun_tat": true,
+                "protect_blacklist": false,
+                "srv_wt_th": 4500.0
+            }
+        }
+    ]
+}
+```
+
+### 2. Bulk waybill fetch
+
+REQUEST:
+```
+GET https://track.delhivery.com/waybill/api/bulk/json/?cl=c80988-MOTOXPLUSINDIAPRIVAT-do&count=1
+Authorization: Token ***REDACTED***
+Accept: application/json
+
+```
+
+RESPONSE: 200 OK
+```
+"57930810000070"
+```
+
+### 3. Create shipment (REAL)
+
+REQUEST:
+```
+POST https://track.delhivery.com/api/cmu/create.json
+Authorization: Token ***REDACTED***
+Content-Type: application/x-www-form-urlencoded
+format=json&data=%7B%22shipments%22%3A%5B%7B%22name%22%3A%22Manish+Giri%22%2C%22add%22%3A%22House+No.+123%2C+Model+Town+Road%22%2C%22pin%22%3A%22135001%22%2C%22city%22%3A%22Yamunanagar%22%2C%22state%22%3A%22Haryana%22%2C%22country%22%3A%22India%22%2C%22phone%22%3A%227206794749%22%2C%22order%22%3A%22CAPTURE-1787978807097%22%2C%22payment_mode%22%3A%22Prepaid%22%2C%22return_pin%22%3A%22110046%22%2C%22return_city%22%3A%22New+Delhi%22%2C%22return_phone%22%3A%229217131801%22%2C%22return_name%22%3A%22MotoXPlus+India+Pvt.+Ltd.%22%2C%22return_add%22%3A%22Khasra+No.+4443%2C+Nasirpur+Village%2C+Palam%2C+New+Delhi+45%2C+near+Dada+Dev+Property%22%2C%22return_state%22%3A%22Delhi%22%2C%22return_country%22%3A%22India%22%2C%22products_desc%22%3A%22Capture+test+item%22%2C%22hsn_code%22%3A%2287141090%22%2C%22cod_amount%22%3A0%2C%22order_date%22%3A%222026-08-29%22%2C%22total_amount%22%3A100%2C%22seller_gst_tin%22%3A%2207AAUCM5765B1Z4%22%2C%22shipping_mode%22%3A%22Surface%22%2C%22address_type%22%3A%22office%22%2C%22quantity%22%3A1%2C%22weight%22%3A0.5%7D%5D%2C%22pickup_location%22%3A%7B%22name%22%3A%22Manish+Giri%22%2C%22add%22%3A%22Khasra+No.+4443%2C+Nasirpur+Village%2C+Palam%2C+New+Delhi+45%2C+near+Dada+Dev+Property%22%2C%22city%22%3A%22New+Delhi%22%2C%22pin_code%22%3A%22110046%22%2C%22country%22%3A%22India%22%2C%22phone%22%3A%229217131801%22%7D%7D
+```
+
+RESPONSE: 200 OK
+```
+{"cash_pickups_count":0.0,"package_count":1,"prepaid_count":1,"pickups_count":0,"replacement_count":0,"cash_pickups":0.0,"cod_amount":0.0,"cod_count":0,"upload_wbn":"UPL10710106414754057777","packages":[{"waybill":"57930810000081","refnum":"CAPTURE-1787978807097","client":"c80988-MOTOXPLUSINDIAPRIVAT-do","payment":"Pre-paid","cod_amount":0.0,"status":"Success","sort_code":"CHA/RAM","serviceable":true,"remarks":[""]}],"success":true}
+```
+
+### 4. Track
+
+REQUEST:
+```
+GET https://track.delhivery.com/api/v1/packages/json/?waybill=57930810000081&verbose=0
+Authorization: Token ***REDACTED***
+Accept: application/json
+
+```
+
+RESPONSE: 200 OK
+```
+{
+    "ShipmentData": [
+        {
+            "Shipment": {
+                "AWB": "57930810000081",
+                "CODAmount": 0,
+                "ChargedWeight": null,
+                "DeliveryDate": null,
+                "DestRecieveDate": null,
+                "Destination": "Yamunanagar",
+                "DispatchCount": 0,
+                "Ewaybill": [],
+                "ExpectedDeliveryDate": null,
+                "Extras": "",
+                "FirstAttemptDate": null,
+                "InvoiceAmount": 100,
+                "OrderType": "Pre-paid",
+                "Origin": "Delhi_Airport_GW (Delhi)",
+                "OriginRecieveDate": null,
+                "OutDestinationDate": null,
+                "PickUpDate": "2026-08-29T10:16:56.763",
+                "PickedupDate": null,
+                "PickupLocation": "Manish Giri",
+                "PromisedDeliveryDate": null,
+                "Quantity": "1",
+                "RTOStartedDate": null,
+                "ReferenceNo": "CAPTURE-1787978807097",
+                "ReturnPromisedDeliveryDate": null,
+                "ReturnedDate": null,
+                "ReverseInTransit": false,
+                "SenderName": "c80988-MOTOXPLUSINDIAPRIVAT-do",
+                "Status": {
+                    "Instructions": "Manifest uploaded",
+                    "RecievedBy": "",
+                    "Status": "Manifested",
+                    "StatusCode": "X-UCI",
+                    "StatusDateTime": "2026-08-29T10:16:56.796",
+                    "StatusLocation": "Delhi_Airport_GW (Delhi)",
+                    "StatusType": "UD"
+                }
+            }
+        }
+    ]
+}
+```
+
+### 5. Cancel
+
+REQUEST:
+```
+POST https://track.delhivery.com/api/p/edit
+Authorization: Token ***REDACTED***
+Content-Type: application/json
+{"waybill":"57930810000081","cancellation":"true"}
+```
+
+RESPONSE: 200 OK
+```
+<?xml version="1.0" encoding="utf-8"?>
+<root><status>True</status><waybill>57930810000081</waybill><order_id>CAPTURE-1787978807097</order_id><remark>Shipment has been cancelled.</remark></root>
+```
+
+### 6. Track (post-cancel, attempt 1/3)
+
+REQUEST:
+```
+GET https://track.delhivery.com/api/v1/packages/json/?waybill=57930810000081&verbose=0
+Authorization: Token ***REDACTED***
+Accept: application/json
+
+```
+
+RESPONSE: 200 OK
+```
+{
+    "ShipmentData": [
+        {
+            "Shipment": {
+                "AWB": "57930810000081",
+                "CODAmount": 0,
+                "ChargedWeight": null,
+                "DeliveryDate": null,
+                "DestRecieveDate": null,
+                "Destination": "Yamunanagar",
+                "DispatchCount": 0,
+                "Ewaybill": [],
+                "ExpectedDeliveryDate": null,
+                "Extras": "",
+                "FirstAttemptDate": null,
+                "InvoiceAmount": 100,
+                "OrderType": "Pre-paid",
+                "Origin": "Delhi_Airport_GW (Delhi)",
+                "OriginRecieveDate": null,
+                "OutDestinationDate": null,
+                "PickUpDate": "2026-08-29T10:16:56.763",
+                "PickedupDate": null,
+                "PickupLocation": "Manish Giri",
+                "PromisedDeliveryDate": null,
+                "Quantity": "1",
+                "RTOStartedDate": null,
+                "ReferenceNo": "CAPTURE-1787978807097",
+                "ReturnPromisedDeliveryDate": null,
+                "ReturnedDate": null,
+                "ReverseInTransit": false,
+                "SenderName": "c80988-MOTOXPLUSINDIAPRIVAT-do",
+                "Status": {
+                    "Instructions": "Shipment not received from client",
+                    "RecievedBy": "",
+                    "Status": "Not Picked",
+                    "StatusCode": "X-PNP",
+                    "StatusDateTime": "2026-08-29T10:16:57.435",
+                    "StatusLocation": "Delhi_Airport_GW (Delhi)",
+                    "StatusType": "UD"
+                }
+            }
+        }
+    ]
+}
+```
+
+### 6. Track (post-cancel, attempt 2/3)
+
+REQUEST:
+```
+GET https://track.delhivery.com/api/v1/packages/json/?waybill=57930810000081&verbose=0
+Authorization: Token ***REDACTED***
+Accept: application/json
+
+```
+
+RESPONSE: 200 OK
+```
+{
+    "ShipmentData": [
+        {
+            "Shipment": {
+                "AWB": "57930810000081",
+                "CODAmount": 0,
+                "ChargedWeight": null,
+                "DeliveryDate": null,
+                "DestRecieveDate": null,
+                "Destination": "Yamunanagar",
+                "DispatchCount": 0,
+                "Ewaybill": [],
+                "ExpectedDeliveryDate": null,
+                "Extras": "",
+                "FirstAttemptDate": null,
+                "InvoiceAmount": 100,
+                "OrderType": "Pre-paid",
+                "Origin": "Delhi_Airport_GW (Delhi)",
+                "OriginRecieveDate": null,
+                "OutDestinationDate": null,
+                "PickUpDate": "2026-08-29T10:16:56.763",
+                "PickedupDate": null,
+                "PickupLocation": "Manish Giri",
+                "PromisedDeliveryDate": null,
+                "Quantity": "1",
+                "RTOStartedDate": null,
+                "ReferenceNo": "CAPTURE-1787978807097",
+                "ReturnPromisedDeliveryDate": null,
+                "ReturnedDate": null,
+                "ReverseInTransit": false,
+                "SenderName": "c80988-MOTOXPLUSINDIAPRIVAT-do",
+                "Status": {
+                    "Instructions": "Shipment not received from client",
+                    "RecievedBy": "",
+                    "Status": "Not Picked",
+                    "StatusCode": "X-PNP",
+                    "StatusDateTime": "2026-08-29T10:16:57.435",
+                    "StatusLocation": "Delhi_Airport_GW (Delhi)",
+                    "StatusType": "UD"
+                }
+            }
+        }
+    ]
+}
+```
+
+### 6. Track (post-cancel, attempt 3/3)
+
+REQUEST:
+```
+GET https://track.delhivery.com/api/v1/packages/json/?waybill=57930810000081&verbose=0
+Authorization: Token ***REDACTED***
+Accept: application/json
+
+```
+
+RESPONSE: 200 OK
+```
+{
+    "ShipmentData": [
+        {
+            "Shipment": {
+                "AWB": "57930810000081",
+                "CODAmount": 0,
+                "ChargedWeight": null,
+                "DeliveryDate": null,
+                "DestRecieveDate": null,
+                "Destination": "Yamunanagar",
+                "DispatchCount": 0,
+                "Ewaybill": [],
+                "ExpectedDeliveryDate": null,
+                "Extras": "",
+                "FirstAttemptDate": null,
+                "InvoiceAmount": 100,
+                "OrderType": "Pre-paid",
+                "Origin": "Delhi_Airport_GW (Delhi)",
+                "OriginRecieveDate": null,
+                "OutDestinationDate": null,
+                "PickUpDate": "2026-08-29T10:16:56.763",
+                "PickedupDate": null,
+                "PickupLocation": "Manish Giri",
+                "PromisedDeliveryDate": null,
+                "Quantity": "1",
+                "RTOStartedDate": null,
+                "ReferenceNo": "CAPTURE-1787978807097",
+                "ReturnPromisedDeliveryDate": null,
+                "ReturnedDate": null,
+                "ReverseInTransit": false,
+                "SenderName": "c80988-MOTOXPLUSINDIAPRIVAT-do",
+                "Status": {
+                    "Instructions": "Shipment not received from client",
+                    "RecievedBy": "",
+                    "Status": "Not Picked",
+                    "StatusCode": "X-PNP",
+                    "StatusDateTime": "2026-08-29T10:16:57.435",
+                    "StatusLocation": "Delhi_Airport_GW (Delhi)",
+                    "StatusType": "UD"
+                }
+            }
+        }
+    ]
+}
+```
