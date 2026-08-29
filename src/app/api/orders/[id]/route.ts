@@ -5,6 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { requireSectionAccess } from "@/lib/staff-access";
 import { OrderStatus } from "@prisma/client";
+import { notifyOrderEvent, type OrderNotificationEvent } from "@/lib/push/order-notifications";
+
+// Manual fulfillment transitions that push to the dealer app. PROCESSING and
+// RETURNED are intentionally absent — the app only shows confirm/ship/deliver/cancel.
+const NOTIFY_EVENT_BY_ORDER_STATUS: Partial<Record<OrderStatus, OrderNotificationEvent>> = {
+  SHIPPED: "ORDER_SHIPPED",
+  DELIVERED: "ORDER_DELIVERED",
+};
 
 // Accepts either the web NextAuth session or the mobile/plain-login JWT
 // (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
@@ -92,6 +100,9 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
   if (guarded.count === 0) {
     return NextResponse.json({ error: "Order status changed, please retry", code: "ORDER_CHANGED" }, { status: 409 });
   }
+
+  const notifyEvent = NOTIFY_EVENT_BY_ORDER_STATUS[status as OrderStatus];
+  if (notifyEvent) void notifyOrderEvent(params.id, notifyEvent);
 
   const order = await prisma.order.findUnique({ where: { id: params.id } });
   return NextResponse.json(order);

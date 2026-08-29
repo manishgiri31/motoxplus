@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email";
 import { baseTemplate } from "@/lib/email/templates/base";
 import { generateInvoiceNumber, escapeHtml } from "@/lib/utils";
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
+import { notifyOrderEvent } from "@/lib/push/order-notifications";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   }
 
   const now = new Date();
+  const wasPending = submission.order.status === "PENDING";
+  let didConfirm = false;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -67,6 +70,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       });
 
       if (guarded.count > 0) {
+        if (wasPending) didConfirm = true;
         await decrementStock(
           tx,
           submission.order.items.map((item) => ({
@@ -100,6 +104,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }
     throw err;
   }
+
+  // Notify the dealer's devices only if this call actually confirmed the order
+  // (fire-and-forget; never throws).
+  if (didConfirm) void notifyOrderEvent(submission.orderId, "ORDER_CONFIRMED");
 
   // Reload the order with invoice for email
   const updatedOrder = await prisma.order.findUnique({

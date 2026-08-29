@@ -17,6 +17,7 @@ import {
 import { getCancellationPolicy } from "@/lib/orders/cancellation-policy";
 import { resolveDealerGate, buildCancellationQuote, type GateOrder } from "@/lib/orders/cancellation-gate";
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
+import { notifyOrderEvent } from "@/lib/push/order-notifications";
 
 const WAIVE_ROLES = ["SUPER_ADMIN", "ACCOUNTS"];
 const CANCEL_ROLES = ["ADMIN", "SUPER_ADMIN", "ACCOUNTS"];
@@ -279,6 +280,12 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   }
 
   const cancellation = await prisma.orderCancellation.findUnique({ where: { orderId: order.id } });
+
+  // Notify the dealer's devices — notifyOrderEvent re-reads the cancellation
+  // so the push carries the current refund status (fire-and-forget; the
+  // refund.processed webhook won't re-notify because of the dedupe marker).
+  void notifyOrderEvent(order.id, "ORDER_CANCELLED");
+
   return NextResponse.json({
     success: true,
     stage: effectiveStage,

@@ -6,6 +6,7 @@ import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
+import { notifyOrderEvent } from "@/lib/push/order-notifications";
 
 const FREE_DELIVERY_THRESHOLD = 25000;
 
@@ -254,6 +255,9 @@ export async function POST(req: NextRequest) {
     createDelhiveryShipment(order.id).catch((err) => {
       console.error(`[Delhivery] COD shipment creation failed for order ${order.id}:`, err);
     });
+    // COD orders are born CONFIRMED — notify the dealer just like the prepaid
+    // path does once payment lands (fire-and-forget; never throws).
+    void notifyOrderEvent(order.id, "ORDER_CONFIRMED");
   }
 
   return NextResponse.json({ order, isCOD });

@@ -8,6 +8,14 @@ import type {
 } from "./types";
 import { normalizeShipmentStatus } from "./types";
 import { isPreShipCarrierStatus } from "./carrier-status";
+import { notifyOrderEvent, type OrderNotificationEvent } from "@/lib/push/order-notifications";
+
+// Same subset as the webhook path: only ship / deliver are reachable here
+// (PROCESSING / RETURNED transitions aren't surfaced in the app).
+const NOTIFY_EVENT_BY_ORDER_STATUS: Record<string, OrderNotificationEvent> = {
+  SHIPPED: "ORDER_SHIPPED",
+  DELIVERED: "ORDER_DELIVERED",
+};
 
 /**
  * Raw tracking lookup, typed against the real captured verbose=2 response.
@@ -87,8 +95,11 @@ export async function fetchLiveTracking(waybill: string): Promise<TrackingResult
 export async function syncTrackingToDb(orderId: string): Promise<void> {
   const shipment = await prisma.shipment.findUnique({
     where: { orderId },
+    include: { order: { select: { status: true } } },
   });
   if (!shipment) return;
+
+  const priorOrderStatus = shipment.order.status;
 
   // Fetch the RAW shipment (not fetchLiveTracking's normalized result) so the
   // F-17 write-guard below can read Status.Status / StatusCode / PickedupDate
@@ -104,6 +115,10 @@ export async function syncTrackingToDb(orderId: string): Promise<void> {
   const tracking = mapTrackingDetail(shipment.waybill, detail);
 
   const newStatus = tracking.status as any;
+
+  // Set inside the transaction to the status we actually wrote, so the
+  // post-commit push only fires on a genuine, applied transition.
+  let appliedOrderStatus: string | null = null;
 
   await prisma.$transaction(async (tx) => {
     // Upsert each tracking event by timestamp
@@ -169,6 +184,14 @@ export async function syncTrackingToDb(orderId: string): Promise<void> {
         where: { id: orderId },
         data: { status: orderTarget as any },
       });
+      appliedOrderStatus = orderTarget;
     }
   });
+
+  // Notify the dealer if the poller just advanced the order (fire-and-forget;
+  // notifyOrderEvent dedupes against the webhook path and never throws).
+  if (appliedOrderStatus && appliedOrderStatus !== priorOrderStatus) {
+    const event = NOTIFY_EVENT_BY_ORDER_STATUS[appliedOrderStatus];
+    if (event) void notifyOrderEvent(orderId, event);
+  }
 }

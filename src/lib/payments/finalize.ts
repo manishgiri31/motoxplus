@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
 import { createDelhiveryShipment } from "@/lib/delhivery";
 import { decrementStock } from "@/lib/orders/stock";
+import { notifyOrderEvent } from "@/lib/push/order-notifications";
 
 export interface FinalizeCapturedPaymentResult {
   /** false only for the single call that actually performed the transition. */
@@ -99,6 +100,10 @@ export async function finalizeCapturedPayment(params: {
   createDelhiveryShipment(orderId).catch((err) => {
     console.error(`[Payments] Shipment creation failed for order ${orderId}:`, err);
   });
+
+  // Only the call that actually performed the PENDING -> CONFIRMED transition
+  // notifies the dealer (fire-and-forget; notifyOrderEvent never throws).
+  void notifyOrderEvent(orderId, "ORDER_CONFIRMED");
 
   return { alreadyProcessed: false, invoiceNumber };
 }

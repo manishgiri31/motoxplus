@@ -16,6 +16,15 @@ export default async function PendingApprovalPage() {
   const role = session.user.role;
   const status = role === "VENDOR" ? session.user.vendorStatus : session.user.dealerStatus;
 
+  // Dealers no longer wait for approval — only a suspended/rejected dealer belongs
+  // here. An in-good-standing dealer or an approved vendor goes to their portal.
+  if (role === "DEALER" && status !== "SUSPENDED" && status !== "REJECTED") {
+    redirect("/dealer/dashboard");
+  }
+  if (role === "VENDOR" && status === "APPROVED") {
+    redirect("/vendor/dashboard");
+  }
+
   return (
     <AuthPageLayout>
       <PendingApprovalCard role={role} status={status} />

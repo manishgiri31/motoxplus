@@ -269,7 +269,7 @@ the other half of the H2 P0.
 | F-02 | **P0** | C/B | `src/lib/orders/cancellation.ts:76-116,165-167` + `webhook.ts` + `tracking.ts` + `cancel/route.ts` | Cancellation fee tier keys off `Order.status`, which lags real shipment state (often indefinitely). Dealer cancels a physically-in-transit `PROCESSING` order at 2% (98% refund) and, per H8b, the parcel is never cancelled with Delhivery. | Dealer keeps the goods and gets 98% of the money back. | code trace + `docs/delhivery-open-items.md` item 1 |
 | F-03 | **P0** | C | `src/lib/delhivery/client.ts:3,33-60,74-84` | `create.json` inherits 3 auto-retries; Delhivery may accept attempt 1 before a client timeout → duplicate real AWB. No path/method exclusion; no advisory lock for the concurrent-call variant. | Two parcels dispatched and billed for one order; the second is invisible to the app. | code trace + `delhivery-audit.md` / `delhivery-open-items.md` (flagged 3×) |
 | F-04 | **P0** | C/B | `src/app/api/orders/[id]/cancel/route.ts` (whole flow) | `cancelDelhiveryShipment` exists but is called nowhere. Any cancellation of an order that has an AWB (dealer *or* admin) issues a refund and leaves the parcel moving. | Refund + goods, every post-manifest cancellation. | `grep`; function header comment; `delhivery-open-items.md` item 1 |
-| F-05 | **P1** | B | `src/lib/payments/finalize.ts:41-48` (the `prisma.payment.updateMany(... → "PAID")` **before** the `$transaction` at :52) | `Payment→PAID` write is outside the `$transaction`; if the txn throws, Payment is `PAID` but order stays `PENDING`, and every later webhook delivery no-ops on `dbPayment.status==="PAID"` (`webhooks/razorpay/route.ts`). Webhook returns 200 on processing error → no Razorpay retry. **Concrete trigger confirmed 2026-08-29:** prepaid orders do NOT reserve/decrement stock at creation (`orders/route.ts:184` `stockReserved: isCOD`), so two dealers can both check out the last unit, both pay, and the 2nd dealer's `finalize` hits `decrementStock`'s atomic `stock:{gte:qty}` guard → `InsufficientStockError` thrown from inside the txn *after* their Payment row is already committed `PAID`. | (Razorpay live) 2nd dealer's money captured, order never confirmed, permanently stuck, silent — only a `console.error`. | code trace (`finalize.ts`, `stock.ts`, `orders/route.ts`) |
+| F-05 | **P1** — **THE Razorpay go-live blocker; fix before anything else on that integration** | B | `src/lib/payments/finalize.ts:41-48` (the `prisma.payment.updateMany(... → "PAID")` **before** the `$transaction` at :52) | `Payment→PAID` write is outside the `$transaction`; if the txn throws, Payment is `PAID` but order stays `PENDING`, and every later webhook delivery no-ops on `dbPayment.status==="PAID"` (`webhooks/razorpay/route.ts`). Webhook returns 200 on processing error → no Razorpay retry. **Concrete trigger confirmed 2026-08-29:** prepaid orders do NOT reserve/decrement stock at creation (`orders/route.ts:184` `stockReserved: isCOD` — so `false` for every prepaid order), so two dealers can both check out the last unit, both pay, and the 2nd dealer's `finalize` hits `decrementStock`'s atomic `stock:{gte:qty}` guard → `InsufficientStockError` thrown from inside the txn *after* their Payment row is already committed `PAID`. **Money captured, no order, no retry, no alert.** Not a corner case — any oversold SKU during a busy window. | (Razorpay live) 2nd dealer's money captured, order never confirmed, permanently stuck, silent — only a `console.error`. Fix: (1) move the `Payment→PAID` write inside the `$transaction`; (2) reserve stock at prepaid order creation, or accept the oversell and refund cleanly; (3) webhook returns non-2xx / enqueues on genuine processing failure; (4) alert on post-capture finalize failure. | code trace (`finalize.ts`, `stock.ts`, `orders/route.ts`) |
 | F-06 | **P2** | A | `src/app/api/admin/payments/[id]/verify/route.ts:11,16` (also `review`, `reject`) | `ADMIN_ROLES` here is `["ADMIN","SUPER_ADMIN","STAFF"]` with **no department check** — any STAFF (SALES, MARKETING, PRODUCTION) can verify/reject dealer payments and confirm orders. `staff-access.ts` scopes invoices/accounts work to `ACCOUNTS` dept, but this route doesn't use `requireSectionAccess`. | A marketing staffer can mark any dealer's payment verified → order goes to production with no money received. | code trace; contrast with `staff-access.ts:6-13` |
 | F-07 | **P2** | B | `src/app/api/admin/refunds/[id]/retry/route.ts:263-283` | `refundStatus !== "FAILED"` is a read-then-write check with no atomic guard; two concurrent retries both pass and both call `refundPayment` (Razorpay refund API, no idempotency key). | Double refund issued to the dealer on a double-click / concurrent admin action. | code trace |
 | F-08 | **P2** | J | `npm audit` (10 vulns: 2 critical, 7 high, 1 low) | `xlsx@0.18.5` prototype pollution (CVSS 7.8, admin import path, no npm-registry fix available); `@auth/core` homoglyph email bypass (critical, via next-auth chain); `next`→`postcss` XSS; `sharp`/libvips CVEs; `deepmerge-ts` DoS via `@prisma/config`. | `xlsx`: an admin importing a crafted `.xlsx` could pollute `Object.prototype` in the Node process. Others mostly build-time / low-reachability. | `npm audit --json` |
@@ -322,6 +322,19 @@ the other half of the H2 P0.
   `STAFF_NAV.PRODUCTION` renders a "GRN" link. PRODUCTION staff get a nav link to a page whose
   API 401s them. Same family as S-03 / O-1. Confirm in Area H (page-level guard may also 401,
   in which case it's just a dead nav link, not a broken flow). P3.
+- **S-09 (F/J):** `npm run build` prerenders `/admin/staff` and `/admin/products/new` (and
+  reached 111/148 before failing), which call `prisma.user.findMany` / `prisma.category.findMany`
+  **at build time** → the build hard-fails without a reachable DB, and on success bakes those
+  admin pages with build-time data. Admin pages should be `dynamic`/`force-dynamic` or use
+  client-side fetch. Confirm the full list of DB-touching prerendered pages in Area F/H. P2
+  (build fragility + stale admin data).
+- **S-10 (K/process):** the uncommitted push-notification WIP (working tree, 2026-08-29) ships
+  with **2 failing tests** — it added `include:{order:{select:{status:true}}}` +
+  `shipment.order.status` to `syncTrackingToDb` without updating `tracking.test.ts`'s mock. Also
+  it introduces a *third* `notifyOrderEvent`-at-status-transition site and a `NOTIFY_EVENT_BY_
+  ORDER_STATUS` map in **both** `webhook.ts` and `tracking.ts` — i.e. it's building more on top
+  of the F-24 unguarded-writer problem. Flag before it's committed. P3 (process); the F-24
+  interaction is already P1.
 
 ---
 
@@ -415,10 +428,10 @@ auth/authz line of **every** `route.ts` (all ~146). Segment-1 conventions apply.
 |---|---|---|---|---|---|---|
 | F-19 | **P3** | E/C | `src/app/api/shipping/serviceability/route.ts` (whole file — 12 lines) | `GET /api/shipping/serviceability?pincode=` is **unauthenticated and unrate-limited**, and calls `checkServiceability()` → a live Delhivery API request per hit. **Confirmed no cache** (`src/lib/delhivery/serviceability.ts` — direct `delhiveryFetch`, no memo/Redis/TTL), and `delhiveryFetch` default `retries=3` with 1s/2s backoff → one abusive request can be **3 outbound Delhivery calls** and hold the handler ~3s. Sibling `shipping/estimate` requires `getCurrentUserId`. | Anon caller drives unbounded (×3-amplified) outbound calls to Delhivery — quota burn / carrier-side IP ban that would break real shipment creation — and enumerates serviceable pincodes. | file read (route + `serviceability.ts` + `client.ts`) |
 | F-20 | **P3** | E/D | `src/app/api/products/search/route.ts` | `GET /api/products/search?q=` is unauthenticated + unrate-limited and, per request, runs a Prisma `contains` OR-scan **plus** a `$queryRaw` doing `EXISTS (SELECT 1 FROM unnest(p.compatibility) WHERE compat ILIKE '%q%')` — a full scan of the `Product.compatibility` text[] on every ≥2-char keystroke (no GIN index; `Product` has no text-search index). `${pattern}` is parameterised (no SQLi). | Cheap unauthenticated DB-CPU amplification on a keystroke-frequency endpoint. | file read |
-| F-21 | **P2** | C/E | `src/app/api/orders/route.ts:98-101,252-257` + `src/lib/delhivery/shipment.ts` (no serviceability call) | **No server-side pincode-serviceability validation anywhere in the order → manifest path.** `POST /api/orders` validates only `/^\d{6}$/` on `deliveryPincode`. The checkout page's `<PincodeChecker>` is client-side + advisory (and `checkout/page.tsx:210` deliberately decouples shipping cost from it). `createDelhiveryShipment` (contrary to its own doc-comment "createShipment() will call this to re-check serviceability") **never calls `isServiceable`**. COD shipment creation is fire-and-forget with only `console.error` on failure (`orders/route.ts:254`); the prepaid path is the same in `finalize.ts:99`. | A dealer in a non-serviceable pincode places and pays for an order → order goes `CONFIRMED`, stock decremented, invoice issued, **AWB creation fails silently**, no shipment row, no retry, no alert, nothing shown to dealer or admin. Order sits "confirmed, never ships". | code trace (`orders/route.ts`, `shipment.ts`, `finalize.ts`, `serviceability.ts`, `checkout/page.tsx`) |
-| F-22 | **P3** | E | ~90 route handlers (full list-method in §4d E-1) | Systemic: no input-validation layer. ~90 mutating routes destructure `await req.json()` with no zod schema, no try/catch, no type/range/length/enum checks. Malformed body → unhandled 500 (not 400); out-of-domain but in-type values pass straight to Prisma; Prisma `P2025` on bad id → 500 not 404. F-13 (`parseInt(page)` NaN) is the query-param analogue. | Users/integrations get 500s for what should be 400/404; log noise; a few genuinely unbounded fields (`creditLimit`, oversized strings) reach the DB. No stack leak (Next hides in prod). | grep sweep (zod/req.json/try across all 146) + spot reads |
+| F-21 | **P1** (was P2 — raised 2026-08-29 per user: for a prepaid order it's money taken for an undeliverable order with zero alert to anyone) | C/E | `src/app/api/orders/route.ts:98-101,252-257` + `src/lib/delhivery/shipment.ts` (no serviceability call) | **No server-side pincode-serviceability validation anywhere in the order → manifest path.** `POST /api/orders` validates only `/^\d{6}$/` on `deliveryPincode`. The checkout page's `<PincodeChecker>` is client-side + advisory (and `checkout/page.tsx:210` deliberately decouples shipping cost from it). `createDelhiveryShipment` (contrary to its own doc-comment "createShipment() will call this to re-check serviceability") **never calls `isServiceable`**. COD shipment creation is fire-and-forget with only `console.error` on failure (`orders/route.ts:254`); the prepaid path is the same in `finalize.ts:99`. | Dealer in a non-serviceable pincode places and pays → order `CONFIRMED`, stock decremented, invoice issued, **AWB creation fails silently**, no shipment row, no retry, no alert. For a prepaid order: money captured for something that can never ship, and nobody — dealer, admin, ops — is told. **Fix has two independent parts, both required:** (1) a real serviceability check *before* payment (server-side in `POST /api/orders`, and gate `payments/create-order`/checkout on it); (2) AWB-creation failure must surface somewhere a human sees — an admin queue / OrderEvent / alert — not `console.error`. Part 2 also covers F-05's silent-failure class and every other `createDelhiveryShipment().catch(console.error)`. | code trace (`orders/route.ts`, `shipment.ts`, `finalize.ts`, `serviceability.ts`, `checkout/page.tsx`) |
+| ~~F-22~~ → **PHASE 3 WORKSTREAM, not a finding** (reclassified 2026-08-29 per user) | — | E | ~90 route handlers (full list-method in §4d E-1) | Systemic: no input-validation layer. ~90 mutating routes destructure `await req.json()` with no zod schema, no try/catch, no type/range/length/enum checks. Malformed body → unhandled 500 (not 400); out-of-domain but in-type values pass straight to Prisma; Prisma `P2025` on bad id → 500 not 404. F-13 (`parseInt(page)` NaN) is the query-param analogue. **This is a planned workstream — introduce a shared zod-parse + error-envelope helper and apply it route-by-route — not an ad-hoc patch target. Phase 2 report lists it under "recommended workstreams", Phase 3 schedules it. Do not fix piecemeal.** F-13 and the specific unbounded-field cases (`creditLimit`, cancellation-policy already bounded) can be handled inside that workstream. | Users/integrations get 500s for what should be 400/404; log noise; a few genuinely unbounded fields reach the DB. No stack leak (Next hides in prod). | grep sweep (zod/req.json/try across all 146) + spot reads |
 | F-23 | **P3** | E/J | `src/app/api/health/route.ts:19`; `src/app/api/upload/dealer-document/route.ts:100` (+ 3 admin upload routes) | Routes echo raw `err.message`/`String(err)` to the caller. `/api/health` is **public** and leaks the DB driver error string (host/driver disclosure on failure); `upload/dealer-document` leaks R2/S3 SDK error text to a dealer. Admin upload/import/refund routes do the same but to trusted actors. | Internal infra detail disclosed to unauthenticated (`/api/health`) or semi-trusted (dealer) callers on error. | grep + file spot-reads |
-| F-24 | **P2** | D/C | `src/lib/delhivery/webhook.ts:60-66`, `src/lib/delhivery/tracking.ts:141-169` (vs `orders/[id]/route.ts:64-95`) | Carrier-driven `Order.status` writes bypass the fulfilment state machine: unconditional `update({data:{status}})`, no transition check, no compare-and-swap, no event dedupe, two drifted status maps. Webhook auth is `?token=` in URL, no HMAC. | Out-of-order/replayed/forged Delhivery event moves `Order.status` backward or `CANCELLED → SHIPPED` — silently un-cancels an already-refunded order in every UI. | code trace (promotes S-06) |
+| F-24 | **P1** (raised from P2, 2026-08-29 — it gates an ops action, see below) | D/C | `src/lib/delhivery/webhook.ts:60-66`, `src/lib/delhivery/tracking.ts:141-169` (vs `orders/[id]/route.ts:64-95`) | Carrier-driven `Order.status` writes bypass the fulfilment state machine: unconditional `update({data:{status}})`, no transition check, no compare-and-swap, no event dedupe, two drifted status maps. Webhook auth is `?token=` **in the URL** — leaks into nginx/Cloudflare access logs, proxy logs, and `Referer`. | Out-of-order/replayed/**forged** Delhivery event moves `Order.status` backward or `CANCELLED → SHIPPED` — silently un-cancels an already-refunded order in every UI (dealer + admin), and can drive false `SHIPPED` (→ F-02/F-17 tier errors). | code trace (promotes S-06) |
 | F-25 | **P3** | D | `prisma/schema.prisma` — `OrderItem` (no indexes), `ProductVariant.productId`, `Shipment.status`, `Review.userId`, `StorageAuditLog` | Hot FK/filter columns unindexed. `OrderItem WHERE orderId IN (...)` (every order read) and `ProductVariant WHERE productId` (every PDP) are seq scans. | Slow order lists / PDPs as data grows; unbounded `StorageAuditLog`. Fix = new migration → Phase 3, blocked by H6. | code trace vs catalogued queries |
 | O-1..O-6 | — | A/E | see "Observations" below | Consistency observations, not defects — logged so Phase 2 can decide. | — | code trace |
 
@@ -523,7 +536,7 @@ Three writers of `Order.status`, **three divergent state models**:
 | Delhivery webhook | `src/lib/delhivery/webhook.ts:5-11,60-66` | `ORDER_STATUS_MAP` (6 entries incl. `CANCELLED`), unconditional `tx.order.update` | ❌ none | No transition check, no dedupe on `ShipmentTrackingEvent`, **no F-17 raw-status guard** (dormant — secret unset). |
 | Tracking sync | `src/lib/delhivery/tracking.ts:141-169` | inline `orderStatusMap` (5 entries, **no `CANCELLED`** — already drifted from the webhook's), unconditional `tx.order.update` | ❌ none | Has the F-17 `rawSaysPreShip` guard (Item 1c) but still no transition/CAS guard. |
 
-**F-24 (P2, D/C) — carrier-driven `Order.status` writes bypass the fulfilment state machine.**
+**F-24 (P1, D/C) — carrier-driven `Order.status` writes bypass the fulfilment state machine.**
 The two Delhivery writers do unconditional `update({data:{status}})` with no check of the
 current status and no compare-and-swap. Consequences:
 - **Backward / illegal transitions.** A delayed, replayed, or out-of-order Delhivery event
@@ -538,6 +551,28 @@ current status and no compare-and-swap. Consequences:
   known waybill, and F-24's missing guards mean those writes land unvalidated.
 Interacts with F-02/F-17 (all three are "carrier data drives Order.status without a guard").
 S-06 is now F-24.
+
+> ### ⚠ F-24 BLOCKS AN OPS ACTION — do not enable the Delhivery webhook push URL
+> The user was about to have Delhivery configure the webhook push URL. **That is now blocked
+> on fixing F-24.** Enabling it today arms a **forgeable, unauthenticated-in-practice endpoint
+> (`?token=` in the URL) that can un-cancel refunded orders and forge fulfilment state.** Today
+> the webhook secret is unset so the endpoint is inert; configuring the push URL is what makes
+> it live.
+>
+> **Phase 3 fix scope (all five, together — this is one unit of work):**
+> 1. **HMAC signature verification** on the raw body (like the Razorpay webhook already does) —
+>    **not** `?token=` in the URL. Move off the query param entirely.
+> 2. **Event dedupe** — idempotency key on `ShipmentTrackingEvent` (carrier event id / hash),
+>    skip already-seen events.
+> 3. **State-machine guard** — reject backward / out-of-DAG transitions; share the admin
+>    `FULFILLMENT_TRANSITIONS` map (`orders/[id]/route.ts`) instead of a third copy.
+> 4. **Compare-and-swap** on the `Order.status` write (`updateMany({where:{status:prior}})`),
+>    matching the admin PATCH and payment/cancel routes.
+> 5. **Reconcile the two drifted status maps** (`webhook.ts` `ORDER_STATUS_MAP` vs `tracking.ts`
+>    inline `orderStatusMap`) into one shared table; while there, close the webhook-path half of
+>    **F-17** (the `normalizeShipmentStatus` "Not Picked" gap) since it lives in the same code.
+>
+> Depends on: nothing code-side. Blocks: the Delhivery webhook rollout (ops).
 
 ### D-2 — N+1 — **largely NOT a problem in the API routes**
 
@@ -608,7 +643,16 @@ and every `admin/*` list route.
    unused; `src/lib/shiprocket/*` dead (F-10); unused-export sweep.
 
 **Deliverable state:** `AUDIT/01-findings.md` is the running log. `AUDIT/02-report.md` (Phase 2)
-not started. Findings now **F-01…F-25 + S-01…S-08 (S-06 promoted→F-24) + O-1…O-6**.
+not started. Findings now **F-01…F-25 (F-22 reclassified to a Phase-3 workstream) + S-01…S-10
+(S-06 promoted→F-24) + O-1…O-6**.
+
+### Re-rating / re-sequencing applied 2026-08-29 (per user)
+| Finding | Was | Now | Why |
+|---|---|---|---|
+| F-24 | P2 | **P1** | Gates an ops action — enabling the Delhivery webhook push URL arms a forgeable endpoint that can un-cancel refunded orders. **Webhook rollout blocked until fixed.** Fix scope (HMAC not `?token=`, dedupe, state-machine guard, CAS, map reconciliation) in §4e D-1. |
+| F-21 | P2 | **P1** | Prepaid: money taken for an undeliverable order, zero alert. Two-part fix (serviceability check before payment + AWB-failure surfacing) noted on the finding. |
+| F-05 | P1 | P1 (**sequence: first on Razorpay**) | Added the prepaid-no-stock-reservation trigger; it's THE Razorpay go-live blocker. |
+| F-22 | P3 finding | **Phase-3 workstream, not a finding** | ~90 routes = a shared-helper rollout, planned not patched piecemeal. |
 
 ---
 
@@ -705,6 +749,132 @@ stays retryable. Two concurrent retries can no longer both issue a refund.
   never picked up, per Amendment 2) is queued.
 - Prod config unconfirmed: `NEXT_PUBLIC_RAZORPAY_ENABLED`, `RAZORPAY_KEY_ID` prefix,
   `DELHIVERY_WEBHOOK_SECRET`. None of the shipped code assumes a value.
+
+---
+
+## 6b. Step 6 — verification deliverables (2026-08-29)
+
+### Git-packaging status — the batch is PUSHED; split blocked
+
+The entire emergency batch is **one squashed commit `25f4797 "all"` (2026-08-28 23:16), and it
+is on `origin/main`** (`git branch -vv`: `main … [origin/main]`, 0 ahead / 0 behind). Two more
+commits sit on top (`4cf9d18` docs, `d006ab6` scripts fix), then `c70c528` "all" (a partly-
+committed push-notification feature), all pushed. There is also **uncommitted push-notification
+WIP** in the working tree (8 modified files + `src/lib/push/order-notifications.ts` +
+`src/app/api/mobile/push-token/route.ts`).
+
+`25f4797` also bundles unrelated changes: `AUDIT/01-findings.md`, `AUDIT/DECISION-RULES.md`,
+`scripts/add-test-product.mjs`, `SECRET-ROTATION.md`.
+
+**Per the user's instruction ("if anything is already pushed, tell me before rewriting
+history") the reset-and-recommit is NOT done.** Options are in the session response; awaiting a
+decision. Recommendation: forward-only — leave `25f4797` as history; if F-04 (Item 3) misbehaves,
+revert just its hunks in `orders/[id]/cancel/route.ts` (a manual hunk-revert, ~30 lines — the
+squash makes it manual, not impossible).
+
+### Typecheck / lint / build / test — verbatim
+
+Run against the current working tree (**includes the uncommitted push-notif WIP** — noted where
+it matters). Local Postgres is not reachable from this environment (`DATABASE_URL` →
+`localhost:5433`, no tunnel).
+
+**`npx tsc --noEmit`** → exit **0**, no output. Clean.
+
+**`npx next lint`** → exit **0**. **0 errors, 160 warnings** (all pre-existing:
+`@typescript-eslint/no-explicit-any` ×~150, `no-console` ×~10, spread across `src/lib/**`,
+`src/app/**`, test files). No new warnings from the batch.
+
+**`npm run build`** → **FAILS**, but **environmentally, not a code defect**:
+```
+   Generating static pages (111/148)
+{"level":"error","msg":"Prisma error","target":"user.findMany",
+ "error":"Can't reach database server at `localhost:5433`"}
+Error occurred prerendering page "/admin/staff"
+Error [PrismaClientInitializationError]: Can't reach database server at `localhost:5433`
+Export encountered an error on /admin/staff/page: /admin/staff, exiting the build.
+ ⨯ Next.js build worker exited with code: 1
+```
+`tsc` + webpack compile + 111/148 static pages succeed; the build then dies trying to
+**prerender `/admin/staff` and `/admin/products/new`, which query Prisma at build time**. On the
+VPS the DB is reachable so prod builds pass — but this is itself a finding: **→ new S-09**
+(admin RSC pages statically prerendered with build-time DB access; fragile, and bakes stale
+data unless they opt into dynamic rendering). Not batch-related.
+
+**`npx vitest run`** — two states:
+
+*Clean `HEAD` (`c70c528`, push-notif WIP stashed):*
+```
+ Test Files  18 passed (18)
+      Tests  168 passed (168)
+   Duration  22.58s
+```
+
+*Current working tree (push-notif WIP applied):*
+```
+ ❯ src/lib/delhivery/tracking.test.ts (10 tests | 2 failed)
+   × does NOT write Order.status = SHIPPED for a raw 'Not Picked' (pre-pickup) parcel
+   × DOES write Order.status = SHIPPED once the parcel is genuinely picked up
+   TypeError: Cannot read properties of undefined (reading 'status')
+    ❯ Module.syncTrackingToDb src/lib/delhivery/tracking.ts:102:43
+ Test Files  1 failed | 17 passed (18)
+      Tests  2 failed | 166 passed (168)
+```
+**The 2 failures are caused by the uncommitted push-notif WIP, not the batch.** That WIP added
+`include:{order:{select:{status:true}}}` + `const priorOrderStatus = shipment.order.status` to
+`syncTrackingToDb` but did not update `tracking.test.ts`'s `shipment.findUnique` mock (which
+returns no `.order`). At `25f4797` and at `HEAD` the file is green. **→ new S-10** (uncommitted
+WIP ships with 2 failing tests; mock not updated for the new relation load).
+
+### Fails-before / passes-after — per item
+
+Method: `git stash -u` the WIP, `git checkout 25f4797^ -- <pre-existing source files the batch
+touched>` (tests + net-new modules kept at HEAD), run the batch's tests, then restore. Non-
+destructive; tree returned to exact prior state.
+
+| Item | Test file | Fails before the fix? | Evidence |
+|---|---|---|---|
+| **F-03** (retry cap + P2002 recovery) | `src/lib/delhivery/shipment.test.ts` (net-new) | **YES** | `expect(delhiveryPost).toHaveBeenCalledWith("/api/cmu/create.json", …, { retries: 1 })` → fails (called with no opts); "recovers from a P2002" → throws `PrismaClientKnownRequestError` instead of returning the existing row. |
+| **F-14** (session cross-check) | `src/lib/auth/middleware.test.ts` (net-new) | **YES** | 4/6 fail against pre-fix `middleware.ts`/`current-user.ts`: "returns null when the session has been revoked" → returns the payload; "does not consult NextAuth when a Bearer token is present but revoked" → `expected 'u1' to be null`. |
+| **F-17 / Item 1c** (SHIPPED write-guard) | `src/lib/delhivery/tracking.test.ts` F-17 block (net-new block, pre-existing `syncTrackingToDb`) | **YES** | "does NOT write Order.status = SHIPPED for a raw 'Not Picked'" → `txOrderUpdate` **called** with `{data:{status:"SHIPPED"}}` — exactly the bug. |
+| **F-02 / F-04** (carrier-aware gate, Delhivery-cancel wiring) | `carrier-cancellation.test.ts`, `carrier-status.test.ts`, `cancellation.test.ts` new blocks (all net-new exports: `classifyCarrierTier`, `evaluateDealerGateLocal`, `resolveDealerGateFromCarrier`, `defaultAdminStageFromCarrier`) | **N/A — no "before"** | The functions and their tests were introduced together. There is no prior version to fail. The *route*-level behaviour (dealer 2%-cancel of an in-transit order) has **no unit test** — only the integration script below. |
+| **F-07** (concurrent refund-retry guard) | — | **NO TEST** | Fix is a route-level `updateMany` claim guard in `admin/refunds/[id]/retry/route.ts`; no extracted lib fn, no route-test infra in this repo. Covered only by the integration script (§ below), which is **not part of `npm test`** and needs a running app + DB. |
+
+**Honest summary:** F-03, F-14, F-17/1c have genuine fail-before/pass-after unit tests. F-02/F-04
+have thorough tests of their *new pure logic* but nothing that exercises the actual cancel route,
+and F-07 has no automated test at all. The route-level behaviour of all three rests on
+`scripts/security/cancellation-exploit-test.ts` (below), which has never been run here.
+
+### Manual staging verification script
+
+`scripts/security/cancellation-exploit-test.ts` **already exists** (added in the batch, 229
+lines) and covers the exploit end-to-end + the admin override + F-07. It has **not been run**
+(needs a running app + its DB; ideally a real staging Delhivery AWB). To run on staging:
+
+```
+# 1. Point at staging, seed a real MANIFESTED (pre-pickup) AWB on the staging Delhivery account
+BASE_URL=https://staging.motoxplus.<...> \
+TEST_WAYBILL=<a real pre-pickup AWB on the staging Delhivery account> \
+npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/security/cancellation-exploit-test.ts
+```
+
+What it asserts (exits non-zero on any failure):
+1. **Dealer cancel, fresh MANIFESTED shipment** — *with* a real pre-pickup AWB → allowed at
+   `PRE_SHIP`, parcel cancelled with Delhivery first; *without* → `422`, order stays
+   `PROCESSING`, **no `OrderCancellation` row, no refund** (F-04).
+2. **Age backstop** — MANIFESTED shipment older than `carrierStaleDays` (default 3) → dealer
+   cancel `422`, order untouched.
+3. **Local fast-path** — `Shipment.status = IN_TRANSIT` → dealer cancel `422` with no carrier
+   fetch.
+4. **Admin tier override** — admin cancels with `tierOverride: "POST_SHIP"` → succeeds (real
+   AWB) and writes an `OrderEvent{type:"CANCELLATION_TIER_OVERRIDE"}` recording
+   `carrier / defaulted / chosen`; without a real AWB → `422`, nothing mutated.
+5. **F-07** — two concurrent `POST /api/admin/refunds/{id}/retry` → **exactly one** gets `409`;
+   the other `200`/`502` but never both proceeding to `refundPayment`.
+
+**Gap vs. the ideal end-to-end script:** it seeds orders directly in the DB rather than driving
+signup → browse → cart → order → pay. A full happy-path exploit reproduction (place a real order,
+pay, wait for MANIFEST, then cancel) is not automated. Recommend running this script on staging
+with `TEST_WAYBILL` set as the acceptance gate for the batch before it's considered verified.
 
 ---
 

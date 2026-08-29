@@ -1,6 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { notifyOrderEvent, type OrderNotificationEvent } from "@/lib/push/order-notifications";
 import type { DelhiveryWebhookPayload } from "./types";
 import { normalizeShipmentStatus } from "./types";
+
+// Order-status transitions that warrant a push to the dealer. PROCESSING /
+// RETURNED deliberately have no entry — the app only surfaces confirm / ship /
+// deliver / cancel.
+const NOTIFY_EVENT_BY_ORDER_STATUS: Record<string, OrderNotificationEvent> = {
+  SHIPPED: "ORDER_SHIPPED",
+  DELIVERED: "ORDER_DELIVERED",
+  CANCELLED: "ORDER_CANCELLED",
+};
 
 const ORDER_STATUS_MAP: Record<string, string> = {
   PICKED_UP: "PROCESSING",
@@ -65,6 +75,14 @@ export async function processDelhiveryWebhook(
       });
     }
   });
+
+  // Notify the dealer if this webhook actually advanced the order's status
+  // (fire-and-forget; notifyOrderEvent dedupes and never throws).
+  const newOrderStatus = ORDER_STATUS_MAP[normalizedStatus];
+  if (newOrderStatus && newOrderStatus !== shipment.order.status) {
+    const event = NOTIFY_EVENT_BY_ORDER_STATUS[newOrderStatus];
+    if (event) void notifyOrderEvent(shipment.orderId, event);
+  }
 
   return { processed: true, waybill };
 }
