@@ -14,7 +14,10 @@ These encode the review posture applied across the audit so far. Apply them your
 3. **Never route a fee, tier, or refund decision through `Order.status` or `normalizeShipmentStatus`.** Those mappings exist for display and workflow, not for money. Read raw carrier data.
 4. **Prefer read-only classifiers over write-coupled syncs.** If you need to know something, fetch and classify it. Do not call a function that also writes as a way of getting a read.
 5. **No schema changes or new migrations** while H6 (migration drift) is unresolved. If a fix seems to need one, it belongs in Phase 3, not now.
-6. **Never point at the production database.** Neon branch only, read-only unless explicitly told otherwise.
+6. **Never point at the production database.** Prod DB is self-hosted Postgres on the VPS
+   (`localhost:5432/motoxplus`) — there is no Neon branch. Use only the scratch/restore DB the
+   user provides, read-only unless explicitly told otherwise. Every query name-checks the
+   scratch DB.
 7. **Shared helpers require a blast-radius report before you change them.** Enumerate every consumer, state what else changes, and if the effect reaches beyond the finding's scope, don't make the change — log it and pick a narrower fix.
 8. **Label every fix as stopgap or real.** A stopgap that isn't labelled becomes permanent by accident.
 9. **Verified means you ran something.** Inference is "suspected". Never present the two as the same thing.

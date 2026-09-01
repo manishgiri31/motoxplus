@@ -185,7 +185,17 @@ at each step of order creation (`orders/route.ts:139-163,198-199`), cancellation
 
 ---
 
-### H5 — Rate limiting under PM2 cluster — **REFUTED as configured**
+### H5 — Rate limiting under PM2 cluster — **RE-OPENED 2026-08-30 → CONFIRMED (P1, live now)**
+
+> **The original refutation was wrong in premise.** It rested on "`REDIS_URL` is set."
+> Confirmed 2026-08-30: **Redis is DOWN in production** — continuous ioredis connection
+> errors every ~2s (matches `retryStrategy` cap) since ≥ 2026-08-29 19:28 UTC, and PM2
+> restart counts of 29 / 19 across the two cluster workers. `REDIS_URL` being *set* is not
+> `redis-server` *running*. Full re-analysis in **§9** (per-limiter fail-open/closed, what
+> protection is absent right now, whether the DB lockout backstop still functions) and the
+> crash-loop as its own finding **F-26**.
+
+*Original analysis, retained — the "as configured" (Redis healthy) case:*
 
 - `REDIS_URL` **is set** in the server `.env` (confirmed — key present). Every app rate limit
   goes through `checkRateLimit()` (`rate-limit.ts:137-161`), which uses the Redis Lua
@@ -269,7 +279,7 @@ the other half of the H2 P0.
 | F-02 | **P0** | C/B | `src/lib/orders/cancellation.ts:76-116,165-167` + `webhook.ts` + `tracking.ts` + `cancel/route.ts` | Cancellation fee tier keys off `Order.status`, which lags real shipment state (often indefinitely). Dealer cancels a physically-in-transit `PROCESSING` order at 2% (98% refund) and, per H8b, the parcel is never cancelled with Delhivery. | Dealer keeps the goods and gets 98% of the money back. | code trace + `docs/delhivery-open-items.md` item 1 |
 | F-03 | **P0** | C | `src/lib/delhivery/client.ts:3,33-60,74-84` | `create.json` inherits 3 auto-retries; Delhivery may accept attempt 1 before a client timeout → duplicate real AWB. No path/method exclusion; no advisory lock for the concurrent-call variant. | Two parcels dispatched and billed for one order; the second is invisible to the app. | code trace + `delhivery-audit.md` / `delhivery-open-items.md` (flagged 3×) |
 | F-04 | **P0** | C/B | `src/app/api/orders/[id]/cancel/route.ts` (whole flow) | `cancelDelhiveryShipment` exists but is called nowhere. Any cancellation of an order that has an AWB (dealer *or* admin) issues a refund and leaves the parcel moving. | Refund + goods, every post-manifest cancellation. | `grep`; function header comment; `delhivery-open-items.md` item 1 |
-| F-05 | **P1** — **THE Razorpay go-live blocker; fix before anything else on that integration** | B | `src/lib/payments/finalize.ts:41-48` (the `prisma.payment.updateMany(... → "PAID")` **before** the `$transaction` at :52) | `Payment→PAID` write is outside the `$transaction`; if the txn throws, Payment is `PAID` but order stays `PENDING`, and every later webhook delivery no-ops on `dbPayment.status==="PAID"` (`webhooks/razorpay/route.ts`). Webhook returns 200 on processing error → no Razorpay retry. **Concrete trigger confirmed 2026-08-29:** prepaid orders do NOT reserve/decrement stock at creation (`orders/route.ts:184` `stockReserved: isCOD` — so `false` for every prepaid order), so two dealers can both check out the last unit, both pay, and the 2nd dealer's `finalize` hits `decrementStock`'s atomic `stock:{gte:qty}` guard → `InsufficientStockError` thrown from inside the txn *after* their Payment row is already committed `PAID`. **Money captured, no order, no retry, no alert.** Not a corner case — any oversold SKU during a busy window. | (Razorpay live) 2nd dealer's money captured, order never confirmed, permanently stuck, silent — only a `console.error`. Fix: (1) move the `Payment→PAID` write inside the `$transaction`; (2) reserve stock at prepaid order creation, or accept the oversell and refund cleanly; (3) webhook returns non-2xx / enqueues on genuine processing failure; (4) alert on post-capture finalize failure. | code trace (`finalize.ts`, `stock.ts`, `orders/route.ts`) |
+| F-05 | **P0** (was P1 — re-rated 2026-08-30: Razorpay confirmed **LIVE** in prod, `rzp_live_` key. This is active money loss, not a future go-live risk) | B | `src/lib/payments/finalize.ts:41-48` (the `prisma.payment.updateMany(... → "PAID")` **before** the `$transaction` at :52) | `Payment→PAID` write is outside the `$transaction`; if the txn throws, Payment is `PAID` but order stays `PENDING`, and every later webhook delivery no-ops on `dbPayment.status==="PAID"` (`webhooks/razorpay/route.ts`). Webhook returns 200 on processing error → no Razorpay retry. **Concrete trigger confirmed 2026-08-29:** prepaid orders do NOT reserve/decrement stock at creation (`orders/route.ts:184` `stockReserved: isCOD` — so `false` for every prepaid order), so two dealers can both check out the last unit, both pay, and the 2nd dealer's `finalize` hits `decrementStock`'s atomic `stock:{gte:qty}` guard → `InsufficientStockError` thrown from inside the txn *after* their Payment row is already committed `PAID`. **Money captured, no order, no retry, no alert.** Not a corner case — any oversold SKU during a busy window. | (Razorpay live) 2nd dealer's money captured, order never confirmed, permanently stuck, silent — only a `console.error`. Fix: (1) move the `Payment→PAID` write inside the `$transaction`; (2) reserve stock at prepaid order creation, or accept the oversell and refund cleanly; (3) webhook returns non-2xx / enqueues on genuine processing failure; (4) alert on post-capture finalize failure. | code trace (`finalize.ts`, `stock.ts`, `orders/route.ts`) |
 | F-06 | **P2** | A | `src/app/api/admin/payments/[id]/verify/route.ts:11,16` (also `review`, `reject`) | `ADMIN_ROLES` here is `["ADMIN","SUPER_ADMIN","STAFF"]` with **no department check** — any STAFF (SALES, MARKETING, PRODUCTION) can verify/reject dealer payments and confirm orders. `staff-access.ts` scopes invoices/accounts work to `ACCOUNTS` dept, but this route doesn't use `requireSectionAccess`. | A marketing staffer can mark any dealer's payment verified → order goes to production with no money received. | code trace; contrast with `staff-access.ts:6-13` |
 | F-07 | **P2** | B | `src/app/api/admin/refunds/[id]/retry/route.ts:263-283` | `refundStatus !== "FAILED"` is a read-then-write check with no atomic guard; two concurrent retries both pass and both call `refundPayment` (Razorpay refund API, no idempotency key). | Double refund issued to the dealer on a double-click / concurrent admin action. | code trace |
 | F-08 | **P2** | J | `npm audit` (10 vulns: 2 critical, 7 high, 1 low) | `xlsx@0.18.5` prototype pollution (CVSS 7.8, admin import path, no npm-registry fix available); `@auth/core` homoglyph email bypass (critical, via next-auth chain); `next`→`postcss` XSS; `sharp`/libvips CVEs; `deepmerge-ts` DoS via `@prisma/config`. | `xlsx`: an admin importing a crafted `.xlsx` could pollute `Object.prototype` in the Node process. Others mostly build-time / low-reachability. | `npm audit --json` |
@@ -314,9 +324,17 @@ the other half of the H2 P0.
   per-IP (8/60s) as the only cross-number bound — *but* `checkResendLimit` caps a single
   authenticated user to 10 OTP/hour total. Net spend bound per account ≈ 10/hr. Likely P3.
 - **S-06 (D): PROMOTED → F-24** (2026-08-29, after the state-machine enumeration in §4e D-1).
-- **S-07 (J):** Brief says "Hostinger VPS PostgreSQL"; git history (`df12334 connect neon db`)
-  and the leaked `DATABASE_URL` shape suggest **Neon**. Affects backup/restore assumptions.
-  Needs confirmation from the team / current `.env` value (not read).
+- **S-07 (J): RESOLVED 2026-08-30 (per user).** Production DB is **self-hosted PostgreSQL on
+  the VPS**, `postgresql://motoxplus@localhost:5432/motoxplus` — NOT Neon. The
+  `df12334 connect neon db` commit + leaked `DATABASE_URL` reflect a *former* Neon setup that
+  has since been migrated to local Postgres. Consequences: (1) backup/restore = local
+  `pg_dump`/`pg_restore`, not Neon branching (Area J); (2) no Neon read-replica / branch option
+  for Steps 3–4 — user restores a dump into a scratch DB on the same box (see §9); (3) the DB
+  is localhost-only (not remotely reachable), so the *current* DB credential has a smaller blast
+  radius than F-01 implies **iff** `.env` was regenerated during the Neon→local move (unverified);
+  (4) the leaked historical Neon project may still exist and be forgotten — worth checking it's
+  been deleted. DECISION-RULES §6 ("Neon branch only") updated to "the scratch DB the user
+  provides".
 - **S-08 (A):** `procurement/*` routes (requests, purchase-orders, grn) all require
   `["ADMIN","SUPER_ADMIN"]`, but `staff-access.ts` maps `procurement/grn → ["PRODUCTION"]` and
   `STAFF_NAV.PRODUCTION` renders a "GRN" link. PRODUCTION staff get a nav link to a page whose
@@ -954,3 +972,268 @@ not actually applied to the charge. Edge case (admin overriding tier on a shipme
 Options: (i) ignore `tierOverride` entirely + skip the event when `!order.shipment`, or
 (ii) honour the override for shipment-less orders too. (ii) is a small policy question —
 deferred.
+
+---
+
+## 9. Re-rate on three confirmed production facts (2026-08-30, per user)
+
+Three prod facts were confirmed that invalidate parts of Phase 1's ratings:
+**(1)** Razorpay is **LIVE** (`NEXT_PUBLIC_RAZORPAY_ENABLED="true"`, `RAZORPAY_KEY_ID` =
+`rzp_live_…`). **(2)** `DELHIVERY_WEBHOOK_SECRET` is **confirmed absent** from prod `.env`.
+**(3)** **Redis is down** in prod (ioredis connection errors every ~2s since ≥ 2026-08-29
+19:28 UTC; PM2 restart counts 29 / 19 — unequal ⇒ individual-worker crashes, not deploy
+reloads). Also: prod DB is **self-hosted Postgres**, not Neon (S-07 resolved).
+
+### 9.1 Payment paths re-read under "Razorpay is live"
+
+| Finding | Was | Now | Why it changes |
+|---|---|---|---|
+| **F-05** | P1 (go-live blocker) | **P0 — active money loss, live today** | `finalize.ts:41-48` commits `Payment.status = "PAID"` *before* the `$transaction` (`:53`). Prepaid orders never reserve stock (`orders/route.ts:184` `stockReserved: isCOD` → `false`), so any oversold SKU makes `decrementStock` (`stock:{gte:qty}` guard) throw `InsufficientStockError` *inside* the txn — after the PAID commit. Txn rolls back (order stays `PENDING`, no invoice, no shipment); Payment stays `PAID`. Every later webhook delivery short-circuits at `handlePaymentCaptured`'s `if (dbPayment.status === "PAID") return` (`webhooks/razorpay/route.ts:123`). **Real ₹ captured, no order, no retry, no alert — only a `console.error`.** The `/verify` path at least returns a 409 the dealer sees ("payment received but out of stock, contact support", `verify/route.ts:132-139`); the **webhook path is fully silent**. Confirmed by trace of `finalize.ts` + `stock.ts` + `orders/route.ts` + `webhooks/razorpay/route.ts`. |
+| **F-03** | P0 | **P0 (unchanged rating; exposure now real, not latent)** | `createDelhiveryShipment` now fires on **every prepaid capture** (`finalize.ts:99`), not just COD. The **retry variant** is closed in prod (`da0ed80` carries `25f4797`'s `retries:1` on `create.json` + P2002 recovery in `shipment.ts`). The **webhook-swallows-errors** half (webhook `catch` → HTTP 200, `webhooks/razorpay/route.ts:100-105`) is unchanged and is the mechanism that makes F-05 unrecoverable: Razorpay never retries a 200, so a `finalize` that throws is a permanent dead end. F-05 and this are one incident in practice. |
+| **F-07** | P2 | **P2 (unchanged; now a live money path)** | Batch fix (atomic `FAILED→INITIATED` claim) is deployed in `da0ed80`. `refundPayment` (real Razorpay refunds) now moves real money. The remaining unguarded double-refund vector was the retry route — fixed. The cancel route's own refund is single-shot per the guarded `CANCELLED` transition. No re-rate, but it graduates from "theoretical" to "live". |
+| **F-11** | P3 | P3 (unchanged) | GST-on-invoice rounding — independent of payment rail. |
+| **F-21** | P1 (already re-rated 2026-08-29) | P1 | "Prepaid order for an undeliverable pincode: money taken, AWB fails silently, zero alert." Already P1; the live-Razorpay assumption it was re-rated under is now confirmed rather than assumed. |
+| **F-15 / F-18 / F-14 / F-01** | P2 / P2 / P2 / P0 | **blast radius up (ratings hold)** | Session-forgery / stale-session / unrotated-secret findings all now sit in front of a **live money mover**: a forged or non-revoked session can drive `POST /api/payments/verify` and `POST /api/orders/[id]/cancel` (refund). F-01 specifically: unrotated `NEXTAUTH_SECRET` / `JWT_SECRET` (no evidence of rotation) → forge an admin/dealer session → real refunds / confirmations. F-01 stays P0; note the money reachability. |
+
+**New question for the user (not a finding yet):** is `RAZORPAY_WEBHOOK_SECRET` set in prod?
+`env.ts:28` puts it in `REQUIRED_SERVER` when Razorpay is enabled, and `instrumentation-node.ts:11-20`
+`process.exit(1)`s on any missing required var — the app is serving, so it is **almost certainly set**
+(a missing one would hard-fail every boot, not crash-loop after minutes). If confirmed set, the
+webhook path is reachable (200/401), not 503. Worth an explicit check.
+
+### 9.2 F-02 — staleness window: suspected → **CONFIRMED unbounded**
+
+`DELHIVERY_WEBHOOK_SECRET` **confirmed absent** from prod. The Delhivery webhook
+(`webhooks/delhivery/route.ts`) fails closed in production when the secret is unset → **it
+processes nothing**. So `Shipment.status` and `Order.status` advance **only** via
+(a) an admin manual `PATCH` (`orders/[id]/route.ts` `FULFILLMENT_TRANSITIONS`), or
+(b) `syncTrackingToDb`, which runs only when someone opens `GET /api/orders/[id]/tracking`
+**and** `shipment.updatedAt` is > 30 min old (`tracking/route.ts:44-48`). With no tracking-page
+open and no manual PATCH, a manifested/picked-up parcel reads `Order.status = PROCESSING`
+(**PRE_SHIP / 2%**) **forever** — past physical delivery. F-02 stays **P0**. The emergency
+batch (`da0ed80`) blunts the *dealer* path via the live `classifyCarrierTier` fetch and the
+3-day age backstop (`cancellation-gate.ts`); the *admin* path and the underlying `Order.status`
+lag are unchanged, and F-24 blocks the real fix (turning the webhook on).
+
+### 9.3 H5 re-analysis — Redis DOWN in production, right now
+
+**Scope of Redis in this codebase (confirmed by grep):** the **only** runtime consumer is the
+rate limiter (`src/lib/auth/rate-limit.ts`). No `unstable_cache` anywhere. No Redis-backed
+session store (NextAuth = DB/JWT; custom JWT = `UserSession` table). The Shiprocket token cache
+(`shiprocket/auth.ts`) is dead code (H7). `scripts/unlock-logins.ts` is a manual script.
+**→ Redis being down affects rate limiting only — there is no cache-stampede or session-loss
+dimension.**
+
+**Behaviour of `checkRateLimit` when Redis is unreachable** (`rate-limit.ts:136-160`): `getRedis()`
+returns a non-null client (URL is set), so the `!redis` branch is skipped; `await waitForReady`
+burns ~300 ms (see F-26), then `redis.eval` **rejects immediately** (`enableOfflineQueue:false`,
+`commandTimeout:1000`, `maxRetriesPerRequest:1`) → `catch` → **`failMode` decides**:
+- `failMode:"open"` → fall through to `checkInMemory` (per-**worker** `Map`).
+- `failMode:"closed"` → `{ allowed:false }` (hard block).
+
+Every budget in `rate-limit-budgets.ts` is **`failMode:"open"`** (LOGIN/OTP/ORDER/PASSWORD_RESET
+were deliberately switched from "closed" to "open" — see the file header). `checkIPRateLimit`
+(legacy, used by `upi/submit`, `register`, `change-email`, `send-email-verification`) is also
+`"open"`.
+
+| Limiter / call site | failMode | Effect **right now** (Redis down) | DB-backed backstop still working? |
+|---|---|---|---|
+| **LOGIN** per-identifier (5 / 15 min) & per-IP (20 / 15 min) — `credentials.ts` via `peekRateLimit`/`checkRateLimit` | open | Degrades to per-worker in-memory. PM2 `instances:"max"` → **effective limit ≈ 5 × cores** per identifier, **20 × cores** per IP — and the `Map` is **wiped on every worker restart** (29 restarts observed) so counters rarely survive a window. Coarse login throttle is **effectively absent**. | **YES — partially.** `recordFailedLogin`/`isAccountLocked` (`rate-limit.ts:9-50`) are pure Prisma: `User.failedLoginAttempts` +1 per wrong password, `accountLockedUntil` = now+30 min at 5. **Still enforced.** BUT it only counts **wrong-password attempts against a known, active user** (`credentials.ts:102-104`) — it does **nothing** against horizontal **password spray** (one password × thousands of identifiers: 1 increment each, never reaches 5) or **identifier enumeration** (`!user` branch → no DB counter). Those are bounded only by the now-absent per-IP layer. |
+| **OTP_SEND** per-identifier (10 / 15 min, keyed on *target* phone), perIdentifierDaily (30 / day), per-IP (8 / 60 s) — `send-mobile-otp` via `enforceRateLimit` | open | All three degrade to per-worker in-memory (× cores, wiped on restart). SMS/WhatsApp **cost-of-abuse ceiling is effectively removed** at this layer. | **YES.** `checkResendLimit` (`otp.ts:121-129`) = `prisma.otpCode.count` in the last hour ≤ 10 **per userId**. Pure Prisma, still enforced. Since OTP sends require an existing `User` row (register creates one first; forgot-password needs one), a single account is still capped at **10 sends/hr**. Cross-account SMS spend (N registered/abandoned accounts) is no longer bounded by the per-IP 8/60 s. |
+| **OTP_VERIFY** per-identifier (8 / 15 min), per-IP (20 / 60 s) — `verify-mobile` etc. | open | Per-worker in-memory. | **YES.** `MAX_OTP_ATTEMPTS = 5` on `OtpCode.attempts` (`otp.ts:98-108`), guarded `updateMany(used:false)`. Pure Prisma. A given code can still be guessed **≤ 5 times** then it's burned. Brute-forcing a 6-digit code needs new codes, which needs the (in-memory-only-now) send route + the 10/hr DB cap. |
+| **PASSWORD_RESET** (8 / 15 min id, 20 / 15 min IP) — `reset-password` | open | Per-worker in-memory. | Backed by the 32-byte `resetToken` (unguessable) minted only after OTP verify — the rate limit was always defense-in-depth here, so **little real loss**. |
+| **ORDER_CREATE / ORDER_CANCEL** (id + IP hourly) | open | Per-worker in-memory. | No DB backstop, but `getVerifiedDealer` gates ORDER_CREATE and both are dealer-authenticated + low-abuse-value. **Minor.** |
+| **`checkIPRateLimit` legacy** — `upi/submit` (5/60 s), `register` (5/60 s), `change-email` (5/60 s), `send-email-verification` (5/60 s) | open | Per-worker in-memory (× cores, wiped). | **No DB backstop.** `register` spam and `change-email` step-up-abuse (F-15) are essentially unthrottled right now. `upi/submit` — admin reviews each, low impact. `send-email-verification` — Resend cost only. |
+| **SEARCH_PUBLIC / DEFAULT** (per-IP) | open | Per-worker in-memory. | n/a — DoS-shaping only. |
+| **any `failMode:"closed"` limiter** | — | **none exist** — every budget is "open". So Redis-down does **not** hard-block any auth/payment route. (This is why the outage is a silent degradation, not an outage.) | — |
+
+**Bottom line for H5:** with Redis down, the app does **not** fall over (all limiters fail
+open), but three protections are effectively gone in production **right now**:
+1. **Coarse login rate limiting** (per-IP + per-identifier) — leaving credential-stuffing and
+   password-spray bounded only by the per-account 5-strike DB lock, which a spray never trips.
+2. **Per-IP OTP send throttling** — the per-account 10/hr DB cap holds, but cross-account
+   SMS/WhatsApp spend is uncapped at the IP layer (real ₹ cost).
+3. **`register` / `change-email` IP throttles** — unthrottled; `change-email` compounds F-15.
+
+The DB-backed backstops that **do** survive: per-account login lockout (5→30 min),
+per-code OTP attempt cap (5), per-account OTP resend cap (10/hr). The original H5 refutation's
+claim that these make the Redis layer "a weakening, not a hole" is **half right** — true for a
+*single targeted account*, false for *horizontal* attacks (spray, enumeration, cross-account
+OTP spend), which now have no effective ceiling.
+
+**Rating: P1** while Redis is down (the fix is ops — start `redis-server` — plus optionally
+reconsidering `failMode` for LOGIN/OTP). Not P0: no money-loss path, and single-account attacks
+are still contained.
+
+### 9.4 F-26 (NEW, P2 — P1 while the outage persists) — Redis crash-loop / `waitForReady` listener leak
+
+**The crash loop is not the instrumentation Redis warmup.** `instrumentation-node.ts:34`
+(`const redis = getRedis()`) only *constructs* the lazy client — it never awaits a connection
+and never throws/exits on Redis failure (`redis.ts` swallows connection errors in the `error`
+listener). Ruled out.
+
+**Actual mechanism — a listener leak in `rate-limit.ts:118-127`:**
+```
+function waitForReady(redis) {
+  if (redis.status === "ready") return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, 300);
+    redis.once("ready", () => { clearTimeout(timer); resolve(); });  // ← never removed if 'ready' never fires
+  });
+}
+```
+While Redis is unreachable, `redis.status` is never `"ready"`, so **every** `checkRateLimit`,
+`peekRateLimit`, and `resetRateLimit` call registers a `once("ready")` listener whose only
+removal path is the `ready` event firing. During a sustained outage that event never comes, so
+listeners + their closures accumulate on the shared ioredis EventEmitter **without bound** —
+one per rate-limited request (every login, OTP, order, cancel). Node heap grows; with
+`NODE_OPTIONS=--max-old-space-size=1024` the worker hits a V8 OOM and dies; PM2 restarts it
+(`autorestart`, `restart_delay: 2000`). Workers handle different traffic → hit OOM at different
+times → **unequal restart counts (29 / 19), exactly as observed.** It self-heals the moment
+Redis reconnects (all queued listeners fire at once and are removed) — which is why it only
+shows under a *sustained* outage.
+
+Secondary effects during the outage: every rate-limited request pays the **300 ms**
+`REDIS_READY_WAIT_MS` wait before falling through to in-memory (login/OTP/checkout latency),
+and ioredis logs a connection error every ~2 s (log-volume / disk).
+
+**Can a worker die mid-request?** Yes. `ecosystem.config.js` sets `kill_timeout: 30000`
+(graceful) — that covers a `pm2 reload`, but a **V8 OOM is not graceful**: the process aborts
+immediately and any in-flight requests on that worker are dropped (client sees a connection
+reset / 502 from Nginx). At ~1 crash/hour per worker under current traffic this is a small but
+nonzero request-loss rate, and it's **correlated with load** (more rate-limited requests →
+faster leak → sooner OOM).
+
+**Fix (Phase 3, ~2 lines):** in `waitForReady`, remove the `ready` listener when the timeout
+wins — `const onReady = () => {...}; redis.once("ready", onReady); setTimeout(() => {
+redis.removeListener("ready", onReady); resolve(); }, 300)`. Independent of the Redis outage
+itself. Log only for now (DECISION-RULES §2 — not in the current batch scope).
+
+### 9.5 S-10 — confirmed in production
+
+Ran `npx vitest run` at prod `HEAD da0ed80`: **2 failed / 168**, both in
+`src/lib/delhivery/tracking.test.ts` ("F-17 Order.status write-guard" block) —
+`TypeError: Cannot read properties of undefined (reading 'status')` at `tracking.ts:102`
+(`shipment.order.status`). The push-notif WIP (now committed in `c70c528`/`da0ed80`, no longer
+"uncommitted") added `include:{order:{select:{status:true}}}` to `syncTrackingToDb`'s
+`shipment.findUnique` for `priorOrderStatus` / `NOTIFY_EVENT_BY_ORDER_STATUS`, without updating
+the test's mock (which returns a bare shipment, no `.order`). **Runtime is not broken** (real
+Prisma populates the required `order` relation); the **test suite is red in prod**, and since
+no CI runs tests (`00-map §6`), nothing caught it. S-10 → **confirmed**, and it doubles as
+proof that the red suite is invisible to the deploy pipeline. The WIP also adds a *third*
+copy of an order-status→event map across `webhook.ts` + `tracking.ts`, building on the F-24
+unguarded-writer problem (P1).
+
+### 9.6 Neon inference — what it touched, now corrected
+
+Everything concluded from "DB is Neon" and its corrections:
+| Where | Was | Corrected |
+|---|---|---|
+| S-07 | "suspected Neon" | Resolved: self-hosted `localhost:5432/motoxplus`. |
+| `DECISION-RULES.md §6` | "Neon branch only" | "the scratch DB the user provides". |
+| Steps 3 & 4 plan (§8, §5 resume) | "need the Neon branch URL" | need the **restored scratch DB** conn string (§9.7). |
+| §8 build note | "will complete once the Neon branch is the build `DATABASE_URL`" | build needs *any* reachable Postgres; prod builds pass because the VPS has local Postgres (this is S-09). |
+| F-01 blast radius | leaked `DATABASE_URL` = live Neon prod DB | leaked URL = *former* Neon project; current DB is localhost-only. Reduces the *DB-credential* exposure **iff** `.env` was regenerated in the move (unverified). Other leaked secrets (`NEXTAUTH_SECRET`, `JWT_SECRET`, `RAZORPAY_KEY_SECRET`, R2, Delhivery, Resend, MSG91) unaffected — F-01 stays P0. Check the old Neon project was deleted. |
+| §4 "Cannot verify" table | "Neon key-creation timestamps" for rotation check | still valid as a *historical* provider to check, plus local `.pgpass`/`.env` mtime. |
+
+No functional finding was *derived* from Neon (they were all code-traced); the impact is on
+**backup/restore assumptions (Area J, not yet done)** and the Steps 3–4 mechanics.
+
+### 9.7 What I need to run Steps 3–4 (scratch DB) + `cancellation-exploit-test.ts`
+
+**`cancellation-exploit-test.ts` priority: raised to do-first once a target exists.** The
+cancellation route (`da0ed80`) is live and has **never been route-tested** — only the extracted
+lib functions have unit tests. To run it I need **one** of:
+- **(A) a staging app + its DB** — `BASE_URL=<staging url>` and the test seeds/cleans its own
+  data via `PrismaClient` (needs `DATABASE_URL` = staging DB in the shell). Preferred — exercises
+  the real route stack.
+- **(B) a local app against the scratch DB** — `npm run dev` with `DATABASE_URL=<scratch>` +
+  `BASE_URL=http://localhost:3000`. Works, but the scratch DB is a prod copy → the test's
+  `cleanup()` (deletes rows `WHERE email LIKE 'cancel-exploit-test%'` / `sku LIKE …`) must be
+  reviewed as non-destructive to real data first — it is (all filters are on the test's own
+  `MARK` prefix), but confirm before pointing it at prod-copy data.
+- Optional `TEST_WAYBILL=<a real pre-pickup MANIFESTED AWB on the Delhivery account>` to also
+  exercise the dealer-allowed + real-carrier-cancel happy path. Without it the test still
+  proves the exploit fails (via the `FETCH_FAILED` → block path).
+- The Razorpay refund calls in the F-07 section hit the **live** Razorpay API if
+  `RAZORPAY_KEY_SECRET` is the live key in that shell — run it with **test keys** or expect
+  real (tiny, ₹0-ish on fake `pay_seed_fake`) refund attempts to 400 at Razorpay. Safer: run
+  section 5 with `RAZORPAY_KEY_ID/SECRET` pointed at test, or stub.
+
+**Scratch-DB restore runbook** (self-hosted Postgres on the VPS; scratch DB name
+`motoxplus_audit` in every command so the prod `motoxplus` is never the target):
+
+```bash
+# 0. PRE-CHECK — disk. A full dump+restore needs ~2× the DB size free.
+#    Show DB size and free space; abort if free space < 3× DB size.
+sudo -u postgres psql -d motoxplus -c "SELECT pg_size_pretty(pg_database_size('motoxplus')) AS prod_db_size;"
+df -h /var/lib/postgresql        # data dir — confirm 'Avail' comfortably exceeds 3× the size above
+df -h /tmp                       # dump file target
+
+# 1. DUMP prod (read-only; -Fc custom format; no ownership/ACL noise on restore)
+#    --no-owner --no-privileges so it restores cleanly under the scratch owner.
+sudo -u postgres pg_dump -Fc --no-owner --no-privileges \
+  -d motoxplus -f /tmp/motoxplus_audit_$(date +%Y%m%d).dump
+
+# 2. CREATE the scratch DB (distinct name; same owner role 'motoxplus')
+sudo -u postgres createdb -O motoxplus motoxplus_audit
+
+# 3. RESTORE into the scratch DB ONLY (-d motoxplus_audit, never -d motoxplus)
+sudo -u postgres pg_restore --no-owner --no-privileges --exit-on-error \
+  -d motoxplus_audit /tmp/motoxplus_audit_$(date +%Y%m%d).dump
+
+# 4. VERIFY it's the scratch DB and row counts look sane
+sudo -u postgres psql -d motoxplus_audit -c \
+  "SELECT current_database(), (SELECT count(*) FROM \"Order\"), (SELECT count(*) FROM \"Shipment\");"
+
+# 5. HAND ME a NON-SUPERUSER, READ-ONLY connection string for motoxplus_audit:
+sudo -u postgres psql -d motoxplus_audit <<'SQL'
+CREATE ROLE audit_ro LOGIN PASSWORD 'CHANGE_ME_STRONG';
+GRANT CONNECT ON DATABASE motoxplus_audit TO audit_ro;
+GRANT USAGE ON SCHEMA public TO audit_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO audit_ro;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO audit_ro;
+SQL
+#   → give me: postgresql://audit_ro:CHANGE_ME_STRONG@localhost:5432/motoxplus_audit
+#   The read-only grant is belt-and-braces on top of my own read-only discipline.
+
+# 6. CLEANUP when done
+sudo -u postgres dropdb motoxplus_audit
+sudo -u postgres psql -c "DROP ROLE audit_ro;"
+rm /tmp/motoxplus_audit_*.dump
+```
+
+**Every query I will run against `motoxplus_audit` is read-only** — `SELECT` / `EXPLAIN`
+(no `ANALYZE` — that writes planner stats; plain `EXPLAIN` only) / `\d` introspection. No
+`INSERT`/`UPDATE`/`DELETE`/`CREATE`/`ALTER`/`DROP`, no `SELECT … FOR UPDATE`, no functions with
+side effects. Concretely, Steps 3–4:
+- **Step 3 (F-02/F-04 exposure):** `SELECT` counts + order numbers + `SUM` of ₹ for
+  (a) orders with a `Shipment.waybill` where `Order.status IN ('PENDING','CONFIRMED','PROCESSING')`;
+  (b) `CANCELLED` orders whose `OrderCancellation.feePercent` = the pre-ship tier but
+  `Shipment.status <> 'CANCELLED'` (money already lost — reported separately with numbers);
+  (c) the mirror set (F-17): `CANCELLED` at POST_SHIP % whose `Shipment` never left pickup.
+- **Step 4 (H6 drift):** `pg_dump --schema-only` of `motoxplus_audit` + `\d+` introspection,
+  diffed **offline** against `prisma/migrations/*` and `schema.prisma`. Read-only; the diff is
+  done on my side, not in the DB.
+- **Step 3 (F-03):** `SELECT` shipment counts / `Order`↔`Shipment` cardinality anomalies, with
+  the stated limit — AWBs orphaned by the `Shipment.orderId` unique constraint are invisible
+  DB-side and need Delhivery reconciliation.
+
+### 9.8 Re-rate summary (one line each)
+
+| Finding | Change |
+|---|---|
+| F-05 | P1 → **P0** (live money loss; prepaid capture + oversell + PAID-outside-txn + silent webhook) |
+| F-03 | P0 held; exposure latent → **real** (fires on every prepaid capture; retry variant closed in prod, webhook-200 half open) |
+| F-02 | staleness window **suspected → confirmed unbounded** (`DELHIVERY_WEBHOOK_SECRET` absent); P0 held |
+| H5 | **REFUTED → CONFIRMED, P1** (Redis down; coarse login/OTP-IP/register throttles effectively absent; DB per-account backstops survive) |
+| F-26 | **NEW** — P2 (P1 during outage): `waitForReady` `once("ready")` listener leak → worker OOM crash-loop, drops in-flight requests |
+| F-01 | P0 held; **money reachability up** (unrotated session secrets now front a live payment/refund rail); DB-cred exposure down *iff* `.env` regenerated post-Neon |
+| F-07 / F-15 / F-14 / F-18 | ratings held; all now front a live money mover |
+| S-07 | **RESOLVED** — self-hosted Postgres, not Neon |
+| S-10 | **CONFIRMED in prod** (`da0ed80`): 2 red tests in `tracking.test.ts`; CI runs none |
+| S-09 | reinforced — prod build only succeeds because the VPS has a reachable local Postgres |
+
+**Stopped here per instruction. Area D NOT resumed.** Awaiting: `redis-server` restart
+decision, the `motoxplus_audit` read-only conn string, `RAZORPAY_WEBHOOK_SECRET` prod value,
+and staging target for `cancellation-exploit-test.ts`.
