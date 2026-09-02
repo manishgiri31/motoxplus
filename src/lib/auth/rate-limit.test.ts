@@ -94,6 +94,22 @@ describe("checkRateLimit — cold-start Redis connection race", () => {
     const result = await checkRateLimit("test:key:blip", { max: 5, windowSeconds: 60, failMode: "open" });
     expect(result.allowed).toBe(true);
   });
+
+  it("does not leak a 'ready' listener per call while Redis is unreachable (F-26)", async () => {
+    fakeRedis = new FakeRedis(null); // never becomes ready → every call takes the timeout path
+    const { checkRateLimit, peekRateLimit, resetRateLimit } = await import("./rate-limit");
+
+    for (let i = 0; i < 3; i++) {
+      await checkRateLimit(`f26:${i}`, { max: 5, windowSeconds: 60, failMode: "open" });
+      await peekRateLimit(`f26:${i}`, { max: 5, windowSeconds: 60 });
+      await resetRateLimit(`f26:${i}`);
+    }
+
+    // Before the fix: 9 accumulated once("ready") listeners (one per waitForReady
+    // call) that never get removed because "ready" never fires. After: the
+    // timeout path removes its own listener, so none accumulate.
+    expect(fakeRedis.listenerCount("ready")).toBe(0);
+  }, 15000);
 });
 
 describe("checkRateLimit / peekRateLimit — key isolation and window behavior (in-memory backend)", () => {

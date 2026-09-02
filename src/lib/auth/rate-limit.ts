@@ -118,11 +118,21 @@ const REDIS_READY_WAIT_MS = 300;
 function waitForReady(redis: Redis): Promise<void> {
   if (redis.status === "ready") return Promise.resolve();
   return new Promise((resolve) => {
-    const timer = setTimeout(resolve, REDIS_READY_WAIT_MS);
-    redis.once("ready", () => {
+    // F-26: whichever of the two fires first must tear down BOTH — the
+    // timeout removes the "ready" listener, the "ready" listener clears the
+    // timeout. Before this, the timeout path left the once("ready") listener
+    // attached forever; while Redis was unreachable (never becomes "ready")
+    // every rate-limited request leaked one listener + closure on the shared
+    // ioredis client → heap growth → worker OOM/crash-loop.
+    const onReady = () => {
       clearTimeout(timer);
       resolve();
-    });
+    };
+    const timer = setTimeout(() => {
+      redis.removeListener("ready", onReady);
+      resolve();
+    }, REDIS_READY_WAIT_MS);
+    redis.once("ready", onReady);
   });
 }
 
