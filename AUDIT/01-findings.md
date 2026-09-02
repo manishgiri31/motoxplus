@@ -995,11 +995,18 @@ reloads). Also: prod DB is **self-hosted Postgres**, not Neon (S-07 resolved).
 | **F-21** | P1 (already re-rated 2026-08-29) | P1 | "Prepaid order for an undeliverable pincode: money taken, AWB fails silently, zero alert." Already P1; the live-Razorpay assumption it was re-rated under is now confirmed rather than assumed. |
 | **F-15 / F-18 / F-14 / F-01** | P2 / P2 / P2 / P0 | **blast radius up (ratings hold)** | Session-forgery / stale-session / unrotated-secret findings all now sit in front of a **live money mover**: a forged or non-revoked session can drive `POST /api/payments/verify` and `POST /api/orders/[id]/cancel` (refund). F-01 specifically: unrotated `NEXTAUTH_SECRET` / `JWT_SECRET` (no evidence of rotation) → forge an admin/dealer session → real refunds / confirmations. F-01 stays P0; note the money reachability. |
 
-**New question for the user (not a finding yet):** is `RAZORPAY_WEBHOOK_SECRET` set in prod?
-`env.ts:28` puts it in `REQUIRED_SERVER` when Razorpay is enabled, and `instrumentation-node.ts:11-20`
-`process.exit(1)`s on any missing required var — the app is serving, so it is **almost certainly set**
-(a missing one would hard-fail every boot, not crash-loop after minutes). If confirmed set, the
-webhook path is reachable (200/401), not 503. Worth an explicit check.
+**`RAZORPAY_WEBHOOK_SECRET` — CONFIRMED set in prod** (user, 2026-09-03; present in prod `.env`).
+So `POST /api/webhooks/razorpay` verifies the signature and is reachable (200/401), **not** the
+503-when-unconfigured path. Consequences:
+- The Razorpay capture safety-net is **fully operational** — if the browser never calls
+  `/api/payments/verify` (crash/close/network), the webhook still finalizes the order. This
+  *reduces* the orphaned-capture risk relative to a scenario where the webhook were 503-blocked.
+- The **F-05 fix works as intended in prod**: the webhook now returns 503 on
+  `InsufficientStockError` and Razorpay actually receives it and retries (it was reachable to
+  begin with).
+- `refund.processed` / `refund.failed` webhook handling (moves `OrderCancellation.refundStatus`
+  and `Order.paymentStatus`) is live — relevant once cancellations with refunds start
+  happening.
 
 ### 9.2 F-02 — staleness window: suspected → **CONFIRMED unbounded**
 
@@ -1567,16 +1574,31 @@ clean.
 | **F-26** | **fixed**. Latent crash-loop removed. |
 | **S-10** | **resolved** (test mock). Note the deeper point stands: no CI runs tests, so a red suite still ships silently — see F-27 family. |
 
+### W-1 — Phase 3 workstream: prepaid-order lifecycle (F-05 real fix)
+
+One unit of work, planned not patched piecemeal (F-05 Option A shipped is the stopgap):
+1. **Option B — reserve stock at prepaid order creation**, the way COD already does
+   (`orders/route.ts`, drop the `stockReserved: isCOD` special-case; `decrementStock` +
+   `stockReserved:true` for every order in the creation `$transaction`). Removes the oversell
+   entirely — the second dealer is told "out of stock" at checkout, before paying.
+2. **Abandoned-order reaper** — auto-cancel + restock prepaid orders left `PENDING` beyond a
+   `Setting`-configurable window. No in-process scheduler in this repo → a GitHub Actions
+   workflow like the others.
+3. **Bounded-refund policy** — after N failed `finalizeCapturedPayment` retries on a genuine
+   oversell, auto-refund the captured payment + alert, instead of relying on Razorpay giving up
+   after ~24 h of retries.
+4. **Closes the same latent bug in `admin/payments/[id]/verify`** — that route also calls
+   `decrementStock` post-hoc (after the payment is recorded), so a manual-UPI verify of an
+   oversold order has the same "recorded paid, order not confirmed" failure. Option B fixes it
+   in the same stroke (stock already reserved at creation → nothing to fail at verify time).
+
+Blocked by: nothing code-side. Sequence: after the Step 3 data pull (to size how many prepaid
+orders actually sit `PENDING`).
+
 ### Still not done / awaiting
-- **Steps 3 & 4** — **still BLOCKED.** `audit_ro` / `Aud1t_R0_x9Kp2Lm` at `localhost:5432`
-  still returns Postgres "Authentication failed … not valid" from this environment, even after
-  the user's reset. The `localhost:5432` this dev machine reaches is **not** the VPS DB (no SSH
-  tunnel active, or it's a different local Postgres — it also rejects the app's own
-  `motoxplus`/`MotoXplus2026Secure` creds; `localhost:5433` refuses connections entirely).
-  **To unblock:** either (a) `ssh -N -L 5434:localhost:5432 <vps>` from this machine, then tell
-  me — I'll point the script at `localhost:5434`; or (b) run `.scratch/audit/step3.mjs` +
-  `npx prisma migrate diff --from-url "$SCRATCH_URL" --to-schema-datamodel ./prisma/schema.prisma --script`
-  **on the VPS itself** (where `localhost:5432` is the DB and the app's `node_modules` +
-  generated client already exist) and paste the output.
-- F-05 bounded-refund policy + Option B + reaper (follow-up batch).
-- `RAZORPAY_WEBHOOK_SECRET` prod value confirmation.
+- **Steps 3 & 4** — user is running `.scratch/audit/step3.mjs` (reads `AUDIT_DB_URL`) +
+  `npx prisma migrate diff --from-url … --to-schema-datamodel ./prisma/schema.prisma --script`
+  **on the VPS** (this dev machine's `localhost:5432` is a different Postgres — no tunnel).
+  Awaiting `/tmp/step3.txt` + `/tmp/step4.txt`.
+- W-1 (above).
+- `RAZORPAY_WEBHOOK_SECRET` — **CONFIRMED set** (see §9.1). Resolved.
