@@ -282,7 +282,9 @@ describe("fetchLiveTracking", () => {
 
 describe("syncTrackingToDb — F-17 Order.status write-guard", () => {
   beforeEach(() => {
-    shipmentFindUnique.mockResolvedValue({ id: "shp_1", waybill: "57930810000066" });
+    // syncTrackingToDb now loads `order: { select: { status: true } }` for the
+    // priorOrderStatus / notification dedupe — the mock must carry the relation.
+    shipmentFindUnique.mockResolvedValue({ id: "shp_1", waybill: "57930810000066", order: { status: "PROCESSING" } });
   });
 
   it("does NOT write Order.status = SHIPPED for a raw 'Not Picked' (pre-pickup) parcel", async () => {
