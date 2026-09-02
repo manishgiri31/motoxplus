@@ -20,7 +20,7 @@ Legend: ✅ fully read · 🟡 partially read / key files only · ⬜ not yet
 | H3 Razorpay webhook swallows failures | ✅ traced | **CONFIRMED (P1 now / P0 at launch)** |
 | H4 Float money model | 🟡 traced core paths | **Minor issues only; no material Razorpay disagreement (gated off)** |
 | H5 rate limiting under PM2 cluster | ✅ traced | **CONFIRMED · P1 — Redis NEVER installed in prod; distributed RL never functioned since launch. See §9.3 + §10.1.** (resolved operationally 2026-08-30) |
-| H6 migration drift | 🟡 blocked on shadow DB | **CANNOT fully verify — manual diff of `0_init` pending** |
+| H6 migration drift | ✅ | **RESOLVED — no drift either direction. Offline (migrations↔schema) clean; live (`migrate diff --from-url` prod) returned "empty migration". `DISASTER_RECOVERY.md` correct. F-25 unblocked. See §12.** |
 | H7 Shiprocket live/dead | ✅ | **CONFIRMED DEAD (no importers; creds not set)** |
 | H8 delhiveryFetch retry + cancel wiring | ✅ | **BOTH CONFIRMED** |
 
@@ -218,7 +218,12 @@ at each step of order creation (`orders/route.ts:139-163,198-199`), cancellation
 
 ---
 
-### H6 — Migration drift — **CANNOT fully verify (blocked); manual diff pending**
+### H6 — Migration drift — **RESOLVED 2026-09-03: no drift either direction (see §12).** ~~CANNOT fully verify (blocked); manual diff pending~~
+
+> Offline `migrations ↔ schema.prisma` diff clean (§10.5); live
+> `migrate diff --from-url <prod> --to-schema-datamodel` returned **"empty migration"** (§12).
+> Production schema == `schema.prisma` exactly. `DISASTER_RECOVERY.md` correct; **F-25 unblocked.**
+> Original blocked-state notes retained below for history.
 
 `npx prisma migrate diff --from-migrations … --to-schema-datamodel …` needs a shadow database;
 the configured datasource is a real Postgres that denied `CREATEDB` (`P1010`), and I will not
@@ -446,11 +451,12 @@ auth/authz line of **every** `route.ts` (all ~146). Segment-1 conventions apply.
 |---|---|---|---|---|---|---|
 | F-19 | **P3** | E/C | `src/app/api/shipping/serviceability/route.ts` (whole file — 12 lines) | `GET /api/shipping/serviceability?pincode=` is **unauthenticated and unrate-limited**, and calls `checkServiceability()` → a live Delhivery API request per hit. **Confirmed no cache** (`src/lib/delhivery/serviceability.ts` — direct `delhiveryFetch`, no memo/Redis/TTL), and `delhiveryFetch` default `retries=3` with 1s/2s backoff → one abusive request can be **3 outbound Delhivery calls** and hold the handler ~3s. Sibling `shipping/estimate` requires `getCurrentUserId`. | Anon caller drives unbounded (×3-amplified) outbound calls to Delhivery — quota burn / carrier-side IP ban that would break real shipment creation — and enumerates serviceable pincodes. | file read (route + `serviceability.ts` + `client.ts`) |
 | F-20 | **P3** | E/D | `src/app/api/products/search/route.ts` | `GET /api/products/search?q=` is unauthenticated + unrate-limited and, per request, runs a Prisma `contains` OR-scan **plus** a `$queryRaw` doing `EXISTS (SELECT 1 FROM unnest(p.compatibility) WHERE compat ILIKE '%q%')` — a full scan of the `Product.compatibility` text[] on every ≥2-char keystroke (no GIN index; `Product` has no text-search index). `${pattern}` is parameterised (no SQLi). | Cheap unauthenticated DB-CPU amplification on a keystroke-frequency endpoint. | file read |
-| F-21 | **P1** (was P2 — raised 2026-08-29 per user: for a prepaid order it's money taken for an undeliverable order with zero alert to anyone) | C/E | `src/app/api/orders/route.ts:98-101,252-257` + `src/lib/delhivery/shipment.ts` (no serviceability call) | **No server-side pincode-serviceability validation anywhere in the order → manifest path.** `POST /api/orders` validates only `/^\d{6}$/` on `deliveryPincode`. The checkout page's `<PincodeChecker>` is client-side + advisory (and `checkout/page.tsx:210` deliberately decouples shipping cost from it). `createDelhiveryShipment` (contrary to its own doc-comment "createShipment() will call this to re-check serviceability") **never calls `isServiceable`**. COD shipment creation is fire-and-forget with only `console.error` on failure (`orders/route.ts:254`); the prepaid path is the same in `finalize.ts:99`. | Dealer in a non-serviceable pincode places and pays → order `CONFIRMED`, stock decremented, invoice issued, **AWB creation fails silently**, no shipment row, no retry, no alert. For a prepaid order: money captured for something that can never ship, and nobody — dealer, admin, ops — is told. **Fix has two independent parts, both required:** (1) a real serviceability check *before* payment (server-side in `POST /api/orders`, and gate `payments/create-order`/checkout on it); (2) AWB-creation failure must surface somewhere a human sees — an admin queue / OrderEvent / alert — not `console.error`. Part 2 also covers F-05's silent-failure class and every other `createDelhiveryShipment().catch(console.error)`. | code trace (`orders/route.ts`, `shipment.ts`, `finalize.ts`, `serviceability.ts`, `checkout/page.tsx`) |
+| F-21 | **P1 — highest-value open finding (confirmed in prod 2026-09-03: 4 June–July orders should have an AWB, 0 do; root cause = `pickup_location` missing from `create.json` until `5479ac7` 2026-08-25; payload now fixed + script-proven but the real prod path is still unexercised — see §12)** | C/E | `src/app/api/orders/route.ts:98-101,252-257` + `src/lib/delhivery/shipment.ts` (no serviceability call) | **No server-side pincode-serviceability validation anywhere in the order → manifest path.** `POST /api/orders` validates only `/^\d{6}$/` on `deliveryPincode`. The checkout page's `<PincodeChecker>` is client-side + advisory (and `checkout/page.tsx:210` deliberately decouples shipping cost from it). `createDelhiveryShipment` (contrary to its own doc-comment "createShipment() will call this to re-check serviceability") **never calls `isServiceable`**. COD shipment creation is fire-and-forget with only `console.error` on failure (`orders/route.ts:254`); the prepaid path is the same in `finalize.ts:99`. | Dealer in a non-serviceable pincode places and pays → order `CONFIRMED`, stock decremented, invoice issued, **AWB creation fails silently**, no shipment row, no retry, no alert. For a prepaid order: money captured for something that can never ship, and nobody — dealer, admin, ops — is told. **Fix has two independent parts, both required:** (1) a real serviceability check *before* payment (server-side in `POST /api/orders`, and gate `payments/create-order`/checkout on it); (2) AWB-creation failure must surface somewhere a human sees — an admin queue / OrderEvent / alert — not `console.error`. Part 2 also covers F-05's silent-failure class and every other `createDelhiveryShipment().catch(console.error)`. | code trace (`orders/route.ts`, `shipment.ts`, `finalize.ts`, `serviceability.ts`, `checkout/page.tsx`) |
 | ~~F-22~~ → **PHASE 3 WORKSTREAM, not a finding** (reclassified 2026-08-29 per user) | — | E | ~90 route handlers (full list-method in §4d E-1) | Systemic: no input-validation layer. ~90 mutating routes destructure `await req.json()` with no zod schema, no try/catch, no type/range/length/enum checks. Malformed body → unhandled 500 (not 400); out-of-domain but in-type values pass straight to Prisma; Prisma `P2025` on bad id → 500 not 404. F-13 (`parseInt(page)` NaN) is the query-param analogue. **This is a planned workstream — introduce a shared zod-parse + error-envelope helper and apply it route-by-route — not an ad-hoc patch target. Phase 2 report lists it under "recommended workstreams", Phase 3 schedules it. Do not fix piecemeal.** F-13 and the specific unbounded-field cases (`creditLimit`, cancellation-policy already bounded) can be handled inside that workstream. | Users/integrations get 500s for what should be 400/404; log noise; a few genuinely unbounded fields reach the DB. No stack leak (Next hides in prod). | grep sweep (zod/req.json/try across all 146) + spot reads |
 | F-23 | **P3** | E/J | `src/app/api/health/route.ts:19`; `src/app/api/upload/dealer-document/route.ts:100` (+ 3 admin upload routes) | Routes echo raw `err.message`/`String(err)` to the caller. `/api/health` is **public** and leaks the DB driver error string (host/driver disclosure on failure); `upload/dealer-document` leaks R2/S3 SDK error text to a dealer. Admin upload/import/refund routes do the same but to trusted actors. | Internal infra detail disclosed to unauthenticated (`/api/health`) or semi-trusted (dealer) callers on error. | grep + file spot-reads |
 | F-24 | **P1** (raised from P2, 2026-08-29 — it gates an ops action, see below) | D/C | `src/lib/delhivery/webhook.ts:60-66`, `src/lib/delhivery/tracking.ts:141-169` (vs `orders/[id]/route.ts:64-95`) | Carrier-driven `Order.status` writes bypass the fulfilment state machine: unconditional `update({data:{status}})`, no transition check, no compare-and-swap, no event dedupe, two drifted status maps. Webhook auth is `?token=` **in the URL** — leaks into nginx/Cloudflare access logs, proxy logs, and `Referer`. | Out-of-order/replayed/**forged** Delhivery event moves `Order.status` backward or `CANCELLED → SHIPPED` — silently un-cancels an already-refunded order in every UI (dealer + admin), and can drive false `SHIPPED` (→ F-02/F-17 tier errors). | code trace (promotes S-06) |
-| F-25 | **P3** | D | `prisma/schema.prisma` — `OrderItem` (no indexes), `ProductVariant.productId`, `Shipment.status`, `Review.userId`, `StorageAuditLog` | Hot FK/filter columns unindexed. `OrderItem WHERE orderId IN (...)` (every order read) and `ProductVariant WHERE productId` (every PDP) are seq scans. | Slow order lists / PDPs as data grows; unbounded `StorageAuditLog`. Fix = new migration → Phase 3, blocked by H6. | code trace vs catalogued queries |
+| F-25 | **P3** | D | `prisma/schema.prisma` — `OrderItem` (no indexes), `ProductVariant.productId`, `Shipment.status`, `Review.userId`, `StorageAuditLog` | Hot FK/filter columns unindexed. `OrderItem WHERE orderId IN (...)` (every order read) and `ProductVariant WHERE productId` (every PDP) are seq scans. | Slow order lists / PDPs as data grows; unbounded `StorageAuditLog`. Fix = new migration → Phase 3, ~~blocked by H6~~ **UNBLOCKED 2026-09-03 (H6 resolved, no drift — §12).** | code trace vs catalogued queries |
+| F-28 | **P2** | B | `src/app/api/admin/payments/[id]/verify/route.ts:54-92` (writes `Order.paymentStatus='PAID'` + `Invoice`, **no `Payment` row**); refund path `src/app/api/orders/[id]/cancel/route.ts:207-218`, `src/app/api/admin/refunds/[id]/retry/route.ts:32-38` | Manual UPI/bank-transfer verification marks an order fully paid with no `Payment` row (manual payments live in `PaymentSubmission`). `Payment` is Razorpay-only. Confirmed in prod: order `MXP35620539125` — `paymentStatus PAID`, `amountPaid 101.18`, 0 `Payment` rows (§12). Grep confirms only 2 code paths write `paymentStatus='PAID'`: `finalize.ts` (Razorpay, row exists) and this one (no row). | Cancellation-with-refund of a manually-paid order **always** dead-ends at `refundStatus: FAILED / "No Razorpay-captured payment found"` → every one needs out-of-band handling. Any receipts/revenue figure from the `Payment` table omits all manual payments. Not corruption — a ledger design gap. Fix: write a `Payment` row on manual verify (cleanest), or teach refund + reporting to read `PaymentSubmission`. Phase 3. | data (§12) + grep `paymentStatus:` + code trace |
 | O-1..O-6 | — | A/E | see "Observations" below | Consistency observations, not defects — logged so Phase 2 can decide. | — | code trace |
 
 **Observations (unrated):**
@@ -639,10 +645,8 @@ and every `admin/*` list route.
 **Done this session (2026-08-29):** Area A (route matrix complete, §4b/§4c), Area E partial
 (§4d — F-22/F-23), Area D partial (§4e — F-24/F-25). Next: finish D, then G, H, I, J, K.
 
-1. **Area D — H6 manual migration diff** (blocked on shadow DB; manual line-diff of
-   `prisma/migrations/0_init/migration.sql` + 4 later vs `schema.prisma` is the fallback, not
-   done). Suspect columns listed under H6 above.
-2. **Area D — txn sweep:** `crm/leads/[id]/convert` (User+Dealer+Lead — wrapped?),
+1. **Area D — H6 migration diff — DONE 2026-09-03 (§12): no drift either direction, RESOLVED.**
+2. **Area D — txn sweep (NEXT):** `crm/leads/[id]/convert` (User+Dealer+Lead — wrapped?),
    procurement PO→PR conversion, GRN `receivedQty` updates.
 3. **Area G:** 3 cached-read surfaces only (`api/vehicles` `revalidate=86400`, `products/[id]`
    `revalidatePath`, `sitemap`); Redis used only by `rate-limit.ts` + dead `shiprocket/auth.ts`.
@@ -1602,3 +1606,121 @@ orders actually sit `PENDING`).
   Awaiting `/tmp/step3.txt` + `/tmp/step4.txt`.
 - W-1 (above).
 - `RAZORPAY_WEBHOOK_SECRET` — **CONFIRMED set** (see §9.1). Resolved.
+
+---
+
+## 12. Steps 3 & 4 — results (2026-09-03, scratch DB `motoxplus_audit`, read-only)
+
+User ran `.scratch/audit/step3.mjs` + `prisma migrate diff --from-url` **on the VPS** and
+reported the output (I have no path to `/tmp/*.txt` on the VPS from this environment — worked
+from the reported headlines). Dataset: **20 orders, 0 shipments, 4 payments** (3 PENDING,
+1 FAILED), a handful of cancellations, 11 stale sessions.
+
+### Step 4 — H6: **RESOLVED, no drift**
+- Offline (§10.5): migrations ↔ `schema.prisma` — clean (tables/columns/enums).
+- Live: `migrate diff --from-url <prod> --to-schema-datamodel ./prisma/schema.prisma` →
+  **"This is an empty migration."** Production schema == `schema.prisma`, exactly.
+- **Verdict:** no drift in either direction. `scripts/db/restore.sh` + `prisma migrate deploy`
+  reconstructs production. **`DISASTER_RECOVERY.md` is correct.** **The F-25 index migration is
+  unblocked** (DECISION-RULES §1.5 no longer applies — H6 is closed).
+
+### Step 3, item 1 — F-05: **never occurred in production**
+Zero `Payment` rows with `status='PAID'` against an incomplete order. Only **4 `Payment` rows
+exist total** — 3 `PENDING`, 1 `FAILED`, none orphaned. The bug was real (code trace holds) and
+**Option A was worth shipping** (Razorpay is live; the next oversold prepaid capture would have
+hit it), but **no dealer has lost money to it.** F-05 rating: keep the code fix; the historical
+exposure is **nil**.
+
+### Step 3, item 2 — F-21: **CONFIRMED — root cause found. This is the real story.**
+**4 orders should have an AWB and none do** — 1 prepaid `CONFIRMED`, 3 COD `CONFIRMED`, dated
+**June–July 2026**. Zero `Shipment` rows. **No `OrderEvent`** records any shipment/AWB failure —
+every failure went into `console.error` and nowhere else.
+
+**Root cause (code + git trace):** the June–July `src/lib/delhivery/shipment.ts`
+(`d879bf5` 2026-06-20 → `bbb7ed4` 2026-07-06) sent
+`data: JSON.stringify({ shipments: [payload] })` — **with no `pickup_location` key.**
+Delhivery's `POST /api/cmu/create.json` requires `pickup_location` as a sibling of `shipments`
+(confirmed in `delhivery-reference.md`); without it the call is rejected →
+`createDelhiveryShipment` throws → the fire-and-forget `.catch(err => console.error(...))` at
+`orders/route.ts` / `finalize.ts` swallows it. `buildPickupLocation()` / the `pickup_location`
+key were **added 2026-08-25 (`5479ac7`)**; the Delhivery boot-config check landed `2026-08-24`
+(`065c4e8`).
+
+**Current state:** the payload is fixed and **proven working via `scripts/delhivery-capture.ts`**
+(AWB `57930810000081`, 2026-08-29, `4cf9d18`). BUT every order in the DB is pre-fix (June–July);
+**no `CONFIRMED` order has been placed since 2026-08-25**, so the *production*
+`createDelhiveryShipment` path (which pulls live `order.deliveryPincode` / dealer data — see the
+pincode garbage below) **has still never run successfully end-to-end.** The capture script
+shares `buildShipmentPayload` but not the DB-data-pull path.
+
+**F-21 fix scope (unchanged, both parts required — now with confidence):**
+1. **Surface the failure** — AWB-creation failure writes an `OrderEvent` + lands in an admin
+   queue / alert, never just `console.error`. Covers F-05's silent-failure class and every
+   other `createDelhiveryShipment().catch(console.error)`.
+2. **Serviceability + format check before payment** — server-side in `POST /api/orders` (and
+   gate `payments/create-order` / checkout). **Fold in the pincode/city data-quality gap
+   below.**
+3. First real `CONFIRMED` order post-fix should be watched to confirm the DB-data-pull path
+   actually produces an AWB.
+
+### Step 3, item 2b — no pincode/city validation (→ folded into F-21)
+Production orders carry `deliveryPincode` values like `949494`, `988494`, `778848` (6 digits so
+they pass `POST /api/orders`'s `/^\d{6}$/`, but not plausible Indian PINs — valid PINs start
+1–8) and a `deliveryCity` of `oqwncn`. **Nothing rejected them.** `orders/route.ts` validates
+pincode *format* only; city/state are unvalidated free text; serviceability is never checked
+server-side. Even if these are test rows, the gap is real and is exactly what makes F-21 fire.
+**Not a separate finding — it is F-21 fix part 2.** (Confirms these orders are among the
+shipment-less set / are test data; either way the validation gap stands.)
+
+### Step 3, item 3/4 — F-02 / F-04 / F-17: **were unreachable; now closed**
+Under-charge set: **empty.** Over-charge set: **empty.** Currently-exploitable set: **empty.**
+Because there are **0 shipments** (F-21), the cancellation-tier exploit was **never reachable** —
+no parcel ever existed to under-refund or over-charge against. Re-rate: F-02 / F-04 / F-17 go
+from *"live exploitable, P0"* to **"was unreachable in practice (0 shipments); code fix shipped
+in the emergency batch; nobody was harmed."** Still correct to have fixed — the moment F-21 is
+resolved and shipments start being created, the exploit would be live — but there is **no
+historical harm and no cleanup owed.** (Keep the batch fix; drop the "money already lost"
+urgency.)
+
+### Step 3, item 6 — F-28 (NEW, P2): order marked paid with no `Payment` row
+`MXP35620539125`: `paymentStatus: PAID`, `amountPaid: 101.18`, **zero `Payment` rows.**
+**Not corruption — it's the manual-payment design.** `paymentStatus='PAID'` is written from
+exactly two code paths (grep confirmed): `finalize.ts` (Razorpay — a `Payment` row exists, from
+`create-order`) and **`admin/payments/[id]/verify:64` (manual UPI/bank transfer — creates an
+`Invoice`, sets `Order.paymentStatus/amountPaid`, but NO `Payment` row).** Manual payments live
+in `PaymentSubmission` (dealer uploads UTR + screenshot → admin verifies), never `Payment`.
+
+**Why it's still a finding:**
+- **Refunds are broken for manually-paid orders.** `cancel/route.ts:207` filters
+  `order.payments` for `status='PAID' && razorpayPaymentId` → empty for a manual order →
+  `refundStatus: FAILED, refundError: "No Razorpay-captured payment found"`. `admin/refunds/[id]/retry`
+  has the same dead end (`refund manually`). **Every cancellation-with-refund of a
+  manually-paid order requires out-of-band handling** — and manual UPI is still an offered
+  method.
+- **Reconciliation gap** — any revenue/receipts figure computed from the `Payment` table
+  omits every manual payment.
+- **Fix direction:** either (a) `admin/payments/[id]/verify` writes a `Payment` row
+  (`status: PAID`, `paymentType`, `amount`, no `razorpayPaymentId`, a `method`/source marker) so
+  `Payment` is the single ledger; or (b) the refund + reporting paths are taught to read
+  `PaymentSubmission` too. (a) is cleaner and closes the refund gap directly. **Phase 3.**
+- Verify on the step-3 rerun: item 6 shows `submission_rows` / `submissions` for
+  `MXP35620539125` — a `VERIFIED` `PaymentSubmission` confirms the manual path; none would mean
+  genuine corruption (a hand-run `UPDATE` or a seed). Reported headline says manual-verify, so
+  treating as **F-28 = design gap, not corruption**, pending that confirmation.
+
+### Step 3, item 5 — F-18 cohort: **11**
+11 `UserSession` rows `isActive=true` and `createdAt` > 7 days old — **all already past
+`expiresAt`**, mostly one test dealer. Small, low-risk. `getAuthUser` (post-F-14 fix) rejects
+expired sessions on the Bearer path already; the web-cookie path (F-18a) wouldn't consult these
+rows anyway. Recorded — no action beyond the F-18 fix already scoped.
+
+### Re-rate summary (§12)
+| Finding | Now |
+|---|---|
+| **H6** | **RESOLVED** — no drift either direction. `DISASTER_RECOVERY.md` correct. **F-25 unblocked.** |
+| **F-05** | code fix (Option A) shipped + correct; **historical prod exposure: nil** (0 orphaned payments). |
+| **F-21** | **CONFIRMED · P1 · highest-value open finding.** Root cause: `pickup_location` missing from `create.json` payload until `5479ac7` (2026-08-25). Payload fixed + script-proven; real prod path still unexercised (all orders pre-fix). Fix = surface failures + pre-payment serviceability/format check. |
+| **F-02 / F-04 / F-17** | **"was unreachable (0 shipments); batch fix shipped; no historical harm."** Keep the fix; drop the P0 urgency / "money already lost" framing. |
+| **F-28** | **NEW · P2** — manual-UPI verified orders have `paymentStatus=PAID` with no `Payment` row → refund path always FAILS to manual; reconciliation gap. Design, not corruption. Phase 3. |
+| pincode/city validation | **folded into F-21 fix part 2** (not a separate number). |
+| **F-18** | cohort size **11**, all expired; recorded, no extra action. |
