@@ -4,9 +4,15 @@ import { PrismaClient } from "@prisma/client";
 const url = process.env.AUDIT_DB_URL;
 if (!url) { console.error("set AUDIT_DB_URL to the scratch (read-only) DB connection string"); process.exit(1); }
 const prisma = new PrismaClient({ datasources: { db: { url } }, log: ["error"] });
+// JSON.stringify replacer: BigInt (count(*)) and Prisma Decimal both stringify
+// as unreadable objects otherwise.
+const repl = (_k, v) =>
+  typeof v === "bigint" ? Number(v)
+  : (v && typeof v === "object" && typeof v.toNumber === "function") ? v.toNumber()
+  : v;
 const q = (label, sql) =>
   prisma.$queryRawUnsafe(sql).then(
-    (r) => { console.log(`\n########## ${label} ##########`); console.dir(r, { depth: 6, maxArrayLength: 500 }); },
+    (r) => { console.log(`\n########## ${label} ##########`); console.log(JSON.stringify(r, repl, 2)); },
     (e) => { console.log(`\n########## ${label} :: ERROR ##########`); console.log(String(e.message || e).slice(0, 1200)); }
   );
 
@@ -111,12 +117,12 @@ await q("3a. ALL OrderCancellation rows (full context — dataset is tiny)", `
   select c."orderId", o."orderNumber", o."paymentType", c."fromStatus", c."feePercent"::float feepct,
          c."feeAmount"::float feeamt, c."amountPaidAtCancellation"::float paid_at_cxl,
          c."refundAmount"::float refundamt, c."refundStatus", c."refundId", c."refundedAt",
-         c."cancelledByRole", c."waived", c."createdAt",
+         c."cancelledByRole", c."waived", c."cancelledAt",
          o.status cur_order_status,
          (select s.status::text from "Shipment" s where s."orderId"=c."orderId") shipment_status,
          (select s.waybill from "Shipment" s where s."orderId"=c."orderId") waybill
   from "OrderCancellation" c join "Order" o on o.id = c."orderId"
-  order by c."createdAt"`);
+  order by c."cancelledAt"`);
 
 await q("3b. UNDER-charge set: cancelled at pre-ship % but a shipment exists / existed not-cancelled", `
   select o."orderNumber", c."feePercent"::float feepct, c."refundAmount"::float refundamt,
@@ -140,7 +146,7 @@ await q("3c. OVER-charge set: cancelled at post-ship % but shipment never left p
 await q("4. currently-exploitable: live parcel (shipment past pickup OR order really shipped) but order.status reads PRE_SHIP", `
   select o."orderNumber", o.status order_status, o."paymentType", o."amountPaid"::float paid,
          s.status::text shipment_status, s.waybill, s."createdAt" awb_at, s."updatedAt" awb_upd,
-         round(extract(epoch from (now() - s."createdAt"))/86400.0, 1) awb_age_days
+         round(extract(epoch from (now() - s."createdAt"))/86400.0, 1)::float8 awb_age_days
   from "Order" o join "Shipment" s on s."orderId"=o.id
   where o.status in ('PENDING','CONFIRMED','PROCESSING')
     and (s.status <> 'MANIFESTED' or s."createdAt" < now() - interval '3 days')`);
@@ -174,8 +180,32 @@ await q("5b. F-18 cohort: active sessions created >7d ago (still usable on web p
 
 await q("5c. all UserSession rows (tiny dataset)", `
   select s.id, s."userId", u.email, u.role, s."isActive", s."createdAt", s."expiresAt",
-         round(extract(epoch from (now()-s."createdAt"))/86400.0,1) age_days,
+         round(extract(epoch from (now()-s."createdAt"))/86400.0,1)::float8 age_days,
          (s."expiresAt" < now()) is_expired
   from "UserSession" s left join "User" u on u.id=s."userId" order by s."createdAt"`);
+
+/* ---------- ITEM 6: F-28 — orders marked paid with no Payment row (manual-verify path vs corruption) ---------- */
+await q("6. orders paymentStatus PAID/PARTIAL or amountPaid>0, with Payment-row + PaymentSubmission linkage", `
+  select o."orderNumber", o.status, o."paymentStatus", o."paymentType",
+         o."amountPaid"::float amount_paid, o."amountDue"::float amount_due, o."grandTotal"::float gt, o."createdAt",
+         (select count(*) from "Payment" p where p."orderId"=o.id) payment_rows,
+         (select count(*) from "PaymentSubmission" ps where ps."orderId"=o.id) submission_rows,
+         (select string_agg(ps.status::text||':'||ps.amount::text, ', ') from "PaymentSubmission" ps where ps."orderId"=o.id) submissions,
+         (select count(*) from "Invoice" i where i."orderId"=o.id) invoice_rows
+  from "Order" o
+  where o."paymentStatus" in ('PAID','PARTIAL','REFUNDED') or o."amountPaid" > 0
+  order by o."createdAt"`);
+
+await q("6b. specifically MXP35620539125", `
+  select o.*, (select count(*) from "Payment" p where p."orderId"=o.id) pay_rows,
+         (select count(*) from "PaymentSubmission" ps where ps."orderId"=o.id) sub_rows
+  from "Order" o where o."orderNumber" = 'MXP35620539125'`);
+
+/* ---------- ITEM 7: pincode / city data quality (folds into F-21 fix) ---------- */
+await q("7. delivery pincode / city sanity across ALL orders", `
+  select o."orderNumber", o.status, o."deliveryPincode", o."deliveryCity", o."deliveryState",
+         (o."deliveryPincode" ~ '^[1-8][0-9]{5}$') pin_plausible_format,
+         (o."deliveryCity" ~ '[aeiouAEIOU]') city_has_a_vowel
+  from "Order" o order by o."createdAt"`);
 
 await prisma.$disconnect();
