@@ -31,14 +31,14 @@ Legend: ✅ fully read · 🟡 partially read / key files only · ⬜ not yet
 | A route matrix (~146 routes) | ✅ 146/146 | segment 1 (§4b) + segment 2 (§4c, 2026-08-29). All non-uniform routes full-file read; every `route.ts` authz line grep-confirmed. **Area A DONE.** |
 | B money | 🟡 | Order-create, Razorpay verify/create, UPI submit, admin verify/reject/retry, cancellation lib read. Refund tiers + GST-on-fee traced. Not read: `payments/upi/qr`, `payments/upi/[orderId]`, invoice generation/PDF. |
 | C shipping | ✅ code / 🟡 vs live | `client/shipment/tracking/cancel/webhook/serviceability/rates` read; reconciled with `docs/delhivery-audit.md`. |
-| D data layer | 🟡 | §4e done: `Order.status` writers/state-machine (F-24), N+1 (clear in API routes), index gaps (F-25), `decrementStock` atomic-guard confirmed. Owed: H6 manual migration diff, txn sweep (procurement/convert), admin RSC page query cost (Area H). |
+| D data layer | ✅ (API) / 🟡 (RSC) | §4e + §12: `Order.status` writers (F-24), N+1 clear in API routes, index gaps (F-25, now unblocked), `decrementStock` guard confirmed, **H6 RESOLVED (no drift)**, **txn sweep done → F-30** (procurement/CRM), **F-29** (`upi/[orderId]` hardcoded bank details). Owed: `admin/*` RSC page query cost (Area H, needs app running). |
 | E API surface (validation/errors/rate-limit table) | 🟡 | §4d done: validation coverage (7/~120 use zod → F-22), rate-limit tier table (E-2), error-handling spot notes (E-3). Per-route error-leak pass still owed. |
-| F Next.js 15 | ⬜ | not started |
-| G Redis | 🟡 | `redis.ts`, `rate-limit.ts` read; cache-invalidation map ⬜ (need to find all `unstable_cache`/`redis.get` cached reads) |
-| H web UI | ⬜ | app not yet run |
-| I Flutter app | ⬜ | not started |
-| J ops & security | 🟡 | secrets-in-history, npm audit, .gitignore done; PM2/health/backup ⬜ |
-| K dead weight | 🟡 | Shiprocket, cashfree, import-products confirmed; unused-export sweep ⬜ |
+| F Next.js 15 | 🟡 | folded into G/S-09: no `unstable_cache`; RSC pages dynamic-via-`searchParams` or build-prerendered (S-09). Dedicated Next-15 sweep (async params everywhere, `use client` boundaries) ⬜ low-priority |
+| G Redis / caching | ✅ | §9.3 + §13: Redis = rate-limiter only (H5/F-26/F-27). Cache inventory done → **O-8** (`api/vehicles` 24h no-invalidation; `POST /products` no revalidate; else uncached per-request Prisma). |
+| H web UI | ⬜ | **BLOCKED — needs a running app + DB.** Local `:5433` dead, `:5432` is a different PG, no tunnel. Owed: RSC page query cost, O-1/S-03/S-08 staff-nav checks, visual pass. Needs user to run `npm run dev` against a DB or provide a tunnel. |
+| I Flutter app | ✅ | §14: **F-31** (wrong backend host — vercel.app), **F-32** (fake "Payment successful"), **F-33** (concurrent-refresh logout), O-9. |
+| J ops & security | ✅ | §15: health-check gap → **F-27**; **O-10** (backups unverified/unmonitored, fragile `.env` parse); restore path confirmed (§12); secret-logging spot-check clean. Full `console.*` secret grep still owed (low). |
+| K dead weight | ✅ | §16: **O-11** — remove `@cashfreepayments/cashfree-js` (dead), migrate 2 `@/lib/r2` shim importers, Shiprocket per F-10. Unused-export sweep owed (low value). |
 
 ---
 
@@ -457,6 +457,11 @@ auth/authz line of **every** `route.ts` (all ~146). Segment-1 conventions apply.
 | F-24 | **P1** (raised from P2, 2026-08-29 — it gates an ops action, see below) | D/C | `src/lib/delhivery/webhook.ts:60-66`, `src/lib/delhivery/tracking.ts:141-169` (vs `orders/[id]/route.ts:64-95`) | Carrier-driven `Order.status` writes bypass the fulfilment state machine: unconditional `update({data:{status}})`, no transition check, no compare-and-swap, no event dedupe, two drifted status maps. Webhook auth is `?token=` **in the URL** — leaks into nginx/Cloudflare access logs, proxy logs, and `Referer`. | Out-of-order/replayed/**forged** Delhivery event moves `Order.status` backward or `CANCELLED → SHIPPED` — silently un-cancels an already-refunded order in every UI (dealer + admin), and can drive false `SHIPPED` (→ F-02/F-17 tier errors). | code trace (promotes S-06) |
 | F-25 | **P3** | D | `prisma/schema.prisma` — `OrderItem` (no indexes), `ProductVariant.productId`, `Shipment.status`, `Review.userId`, `StorageAuditLog` | Hot FK/filter columns unindexed. `OrderItem WHERE orderId IN (...)` (every order read) and `ProductVariant WHERE productId` (every PDP) are seq scans. | Slow order lists / PDPs as data grows; unbounded `StorageAuditLog`. Fix = new migration → Phase 3, ~~blocked by H6~~ **UNBLOCKED 2026-09-03 (H6 resolved, no drift — §12).** | code trace vs catalogued queries |
 | F-28 | **P2** | B | `src/app/api/admin/payments/[id]/verify/route.ts:54-92` (writes `Order.paymentStatus='PAID'` + `Invoice`, **no `Payment` row**); refund path `src/app/api/orders/[id]/cancel/route.ts:207-218`, `src/app/api/admin/refunds/[id]/retry/route.ts:32-38` | Manual UPI/bank-transfer verification marks an order fully paid with no `Payment` row (manual payments live in `PaymentSubmission`). `Payment` is Razorpay-only. Confirmed in prod: order `MXP35620539125` — `paymentStatus PAID`, `amountPaid 101.18`, 0 `Payment` rows (§12). Grep confirms only 2 code paths write `paymentStatus='PAID'`: `finalize.ts` (Razorpay, row exists) and this one (no row). | Cancellation-with-refund of a manually-paid order **always** dead-ends at `refundStatus: FAILED / "No Razorpay-captured payment found"` → every one needs out-of-band handling. Any receipts/revenue figure from the `Payment` table omits all manual payments. Not corruption — a ledger design gap. Fix: write a `Payment` row on manual verify (cleanest), or teach refund + reporting to read `PaymentSubmission`. Phase 3. | data (§12) + grep `paymentStatus:` + code trace |
+| F-29 | **P2** | B/J | `src/app/api/payments/upi/[orderId]/route.ts:48-58` | Dealer-facing payment page falls back to **hardcoded real bank/UPI identifiers** (`bankAccountNumber "7834839071"`, `bankIfsc "AIRP0000001"`, `upiId "5118678468276SB1024@mairtel"`) when the `Setting` rows are absent — the exact opposite of sibling `payments/upi/qr` which deliberately fails closed. | If Settings drift/clear, dealers are shown a possibly-stale account to pay into and it looks legitimate → money to an account MotoXplus may not control. Plus those identifiers are now permanently in git history (F-01 family). Fix: fail closed like `payments/upi/qr`; scrub literals. | file read (both routes) — §13 D-5 |
+| F-30 | **P3** | D/E | `src/app/api/crm/leads/[id]/convert/route.ts:35-79`, `src/app/api/procurement/grn/route.ts:49-91`, `src/app/api/procurement/purchase-orders/route.ts:75-110` | Procurement & CRM multi-write mutations are **not `$transaction`-wrapped** and lack input validation. `convert`: user+dealer created but lead not marked CONVERTED on a mid-sequence failure → lead permanently un-convertible via UI; concurrent double-submit → unhandled `P2002` 500. `grn`/`purchase-orders`: PO/PR status left stale; `parseInt`/`parseFloat` with no NaN guard → 500; no FK-existence check → P2003 500. | Admin/vendor-only, low volume, hand-recoverable. Partial-write states + 500s on bad input. Fix: `$transaction` + guarded `updateMany` + F-22 validation layer. | code trace — §13 D-4 |
+| F-31 | **P1** | I/J | `motoxplus_app/lib/core/api/api_client.dart:4` | Shipped mobile app (`version 1.0.0+1`) hardcodes `kBaseUrl = 'https://motoxplus.vercel.app/api'`. Production is `https://motoxplus.com` (VPS+nginx+PM2 — `.env`, `health.yml`, `deploy.yml`, `next.config.mjs`). | Either the mobile app **can't reach the backend at all** (bricked — login/refresh/launch all fail), or there is a **shadow Vercel production** nobody monitors, possibly running pre-emergency-batch code + F-01 leaked secrets. User must confirm whether `motoxplus.vercel.app` exists and kill it if so. Fix `kBaseUrl` → `motoxplus.com/api` + move to `--dart-define`. | file read + cross-check (`.env`, `health.yml`, `deploy.yml`) — §14 |
+| F-32 | **P2** | I/B | `motoxplus_app/lib/features/checkout/checkout_screen.dart:141-158` | `_onPaymentSuccess` calls `POST /payments/verify` inside `try{}catch(_){}` (swallows all), then **unconditionally** shows "Payment successful!" and navigates to `/orders`. | On a failed verify (409 oversell / 5xx / timeout) the dealer is told it worked. The Razorpay webhook (live) is the only backstop and can't finalize a genuine oversell. Fix: check the response, show a pending/error state. | file read — §14 |
+| F-33 | **P2** | I | `motoxplus_app/lib/core/api/api_client.dart:29-46` | Dio `onError` 401 handler calls `_refreshToken()` with **no single-flight lock**. Concurrent 401s (access token expiry with parallel requests) → multiple `POST /mobile/auth/refresh` racing a rotating refresh token → all but the first fail → interceptor falls to `_storage.deleteAll()`. | Dealer is spuriously logged out mid-session whenever the 15-min token expires during concurrent requests (e.g. dashboard load). Fix: share one refresh `Future`. | file read — §14 |
 | O-1..O-6 | — | A/E | see "Observations" below | Consistency observations, not defects — logged so Phase 2 can decide. | — | code trace |
 
 **Observations (unrated):**
@@ -624,11 +629,175 @@ Confirmed against real query patterns now catalogued:
 every order read) and `ProductVariant.productId` (every PDP). Needs a new migration → **Phase 3
 + blocked by H6** (DECISION-RULES §1.5: no migrations while drift is unresolved). Log only.
 
-### D-4 — still owed
-- H6 manual migration diff (blocked on shadow DB — manual line-diff is the fallback, not done).
-- Transaction-boundary sweep beyond order/payment/cancel (procurement PO→PR, GRN→PO receivedQty,
-  `crm/leads/[id]/convert` User+Dealer+Lead — is convert wrapped in `$transaction`?).
-- `admin/*` RSC page query cost (Area H).
+### D-4 — transaction-boundary sweep (done 2026-09-03) → **F-30**
+
+The order / payment / cancel paths are all correctly `$transaction`-wrapped with guarded
+`updateMany` (traced earlier — H2/H3/H8, emergency batch). The **procurement + CRM** mutation
+routes are not:
+
+| Route | Multi-write, no `$transaction` | Partial-failure outcome |
+|---|---|---|
+| `crm/leads/[id]/convert` (`convert/route.ts:35-79`) | `user.create` (nested `dealer.create` — atomic) → **then** `lead.update(CONVERTED)` → **then** `leadActivity.create` | User+Dealer created but Lead not marked `CONVERTED`. Re-running → `existingUser` check (`:30`) 409s → **lead is now permanently un-convertible via the UI**, needs a manual DB fix. Also: `lead.status==="CONVERTED"` (`:18`) and `existingUser` (`:30`) are read-then-act, not atomic → two concurrent converts → 2nd hits `User.email @unique` **P2002, unhandled → 500**. |
+| `procurement/grn` (`grn/route.ts:49-91`) | `goodsReceivedNote.create` → **then** re-fetch PO → **then** `purchaseOrder.update(status)` | GRN row exists, PO status stale (looks open when fully received). Concurrent GRNs on one PO both read a `goodsReceivedNotes` list missing the other's items → PO status computed wrong. |
+| `procurement/purchase-orders` (`purchase-orders/route.ts:75-110`) | `purchaseOrder.create` → **then** `purchaseRequest.update(CONVERTED)` | PO exists, PR still `OPEN` → PR can be converted again → duplicate POs for one request. |
+
+All three also share the **F-22 family** shape: `parseInt(...)` / `parseFloat(...)` on request
+body with **no NaN guard** → `NaN` into an Int/Float column → Prisma throws → **unhandled 500**;
+and **no FK-existence check** on `vendorId` / `purchaseOrderId` / `purchaseRequestId` → P2003
+→ 500.
+
+**F-30 (P3, D/E) — procurement & CRM mutations lack transaction boundaries and input
+validation.** Admin/vendor-only, low volume, all recoverable by hand → P3. Fix = wrap each in
+`$transaction`, add the guarded-`updateMany` state check, and route through the F-22 validation
+layer when that lands.
+
+### D-5 — `payments/upi/[orderId]` hardcoded payment identifiers → **F-29**
+
+`GET /api/payments/upi/[orderId]` (`[orderId]/route.ts:48-58`) builds `paymentSettings` with
+**hardcoded fallbacks to real production payment identifiers** when the `Setting` rows are
+absent:
+```
+upiId:             … || "5118678468276SB1024@mairtel"
+bankAccountNumber: … || "7834839071"
+bankIfsc:          … || "AIRP0000001"
+bankAccountName:   … || "MotoXPlus India Private Limited"
+```
+This is the **exact opposite** of the sibling `payments/upi/qr` route, which deliberately
+**fails closed** with a documented rationale: *"a stale/wrong hardcoded payment identifier
+silently receiving real customer payments is worse than a visible configuration error."*
+
+**F-29 (P2, B/J) — dealer-facing payment page falls back to hardcoded bank/UPI details.**
+- If the `Setting` rows are ever cleared/wrong, dealers are shown a **hardcoded bank account +
+  UPI VPA** to pay into and it looks entirely legitimate — money to a possibly-stale account.
+- Those identifiers (`7834839071` / `AIRP0000001` / `5118678468276SB1024@mairtel`) are now
+  **permanently in the git history** (F-01 family — payment-identifier disclosure).
+- Fix: fail closed exactly like `payments/upi/qr` (return 503 "not configured"); scrub the
+  literals; if they must stay as a dev convenience, gate on `NODE_ENV !== "production"`.
+- Minor: the route does **6 sequential `setting.findUnique`** calls — one
+  `findMany({ where: { key: { in: […] } } })` instead. P3 perf.
+
+### D-6 — still owed
+- `admin/*` RSC page query cost (Area H — needs the app running).
+
+---
+
+## §13 — Area G (caching / Redis), Area I (Flutter), Area J (ops), Area K (dead weight) — 2026-09-03
+
+### Area G — caching & Redis — **thin; effectively no application cache layer**
+
+- **Redis:** confirmed (grep) the *only* runtime consumer is `src/lib/auth/rate-limit.ts`. No
+  `unstable_cache`, no Redis-backed cache or session store anywhere. `shiprocket/auth.ts`
+  (dead, H7) is the only other `getRedis()` caller. → the whole Redis story is H5 / F-26 / F-27.
+- **Next.js data cache:** the app reads Prisma **directly** from RSCs — it never `fetch()`es its
+  own API from a server component, so there is no `fetch` cache to invalidate. Full inventory
+  of anything cached:
+  | Surface | Cache | Invalidation |
+  |---|---|---|
+  | `GET /api/vehicles` | `export const revalidate = 86400` + `Cache-Control: s-maxage=86400, stale-while-revalidate=3600` | **NONE.** No `revalidatePath`/`revalidateTag` on any vehicle-CMS write. A CMS edit is invisible to this endpoint (and the mobile app, which caches it another ~24h) for up to 24h. Deliberate per the comment, but there is no force-refresh path. **→ O-8** (P3). |
+  | `app/sitemap.ts` | `revalidate = 3600` | time-only; fine. |
+  | `PATCH/DELETE /api/products/[id]` | — | calls `revalidatePath` for `/products/[id]`, `/products/[slug]`, `/products`, `/admin/products`. ✅ |
+  | `POST /api/products` (create) | — | **no `revalidatePath`** → a new product doesn't appear on a cached `/products` until the next ISR tick or a later edit. **→ O-8.** |
+  | `admin/*` RSC pages (S-09) | statically prerendered at build with build-time Prisma data | redeploy only. Already **S-09 (P2)**. |
+- **Public detail pages** (`(public)/products/[slug]`, `(public)/vehicles/[category]`): RSC +
+  direct Prisma, **no `generateStaticParams`**, and they `await searchParams` → Next 15 renders
+  them **dynamically (per-request)** → always fresh, but **no cache** → every view is 5–8 Prisma
+  queries (`product` + `variants` + `images` + related ×2 + `review.aggregate` + compatibility).
+  Compounds F-25 (missing `ProductVariant.productId` / `OrderItem` indexes) and F-20 (search
+  full-scan). At current scale (20 orders, small catalogue) not urgent → **O-8 (P3)**, revisit
+  if traffic grows.
+- **O-8 (P3, G) — no coherent caching strategy:** the two things that *are* cached
+  (`api/vehicles`) have no invalidation; `POST /api/products` misses revalidation; everything
+  else is uncached per-request Prisma. Not a bug today; a scaling cliff. Pairs with F-25.
+
+### Area I — Flutter app (`motoxplus_app/`, 22 `.dart` files, `version: 1.0.0+1`)
+
+**F-31 (P1, I/J) — the shipped mobile app points at the wrong backend host.**
+`motoxplus_app/lib/core/api/api_client.dart:4`: `const String kBaseUrl =
+'https://motoxplus.vercel.app/api';` — a hardcoded compile-time constant, no
+flavor/`--dart-define`. **Production is `https://motoxplus.com`** (VPS + nginx + PM2):
+`.env` `NEXTAUTH_URL` / `NEXT_PUBLIC_APP_URL`, `health.yml` checks `https://motoxplus.com`,
+`deploy.yml` → `/var/www/motoxplus` on `VPS_HOST`, `next.config.mjs`. The APK is offered to
+dealers at `motoxplus.com/downloads/motoxplus.apk`. Two possibilities, both bad:
+- `motoxplus.vercel.app` is dead/stale → **the mobile app cannot reach the backend at all** —
+  every request (incl. login, token refresh, `loadCurrentUser` on launch) fails → the app is
+  effectively bricked (forced to `/login`, login also fails).
+- `motoxplus.vercel.app` is a **live Vercel deployment** of this codebase → **shadow
+  production**: mobile talks to Vercel, web talks to the VPS; nobody monitors the Vercel one
+  (`health.yml` only checks `motoxplus.com` + `127.0.0.1:3000`); if it predates the emergency
+  batch it's running F-02/F-03/F-05/F-14 **unfixed** and holds the F-01 leaked secrets. **User
+  must confirm whether this Vercel deployment exists and, if so, kill it.**
+  Fix: `kBaseUrl` → `https://motoxplus.com/api`, rebuild, re-release; move it to
+  `--dart-define`/flavor so staging vs prod isn't a source edit.
+
+**F-32 (P2, I/B) — mobile checkout tells the dealer "Payment successful!" even when verify
+fails.** `checkout_screen.dart:141-158` — `_onPaymentSuccess` calls `POST /payments/verify`
+inside `try { … } catch (_) {}` (swallows everything), then **unconditionally** shows a green
+"Payment successful!" snackbar and `context.go('/orders')`. If `verify` returns 409
+(`InsufficientStockError` — oversold, F-05) or 5xx or times out, the dealer is told it worked
+and navigates away. The Razorpay webhook (confirmed live, §9.1) is the *only* thing that then
+finalizes the order — and on a genuine oversell it can't. Fix: check the `verify` response;
+on failure show a "confirming your payment…" state and surface a real error if it never
+resolves.
+
+**F-33 (P2, I) — concurrent-401 stampede logs the user out mid-session.**
+`api_client.dart:29-45` — the Dio `onError` interceptor calls `_refreshToken()` on any 401
+with **no lock/mutex**. When the 15-min access token expires while the app has several
+requests in flight (e.g. dashboard load), each 401s and each calls `_refreshToken()`
+concurrently against `POST /mobile/auth/refresh`, which **rotates** the refresh token
+(`rotateSession`, per the web audit). The first call rotates it; the rest present a
+now-invalid token → fail → the interceptor falls through to `await _storage.deleteAll()`
+(`:42`) → the user is **forcibly logged out** despite a valid session. Common Dio pitfall;
+fix with a single-flight refresh (share one `Future`).
+
+**O-9 (P3, I) — Flutter minor:**
+- `auth_provider.loadCurrentUser()` catch → `state = const AuthState()` — *any* transient error
+  on launch (network blip, 500) logs the user out of the UI.
+- `auth_provider.logout()` posts to `/auth/logout` (the **web** NextAuth route), not a
+  mobile-specific one — confirm it actually revokes the mobile `UserSession` row (the refresh
+  token), otherwise server-side the session lives until `expiresAt` (7 d) and only the local
+  `clearTokens()` is a real logout. Ties to F-14.
+- `_routerProvider` (`app.dart:18-30`) — grep shows no `refreshListenable`; confirm the
+  redirect re-evaluates on auth-state change (post-login nav, post-revocation kick-out).
+- `_storage.deleteAll()` (`:42`, `:77`) wipes the whole secure-storage namespace, not just the
+  two token keys — fine today (nothing else stored), scope hazard later.
+- No Android App Links / deep-link intent-filter review (needs the manifest) — low priority.
+
+### Area J — ops & security
+
+- **`/api/health` + `/api/health/ready` check only the DB** — see **F-27** (§10.3). No Redis /
+  R2 / Delhivery / Razorpay probe; the `health.yml` */15 cron has been green through a Redis
+  that was never installed and a mobile app pointed at the wrong host.
+- **F-23 (P3)** — `/api/health` leaks the raw DB driver error string on failure (public route).
+  Already logged.
+- **O-10 (P3, J) — backups are unverified and unmonitored.** `scripts/db/backup.sh` (cron via
+  `backup.yml`, `--upload-r2`, `RETENTION_DAYS=14`) does a `pg_dump | gzip`. Nothing **verifies
+  the dump is restorable**, and a failed backup only lands in `/var/log/motoxplus-backup.log` —
+  no alert (same detection gap as F-27). For a business taking real orders, a silently-failing
+  backup is a latent disaster. Also: both scripts parse `.env` with
+  `export "$(grep -v '^#' .env | grep 'DATABASE_URL' | xargs)"` — matches any line *containing*
+  `DATABASE_URL` (e.g. a future `SHADOW_DATABASE_URL`) and `xargs`-mangles a URL with `?`/`&`;
+  the `a04789a` deploy-parser fix shows this class has already bitten. Use a strict
+  `^DATABASE_URL=` parser.
+- **H6 → restore path CONFIRMED** (§12): `restore.sh` + migration history reconstructs prod;
+  `DISASTER_RECOVERY.md` correct.
+- PM2 `instances:"max"` cluster — the rate-limit multiplication is **F-27/H5** (Redis now up,
+  so distributed limiting is real for the first time).
+- Secret-in-`console.*` spot check (auth paths read: `credentials.ts`, `otp.ts`, `jwt.ts`,
+  `finalize.ts`, webhooks): **none log plaintext OTP / password / token / signature.** F-23 is
+  error-*message* disclosure, not secret logging. (Full grep sweep still owed.)
+
+### Area K — dead weight
+
+- **`@cashfreepayments/cashfree-js`** (`package.json:31`) — **zero imports in `src/`**. Dead
+  dependency; remove. **→ O-11.**
+- **`src/lib/shiprocket/*`** — dead (F-10), ~400 LOC, creds unset. Remove in Phase 3.
+- **`src/lib/r2.ts`** — **not a duplicate**, it's a 17-line backward-compat shim over
+  `@/lib/storage/*`. Still used by `products/[id]/route.ts` + `upload/route.ts` (the other ~8
+  upload routes import `@/lib/storage` directly). Migrate the 2 stragglers, delete the shim.
+  **→ O-11** (trivial).
+- **O-11 (P3, K) — dead/inconsistent deps:** remove `@cashfreepayments/cashfree-js`; migrate
+  the 2 `@/lib/r2` importers to `@/lib/storage` and delete the shim; Shiprocket per F-10.
+- Unused-export sweep across `src/lib` still owed (low value).
 
 **Area D status:** 🟡 — writers/state-machine (F-24), N+1 (clear), index gaps (F-25) done;
 H6 + txn sweep + RSC pages owed.
@@ -642,31 +811,35 @@ and every `admin/*` list route.
 
 **Area A (auth/authz route matrix): COMPLETE** (segments 1 + 2, §4b/§4c).
 
-**Done this session (2026-08-29):** Area A (route matrix complete, §4b/§4c), Area E partial
-(§4d — F-22/F-23), Area D partial (§4e — F-24/F-25). Next: finish D, then G, H, I, J, K.
+**Phase 1 status (2026-09-03): substantially COMPLETE.** Areas A, B, C, D (API), E, G, I, J, K
+done. H6 resolved. Steps 3 & 4 done (§12).
 
-1. **Area D — H6 migration diff — DONE 2026-09-03 (§12): no drift either direction, RESOLVED.**
-2. **Area D — txn sweep (NEXT):** `crm/leads/[id]/convert` (User+Dealer+Lead — wrapped?),
-   procurement PO→PR conversion, GRN `receivedQty` updates.
-3. **Area G:** 3 cached-read surfaces only (`api/vehicles` `revalidate=86400`, `products/[id]`
-   `revalidatePath`, `sitemap`); Redis used only by `rate-limit.ts` + dead `shiprocket/auth.ts`.
-   Confirm no `unstable_cache`; map each cached read → its invalidation (or absence).
-4. **Area H:** run the app (`npm run dev`), walk every route; specifically test O-1/S-03/S-08
-   (staff nav links → do the pages 401 or render-with-dead-actions?), and the admin RSC page
-   query cost (D-2 deferral).
-5. **Area I:** Flutter app — `motoxplus_app/lib/**` (22 .dart files): `core/api/api_client.dart`
-   token storage (`flutter_secure_storage`), `razorpay_flutter` flow, deep links / nav dead
-   ends, any secret bundled in `android/app/`.
-6. **Area J:** PM2 (`instances:"max"` cluster × in-memory rate-limit fallback — H5 residual),
-   `/api/health` only checks DB `SELECT 1` (not Redis/R2/Delhivery) + leaks err (F-23),
-   `scripts/db/backup.sh` + `restore.sh`, logging-of-secrets grep (OTP/token/phone in
-   `console.log`).
-7. **Area K:** `src/lib/r2.ts` vs `src/lib/storage/r2.ts` duplicate; `@cashfreepayments/cashfree-js`
-   unused; `src/lib/shiprocket/*` dead (F-10); unused-export sweep.
+**Remaining Phase 1 work — all low-priority or blocked:**
+1. **Area H (web UI) — BLOCKED on a running app + DB.** Local `:5433` is dead, `:5432` is a
+   different Postgres, no SSH tunnel. Needs the user to run `npm run dev` against a reachable
+   DB (or a tunnel to the VPS / scratch DB). Owed: `admin/*` RSC page query cost; O-1/S-03/S-08
+   staff-nav behaviour (401 vs dead-action render); a visual/UX pass.
+2. **Area F — dedicated Next 15 sweep** (async `params`/`searchParams` consistency, `use client`
+   boundaries, `<Suspense>` usage). Low priority — no caching layer to get wrong, S-09 already
+   covers the build-prerender issue.
+3. **Low-value sweeps:** full `console.*` secret-logging grep; unused-export sweep across
+   `src/lib`.
+4. **Phase 2 — `AUDIT/02-report.md`** — not started. The prioritised remediation report
+   (P0/P1 first: F-21 root-cause fix, F-31 shadow-deployment question, W-1, F-24 webhook, F-18,
+   F-28/F-29, the Phase-3 backlog).
 
-**Deliverable state:** `AUDIT/01-findings.md` is the running log. `AUDIT/02-report.md` (Phase 2)
-not started. Findings now **F-01…F-25 (F-22 reclassified to a Phase-3 workstream) + S-01…S-10
-(S-06 promoted→F-24) + O-1…O-6**.
+**Deliverable state:** `AUDIT/01-findings.md` is the running log — findings now
+**F-01…F-33 + S-01…S-10 + O-1…O-11 + W-1**. `AUDIT/02-report.md` (Phase 2) not started.
+
+### Highest-priority open items (for Phase 2 sequencing)
+| # | Item | Why |
+|---|---|---|
+| 1 | **F-31** — confirm/kill `motoxplus.vercel.app`; repoint the Flutter app | Shadow production or bricked mobile app; possibly running unpatched code + leaked secrets |
+| 2 | **F-21** — diagnose + fix `createDelhiveryShipment` (pickup_location was the historical cause; verify the fixed path on a real order) + surface failures + pre-payment serviceability check | 100% silent shipment-creation failure; the only reason shipments exist at all |
+| 3 | **F-24** — Delhivery webhook hardening (blocks turning the webhook on) | Forgeable endpoint can un-cancel refunded orders |
+| 4 | **W-1** — prepaid-order lifecycle (Option B + reaper + bounded refund) | F-05 real fix; also closes manual-UPI variant |
+| 5 | **F-01** — confirm secret rotation actually happened (now fronts live money) | Unrotated `NEXTAUTH_SECRET`/`JWT_SECRET` → forge session → real refunds |
+| 6 | **F-18 / F-28 / F-29 / F-32 / F-33** — session revocation (web), manual-payment ledger, hardcoded bank details, mobile checkout UX | P2 cluster |
 
 ### Re-rating / re-sequencing applied 2026-08-29 (per user)
 | Finding | Was | Now | Why |
