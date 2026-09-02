@@ -38,20 +38,27 @@ export async function finalizeCapturedPayment(params: {
   });
   if (!order) throw new Error(`Order ${orderId} not found during payment finalization`);
 
-  // Never downgrade/overwrite a payment already marked PAID by the other entry point.
-  await prisma.payment.updateMany({
-    where: { id: paymentId, status: { not: "PAID" } },
-    data: {
-      razorpayPaymentId,
-      ...(razorpaySignature ? { razorpaySignature } : {}),
-      status: "PAID",
-    },
-  });
-
   const isFullPayment = order.paymentType === "FULL_100";
   let invoiceNumber: string | null = null;
 
   await prisma.$transaction(async (tx) => {
+    // F-05: the Payment→PAID write lives INSIDE this transaction, so a
+    // rollback (most concretely: decrementStock throwing InsufficientStockError
+    // when the last unit sold between capture and finalize) also un-does it.
+    // Previously this ran before the transaction and stayed committed on
+    // rollback → money reads captured, order stuck PENDING forever, every
+    // webhook redelivery a no-op on status==="PAID". The `status: { not:
+    // "PAID" }` guard still makes it a safe no-op for the second entry point
+    // (verify vs webhook) that arrives after the first already finalized.
+    await tx.payment.updateMany({
+      where: { id: paymentId, status: { not: "PAID" } },
+      data: {
+        razorpayPaymentId,
+        ...(razorpaySignature ? { razorpaySignature } : {}),
+        status: "PAID",
+      },
+    });
+
     const guarded = await tx.order.updateMany({
       where: { id: orderId, stockReserved: false },
       data: {

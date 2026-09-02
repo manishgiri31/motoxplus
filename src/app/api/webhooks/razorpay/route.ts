@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { finalizeCapturedPayment } from "@/lib/payments/finalize";
+import { InsufficientStockError } from "@/lib/orders/stock";
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
@@ -99,8 +100,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[Razorpay Webhook] Processing error:", err);
-    // Always 200 — same reasoning as the Delhivery webhook: prevent Razorpay
-    // from retrying indefinitely on our bug rather than a real delivery failure.
+    // F-05: a RETRIABLE failure — the order's stock sold out between capture
+    // and finalize — returns non-2xx so Razorpay retries later (by which time
+    // stock may have freed up, or the order been refunded). With finalize's
+    // Payment→PAID write now inside its transaction, that rollback leaves the
+    // payment un-PAID, so a retry can still succeed. A non-retriable bug keeps
+    // returning 200 (per the original reasoning: don't let Razorpay hammer us
+    // forever over a code defect rather than a real processing failure).
+    if (err instanceof InsufficientStockError) {
+      return NextResponse.json({ ok: false, error: "Retriable processing failure" }, { status: 503 });
+    }
     return NextResponse.json({ ok: false, error: "Processing failed" });
   }
 }
