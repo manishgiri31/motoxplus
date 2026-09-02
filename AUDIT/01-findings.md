@@ -19,7 +19,7 @@ Legend: ✅ fully read · 🟡 partially read / key files only · ⬜ not yet
 | H2 stale shipment status → wrong fee tier | ✅ traced | **CONFIRMED (P0, compounded by H8b)** |
 | H3 Razorpay webhook swallows failures | ✅ traced | **CONFIRMED (P1 now / P0 at launch)** |
 | H4 Float money model | 🟡 traced core paths | **Minor issues only; no material Razorpay disagreement (gated off)** |
-| H5 rate limiting under PM2 cluster | ✅ traced | **REFUTED as configured (REDIS_URL set); latent fail-open risk** |
+| H5 rate limiting under PM2 cluster | ✅ traced | **CONFIRMED · P1 — Redis NEVER installed in prod; distributed RL never functioned since launch. See §9.3 + §10.1.** (resolved operationally 2026-08-30) |
 | H6 migration drift | 🟡 blocked on shadow DB | **CANNOT fully verify — manual diff of `0_init` pending** |
 | H7 Shiprocket live/dead | ✅ | **CONFIRMED DEAD (no importers; creds not set)** |
 | H8 delhiveryFetch retry + cancel wiring | ✅ | **BOTH CONFIRMED** |
@@ -1237,3 +1237,346 @@ side effects. Concretely, Steps 3–4:
 **Stopped here per instruction. Area D NOT resumed.** Awaiting: `redis-server` restart
 decision, the `motoxplus_audit` read-only conn string, `RAZORPAY_WEBHOOK_SECRET` prod value,
 and staging target for `cancellation-exploit-test.ts`.
+
+---
+
+## 10. Redis-never-installed correction + Steps 3/4 attempt (2026-08-30)
+
+### 10.1 H5 — CONFIRMED, re-rated: **P1, permanent condition since launch** (not an outage)
+
+User verified on the VPS: **no `redis-server` unit, no container, no binary — Redis has
+never run in production.** `REDIS_URL="redis://localhost:6379"` has always pointed at nothing.
+So the "outage" framing in §9.3 is wrong — this is the steady state since deploy:
+
+- **Distributed rate limiting has never functioned in production.** Every limiter has always
+  taken the `catch → checkInMemory` path (`rate-limit.ts:153-159`): a **per-PM2-worker** `Map`,
+  effective limit ≈ `configured budget × worker count`, **wiped on every worker restart**. On a
+  typical multi-core VPS with the observed restart rate, no per-IP or per-identifier budget has
+  ever meaningfully bound anything.
+- The DB-backed per-**account** backstops (login lockout 5→30 min, OTP attempt cap 5, OTP resend
+  10/hr — all pure Prisma) **have** been working the whole time. Single-account brute force /
+  OTP spend were bounded. **Horizontal** attacks (password spray across identifiers, identifier
+  enumeration, cross-account SMS spend) have had **no effective ceiling since launch**.
+- **Retrospective implication:** any abuse-history analysis (SMS/WhatsApp spend, failed-login
+  volume, OTP sends) must assume near-zero effective rate limiting for the entire production
+  lifetime up to the Redis install timestamp. If the OTP-provider bill has ever looked
+  high, this is why.
+
+**Now resolved operationally** (user, 2026-08-30): `redis-server` installed, `PING` OK, PM2
+restarted `--update-env`, error log clean, `pm2 startup` + `pm2 save` done. →
+
+> **⚠ Distributed rate limiting is now enforced for the first time.** Budgets that were
+> silently `× worker count` are now the real numbers cluster-wide. Watch the 429 rate for a
+> few days — legitimate patterns that never tripped a limit may now:
+> - `OTP_SEND perIP 8 / 60 s` — a dealer office behind one NAT doing a bulk onboarding.
+> - `LOGIN perIP 20 / 15 min` — a shared dealer/office IP.
+> - `SEARCH_PUBLIC perIP 120 / 60 s` — fine, but a scraper-ish legit integration could hit it.
+> If something legit breaks, the knob is `RATE_LIMITS` in `rate-limit-budgets.ts` (no deploy
+> needed for the values? — no, they're constants; a deploy IS needed. Consider moving the
+> hot ones to `Setting` in Phase 3).
+
+### 10.2 F-26 — priority RAISED to **P1** (was P2 / "P1 during outage")
+
+Since Redis was never up, the `waitForReady` `once("ready")` listener leak (§9.4) has been
+firing on **every rate-limited request since the first deploy** — not an outage-window event.
+This **is** the restart storm: continuous heap growth → V8 OOM (`--max-old-space-size=1024`) →
+PM2 restart, per worker, forever. The 29 / 21 unequal counts are cumulative OOM deaths, each
+dropping whatever requests were in flight on that worker (V8 OOM is not graceful; `kill_timeout`
+doesn't apply). **This has been low-grade continuous request loss the whole time**, load-
+correlated.
+
+Redis being up now **masks** it (`redis.status` reaches `"ready"`, the accumulated listeners
+fire once and clear, `waitForReady` returns via the fast path). **The bug is still there** and
+re-arms the instant Redis is unavailable for any reason — restart, `maxmemory` eviction stall,
+socket blip, version upgrade. Fix (~2 lines, remove the listener when the timeout wins) is
+**Phase 3, but should jump the queue** given F-27 shows the infra is fragile.
+
+### 10.3 F-27 (NEW) — **P1** — required infra declared but never provisioned; nothing detected it
+
+`REDIS_URL` set in prod `.env` + the rate limiter hard-depends on it for its designed behaviour,
+yet Redis was never installed, for the entire production lifetime, and **every signal the
+system emits about it was green:**
+
+1. **`env.ts`** — `REDIS_URL` is treated as *optional* (`REDIS_URL: process.env.REDIS_URL`,
+   not in `REQUIRED_SERVER`). A piece of infra the rate limiter's correctness depends on is not
+   in the boot-blocking required set. If it were, boot would have failed loudly on day one.
+2. **Boot log lies.** `instrumentation-node.ts:34-38` prints
+   **`"[Boot] Rate limiter: Redis (shared across all PM2 workers)."`** whenever `REDIS_URL` is
+   *set* — it checks `getRedis()` truthiness (always an object) not `redis.status`. Every
+   production boot has logged a false confirmation that Redis was in use.
+3. **Health checks cover 1 of ≥4 external dependencies.** `GET /api/health` and
+   `GET /api/health/ready` run **only** `prisma.$queryRaw\`SELECT 1\``. No Redis, R2, Delhivery,
+   or Razorpay probe. `/api/health` returns `status:"ok"` and `/ready` returns `{ready:true}`
+   while any of those four is down.
+4. **The cron never had a chance.** `.github/workflows/health.yml` (*/15 min) hits `/api/health`
+   and alerts only on non-200 → it has been green throughout, because the one thing it checks
+   (DB) was fine.
+
+**This is the second finding the user asked about** — the health check doesn't *assert*
+"Redis healthy" (it omits Redis entirely), but it **asserts overall readiness while a declared,
+depended-on dependency is absent**, and that green signal is what the ops alerting trusts. A
+readiness probe that passes with a missing declared dependency is worse than none, because it
+actively suppresses the alert.
+
+**Fix scope (Phase 3):** (a) `/api/health` gains per-dependency checks (Redis `PING`, R2
+head-bucket, Delhivery + Razorpay reachability) reported individually, `status:"degraded"` +
+503 if any critical one is down; (b) `instrumentation-node.ts` awaits `redis.ping()` (bounded)
+and logs the real state, or moves `REDIS_URL` into `REQUIRED_SERVER`; (c) the deploy pipeline
+greps the boot log for the real "Redis" vs "in-memory" line and fails/warns.
+
+### 10.4 Step 3 — **BLOCKED**: `audit_ro` credentials rejected
+
+The scratch DB is reachable (TCP `127.0.0.1:5432` open — an SSH tunnel or local instance), but
+every connection as `audit_ro` / `Aud1t_R0_x9Kp2Lm` fails with Postgres
+**"Authentication failed … credentials … not valid"** (password mismatch, *not* a `pg_hba`
+rejection — that produces a different message). Tried: `motoxplus_audit`, `motoxplus`, and
+`postgres` DBs; `localhost` and `127.0.0.1`; `sslmode=disable`. All same.
+
+**Most likely:** the `CREATE ROLE audit_ro LOGIN PASSWORD '…'` in the §9.7 runbook ran with the
+literal placeholder (`CHANGE_ME_STRONG`) or a different value than what was pasted to me.
+To fix on the VPS:
+```bash
+sudo -u postgres psql -c "ALTER ROLE audit_ro WITH LOGIN PASSWORD 'Aud1t_R0_x9Kp2Lm';"
+sudo -u postgres psql -c "SELECT rolname, rolcanlogin FROM pg_roles WHERE rolname='audit_ro';"
+# confirm TCP auth is allowed for it (should already be, generic line):
+grep -E '^host\s+all\s+all\s+127\.0\.0\.1/32' /etc/postgresql/*/main/pg_hba.conf
+```
+Also confirm the tunnel is live if this is remote: `ssh -N -L 5432:localhost:5432 <vps>`.
+
+**The Step 3 query script is written and ready** — `.scratch/audit/step3.mjs` (run:
+`node .scratch/audit/step3.mjs` from the repo root, uses `@prisma/client`, read-only
+`$queryRawUnsafe` only). It covers, in the user's priority order:
+1. **F-05 occurrences** — every `Payment.status='PAID'` whose `Order` is still `PENDING` /
+   has no `Invoice` / has no `OrderItem`; reports payment id, `razorpayPaymentId`, dealer +
+   email + mobile, amount, timestamp, and whether an `OrderCancellation`/`refundId` exists.
+   Plus `1b` (all PAID payments for context) and `1c` (orders with `amountPaid>0` or
+   `paymentStatus∈{PAID,PARTIAL}` still `PENDING`/`CONFIRMED`).
+2. **Zero-shipment confirmation** — `Shipment` count + every `Order` that *should* have an AWB
+   (COD non-cancelled, or prepaid `CONFIRMED`+) with `has_shipment` flag; `OrderEvent` type
+   histogram + any event whose `reason` matches `delhiv|shipment|awb|waybill|manifest|pickup`;
+   `Setting` dump; delivery-pincode histogram.
+3. **Under-charge set** (cancelled ≤ pre-ship % with a live `Shipment`) and **over-charge set**
+   (cancelled ≥ post-ship % with `Shipment` still `MANIFESTED`/`PENDING`/none); plus the full
+   `OrderCancellation` table (tiny) with shipment status joined.
+4. **Currently-exploitable** — `Order.status ∈ pre-ship` with a `Shipment` past `MANIFESTED`
+   or older than 3 days.
+5. **F-18 cohort** — `UserSession WHERE isActive AND createdAt < now()-7d`, plus the full
+   active/expired/age distribution and every row (tiny).
+
+### 10.5 Step 4 / H6 — offline half **DONE and CLEAN**; live half blocked
+
+**What I could do without a writable DB:** `prisma migrate diff --from-empty
+--to-schema-datamodel ./prisma/schema.prisma --script` (no DB needed) produces the canonical
+DDL for `schema.prisma`. I concatenated all **7** migrations (`0_init` + 6 later — note: **2
+more than the map's "5"**, see below) and diffed **table / column / enum-value** sets
+(`.scratch/audit/h6diff.mjs`):
+
+| Check | Result |
+|---|---|
+| Tables in `schema.prisma` not created by any migration | **none** (66 = 66) |
+| Tables created by migrations but absent from `schema.prisma` | **none** |
+| Columns in `schema.prisma` not produced by a migration | **none** |
+| Columns produced by migrations but absent from `schema.prisma` | **none** |
+| Enum values mismatched either direction | **none** (30 enums, all match) |
+| The H6 "prime suspects" (`Vehicle.aiLabels/ocrKeywords/badgeText`, `Product.package*`, `Product.markupPercent/vendorCostPrice`, `ProductImage.thumbnailUrl`, `ProductVariant.vehicleModel`, `User.lastDevice/lastLoginIP`) | **all present in `0_init`** — they arrived via a `db push` *that was then captured into `0_init`* (1674 lines), not via an un-migrated `db push`. |
+
+**H6 verdict (migration-history ↔ `schema.prisma`): CLEAN.** `0_init` + the 6 later migrations
+reproduce `schema.prisma` at the table/column/enum level. **This unblocks the F-25 index
+migration** — with two caveats:
+1. **Not verified against live prod.** My diff is `migrations ↔ schema.prisma`, not
+   `migrations ↔ actual prod DB`. If someone ran `prisma db push` against prod *after* the last
+   migration, or hand-DDL'd it, only a `migrate diff --from-url <scratch> --to-schema-datamodel`
+   (read-only, one command) catches it. **Run that when `audit_ro` works** before treating H6
+   as fully closed. Also check `_prisma_migrations` shows all 7 `applied_steps_count` clean.
+2. My offline parser checks **names** (tables/columns/enum values), not column **types**,
+   nullability, defaults, FK actions, or index bodies. Prisma's own `migrate diff` against a
+   shadow DB would — that still needs a writable throwaway Postgres (no Docker / local PG
+   available in this environment).
+
+**`scripts/db/restore.sh` + migration history → can it rebuild prod?** On the evidence:
+**yes, for the schema** — `pg_restore` of a `pg_dump` carries the full live schema anyway
+(restore.sh doesn't rely on `migrate deploy` to *build* structure, only data+structure from the
+dump); and if a fresh DB were built from migrations alone, the history is complete and ordered.
+The DR risk H6 was guarding against (schema exists only in `schema.prisma`, lost if the dump
+fails) is **not present**. `DISASTER_RECOVERY.md` is **not** wrong on this point. Confirm with
+caveat 1 when DB access is restored.
+
+**Two migrations were added while H6 was open** (DECISION-RULES §1.5 violation — by the
+push-notif/dealer WIP, not the audit batch), both already in prod (`c70c528`):
+- `20260829000000_dealer_no_approval_default_active` — `ALTER TABLE "Dealer" ALTER COLUMN
+  "status" SET DEFAULT 'ACTIVE'` + `UPDATE "Dealer" SET status='ACTIVE' WHERE status='PENDING'`.
+  **This is a product/policy change**: dealer sign-ups are now auto-`ACTIVE`, the admin approval
+  queue is gone. `getVerifiedDealer` still requires `emailVerified && mobileVerified`, so new
+  dealers still can't transact until they verify — but the human approval gate that H1's
+  analysis assumed is removed. Flag for product confirmation (the migration comment says it's
+  deliberate). → **O-7** (observation, not a defect).
+- `20260829120000_add_device_token` — clean new `DeviceToken` table + `DevicePlatform` enum for
+  push. Well-formed.
+
+### 10.6 Zero shipments (`0` in the scratch DB, per user) — consistent with F-21, not yet confirmed by query
+
+Cannot run the diagnostic (DB blocked), but: **0 `Shipment` rows against 20 orders means
+`createDelhiveryShipment` has never once succeeded in production** despite firing on every COD
+order (`orders/route.ts:254`) and every prepaid capture (`finalize.ts:99`). Both call sites are
+fire-and-forget with only a `console.error` on failure (`orders/route.ts:255`,
+`finalize.ts:100`) — exactly F-21's "silent AWB failure" shape. Candidate causes, in
+likelihood order, to be nailed down once DB access + a prod-log sample are available:
+1. **Delhivery credentials / pickup registration** — `getDelhiveryConfig()` validates at boot
+   (`instrumentation-node.ts:24`) so the *token* is probably syntactically fine, but the
+   **`pickup_location.name`** must exactly match a registered pickup location on the Delhivery
+   client account (`shipment.ts:74-84`, and `4cf9d18 docs(delhivery): re-verify
+   pickup_location.name after dashboard address change` suggests this has already bitten once).
+   A mismatch → `create.json` returns `success:false` / `pkg.status !== "Success"` → throws →
+   swallowed.
+2. **Serviceability** — destination pincodes not serviceable on the account → rejected at
+   `create.json`.
+3. **Payload validation** — phone normalization, weight, HSN, address completeness
+   (`shipment.ts:109-153`).
+4. **The `da0ed80` red-test / relation-load issue is not it** (that's tracking, not create).
+
+This **raises F-21's confidence** (the failure mode is not hypothetical — it's 100% of
+attempts) and means the F-21 fix (serviceability precheck before payment + surfacing AWB
+failure to admin/dealer instead of `console.error`) is **not optional polish — it's the only
+reason anyone would find out shipments aren't being created**. Recommend confirming cause
+before the next batch and folding a real fix into it. Also: with **0 shipments**, the F-02 /
+F-04 cancellation-tier exposure is currently **theoretical in prod** (no parcel has ever
+existed to under/over-refund against) — the batch fix is still correct and necessary the moment
+shipment creation starts working, but Step 3's cancellation sets will almost certainly come
+back empty, and that's *why*, not because the bug isn't real.
+
+### 10.7 F-05 fix scoping (decision item — Razorpay stays live, F-05 is top priority, do NOT implement yet)
+
+The bug (recap): `finalize.ts:41-48` commits `Payment.status='PAID'` **before** the
+`$transaction` (`:53`); the txn can then throw `InsufficientStockError` from `decrementStock`
+(prepaid orders carry `stockReserved:false` so the last unit can be sold twice) → rollback →
+order stuck `PENDING`, invoice never made, **Payment permanently `PAID`**, every later webhook
+a no-op (`webhooks/razorpay/route.ts:123`), webhook returns 200 so Razorpay never retries.
+
+Two fix directions, **not mutually exclusive**:
+
+**Option A — move the `Payment→PAID` write inside the `$transaction`.**
+- *Change:* delete the `prisma.payment.updateMany` at `finalize.ts:41-48`; do the same
+  `updateMany({ where:{ id, status:{not:'PAID'} }, data:{…, status:'PAID' } })` as the first
+  statement *inside* the `prisma.$transaction` callback, before the `order.updateMany` guard.
+  If the txn rolls back, Payment stays un-`PAID` and the **webhook retries naturally** and
+  succeeds once stock is available (or the dealer is refunded). Also flip the webhook `catch`
+  to return non-2xx (or enqueue) so Razorpay *does* retry.
+- *Pro:* smallest change; removes the "money captured, zero record progression" state entirely;
+  idempotency (`stockReserved:false` guard) is unaffected; no behavioural change for the happy
+  path.
+- *Con:* on a genuine oversell the order legitimately **cannot** be fulfilled — retrying the
+  webhook forever doesn't help. Need a bounded policy: after N failed finalize attempts, auto-
+  refund + notify (a small amount of new code + an alert). Without that, an oversold prepaid
+  order degrades from "silent stuck" to "noisy stuck".
+- *Con:* the `Payment` row briefly not reflecting a real Razorpay capture is a reconciliation
+  wrinkle if ops eyeball the table mid-retry — mitigated by keeping `razorpayPaymentId` written
+  even when `status` isn't `PAID` yet, or by the webhook-driven retry closing the gap in
+  seconds.
+
+**Option B — reserve stock for prepaid orders at creation, the way COD does.**
+- *Change:* in `orders/route.ts`, drop the `stockReserved: isCOD` special-case — call
+  `decrementStock` + set `stockReserved:true` for **every** order in the creation `$transaction`
+  (COD and prepaid alike). `finalize` then never calls `decrementStock` (stock already
+  reserved), so its txn can't throw `InsufficientStockError` and the PAID-outside-txn ordering
+  stops mattering for *this* failure mode. Cancellation already restocks
+  (`cancel/route.ts:155` `if (order.stockReserved) restockItems`).
+- *Pro:* removes the oversell entirely — the dealer who checks out first gets the unit;
+  the second dealer is told "out of stock" at **checkout**, before paying a rupee. Matches how
+  every serious commerce flow works. Also fixes the *same* latent bug in the manual-UPI path
+  (`admin/payments/[id]/verify` also calls `decrementStock` post-hoc).
+- *Con:* **abandoned prepaid carts now hold stock.** An order created and never paid ties up
+  inventory until it's cancelled. Needs a reaper (cron/GitHub Action: auto-cancel + restock
+  prepaid orders `PENDING` > X hours) — which this repo has no in-process scheduler for, so
+  it's another GitHub Actions workflow. Until that exists, stock can silently bleed into
+  un-paid orders.
+- *Con:* slightly bigger blast radius — touches the checkout transaction for every order, and
+  the `stockReserved` invariant is now "true from creation" which several code paths assume is
+  "true from confirmation" (grep `stockReserved` — `finalize.ts`, `cancel/route.ts`,
+  `admin/payments/[id]/verify`, `orders/route.ts` all reference it).
+
+**Recommendation (for the user to decide, not yet built):** **A + the bounded-refund policy**,
+as the F-05 hotfix — it's the minimal change that closes the money-loss hole and it's safe to
+ship fast. Then **B as the real fix** in a follow-up, bundled with the abandoned-order reaper,
+because "tell the second dealer at checkout" is the correct product behaviour and it also
+closes the manual-UPI variant. Doing B alone without the reaper trades a rare silent failure
+for a slow inventory leak; doing A alone leaves the oversell UX (pay, then find out) in place.
+
+### 10.8 Combined re-rate summary (this session)
+
+| Finding | Change this session |
+|---|---|
+| **H5** | CONFIRMED → **P1, permanent since launch** (Redis never installed; distributed RL never functioned; horizontal-abuse ceilings absent for the whole prod lifetime). Resolved operationally 2026-08-30; distributed RL now live for the first time — watch 429s. |
+| **F-26** | P2 → **P1**. Was firing every rate-limited request since first deploy = the 29/21 restart storm = continuous load-correlated in-flight request loss. Masked (not fixed) by Redis coming up. Fix should jump the Phase-3 queue. |
+| **F-27** | **NEW, P1** — `REDIS_URL` declared + depended-on but never provisioned; `env.ts` treats it optional, boot log falsely reports "Redis", `/api/health(/ready)` checks only the DB so the */15 cron stayed green. Readiness probe passing with a missing declared dependency = worse than none. |
+| **O-7** | **NEW observation** — `20260829000000` migration removed the dealer admin-approval queue (auto-`ACTIVE`). Product-confirm; affects the H1 posture. |
+| **H6** | migration-history ↔ `schema.prisma`: **CLEAN** (offline table/column/enum diff). **Unblocks F-25.** Caveats: live-prod direction still needs one read-only `migrate diff --from-url` (DB blocked); types/defaults/indexes not offline-checkable. `DISASTER_RECOVERY.md` not wrong on schema reconstruction. |
+| **F-21** | confidence **up** — 0 `Shipment` rows / 20 orders ⇒ `createDelhiveryShipment` has **never succeeded in prod**, 100% silent failure. The "surface the failure" half of the F-21 fix is now the critical half. Cause TBD (pickup_location.name mismatch is prime suspect per `4cf9d18`). |
+| **F-02 / F-04** | still P0 by design, but **currently theoretical in prod** — no shipment has ever existed. Step 3 cancellation sets will likely be empty *because of F-21*, not because the bug is unreal. |
+| **Step 3** | **BLOCKED** — `audit_ro` auth rejected (password mismatch server-side). Fix: `ALTER ROLE audit_ro WITH LOGIN PASSWORD '…'` on the VPS. Query script ready at `.scratch/audit/step3.mjs`. |
+| **Step 4** | offline half done (H6 clean); live half blocked on the same DB-auth issue. |
+
+---
+
+## 11. Code batch shipped — F-05 (Option A) + F-26 + S-10 (2026-09-03)
+
+User approved F-05 **Option A** and F-26 as a code batch (Razorpay stays live). Three commits,
+each with a failing-then-passing test; full suite **173/173 green**, `tsc` clean, `next lint`
+clean.
+
+### F-05 — Payment→PAID write moved inside the finalize transaction
+- `src/lib/payments/finalize.ts` — the `prisma.payment.updateMany(… status:"PAID")` that ran
+  **before** `prisma.$transaction` is now the **first statement inside** it (on `tx`). A
+  rollback (`decrementStock` → `InsufficientStockError` when the last unit sold between capture
+  and finalize) now also un-does the PAID write, so the payment stays retriable instead of
+  "captured, order stuck PENDING forever". The `status:{not:"PAID"}` guard still makes it a safe
+  no-op for the second entry point (verify vs webhook).
+- `src/app/api/webhooks/razorpay/route.ts` — the catch-all now returns **503** (not 200) when
+  the error is `InsufficientStockError`, so Razorpay **retries** (by which time stock may have
+  freed up or the order been refunded). Genuine bugs still return 200 (unchanged — don't let
+  Razorpay hammer us over a code defect).
+- `src/lib/payments/finalize.test.ts` (**new**, 4 tests) — asserts the PAID write is on the
+  `tx` client and **never** the top-level `prisma` client (2 tests fail pre-fix), plus happy
+  path + idempotent no-op path.
+- **Still open (follow-up, NOT in this batch):** the *bounded* policy — after N failed
+  finalize retries, auto-refund + alert. Without it a genuine oversell degrades from "silent
+  stuck" to "Razorpay retries ~24 h then gives up, visibly" — strictly better, but not closed.
+  Recommend bundling with **Option B** (reserve prepaid stock at creation, like COD) + an
+  abandoned-order reaper as the real fix. Option B also closes the same latent bug in
+  `admin/payments/[id]/verify` (manual-UPI path).
+
+### F-26 — `waitForReady` listener leak fixed
+- `src/lib/auth/rate-limit.ts` — the timeout path now `redis.removeListener("ready", onReady)`;
+  previously it left one `once("ready")` listener + closure attached per call, unbounded while
+  Redis never reached `"ready"` → worker OOM/crash-loop.
+- `src/lib/auth/rate-limit.test.ts` (+1 test) — 3×(check+peek+reset) against a never-ready fake
+  Redis, then asserts `listenerCount("ready") === 0` (was 9 pre-fix).
+- Redis is up now so this was already dormant; the fix removes the crash-loop for any *future*
+  Redis unavailability.
+
+### S-10 — stale test mock repaired
+- `src/lib/delhivery/tracking.test.ts` — `shipmentFindUnique` mock now carries
+  `order: { status: "PROCESSING" }` (the push-notif WIP added `include:{order:{select:{status}}}`
+  to `syncTrackingToDb` for `priorOrderStatus`). The 2 red tests in prod (`da0ed80` / `5250d43`)
+  are green again. Runtime was never broken (real Prisma populates the relation) — this only
+  un-reds the suite.
+
+### Re-rate deltas
+| Finding | Now |
+|---|---|
+| **F-05** | code hotfix **shipped** (Option A). Money-loss hole closed: a rollback no longer strands a captured payment. Residual: bounded auto-refund policy + Option B still owed. Drops from "active silent money loss" to "retriable, visible". |
+| **F-26** | **fixed**. Latent crash-loop removed. |
+| **S-10** | **resolved** (test mock). Note the deeper point stands: no CI runs tests, so a red suite still ships silently — see F-27 family. |
+
+### Still not done / awaiting
+- **Steps 3 & 4** — **still BLOCKED.** `audit_ro` / `Aud1t_R0_x9Kp2Lm` at `localhost:5432`
+  still returns Postgres "Authentication failed … not valid" from this environment, even after
+  the user's reset. The `localhost:5432` this dev machine reaches is **not** the VPS DB (no SSH
+  tunnel active, or it's a different local Postgres — it also rejects the app's own
+  `motoxplus`/`MotoXplus2026Secure` creds; `localhost:5433` refuses connections entirely).
+  **To unblock:** either (a) `ssh -N -L 5434:localhost:5432 <vps>` from this machine, then tell
+  me — I'll point the script at `localhost:5434`; or (b) run `.scratch/audit/step3.mjs` +
+  `npx prisma migrate diff --from-url "$SCRATCH_URL" --to-schema-datamodel ./prisma/schema.prisma --script`
+  **on the VPS itself** (where `localhost:5432` is the DB and the app's `node_modules` +
+  generated client already exist) and paste the output.
+- F-05 bounded-refund policy + Option B + reaper (follow-up batch).
+- `RAZORPAY_WEBHOOK_SECRET` prod value confirmation.
