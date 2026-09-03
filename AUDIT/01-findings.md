@@ -818,11 +818,19 @@ fix with a single-flight refresh (share one `Future`).
   Shiprocket (F-10), `@cashfreepayments/cashfree-js` (O-11), `src/lib/r2.ts` shim (O-11).
   Not worth a deeper pass.
 
-### Peer branch under review — `delhivery-auto-shipment-killswitch` (`0a3d3d8`, NOT merged)
+### Peer branch — `delhivery-auto-shipment-killswitch` — LANDED ON MAIN via `36b20ab` ("all"), pushed
 
-A parallel session (`motoxplus-app-49`) built the `DELHIVERY_AUTO_SHIPMENT` kill switch +
-DB-level idempotency for `createDelhiveryShipment`. Reviewed the actual diff (read from the
-branch, not from the peer's summary):
+**Status change (2026-09-03 21:12):** the peer branch content was NOT merged as a branch — it
+was swept onto `main` inside commit `36b20ab` (message: "all", author Manish Giri), together
+with unrelated UI/content edits, and pushed to `origin/main`. So `auto-shipment.ts`,
+`auto-shipment.test.ts`, the `shipment.ts` advisory-lock rewrite, the `finalize.ts`
+`createDelhiveryShipment` → `autoCreateShipment` swap, `orders/route.ts`, `.env.example`
+(`DELHIVERY_AUTO_SHIPMENT`) are all live on `main`. The pool-exhaustion concern below is now
+shipped production code, not a branch review note. → **F-34.**
+
+A parallel session (`motoxplus-app-49`, no longer running) built the `DELHIVERY_AUTO_SHIPMENT`
+kill switch + DB-level idempotency for `createDelhiveryShipment`. Reviewed the actual diff
+(read from the branch, not from the peer's summary):
 - **Good:** kill switch (default ON, admin `POST /api/admin/shipments` bypasses it),
   `autoCreateShipment()` never throws + writes `SHIPMENT_CREATED` / `SHIPMENT_FAILED` /
   `SHIPMENT_AUTO_SKIPPED` to `OrderEvent` (F-21 part-2, partial), fast-path pre-check before the
@@ -834,8 +842,17 @@ branch, not from the peer's summary):
   while a pooled DB connection **and** the advisory lock are held for the whole HTTP round-trip.
   Classic "no I/O in a transaction" — under real throughput a slow Delhivery exhausts the
   Prisma pool → app-wide DB timeouts. Better: session-level `pg_try_advisory_lock` (or a tiny
-  claim txn) → HTTP outside any txn → short final txn to persist. → **log as F-21/F-03
-  follow-up if merged as-is.**
+  claim txn) → HTTP outside any txn → short final txn to persist.
+  - **F-34 (P2, D) — external HTTP call inside a Prisma interactive transaction.** As landed
+    in `36b20ab`, `createDelhiveryShipment` wraps `prisma.$transaction(..., { timeout: 25_000,
+    maxWait: 8_000 })` around a `pg_advisory_xact_lock` **and** the `create.json` round-trip
+    (`retries:1`, 15 s per-attempt `AbortSignal`). A pooled connection + the advisory lock are
+    held for the entire Delhivery HTTP call. At current ~0 orders/day this is inert; at any
+    real concurrency a slow/hanging Delhivery drains the connection pool and every unrelated
+    request 500s on a pool-acquire timeout. Fix: acquire a session-scoped
+    `pg_try_advisory_lock`, do the HTTP call with no transaction open, then a short txn to
+    persist the `Shipment` row + `→ PROCESSING` status. Needs to be addressed or explicitly
+    accepted now that it is on `main`.
 - **`OrderEvent` is still not rendered in any admin/dealer UI** (peer noted this) → F-21
   "surface the failure" is ~40% done: queryable, not visible. A minimal admin "shipment issues"
   view or a `SHIPMENT_FAILED` → alert is the other half.
