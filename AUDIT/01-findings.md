@@ -36,8 +36,8 @@ Legend: ✅ fully read · 🟡 partially read / key files only · ⬜ not yet
 | F Next.js 15 | ✅ | §13: sweep done — all pages/routes correctly `await` `Promise<params/searchParams>`, tsc clean, no `use client`/async mix. No new findings; Next-specific issues are S-09 + O-8. |
 | G Redis / caching | ✅ | §9.3 + §13: Redis = rate-limiter only (H5/F-26/F-27). Cache inventory done → **O-8** (`api/vehicles` 24h no-invalidation; `POST /products` no revalidate; else uncached per-request Prisma). |
 | H web UI | ⬜ | **BLOCKED — needs a running app + DB.** Local `:5433` dead, `:5432` is a different PG, no tunnel. Owed: RSC page query cost, O-1/S-03/S-08 staff-nav checks, visual pass. Needs user to run `npm run dev` against a DB or provide a tunnel. |
-| I Flutter app | ✅ | §14: **F-31** (wrong backend host — vercel.app), **F-32** (fake "Payment successful"), **F-33** (concurrent-refresh logout), O-9. |
-| J ops & security | ✅ | §15: health-check gap → **F-27**; **O-10** (backups unverified/unmonitored, fragile `.env` parse); restore path confirmed (§12); secret-logging spot-check clean. Full `console.*` secret grep still owed (low). |
+| I Flutter app | ✅ | §14 + §18: **F-31** (wrong backend host — vercel.app; fix on branch `fix/mobile-base-url`), **F-32** (fake "Payment successful"), **F-33** (concurrent-refresh logout), **F-35** (release builds debug-signed → Play Store blocker), O-9. |
+| J ops & security | ✅ | §15 + §18: health-check gap → **F-27**; **O-10** (backups unverified/unmonitored, fragile `.env` parse); restore path confirmed (§12); secret-logging spot-check clean. **F-36** (release-engineering: "all" commits + no CI gate on deploy → red tests reached prod). |
 | K dead weight | ✅ | §16: **O-11** — remove `@cashfreepayments/cashfree-js` (dead), migrate 2 `@/lib/r2` shim importers, Shiprocket per F-10. Unused-export sweep owed (low value). |
 
 ---
@@ -851,8 +851,14 @@ kill switch + DB-level idempotency for `createDelhiveryShipment`. Reviewed the a
     real concurrency a slow/hanging Delhivery drains the connection pool and every unrelated
     request 500s on a pool-acquire timeout. Fix: acquire a session-scoped
     `pg_try_advisory_lock`, do the HTTP call with no transaction open, then a short txn to
-    persist the `Shipment` row + `→ PROCESSING` status. Needs to be addressed or explicitly
-    accepted now that it is on `main`.
+    persist the `Shipment` row + `→ PROCESSING` status.
+    - **DEPLOYED TO PRODUCTION.** `.github/workflows/deploy.yml` pulls `origin/main` on push, so
+      `36b20ab` — advisory-lock rewrite included — is live, not a pending branch. This is
+      shipped code.
+    - **Decision (user, 2026-09-03): accept on `main`, no revert.** Untangling the peer branch
+      from the redesign edits in `36b20ab` costs more than it saves and F-34 is inert at current
+      volume (~0 orders/day). The `pg_try_advisory_lock` → HTTP-outside-txn → short-persist-txn
+      refactor is the **Wave 2** remedy, to land before real shipping throughput.
 - **`OrderEvent` is still not rendered in any admin/dealer UI** (peer noted this) → F-21
   "surface the failure" is ~40% done: queryable, not visible. A minimal admin "shipment issues"
   view or a `SHIPMENT_FAILED` → alert is the other half.
@@ -1970,3 +1976,53 @@ rows anyway. Recorded — no action beyond the F-18 fix already scoped.
 | **F-28** | **NEW · P2** — manual-UPI verified orders have `paymentStatus=PAID` with no `Payment` row → refund path always FAILS to manual; reconciliation gap. Design, not corruption. Phase 3. |
 | pincode/city validation | **folded into F-21 fix part 2** (not a separate number). |
 | **F-18** | cohort size **11**, all expired; recorded, no extra action. |
+
+---
+
+## 18. Session 2026-09-03 (cont.) — F-34 / F-35 / F-36, F-31 fix branch
+
+### F-34 (P2, D) — external HTTP inside a Prisma interactive transaction
+Full text under **"Peer branch — `delhivery-auto-shipment-killswitch`"** above. Summary:
+`createDelhiveryShipment` (as landed in `36b20ab`) holds a pooled connection + a
+`pg_advisory_xact_lock` for the entire `create.json` round-trip inside
+`prisma.$transaction({ timeout: 25_000, maxWait: 8_000 })`. Inert at ~0 orders/day; a slow
+Delhivery drains the pool at real concurrency. **Deployed to prod** (deploy.yml checks out the
+pushed `main` SHA — verified: `git checkout --detach --force ${DEPLOY_SHA}` at line 310, no test
+step). **User decision: accept, no revert; refactor is Wave 2.**
+
+### F-35 (P1, I) — release APK is signed with the debug keystore
+`motoxplus_app/android/app/build.gradle.kts:26` — `release { signingConfig =
+signingConfigs.getByName("debug") }`. Every "release" build so far is debug-signed.
+- **Why P1, not a footnote:** the Play Store **rejects debug-signed uploads outright**
+  (`Test-only` / `debuggable` APK error). This blocks the pending organisation-account
+  publication (waiting on the D-U-N-S number). It is also a security downgrade — the debug
+  keystore ships with the Android SDK, so a debug-signed APK can be re-signed by anyone.
+- **Fix scope:** generate an upload keystore (`keytool -genkey -v -keystore
+  upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`); add a
+  `release` `signingConfig` in `build.gradle.kts` driven by `key.properties`; keep
+  `upload-keystore.jks` + `key.properties` **out of git** (`.gitignore` +
+  distribute out of band). For Play App Signing, the upload key is separate from the Google-held
+  app-signing key.
+- **Group with F-31.** Both land on `fix/mobile-base-url` (held per user) so one rebuild covers
+  the base-URL fix, the dart-define config, and proper signing. Nothing ships to a device or
+  the Play Console until both are in.
+
+### F-36 (P1, J — release engineering / process) — "all" commits straight to prod, no CI gate
+Three commits titled exactly **"all"** — `25f4797`, `c70c528`, `36b20ab` — have each bundled
+multiple unrelated workstreams and gone straight to `origin/main`, which auto-deploys.
+- **Mechanism:** several sessions share one working tree on this machine; `git add -A` (or `git
+  add .`) commits whatever anyone left staged/unstaged, so unrelated changes ride along. There
+  are no per-workstream branches and no PR review on the path to `main`.
+- **`deploy.yml` has no test step.** Verified: it does `npm ci` → `prisma migrate deploy` →
+  `npm run build` → PM2 reload. No `npm test` / `vitest`. A red unit suite does **not** block a
+  deploy — which is exactly how **S-10**'s two failing tests reached production.
+- **Consequence realised:** `36b20ab` shipped the F-34 pool-exhaustion code + the peer
+  auto-shipment workstream + a UI/content redesign as one indivisible unit — they can no longer
+  be reverted independently.
+- **Recommendation (Phase 2 process item):**
+  1. Protect `main` — no direct pushes; changes land via PR.
+  2. One branch per workstream; no `git add -A` in a shared tree — stage explicit paths.
+  3. Add a CI job (`npm ci && npm test && npm run build` + `tsc --noEmit`) as a **required
+     check** before merge, and ideally gate `deploy.yml` on it (or run `npm test` inside the
+     deploy script before the build, failing closed).
+  4. If multiple agent sessions must share a tree, give each its own git worktree.

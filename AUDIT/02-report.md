@@ -1,8 +1,8 @@
 # AUDIT / 02 — Phase 2 Report
 
-Date: 2026-09-03. Basis: `AUDIT/00-map.md` (Phase 0 recon) + `AUDIT/01-findings.md` (Phase 1,
-the running evidence log — every claim here is cross-referenced there). Repo at `dc1ddf7`
-(+ local audit commits `2e45a83`…). Production HEAD tracked separately by the team.
+Date: 2026-09-03 (rev. 2 — F-34/F-35/F-36 added). Basis: `AUDIT/00-map.md` (Phase 0 recon) +
+`AUDIT/01-findings.md` (Phase 1, the running evidence log — every claim here is cross-referenced
+there). `main` at `36b20ab` (auto-deployed) + local audit commits. Area H still outstanding.
 
 This report is a summary and a plan. `01-findings.md` is the authority for detail, code
 locations, and verification method.
@@ -28,10 +28,12 @@ file that no alert watches.
    has been placed since, so the fix is unproven, and the *class* of problem — a shipment
    failure that only a `console.error` records — is still there. (**F-21**, now P1.)
 
-2. **The mobile app is dead.** The shipped Android app has the backend address hardcoded to a
-   Vercel URL that no longer resolves (the Vercel account was deleted). Any dealer who installed
-   it, or downloads it from the website, gets an app that cannot reach any server at all.
-   (**F-31**, P1.)
+2. **The mobile app is dead, and can't be re-published as-is.** The shipped Android app has the
+   backend address hardcoded to a Vercel URL that no longer resolves (the Vercel account was
+   deleted) — any dealer who installed it gets an app that reaches no server at all (**F-31**,
+   P1; fix written, held). And every "release" build is signed with the Android SDK's *debug*
+   key, which the Play Store rejects outright — so the pending organisation-account publication
+   is blocked until that's fixed too (**F-35**, P1). Both must land in one rebuild.
 
 3. **Rate limiting never ran.** The app was configured to use Redis for cluster-wide rate
    limiting, but Redis was never installed on the server. For the entire life of the product,
@@ -53,9 +55,16 @@ reachable** — because shipping never worked, there was never a real parcel to 
 migration history is clean (disaster recovery works). The secrets that leaked into git history
 in June are a real exposure, but there's still no confirmation they were rotated (**F-01**).
 
-**What to do, in order:** fix the mobile app's backend URL (F-31), make shipping failures
-visible and verify the shipping fix on a real order (F-21), confirm the June secrets were
-rotated (F-01), harden the Delhivery webhook before turning it on (F-24), then the payment
+**One process problem underneath several of these.** Multiple people/sessions commit to one
+shared copy of the code, everything goes straight to the live branch, and that branch deploys
+itself with no test run in between. That's how a set of known-failing tests reached production,
+and how three commits each titled "all" shipped unrelated changes fused together. Fixing the
+way changes reach production (**F-36**) matters as much as any single bug.
+
+**What to do, in order:** fix the mobile app's backend URL and signing so a working build can
+ship (F-31 + F-35), make shipping failures visible and verify the shipping fix on a real order
+(F-21), confirm the June secrets were rotated (F-01), put a test gate in front of production
+deploys (F-36), harden the Delhivery webhook before turning it on (F-24), then the payment
 lifecycle work (W-1). Everything else is P2/P3 cleanup.
 
 ---
@@ -69,13 +78,13 @@ Legend: 🟢 healthy · 🟡 issues, contained · 🟠 material gaps · 🔴 ser
 | **A — Auth / authz** | 🟠 | Route matrix complete (~146/146 at the authz line). `/api/*` is not covered by middleware — every route self-checks, and it's *mostly* done consistently, but F-06 (staff dept check), F-14/F-18 (session revocation), F-15 (email-change takeover), and the O-1 staff-nav-vs-API cluster remain. |
 | **B — Payments / money** | 🟠 | Razorpay live. F-05 fixed; transaction discipline in the money paths is good; Float money model has only cosmetic issues (H4). Open: F-21 (shipping billed but never ships), F-28 (manual payments have no ledger row → refunds break), F-29 (hardcoded bank details), F-11 (GST invoice rounding), W-1. |
 | **C — Shipping / Delhivery** | 🔴 | The integration has **never worked in production** (F-21). F-24 (forgeable webhook) blocks turning on live tracking. F-03 (duplicate AWB) partly fixed. F-17 (false "shipped") partly fixed. Everything here needs the fix *and* a way to see failures. |
-| **D — Data layer** | 🟡 | H6 migration drift **RESOLVED — no drift, DR works**. Money-path transactions are correct. Open: F-24 (unguarded status writers), F-25 (missing indexes — now unblocked), F-30 (procurement/CRM not transactional). Admin page query cost not measured (needs Area H). |
+| **D — Data layer** | 🟡 | H6 migration drift **RESOLVED — no drift, DR works**. Money-path transactions are correct. Open: F-24 (unguarded status writers), F-25 (missing indexes — now unblocked), F-30 (procurement/CRM not transactional), F-34 (Delhivery HTTP call held inside a Prisma transaction — now deployed). Admin page query cost not measured (needs Area H). |
 | **E — API validation / errors / rate-limit** | 🟠 | F-22: ~90 mutating routes have no input-validation layer (`parseInt` → NaN → 500, no body schema) — a planned rollout, not piecemeal patches. F-13, F-16, F-19, F-20, F-23 are the individually-notable instances. |
 | **F — Next.js 15** | 🟢 | Clean. Async `params`/`searchParams` handled correctly everywhere; tsc passes. The only Next-shaped issues are S-09 (admin pages baked at build) and O-8. |
 | **G — Caching / Redis** | 🟡 | Redis is used *only* for rate limiting and **was never installed** (F-27) — now fixed operationally. No application cache layer at all (O-8): `/api/vehicles` is cached 24h with no invalidation, everything else is uncached per-request Prisma. Fine at current scale, a cliff later. |
 | **H — Web UI / UX** | ⬜ | **Not assessed.** Needs the app running against a database; the audit environment has neither a local DB nor a tunnel. Owed: admin RSC page query cost, staff-portal nav behaviour (O-1/S-03/S-08), a visual/UX pass. |
-| **I — Flutter mobile app** | 🔴 | F-31: the app points at a dead host → **completely non-functional**. F-32 (says "Payment successful" when it wasn't), F-33 (spurious logout on token expiry). O-9 minor items. |
-| **J — Ops & security** | 🟠 | F-27 (missing infra undetected), O-10 (backups never verified or alerted on), F-23 (health endpoint leaks errors), S-09 (build fragility). DR **confirmed working** (H6). Secrets: F-01 rotation still unconfirmed. |
+| **I — Flutter mobile app** | 🔴 | F-31: the app points at a dead host → **completely non-functional** (fix on a held branch). F-35: release builds are debug-signed → can't be published to the Play Store at all. F-32 (says "Payment successful" when it wasn't), F-33 (spurious logout on token expiry). O-9 minor items. |
+| **J — Ops & security** | 🟠 | F-36 (unrelated workstreams fused into `"all"` commits that auto-deploy; no CI test gate — how S-10's red tests shipped), F-27 (missing infra undetected), O-10 (backups never verified or alerted on), F-23 (health endpoint leaks errors), S-09 (build fragility). DR **confirmed working** (H6). Secrets: F-01 rotation still unconfirmed. |
 | **K — Dead weight** | 🟢 | Minor: `@cashfreepayments/cashfree-js` (unused), Shiprocket (~400 LOC dead), `src/lib/r2.ts` shim with 2 stragglers. All O-11 / F-10. |
 
 ---
@@ -93,7 +102,9 @@ Severity at time of report. "Status": ✅ fixed & verified · 🔶 partially fix
 | **F-24** | P1 | D/C | ⬜ | Delhivery webhook auth is `?token=` **in the URL** (leaks to access/proxy logs); no HMAC, no event dedupe, no state-machine guard, no compare-and-swap on the `Order.status` write, two drifted status maps. A replayed/forged event can move `CANCELLED → SHIPPED` — silently un-cancelling an already-refunded order. **Blocks turning the webhook on** (currently inert — secret unset). |
 | **F-26** | P1 | G | ✅ | `waitForReady` in the rate limiter leaked an ioredis `"ready"` listener + closure per call while Redis was unreachable → unbounded heap growth → worker OOM → PM2 crash-loop, dropping in-flight requests. Firing continuously since first deploy (Redis never ran). Fixed `303520a` + test. |
 | **F-27** | P1 | J | 🔶 | `REDIS_URL` declared and the rate limiter hard-depends on it, but **Redis was never installed** in production. `env.ts` treats it optional; the boot log falsely printed "Rate limiter: Redis"; `/api/health(/ready)` check only the DB, so the */15 cron stayed green through the whole outage. Redis installed 2026-09-03 (operational fix); the detection gap (health check covers 1 of ≥4 dependencies) remains. |
-| **F-31** | P1 | I | ⬜ | Shipped Flutter app (`v1.0.0+1`) hardcodes `kBaseUrl = 'https://motoxplus.vercel.app/api'`. The Vercel account was deleted → the host resolves to nothing → **every installed build is completely non-functional**. Production is `motoxplus.com`. |
+| **F-31** | P1 | I | 🔶 | Shipped Flutter app (`v1.0.0+1`) hardcodes `kBaseUrl = 'https://motoxplus.vercel.app/api'`. The Vercel account was deleted → the host resolves to nothing → **every installed build is completely non-functional**. Production is `motoxplus.com`. Fix on branch `fix/mobile-base-url` (`String.fromEnvironment`, prod default, `--dart-define-from-file` config) — **held** until F-35 lands so one rebuild covers both. |
+| **F-35** | P1 | I | ⬜ | `android/app/build.gradle.kts` signs `release` builds with the **debug keystore**. Play Store rejects debug-signed uploads outright → blocks the pending org-account publication (waiting on D-U-N-S). Also a security downgrade (debug keystore is public). Fix: upload keystore + `key.properties`-driven `release` signingConfig, keystore/passwords out of the repo. **Groups with F-31** — both land before any re-release. |
+| **F-36** | P1 | J | ⬜ | **Release-engineering.** Three commits titled `"all"` (`25f4797`, `c70c528`, `36b20ab`) each bundled unrelated workstreams straight to `origin/main`, which auto-deploys — because sessions share one working tree and `git add -A` sweeps in whatever is there. `deploy.yml` has **no test step** (`npm ci` → `migrate deploy` → `build` → PM2), so red tests don't block a deploy — how **S-10** reached prod. `36b20ab` fused the F-34 code + peer auto-shipment + a UI redesign into one un-revertable commit. Fix: protect `main`, PR-only, one branch per workstream, required CI check (`npm test` + `build` + `tsc`), git worktrees for parallel sessions. |
 | **F-05** | P0 | B | ✅ | `Payment → PAID` was written *before* `finalize`'s transaction; a rollback (stock sold out between capture and finalize) left the payment `PAID` with the order stuck `PENDING` forever, every webhook a no-op. Fixed `2e45a83` (write moved inside the txn; webhook returns 503 → Razorpay retries) + test. **Prod data: 0 occurrences** — real fix is W-1. |
 | **F-02** | P0→ | C/B | ➖/🔶 | Cancellation fee tier read the lagging `Order.status`, not carrier state → dealer self-cancels an in-transit order at 2%. Emergency batch shipped a carrier-aware gate (`25f4797`). **Prod data: never exploitable — 0 shipments ever existed.** Keep the fix; drop the urgency. |
 | **F-03** | P0 | C | 🔶 | `create.json` retry could create a second real AWB; concurrent calls could too. Retry variant fixed (`retries:1` + P2002 recovery, `25f4797`). Concurrent variant → peer branch `delhivery-auto-shipment-killswitch` (advisory lock) — under review, not merged. |
@@ -115,6 +126,7 @@ Severity at time of report. "Status": ✅ fixed & verified · 🔶 partially fix
 | **F-32** | P2 | I/B | ⬜ | Mobile checkout: `_onPaymentSuccess` swallows a failed `/payments/verify` and **always** shows "Payment successful!" + navigates away. On a genuine oversell (409) the dealer is misled; the webhook is the only backstop. |
 | **F-33** | P2 | I | ⬜ | Mobile: concurrent 401s (token expiry with parallel requests) trigger multiple refresh calls racing a rotating refresh token → all but the first fail → interceptor wipes storage → **spurious logout mid-session**. |
 | **S-09** | P2 | F/J | ⬜ | `next build` prerenders `/admin/staff`, `/admin/products/new`, etc. with **build-time Prisma data** → those admin pages ship with stale data until redeploy, and the build hard-fails without a reachable DB. |
+| **F-34** | P2 | D/C | ⬜ | Peer auto-shipment rewrite (landed on `main` via `36b20ab`, **deployed**): `createDelhiveryShipment` holds a pooled connection + `pg_advisory_xact_lock` for the whole `create.json` HTTP round-trip inside `prisma.$transaction({ timeout: 25_000 })`. Inert at ~0 orders/day; drains the connection pool → app-wide 500s at real shipping concurrency. Fix (Wave 2): session-scoped `pg_try_advisory_lock` → HTTP outside any txn → short persist txn. User accepted on `main`, no revert. |
 
 ### P3 (and workstreams)
 
@@ -181,16 +193,17 @@ Sequenced so nothing is blocked when you reach it. Each row: what, why now, what
 | 0.2 | **F-27** — decide: is a missing Redis a boot failure? Move `REDIS_URL` into `REQUIRED_SERVER`, or have `instrumentation-node.ts` `redis.ping()` and log the truth. | — | Redis is up now; this stops it silently regressing. |
 | 0.3 | Watch 429 rates for a few days (distributed rate limiting is now live for the first time). | Redis up (done) | Tune `RATE_LIMITS` in `rate-limit-budgets.ts` if legit dealer traffic trips `OTP_SEND perIP 8/60s` or `LOGIN perIP 20/15min`. |
 | 0.4 | Confirm no other shadow deployments exist (Vercel account deleted per user — take on trust or verify DNS/registrar). | — | Closes the F-31 shadow-production angle. |
+| 0.5 | **F-36** — stop the bleeding: protect `main` (no direct pushes), and add `npm test` to `deploy.yml` before `npm run build` (fail closed) as an immediate stopgap while proper CI is set up. | — | Cheap, and stops the next red suite / fused commit from auto-deploying. Full process fix (PRs, per-workstream branches, required CI check, worktrees) is a follow-on. |
 
 ### Wave 1 — P1, ship this week
 
 | # | Item | Depends on | Notes |
 |---|---|---|---|
-| 1.1 | **F-31** — repoint `kBaseUrl` → `https://motoxplus.com/api`; move to `String.fromEnvironment` + `--dart-define`; rebuild + re-release the APK; replace `motoxplus.com/downloads/motoxplus.apk`. | — | The mobile app is 100% down until this ships. Independent of everything else. |
+| 1.1 | **F-31 + F-35** (one rebuild) — F-31 fix is done on branch `fix/mobile-base-url` (`String.fromEnvironment`, prod default, config files). F-35: add an upload keystore + `key.properties`-driven `release` signingConfig (keystore/passwords out of git). Then rebuild + re-release the APK; replace `motoxplus.com/downloads/motoxplus.apk` and/or upload the AAB. | branch held for F-35 | The mobile app is 100% down until F-31 ships; nothing can go to the Play Store until F-35. Independent of everything else. |
 | 1.2 | **F-21 part 2** — every `createDelhiveryShipment` failure writes an `OrderEvent` **and** surfaces to an admin-visible place (a "shipment issues" list, or an alert). | peer branch `0a3d3d8` does the `OrderEvent` half | Do this even if you don't merge the peer branch — the silent `.catch(console.error)` is why nobody knew shipping was 0%. |
 | 1.3 | **F-21 part 1** — server-side pincode serviceability + sanity check in `POST /api/orders` (and gate `payments/create-order`); reject non-serviceable / implausible pincodes before payment. | `isServiceable()` already exists | Fold in F-19's caching need (serviceability calls should be cached). |
 | 1.4 | **F-21 verify** — place one real qualifying order (or a staging order against live keys with `DELHIVERY_AUTO_SHIPMENT` on) and confirm an AWB is actually produced by the *production* code path (not just the capture script). | 1.2, 1.3; peer branch decision | The fix is unproven until a real order gets a real AWB. |
-| 1.5 | **Peer branch `delhivery-auto-shipment-killswitch`** — decide: merge as-is (log the HTTP-in-transaction pool concern as a follow-up) or refactor to HTTP-outside-txn first. | review (done) | At ~0 orders/day, merging as-is is defensible. Revisit before real throughput. |
+| 1.5 | **Peer auto-shipment work** — ~~decide merge vs refactor~~ **Resolved:** landed on `main` via `36b20ab` and is deployed. User accepted it as-is; the HTTP-in-transaction pool concern is **F-34**, scheduled for Wave 2 (2.11). No action here. | — | Untangling it from the redesign edits in the same commit isn't worth it. |
 | 1.6 | **F-24** — Delhivery webhook hardening (one unit of work): HMAC on the raw body (not `?token=`), event dedupe, state-machine guard sharing `FULFILLMENT_TRANSITIONS`, compare-and-swap on the `Order.status` write, reconcile the two status maps (close the webhook half of F-17 here). | — | **Do not enable the Delhivery push URL until this ships.** Blocks live tracking. |
 
 ### Wave 2 — P2, this month
@@ -207,6 +220,7 @@ Sequenced so nothing is blocked when you reach it. Each row: what, why now, what
 | 2.8 | **F-08** — `npm audit` remediation (upgrade `next`/`sharp`; isolate or replace `xlsx` on the admin import path). | — |
 | 2.9 | **S-09** — mark the DB-backed admin pages `dynamic`/`force-dynamic` or client-fetch; make the build not depend on a reachable DB. | — |
 | 2.10 | **O-10** — backup verification (test-restore into a scratch DB in CI or a weekly job) + failure alerting. | — |
+| 2.11 | **F-34** — refactor `createDelhiveryShipment`: session-scoped `pg_try_advisory_lock` → `create.json` with **no transaction open** → short txn to persist the `Shipment` row + `→ PROCESSING`. Do this before real shipping throughput. | none (code already on `main`) |
 
 ### Wave 3 — P3 cleanup / workstreams
 
@@ -219,6 +233,29 @@ Sequenced so nothing is blocked when you reach it. Each row: what, why now, what
 - **F-10 / O-11** — delete Shiprocket, `@cashfreepayments/cashfree-js`, the `r2.ts` shim.
 - **F-11** — derive `Order.gstAmount` from the rounded per-line values.
 - **O-1..O-12, S-01..S-05, S-08** — batch by area; several are one-liners (existence checks, `parseInt` guards) and several need the Area-H product calls (O-1, O-2, O-7).
+
+### Process item — release engineering (F-36)
+
+Not a code fix; a way-of-working fix. It caused two concrete production incidents this audit
+already documents:
+
+- **S-10** — a branch with two failing tests was deployed because `deploy.yml` never runs the
+  test suite (it does `npm ci` → `prisma migrate deploy` → `npm run build` → PM2 reload).
+- **`36b20ab`** — a commit literally titled `"all"` fused three unrelated workstreams (the
+  F-34 auto-shipment code, the kill-switch work, and a UI/content redesign) and auto-deployed
+  them as one unit that can no longer be reverted independently. It's the third such `"all"`
+  commit (`25f4797`, `c70c528`, `36b20ab`).
+
+Root cause: multiple agent/dev sessions share a single working tree on one machine, changes go
+straight to `main`, `main` auto-deploys, and there is no gate in between.
+
+Recommended:
+1. Protect `main` — changes land via pull request, not direct push.
+2. One branch per workstream. Never `git add -A` / `git add .` in a shared tree — stage explicit
+   paths. Give each parallel session its own `git worktree`.
+3. A required CI check before merge: `npm ci && npm test && npx tsc --noEmit && npm run build`.
+4. Gate `deploy.yml` on that check passing (or, minimum, run `npm test` inside the deploy
+   script and fail closed before the build).
 
 ### Not yet plannable — needs Area H (a running app)
 
@@ -249,7 +286,7 @@ Sequenced so nothing is blocked when you reach it. Each row: what, why now, what
 - The admin vehicle-CMS route tree (~40 routes) — spot-checked only (all go through `requireAdmin()` = `["ADMIN","SUPER_ADMIN"]`); assumed uniform.
 - Client-side React components beyond the action-components and checkout.
 
-**Numbers:** ~146 API routes · 66 Prisma models · 30 enums · 7 migrations · 22 Flutter files · 173 passing tests (+ audit additions) · findings F-01…F-33, S-01…S-10, O-1…O-12, W-1.
+**Numbers:** ~146 API routes · 66 Prisma models · 30 enums · 7 migrations · 22 Flutter files · 173 passing tests (+ audit additions) · findings F-01…F-36, S-01…S-10, O-1…O-12, W-1.
 
 ---
 
@@ -271,7 +308,7 @@ Sequenced so nothing is blocked when you reach it. Each row: what, why now, what
 
 ## 7. Confidence notes
 
-- **High confidence:** F-01, F-05, F-21 (root cause), F-24, F-26, F-27, F-31, H6-resolved, the "0 shipments / F-02-F-04 never reachable" conclusion — all directly verified in code, git history, or prod data.
+- **High confidence:** F-01, F-05, F-21 (root cause), F-24, F-26, F-27, F-31, F-35 (read `build.gradle.kts`), F-36 (read `deploy.yml` — no test step; three `"all"` commits in `git log`), H6-resolved, the "0 shipments / F-02-F-04 never reachable" conclusion — all directly verified in code, git history, or prod data.
 - **Medium:** F-08 (audit output, not exploit-tested), F-17 remainder (webhook path dormant), F-32/F-33 (Flutter code read, not run), the peer-branch pool concern (analysis, not load-tested).
 - **Lower / needs Area H:** O-1, S-03, S-08 (broken flow vs cosmetic — undetermined), admin page perf.
 - **Taken on trust from the user:** Vercel account deleted (F-31 shadow-prod angle); `RAZORPAY_WEBHOOK_SECRET` set in prod; scratch-DB was a faithful prod restore.
