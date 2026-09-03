@@ -33,7 +33,7 @@ Legend: ✅ fully read · 🟡 partially read / key files only · ⬜ not yet
 | C shipping | ✅ code / 🟡 vs live | `client/shipment/tracking/cancel/webhook/serviceability/rates` read; reconciled with `docs/delhivery-audit.md`. |
 | D data layer | ✅ (API) / 🟡 (RSC) | §4e + §12: `Order.status` writers (F-24), N+1 clear in API routes, index gaps (F-25, now unblocked), `decrementStock` guard confirmed, **H6 RESOLVED (no drift)**, **txn sweep done → F-30** (procurement/CRM), **F-29** (`upi/[orderId]` hardcoded bank details). Owed: `admin/*` RSC page query cost (Area H, needs app running). |
 | E API surface (validation/errors/rate-limit table) | 🟡 | §4d done: validation coverage (7/~120 use zod → F-22), rate-limit tier table (E-2), error-handling spot notes (E-3). Per-route error-leak pass still owed. |
-| F Next.js 15 | 🟡 | folded into G/S-09: no `unstable_cache`; RSC pages dynamic-via-`searchParams` or build-prerendered (S-09). Dedicated Next-15 sweep (async params everywhere, `use client` boundaries) ⬜ low-priority |
+| F Next.js 15 | ✅ | §13: sweep done — all pages/routes correctly `await` `Promise<params/searchParams>`, tsc clean, no `use client`/async mix. No new findings; Next-specific issues are S-09 + O-8. |
 | G Redis / caching | ✅ | §9.3 + §13: Redis = rate-limiter only (H5/F-26/F-27). Cache inventory done → **O-8** (`api/vehicles` 24h no-invalidation; `POST /products` no revalidate; else uncached per-request Prisma). |
 | H web UI | ⬜ | **BLOCKED — needs a running app + DB.** Local `:5433` dead, `:5432` is a different PG, no tunnel. Owed: RSC page query cost, O-1/S-03/S-08 staff-nav checks, visual pass. Needs user to run `npm run dev` against a DB or provide a tunnel. |
 | I Flutter app | ✅ | §14: **F-31** (wrong backend host — vercel.app), **F-32** (fake "Payment successful"), **F-33** (concurrent-refresh logout), O-9. |
@@ -459,7 +459,7 @@ auth/authz line of **every** `route.ts` (all ~146). Segment-1 conventions apply.
 | F-28 | **P2** | B | `src/app/api/admin/payments/[id]/verify/route.ts:54-92` (writes `Order.paymentStatus='PAID'` + `Invoice`, **no `Payment` row**); refund path `src/app/api/orders/[id]/cancel/route.ts:207-218`, `src/app/api/admin/refunds/[id]/retry/route.ts:32-38` | Manual UPI/bank-transfer verification marks an order fully paid with no `Payment` row (manual payments live in `PaymentSubmission`). `Payment` is Razorpay-only. Confirmed in prod: order `MXP35620539125` — `paymentStatus PAID`, `amountPaid 101.18`, 0 `Payment` rows (§12). Grep confirms only 2 code paths write `paymentStatus='PAID'`: `finalize.ts` (Razorpay, row exists) and this one (no row). | Cancellation-with-refund of a manually-paid order **always** dead-ends at `refundStatus: FAILED / "No Razorpay-captured payment found"` → every one needs out-of-band handling. Any receipts/revenue figure from the `Payment` table omits all manual payments. Not corruption — a ledger design gap. Fix: write a `Payment` row on manual verify (cleanest), or teach refund + reporting to read `PaymentSubmission`. Phase 3. | data (§12) + grep `paymentStatus:` + code trace |
 | F-29 | **P2** | B/J | `src/app/api/payments/upi/[orderId]/route.ts:48-58` | Dealer-facing payment page falls back to **hardcoded real bank/UPI identifiers** (`bankAccountNumber "7834839071"`, `bankIfsc "AIRP0000001"`, `upiId "5118678468276SB1024@mairtel"`) when the `Setting` rows are absent — the exact opposite of sibling `payments/upi/qr` which deliberately fails closed. | If Settings drift/clear, dealers are shown a possibly-stale account to pay into and it looks legitimate → money to an account MotoXplus may not control. Plus those identifiers are now permanently in git history (F-01 family). Fix: fail closed like `payments/upi/qr`; scrub literals. | file read (both routes) — §13 D-5 |
 | F-30 | **P3** | D/E | `src/app/api/crm/leads/[id]/convert/route.ts:35-79`, `src/app/api/procurement/grn/route.ts:49-91`, `src/app/api/procurement/purchase-orders/route.ts:75-110` | Procurement & CRM multi-write mutations are **not `$transaction`-wrapped** and lack input validation. `convert`: user+dealer created but lead not marked CONVERTED on a mid-sequence failure → lead permanently un-convertible via UI; concurrent double-submit → unhandled `P2002` 500. `grn`/`purchase-orders`: PO/PR status left stale; `parseInt`/`parseFloat` with no NaN guard → 500; no FK-existence check → P2003 500. | Admin/vendor-only, low volume, hand-recoverable. Partial-write states + 500s on bad input. Fix: `$transaction` + guarded `updateMany` + F-22 validation layer. | code trace — §13 D-4 |
-| F-31 | **P1** | I/J | `motoxplus_app/lib/core/api/api_client.dart:4` | Shipped mobile app (`version 1.0.0+1`) hardcodes `kBaseUrl = 'https://motoxplus.vercel.app/api'`. Production is `https://motoxplus.com` (VPS+nginx+PM2 — `.env`, `health.yml`, `deploy.yml`, `next.config.mjs`). | Either the mobile app **can't reach the backend at all** (bricked — login/refresh/launch all fail), or there is a **shadow Vercel production** nobody monitors, possibly running pre-emergency-batch code + F-01 leaked secrets. User must confirm whether `motoxplus.vercel.app` exists and kill it if so. Fix `kBaseUrl` → `motoxplus.com/api` + move to `--dart-define`. | file read + cross-check (`.env`, `health.yml`, `deploy.yml`) — §14 |
+| F-31 | **P1** | I | `motoxplus_app/lib/core/api/api_client.dart:4` | Shipped mobile app (`version 1.0.0+1`) hardcodes `kBaseUrl = 'https://motoxplus.vercel.app/api'`. **Shadow-production risk RESOLVED 2026-09-03 (user): the Vercel account was deleted — `motoxplus.vercel.app` resolves to nothing, no unmonitored deployment, no pre-patch code, no secret exposure.** But that makes the finding **worse, not better**: the domain is now dead, so **every installed build of the mobile app is completely non-functional** — DNS fails, no backend reachable, launch / login / token-refresh all fail. Production is `https://motoxplus.com`. | The dealer mobile app is **dead for everyone who has it installed** (and for anyone who downloads `motoxplus.com/downloads/motoxplus.apk`). Fix: (1) `kBaseUrl` → `https://motoxplus.com/api`; (2) move it to build-time config (`String.fromEnvironment` / `--dart-define` / flavor) so staging-vs-prod is never a source edit and this can't recur; (3) rebuild + re-release the APK and replace the download at `motoxplus.com/downloads/motoxplus.apk`. | file read + cross-check (`.env`, `health.yml`, `deploy.yml`); Vercel deletion per user — §14 |
 | F-32 | **P2** | I/B | `motoxplus_app/lib/features/checkout/checkout_screen.dart:141-158` | `_onPaymentSuccess` calls `POST /payments/verify` inside `try{}catch(_){}` (swallows all), then **unconditionally** shows "Payment successful!" and navigates to `/orders`. | On a failed verify (409 oversell / 5xx / timeout) the dealer is told it worked. The Razorpay webhook (live) is the only backstop and can't finalize a genuine oversell. Fix: check the response, show a pending/error state. | file read — §14 |
 | F-33 | **P2** | I | `motoxplus_app/lib/core/api/api_client.dart:29-46` | Dio `onError` 401 handler calls `_refreshToken()` with **no single-flight lock**. Concurrent 401s (access token expiry with parallel requests) → multiple `POST /mobile/auth/refresh` racing a rotating refresh token → all but the first fail → interceptor falls to `_storage.deleteAll()`. | Dealer is spuriously logged out mid-session whenever the 15-min token expires during concurrent requests (e.g. dashboard load). Fix: share one refresh `Future`. | file read — §14 |
 | O-1..O-6 | — | A/E | see "Observations" below | Consistency observations, not defects — logged so Phase 2 can decide. | — | code trace |
@@ -711,23 +711,26 @@ silently receiving real customer payments is worse than a visible configuration 
 
 ### Area I — Flutter app (`motoxplus_app/`, 22 `.dart` files, `version: 1.0.0+1`)
 
-**F-31 (P1, I/J) — the shipped mobile app points at the wrong backend host.**
+**F-31 (P1, I) — the shipped mobile app is non-functional (dead backend host).**
 `motoxplus_app/lib/core/api/api_client.dart:4`: `const String kBaseUrl =
 'https://motoxplus.vercel.app/api';` — a hardcoded compile-time constant, no
 flavor/`--dart-define`. **Production is `https://motoxplus.com`** (VPS + nginx + PM2):
 `.env` `NEXTAUTH_URL` / `NEXT_PUBLIC_APP_URL`, `health.yml` checks `https://motoxplus.com`,
 `deploy.yml` → `/var/www/motoxplus` on `VPS_HOST`, `next.config.mjs`. The APK is offered to
-dealers at `motoxplus.com/downloads/motoxplus.apk`. Two possibilities, both bad:
-- `motoxplus.vercel.app` is dead/stale → **the mobile app cannot reach the backend at all** —
-  every request (incl. login, token refresh, `loadCurrentUser` on launch) fails → the app is
-  effectively bricked (forced to `/login`, login also fails).
-- `motoxplus.vercel.app` is a **live Vercel deployment** of this codebase → **shadow
-  production**: mobile talks to Vercel, web talks to the VPS; nobody monitors the Vercel one
-  (`health.yml` only checks `motoxplus.com` + `127.0.0.1:3000`); if it predates the emergency
-  batch it's running F-02/F-03/F-05/F-14 **unfixed** and holds the F-01 leaked secrets. **User
-  must confirm whether this Vercel deployment exists and, if so, kill it.**
-  Fix: `kBaseUrl` → `https://motoxplus.com/api`, rebuild, re-release; move it to
-  `--dart-define`/flavor so staging vs prod isn't a source edit.
+dealers at `motoxplus.com/downloads/motoxplus.apk`.
+
+**Shadow-production risk: RESOLVED** (user, 2026-09-03) — the Vercel account was deleted, so
+there is no unmonitored deployment, no pre-patch code path, no secret exposure via Vercel.
+**But the finding is now worse:** `motoxplus.vercel.app` resolves to nothing → **every
+installed build of the mobile app is completely non-functional.** `_init()` in `main.dart`
+calls `loadCurrentUser()` on every launch → DNS failure → caught → `AuthState()` → router
+redirects to `/login` → login also fails → the app is a dead shell. Anyone who has the APK
+installed, or downloads it from the site, gets this.
+
+Fix: (1) `kBaseUrl` → `https://motoxplus.com/api`; (2) move it to build-time config
+(`String.fromEnvironment('API_BASE_URL', defaultValue: …)` + `--dart-define`, or a flavor) so
+staging-vs-prod is never a source edit and a stale host can't recur; (3) rebuild + re-release
+the APK and replace `motoxplus.com/downloads/motoxplus.apk`.
 
 **F-32 (P2, I/B) — mobile checkout tells the dealer "Payment successful!" even when verify
 fails.** `checkout_screen.dart:141-158` — `_onPaymentSuccess` calls `POST /payments/verify`
@@ -785,6 +788,59 @@ fix with a single-flight refresh (share one `Future`).
 - Secret-in-`console.*` spot check (auth paths read: `credentials.ts`, `otp.ts`, `jwt.ts`,
   `finalize.ts`, webhooks): **none log plaintext OTP / password / token / signature.** F-23 is
   error-*message* disclosure, not secret logging. (Full grep sweep still owed.)
+
+### Area F / low-value sweeps (2026-09-03)
+
+- **Next.js 15 sweep — CLEAN.** Every `page.tsx` / route handler correctly types
+  `params` / `searchParams` as `Promise<…>` and `await`s them (`products/page.tsx`,
+  `products/[slug]/page.tsx`, `vehicles/[category]/**`, all API routes). `tsc --noEmit` passes.
+  No sync-params anti-pattern, no `use client` on an async component. Area F closes with **no
+  new findings** — the Next-specific issues are S-09 (admin pages prerendered with build-time
+  Prisma data) and O-8 (no caching strategy), both already logged.
+- **Secret-logging grep — CLEAN.** No plaintext password / token / JWT / HMAC signature / OTP
+  written to logs in a production path. The one candidate, `src/lib/sms/index.ts:56-64`, is
+  **correctly prod-gated**: production takes `logger.error("… OTP send skipped", { mobile,
+  provider })` (no code); the plaintext-OTP `console.warn` is the `else` (non-prod) branch,
+  with an explicit comment. `src/lib/logger.ts` is well-built (NDJSON to stdout in prod, strips
+  stack traces in prod). `payments/verify` / webhooks log Razorpay/Delhivery **IDs** (not
+  secrets) — useful for reconciliation, fine.
+  - **O-12 (P3) — logging inconsistency:** ~40 routes + `src/lib/email/index.ts` call
+    `console.error` / `console.log` directly instead of `logger` / `logError`, violating the
+    codebase's own stated rule ("Never use console.log / console.error directly in application
+    code" — `logger.ts:5`). `email/index.ts` also logs recipient addresses at info level
+    (`console.log` directly). Consistency + minor PII-in-logs; not a security defect.
+- **Unused-export sweep — partial / low-value.** No `knip` / `ts-prune` configured; a proper
+  pass needs one. Spot-check of `src/lib/delhivery` + `src/lib/orders`: the low-reference-count
+  exports (`buildShipmentPayload`, `buildCreateShipmentRequest`, `buildPickupLocation`) are used
+  by `scripts/delhivery-capture.ts` (outside `src/`, intentional per their doc comment); a few
+  (`stageOf`, `CARRIER_STALE_DAYS_SETTING_KEY`, `PRE_SHIP_CARRIER_STATUS_CODE_PREFIXES`) are
+  referenced only by their own module + tests. **No material dead code** beyond the known set:
+  Shiprocket (F-10), `@cashfreepayments/cashfree-js` (O-11), `src/lib/r2.ts` shim (O-11).
+  Not worth a deeper pass.
+
+### Peer branch under review — `delhivery-auto-shipment-killswitch` (`0a3d3d8`, NOT merged)
+
+A parallel session (`motoxplus-app-49`) built the `DELHIVERY_AUTO_SHIPMENT` kill switch +
+DB-level idempotency for `createDelhiveryShipment`. Reviewed the actual diff (read from the
+branch, not from the peer's summary):
+- **Good:** kill switch (default ON, admin `POST /api/admin/shipments` bypasses it),
+  `autoCreateShipment()` never throws + writes `SHIPMENT_CREATED` / `SHIPMENT_FAILED` /
+  `SHIPMENT_AUTO_SKIPPED` to `OrderEvent` (F-21 part-2, partial), fast-path pre-check before the
+  txn, `pg_advisory_xact_lock(hashtext('delhivery:shipment:'+orderId))` + in-lock existence
+  re-check genuinely closes the **F-03 concurrent-create variant**, P2002 kept as backstop,
+  `updateMany` status guard on the `→ PROCESSING` write.
+- **Concern (flagged to the peer, not a merge blocker at current ~0 order/day volume):**
+  `create.json` (up to 15 s) runs **inside `prisma.$transaction`** (`{ timeout: 20_000 }`)
+  while a pooled DB connection **and** the advisory lock are held for the whole HTTP round-trip.
+  Classic "no I/O in a transaction" — under real throughput a slow Delhivery exhausts the
+  Prisma pool → app-wide DB timeouts. Better: session-level `pg_try_advisory_lock` (or a tiny
+  claim txn) → HTTP outside any txn → short final txn to persist. → **log as F-21/F-03
+  follow-up if merged as-is.**
+- **`OrderEvent` is still not rendered in any admin/dealer UI** (peer noted this) → F-21
+  "surface the failure" is ~40% done: queryable, not visible. A minimal admin "shipment issues"
+  view or a `SHIPMENT_FAILED` → alert is the other half.
+- Residual "commit-fails-after-create.json-succeeds" = F-03's duplicate-AWB class, narrowed;
+  invisible in practice until `OrderEvent` is surfaced.
 
 ### Area K — dead weight
 
