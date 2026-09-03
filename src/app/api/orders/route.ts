@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateOrderNumber, generateInvoiceNumber, roundToPaise } from "@/lib/utils";
-import { createDelhiveryShipment } from "@/lib/delhivery";
+import { autoCreateShipment } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
@@ -250,13 +250,14 @@ export async function POST(req: NextRequest) {
   // Clear cart
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-  // COD: auto-create Delhivery shipment (fire-and-forget, don't block response)
+  // COD orders are born CONFIRMED — auto-create the Delhivery shipment and
+  // notify the dealer, exactly as the prepaid path does once payment lands.
+  // Both are fire-and-forget: a Delhivery outage must never fail order
+  // placement. autoCreateShipment is gated by DELHIVERY_AUTO_SHIPMENT, records
+  // its outcome on OrderEvent, and is idempotent (advisory lock in
+  // createDelhiveryShipment).
   if (isCOD) {
-    createDelhiveryShipment(order.id).catch((err) => {
-      console.error(`[Delhivery] COD shipment creation failed for order ${order.id}:`, err);
-    });
-    // COD orders are born CONFIRMED — notify the dealer just like the prepaid
-    // path does once payment lands (fire-and-forget; never throws).
+    void autoCreateShipment(order.id);
     void notifyOrderEvent(order.id, "ORDER_CONFIRMED");
   }
 

@@ -227,7 +227,7 @@ export default function TermsPage() {
                   Email:{" "}
                   <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>
                 </p>
-                <p className="text-[var(--muted)] text-sm">Phone: +91 92171 31801</p>
+                <p className="text-[var(--muted)] text-sm">Phone: +91 88168 12379</p>
               </div>
             </Section>
           </div>

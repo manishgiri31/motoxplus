@@ -16,9 +16,9 @@ vi.mock("@/lib/utils", async (importOriginal) => {
   return { ...actual, generateInvoiceNumber: () => "INV-TEST-1" };
 });
 
-const createDelhiveryShipmentMock = vi.fn().mockResolvedValue({ waybill: "x", trackingUrl: "y" });
+const autoCreateShipmentMock = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/delhivery", () => ({
-  createDelhiveryShipment: (...a: unknown[]) => createDelhiveryShipmentMock(...a),
+  autoCreateShipment: (...a: unknown[]) => autoCreateShipmentMock(...a),
 }));
 
 const notifyOrderEventMock = vi.fn().mockResolvedValue(undefined);
@@ -87,7 +87,7 @@ describe("finalizeCapturedPayment — F-05 (Payment→PAID inside the transactio
     // The only PAID write was on the tx client — it rolls back with the transaction.
     // Nothing was written on the top-level client that would outlive the rollback.
     expect(prismaMock.payment.updateMany).not.toHaveBeenCalled();
-    expect(createDelhiveryShipmentMock).not.toHaveBeenCalled();
+    expect(autoCreateShipmentMock).not.toHaveBeenCalled();
     expect(notifyOrderEventMock).not.toHaveBeenCalled();
   });
 
@@ -107,6 +107,6 @@ describe("finalizeCapturedPayment — F-05 (Payment→PAID inside the transactio
 
     expect(res).toEqual({ alreadyProcessed: true, invoiceNumber: "INV-EXISTING" });
     expect(decrementStockMock).not.toHaveBeenCalled();
-    expect(createDelhiveryShipmentMock).not.toHaveBeenCalled();
+    expect(autoCreateShipmentMock).not.toHaveBeenCalled();
   });
 });

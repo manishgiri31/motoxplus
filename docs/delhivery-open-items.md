@@ -17,18 +17,28 @@ unwired library primitive. When this gets wired up, the order matters: call
 Delhivery first, compute/issue the refund only once that's accepted — not
 the other way around, and not in parallel.
 
-## 2. create.json can still be auto-retried into a duplicate shipment
+## 2. create.json duplicate-shipment risk — RESOLVED (2026-09-03)
 
-**Why it matters**: `delhiveryPost` (used by `createDelhiveryShipment`) calls
-`delhiveryFetch`, which retries up to 3x by default on 5xx/network errors.
-There's no path- or method-based exception for `POST /api/cmu/create.json`.
-Delhivery may have already accepted the first attempt before a timeout or
-5xx reaches the client — a retry there can create a second real shipment.
+**Was**: `delhiveryPost` retried `POST /api/cmu/create.json` up to 3x by
+default, and two entry points (auto trigger on order confirmation, manual
+admin trigger) could both pass the "does a Shipment row exist?" check and
+both POST create.json — either path minting a second real AWB that the
+`Shipment.orderId` unique constraint would then only hide.
 
-**Status**: still open. Flagged in the original Phase 0 audit
-(`docs/delhivery-audit.md`) and again while building `cancel.ts` today
-(confirmed still live by re-reading `client.ts`). Not fixed in either pass —
-out of scope both times, but now flagged three times across two documents.
+**Fix**:
+- `createDelhiveryShipment` passes `retries: 1` to `delhiveryPost` (single
+  attempt, no repeat) — closes the retry variant.
+- The create path now runs inside a Prisma interactive transaction that first
+  takes a Postgres transaction-scoped advisory lock
+  (`pg_advisory_xact_lock(hashtext('delhivery:shipment:<id>'))`), re-checks
+  for an existing Shipment row, and only then calls create.json — closes the
+  concurrent variant. A fast-path row read outside any transaction keeps the
+  common re-entrant case cheap. The unique constraint stays as a last-resort
+  backstop (`P2002` handler).
+- Both auto call sites go through `autoCreateShipment` (never throws, gated by
+  `DELHIVERY_AUTO_SHIPMENT`, records outcome on `OrderEvent`).
+
+See `src/lib/delhivery/shipment.ts`, `auto-shipment.ts`, and their tests.
 
 ## 3. normalizeShipmentStatus has no "not picked" mapping
 
@@ -55,6 +65,14 @@ handling breaks entirely) and the type will reject a real, valid response.
 (`src/lib/delhivery/types.ts`, `DelhiveryShipment.OrderType`). Needs a real
 COD shipment capture to confirm and extend the union — do not guess the
 literal ahead of that.
+
+**Now more likely to be hit** (2026-09-03): `createDelhiveryShipment` sends
+`payment_mode: "COD"` for both pure COD orders AND `ADVANCE_20` orders (the
+80% balance is collected on delivery — `cod_amount = order.amountDue`). COD
+create.json / tracking is now a live path, not a hypothetical one. The
+tracking parser does not runtime-validate `OrderType`, so a COD literal
+won't crash — but capture the first real COD shipment's tracking response
+and extend the union.
 
 ## 5. DelhiveryConsignee.Address1 / Address2 populated shape is unverified
 

@@ -185,7 +185,7 @@ export default function PrivacyPolicyPage() {
                   Email:{" "}
                   <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>
                 </p>
-                <p className="text-[var(--muted)] text-sm">Phone: +91 92171 31801</p>
+                <p className="text-[var(--muted)] text-sm">Phone: +91 88168 12379</p>
                 <p className="text-[var(--muted)] text-sm">GSTIN: 07AAUCM5765B1Z4</p>
               </div>
             </Section>

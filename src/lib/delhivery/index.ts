@@ -1,6 +1,7 @@
 export { checkServiceability, isServiceable } from "./serviceability";
 export { calculateShippingRate, calculateOrderWeight } from "./rates";
 export { createDelhiveryShipment } from "./shipment";
+export { autoCreateShipment, isAutoShipmentEnabled } from "./auto-shipment";
 export { fetchLiveTracking, fetchTrackingDetail, syncTrackingToDb, mapTrackingDetail } from "./tracking";
 export { processDelhiveryWebhook } from "./webhook";
 export { cancelDelhiveryShipment } from "./cancel";

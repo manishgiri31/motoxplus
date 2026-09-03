@@ -48,7 +48,7 @@ export function ContactSection() {
           <div className="space-y-4">
             {[
               { icon: MapPin, title: "Our Office", detail: process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "India" },
-              { icon: Phone, title: "Call Us", detail: process.env.NEXT_PUBLIC_COMPANY_PHONE || "+91 98765 43210" },
+              { icon: Phone, title: "Call Us", detail: process.env.NEXT_PUBLIC_COMPANY_PHONE || "+91 88168 12379" },
               { icon: Mail, title: "Email Us", detail: process.env.NEXT_PUBLIC_COMPANY_EMAIL || "info@motoxplus.com" },
             ].map((item) => (
               <Card key={item.title} pad="md" className="flex items-start gap-4">

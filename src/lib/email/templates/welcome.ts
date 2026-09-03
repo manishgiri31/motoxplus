@@ -27,7 +27,7 @@ export function welcomeTemplate(name: string, email: string, accountType: "deale
     </ul>
     <hr class="divider" />
     <p class="small">Account Email: <span style="color:#e5e5e5;">${email}</span></p>
-    <p class="small">If you have questions, contact us at support@motoxplus.in or WhatsApp: +91 92171 31801</p>
+    <p class="small">If you have questions, contact us at support@motoxplus.in or WhatsApp: +91 88168 12379</p>
   `;
   return baseTemplate("Welcome to MOTOXPLUS India", content);
 }

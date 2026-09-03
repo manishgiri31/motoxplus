@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
-import { createDelhiveryShipment } from "@/lib/delhivery";
+import { autoCreateShipment } from "@/lib/delhivery";
 import { decrementStock } from "@/lib/orders/stock";
 import { notifyOrderEvent } from "@/lib/push/order-notifications";
 
@@ -99,14 +99,12 @@ export async function finalizeCapturedPayment(params: {
     return { alreadyProcessed: true, invoiceNumber: existing?.invoiceNumber ?? null };
   }
 
-  // Only the call that actually made the transition triggers shipment
-  // creation — createDelhiveryShipment also independently guards against a
-  // second Shipment row per order (throws "Shipment already exists"), but
-  // skipping the call entirely here avoids a guaranteed-to-fail Delhivery
-  // API round-trip on the second (already-processed) caller.
-  createDelhiveryShipment(orderId).catch((err) => {
-    console.error(`[Payments] Shipment creation failed for order ${orderId}:`, err);
-  });
+  // Only the call that actually made the PENDING -> CONFIRMED transition
+  // triggers auto shipment creation. autoCreateShipment never throws (a
+  // Delhivery outage must not un-finalize a captured payment), is gated by
+  // DELHIVERY_AUTO_SHIPMENT, records the outcome on OrderEvent, and is itself
+  // idempotent (advisory lock + unique constraint in createDelhiveryShipment).
+  void autoCreateShipment(orderId);
 
   // Only the call that actually performed the PENDING -> CONFIRMED transition
   // notifies the dealer (fire-and-forget; notifyOrderEvent never throws).
