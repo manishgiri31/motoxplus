@@ -126,6 +126,7 @@ Severity at time of report. "Status": ✅ fixed & verified · 🔶 partially fix
 | **F-32** | P2 | I/B | ⬜ | Mobile checkout: `_onPaymentSuccess` swallows a failed `/payments/verify` and **always** shows "Payment successful!" + navigates away. On a genuine oversell (409) the dealer is misled; the webhook is the only backstop. |
 | **F-33** | P2 | I | ⬜ | Mobile: concurrent 401s (token expiry with parallel requests) trigger multiple refresh calls racing a rotating refresh token → all but the first fail → interceptor wipes storage → **spurious logout mid-session**. |
 | **S-09** | P2 | F/J | ⬜ | `next build` prerenders `/admin/staff`, `/admin/products/new`, etc. with **build-time Prisma data** → those admin pages ship with stale data until redeploy, and the build hard-fails without a reachable DB. |
+| **F-23** | P3→**P2** | E/J | ⬜ | **Live-observed.** `GET /api/health` is unauthenticated and, on any DB error, returns the raw Prisma message in the JSON body — seen leaking the internal DB **host:port** (`localhost:5434`), the ORM, and the query shape (503 body). On prod that's the real connection target, on demand. Also `upload/dealer-document` leaks R2 SDK errors to dealers. **Fix (one line, Wave 1):** generic `error: "unavailable"` in the body, `logError` the detail server-side. |
 | **F-37** | P2 | J/D | ⬜ | `prisma.config.ts` does `import "dotenv/config"` → loads **`.env` only**; `next dev` loads `.env.local` too. The app and the Prisma **CLI** (`migrate`, `db push/seed/reset`, `studio`) can therefore target different `DATABASE_URL`s. Already caused a `db seed` to hit the wrong DB; the destructive case (`migrate reset` against the `.env` DB while the app uses `.env.local`) has no DB-name confirmation. Fix: load `[".env.local", ".env"]` in `prisma.config.ts`. |
 | **F-34** | P2 | D/C | ⬜ | Peer auto-shipment rewrite (landed on `main` via `36b20ab`, **deployed**): `createDelhiveryShipment` holds a pooled connection + `pg_advisory_xact_lock` for the whole `create.json` HTTP round-trip inside `prisma.$transaction({ timeout: 25_000 })`. Inert at ~0 orders/day; drains the connection pool → app-wide 500s at real shipping concurrency. Fix (Wave 2): session-scoped `pg_try_advisory_lock` → HTTP outside any txn → short persist txn. User accepted on `main`, no revert. |
 
@@ -141,7 +142,6 @@ Severity at time of report. "Status": ✅ fixed & verified · 🔶 partially fix
 | **F-16** | P3 | A/E | ⬜ | `auth/verify-email` is unauthenticated, takes `userId` from the body, and has **no** IP/identifier rate limit (only the per-code 5-attempt cap). Inconsistent with every sibling verify route. |
 | **F-19** | P3 | E/C | ⬜ | `GET /api/shipping/serviceability` — unauthenticated, unrate-limited, one live Delhivery call per hit, `retries=3` → ×3 amplification + ~3s handler hold. Quota-burn / carrier IP-ban risk + pincode enumeration. |
 | **F-20** | P3 | E/D | ⬜ | `GET /api/products/search` — unauthenticated, unrate-limited, per-request Prisma `contains` OR-scan + a `$queryRaw` full-scan of `Product.compatibility` (no GIN index) on every keystroke. DB-CPU amplification. |
-| **F-23** | P3 | E/J | ⬜ | `/api/health` (public) and a few dealer/admin upload routes echo raw `err.message` — DB driver / R2 SDK error strings disclosed. |
 | **F-25** | P3 | D | 📋 | Missing indexes on hot FK/filter columns (`OrderItem` has **none**; `ProductVariant.productId`; `Shipment.status`; `Review.userId`; unbounded `StorageAuditLog`). **Unblocked** now that H6 is clean — needs one migration. |
 | **F-30** | P3 | D/E | ⬜ | `crm/leads/[id]/convert`, `procurement/grn`, `procurement/purchase-orders` — multi-write, **no `$transaction`**, no input validation. Partial-write states (lead un-convertible, PO status stale); `parseInt` NaN / missing FK → 500. |
 | **F-22** | — | E | 📋 | Systemic: ~90 mutating routes have no shared input-validation layer. A rollout, not a finding — planned as a Phase-3 workstream. |
@@ -206,6 +206,7 @@ Sequenced so nothing is blocked when you reach it. Each row: what, why now, what
 | 1.4 | **F-21 verify** — place one real qualifying order (or a staging order against live keys with `DELHIVERY_AUTO_SHIPMENT` on) and confirm an AWB is actually produced by the *production* code path (not just the capture script). | 1.2, 1.3; peer branch decision | The fix is unproven until a real order gets a real AWB. |
 | 1.5 | **Peer auto-shipment work** — ~~decide merge vs refactor~~ **Resolved:** landed on `main` via `36b20ab` and is deployed. User accepted it as-is; the HTTP-in-transaction pool concern is **F-34**, scheduled for Wave 2 (2.11). No action here. | — | Untangling it from the redesign edits in the same commit isn't worth it. |
 | 1.6 | **F-24** — Delhivery webhook hardening (one unit of work): HMAC on the raw body (not `?token=`), event dedupe, state-machine guard sharing `FULFILLMENT_TRANSITIONS`, compare-and-swap on the `Order.status` write, reconcile the two status maps (close the webhook half of F-17 here). | — | **Do not enable the Delhivery push URL until this ships.** Blocks live tracking. |
+| 1.7 | **F-23** — `GET /api/health`: return a generic `error: "unavailable"` in the body, `logError(err)` server-side. Same treatment for `upload/dealer-document`'s `String(err)`. | — | One line. Live-observed leaking the internal DB host:port on an unauthenticated route. |
 
 ### Wave 2 — P2, this month
 
@@ -229,7 +230,7 @@ Sequenced so nothing is blocked when you reach it. Each row: what, why now, what
 - **F-25** — index migration (now unblocked): `OrderItem(orderId)`, `ProductVariant(productId)`, `Shipment(status)`, `Review(userId)`, cap `StorageAuditLog`.
 - **F-17** (remainder) / Phase-5 DB-driven `delhivery_status_map`.
 - **F-30** — wrap procurement/CRM mutations in transactions.
-- **F-13, F-16, F-19, F-20, F-23** — the individual E-area instances (some fall out of F-22).
+- **F-13, F-16, F-19, F-20** — the individual E-area instances (some fall out of F-22). (F-23 promoted to Wave 1.)
 - **F-09** — rewrite `.gitignore` as clean UTF-8.
 - **F-10 / O-11** — delete Shiprocket, `@cashfreepayments/cashfree-js`, the `r2.ts` shim.
 - **F-11** — derive `Order.gstAmount` from the rounded per-line values.

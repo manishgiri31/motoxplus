@@ -453,7 +453,7 @@ auth/authz line of **every** `route.ts` (all ~146). Segment-1 conventions apply.
 | F-20 | **P3** | E/D | `src/app/api/products/search/route.ts` | `GET /api/products/search?q=` is unauthenticated + unrate-limited and, per request, runs a Prisma `contains` OR-scan **plus** a `$queryRaw` doing `EXISTS (SELECT 1 FROM unnest(p.compatibility) WHERE compat ILIKE '%q%')` — a full scan of the `Product.compatibility` text[] on every ≥2-char keystroke (no GIN index; `Product` has no text-search index). `${pattern}` is parameterised (no SQLi). | Cheap unauthenticated DB-CPU amplification on a keystroke-frequency endpoint. | file read |
 | F-21 | **P1 — highest-value open finding (confirmed in prod 2026-09-03: 4 June–July orders should have an AWB, 0 do; root cause = `pickup_location` missing from `create.json` until `5479ac7` 2026-08-25; payload now fixed + script-proven but the real prod path is still unexercised — see §12)** | C/E | `src/app/api/orders/route.ts:98-101,252-257` + `src/lib/delhivery/shipment.ts` (no serviceability call) | **No server-side pincode-serviceability validation anywhere in the order → manifest path.** `POST /api/orders` validates only `/^\d{6}$/` on `deliveryPincode`. The checkout page's `<PincodeChecker>` is client-side + advisory (and `checkout/page.tsx:210` deliberately decouples shipping cost from it). `createDelhiveryShipment` (contrary to its own doc-comment "createShipment() will call this to re-check serviceability") **never calls `isServiceable`**. COD shipment creation is fire-and-forget with only `console.error` on failure (`orders/route.ts:254`); the prepaid path is the same in `finalize.ts:99`. | Dealer in a non-serviceable pincode places and pays → order `CONFIRMED`, stock decremented, invoice issued, **AWB creation fails silently**, no shipment row, no retry, no alert. For a prepaid order: money captured for something that can never ship, and nobody — dealer, admin, ops — is told. **Fix has two independent parts, both required:** (1) a real serviceability check *before* payment (server-side in `POST /api/orders`, and gate `payments/create-order`/checkout on it); (2) AWB-creation failure must surface somewhere a human sees — an admin queue / OrderEvent / alert — not `console.error`. Part 2 also covers F-05's silent-failure class and every other `createDelhiveryShipment().catch(console.error)`. | code trace (`orders/route.ts`, `shipment.ts`, `finalize.ts`, `serviceability.ts`, `checkout/page.tsx`) |
 | ~~F-22~~ → **PHASE 3 WORKSTREAM, not a finding** (reclassified 2026-08-29 per user) | — | E | ~90 route handlers (full list-method in §4d E-1) | Systemic: no input-validation layer. ~90 mutating routes destructure `await req.json()` with no zod schema, no try/catch, no type/range/length/enum checks. Malformed body → unhandled 500 (not 400); out-of-domain but in-type values pass straight to Prisma; Prisma `P2025` on bad id → 500 not 404. F-13 (`parseInt(page)` NaN) is the query-param analogue. **This is a planned workstream — introduce a shared zod-parse + error-envelope helper and apply it route-by-route — not an ad-hoc patch target. Phase 2 report lists it under "recommended workstreams", Phase 3 schedules it. Do not fix piecemeal.** F-13 and the specific unbounded-field cases (`creditLimit`, cancellation-policy already bounded) can be handled inside that workstream. | Users/integrations get 500s for what should be 400/404; log noise; a few genuinely unbounded fields reach the DB. No stack leak (Next hides in prod). | grep sweep (zod/req.json/try across all 146) + spot reads |
-| F-23 | **P3** | E/J | `src/app/api/health/route.ts:19`; `src/app/api/upload/dealer-document/route.ts:100` (+ 3 admin upload routes) | Routes echo raw `err.message`/`String(err)` to the caller. `/api/health` is **public** and leaks the DB driver error string (host/driver disclosure on failure); `upload/dealer-document` leaks R2/S3 SDK error text to a dealer. Admin upload/import/refund routes do the same but to trusted actors. | Internal infra detail disclosed to unauthenticated (`/api/health`) or semi-trusted (dealer) callers on error. | grep + file spot-reads |
+| F-23 | **P3 → P2** (live-observed 2026-09-03; Wave 1) | E/J | `src/app/api/health/route.ts:19`; `src/app/api/upload/dealer-document/route.ts:100` (+ 3 admin upload routes) | Routes echo raw `err.message`/`String(err)` to the caller. **`GET /api/health` is unauthenticated and, on a DB failure, returns the raw Prisma error in the JSON body — OBSERVED:** `{"checks":{"database":{"status":"error","error":"Invalid \`prisma.$queryRaw()\` invocation … Can't reach database server at \`localhost:5434\` …"}}}` — disclosing the internal DB **host:port**, the ORM, and the query shape (plus `env` + `version`). On production this is the real connection target handed to anyone who curls the endpoint. `upload/dealer-document` leaks R2/S3 SDK error text to a dealer; admin upload/import/refund routes do the same to trusted actors. | Unauthenticated infra-recon: DB host/port + stack disclosed on demand (just needs the DB to be briefly unreachable, or any transient error). | grep + file read + **live response capture** |
 | F-24 | **P1** (raised from P2, 2026-08-29 — it gates an ops action, see below) | D/C | `src/lib/delhivery/webhook.ts:60-66`, `src/lib/delhivery/tracking.ts:141-169` (vs `orders/[id]/route.ts:64-95`) | Carrier-driven `Order.status` writes bypass the fulfilment state machine: unconditional `update({data:{status}})`, no transition check, no compare-and-swap, no event dedupe, two drifted status maps. Webhook auth is `?token=` **in the URL** — leaks into nginx/Cloudflare access logs, proxy logs, and `Referer`. | Out-of-order/replayed/**forged** Delhivery event moves `Order.status` backward or `CANCELLED → SHIPPED` — silently un-cancels an already-refunded order in every UI (dealer + admin), and can drive false `SHIPPED` (→ F-02/F-17 tier errors). | code trace (promotes S-06) |
 | F-25 | **P3** | D | `prisma/schema.prisma` — `OrderItem` (no indexes), `ProductVariant.productId`, `Shipment.status`, `Review.userId`, `StorageAuditLog` | Hot FK/filter columns unindexed. `OrderItem WHERE orderId IN (...)` (every order read) and `ProductVariant WHERE productId` (every PDP) are seq scans. | Slow order lists / PDPs as data grows; unbounded `StorageAuditLog`. Fix = new migration → Phase 3, ~~blocked by H6~~ **UNBLOCKED 2026-09-03 (H6 resolved, no drift — §12).** | code trace vs catalogued queries |
 | F-28 | **P2** | B | `src/app/api/admin/payments/[id]/verify/route.ts:54-92` (writes `Order.paymentStatus='PAID'` + `Invoice`, **no `Payment` row**); refund path `src/app/api/orders/[id]/cancel/route.ts:207-218`, `src/app/api/admin/refunds/[id]/retry/route.ts:32-38` | Manual UPI/bank-transfer verification marks an order fully paid with no `Payment` row (manual payments live in `PaymentSubmission`). `Payment` is Razorpay-only. Confirmed in prod: order `MXP35620539125` — `paymentStatus PAID`, `amountPaid 101.18`, 0 `Payment` rows (§12). Grep confirms only 2 code paths write `paymentStatus='PAID'`: `finalize.ts` (Razorpay, row exists) and this one (no row). | Cancellation-with-refund of a manually-paid order **always** dead-ends at `refundStatus: FAILED / "No Razorpay-captured payment found"` → every one needs out-of-band handling. Any receipts/revenue figure from the `Payment` table omits all manual payments. Not corruption — a ledger design gap. Fix: write a `Payment` row on manual verify (cleanest), or teach refund + reporting to read `PaymentSubmission`. Phase 3. | data (§12) + grep `paymentStatus:` + code trace |
@@ -538,10 +538,14 @@ are the **unauthenticated** ones: `products/search`, `shipping/serviceability`, 
 - **Positive:** grep for client-returned exception text — only `products` POST and
   `vendor/products` POST return `error.issues` (zod, expected/safe). **No route echoes raw
   Prisma error messages to clients.**
-- **F-23 (P3, E/J) — a few routes echo `err.message` / `String(err)` to the caller:**
-  - `GET /api/health` (`route.ts:19`) returns the DB driver's `err.message` — and `/api/health`
-    is **public** (hit by `health.yml` cron; nginx exposure to confirm). A connection failure
-    string can disclose DB host / driver. Return a generic string; keep detail in the log.
+- **F-23 (P3 → P2, E/J — Wave 1) — a few routes echo `err.message` / `String(err)` to the caller:**
+  - `GET /api/health` (`route.ts:15-20`) puts the DB driver's `err.message` into `checks.database.error`.
+    **Live-observed 2026-09-03** against the dev app while the scratch DB was briefly gone:
+    the 503 body carried `Can't reach database server at \`localhost:5434\`` verbatim — internal
+    host:port, ORM, and query shape, on an **unauthenticated** route. On prod that's the real DB
+    endpoint, free to anyone. **Fix (one line): `error: "unavailable"` (or drop the field);
+    `logError(err)` server-side.** Raised to P2 and pulled into Wave 1 — cheap, unauthenticated,
+    infra-recon.
   - `POST /api/upload/dealer-document` (`:100`) returns `String(err)` to a **dealer** — leaks
     R2/S3 SDK error text (bucket, key prefix, AWS error codes). Same in `upload/product-image`,
     `upload/vehicle-image`, `upload/vehicle-type-image` (admin-only, lower concern).
@@ -2073,4 +2077,43 @@ and nothing else**. `next dev` / `next build` load the full cascade
   `DATABASE_URL`. Cheap; removes a whole class of wrong-database accident.
 - **Severity:** P2 — conditional on a `.env.local` override existing, but the blast radius
   (destructive command against the wrong DB, no name in the prompt) and the fact it *already*
-  caused a wrong-DB write put it above P3.
+  caused a wrong-DB write put it above P3. → Wave 2 remedy (one line).
+
+### F-23 — live confirmation (P3 → P2, Wave 1)
+
+While the scratch DB was briefly unreachable, `GET http://localhost:3000/api/health` returned
+**HTTP 503** with body:
+```
+{"status":"degraded","uptime":32,"version":"0.1.0","env":"development","checks":{"database":
+{"status":"error","latencyMs":4111,"error":"\nInvalid `prisma.$queryRaw()` invocation:\n\n\n
+Can't reach database server at `localhost:5434`\n\nPlease make sure your database server is
+running at `localhost:5434`."}}}
+```
+The route (`src/app/api/health/route.ts:15-20`) is unauthenticated and copies `err.message`
+straight into `checks.database.error`. It leaks the internal DB **host:port**, the ORM, the
+query, plus `env` and `version`. On production, `curl https://motoxplus.com/api/health` during
+any transient DB blip returns the real connection target. **One-line fix:** replace the body's
+`error` with a constant (`"unavailable"`) and `logError(err)` server-side. **Re-rated P2,
+moved to Wave 1** (`02-report.md` §4).
+
+### Timeline / DB availability during this segment
+
+- **First dry-run attempt** (`reset-scratch-passwords.mjs`, no `--commit`): failed at
+  `SELECT current_database()` — `Can't reach database server at localhost:5434`. Tunnel was
+  down; nothing on :5434; app `/api/health` also 503; app uptime 32 s. **No connection was ever
+  established.** The user later confirmed they had run the teardown early — `motoxplus_audit`
+  and `audit_ro` were dropped on the VPS. **Nothing the audit ran caused this** — the reset
+  script contains no DDL and never connected.
+- **After restore** (fresh prod dump, tunnel back on :5434): dry run connects,
+  `current_database()` = `motoxplus_audit` (gates pass), then **fails**:
+  `permission denied for table "User"` (SQLSTATE **42501**) on the first table read. The
+  `motoxplus` login role can connect and `SELECT 1` (so `/api/health` reports "ok") but has no
+  privileges on the application tables in the restored DB — so `groupBy` / `findMany` /
+  `updateMany` all fail, **and the dev app will 500 on every page that touches a table.**
+  → **BLOCKED on the walk.** Needs (user's choice): re-restore with table ownership/grants for
+  `motoxplus` (`pg_restore --no-owner` while connected as `motoxplus`, or
+  `GRANT ALL ON ALL TABLES/SEQUENCES IN SCHEMA public TO motoxplus` + `ALTER DEFAULT
+  PRIVILEGES` as the owner), or a `DATABASE_URL` for the owning role. Audit ran no `GRANT` /
+  re-restore — reporting only.
+- **Area H walk: not started.** Zero application pages rendered/observed. The only running-app
+  observations this segment are the two `/api/health*` 503s above (→ F-23 live confirmation).
