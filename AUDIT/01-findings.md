@@ -35,7 +35,7 @@ Legend: ✅ fully read · 🟡 partially read / key files only · ⬜ not yet
 | E API surface (validation/errors/rate-limit table) | 🟡 | §4d done: validation coverage (7/~120 use zod → F-22), rate-limit tier table (E-2), error-handling spot notes (E-3). Per-route error-leak pass still owed. |
 | F Next.js 15 | ✅ | §13: sweep done — all pages/routes correctly `await` `Promise<params/searchParams>`, tsc clean, no `use client`/async mix. No new findings; Next-specific issues are S-09 + O-8. |
 | G Redis / caching | ✅ | §9.3 + §13: Redis = rate-limiter only (H5/F-26/F-27). Cache inventory done → **O-8** (`api/vehicles` 24h no-invalidation; `POST /products` no revalidate; else uncached per-request Prisma). |
-| H web UI | ⬜ | **BLOCKED — needs a running app + DB.** Local `:5433` dead, `:5432` is a different PG, no tunnel. Owed: RSC page query cost, O-1/S-03/S-08 staff-nav checks, visual pass. Needs user to run `npm run dev` against a DB or provide a tunnel. |
+| H web UI | 🔄 | **UNBLOCKED 2026-09-03** — app on `http://localhost:3000` (from `.env.local`), scratch prod-copy DB (`motoxplus_audit`) over an SSH tunnel on `localhost:5434`. Walk in progress: admin/dealer flows, staff-portal nav, F-13 NaN crash, RSC query cost, 4 viewports. See §19. |
 | I Flutter app | ✅ | §14 + §18: **F-31** (wrong backend host — vercel.app; fix on branch `fix/mobile-base-url`), **F-32** (fake "Payment successful"), **F-33** (concurrent-refresh logout), **F-35** (release builds debug-signed → Play Store blocker), O-9. |
 | J ops & security | ✅ | §15 + §18: health-check gap → **F-27**; **O-10** (backups unverified/unmonitored, fragile `.env` parse); restore path confirmed (§12); secret-logging spot-check clean. **F-36** (release-engineering: "all" commits + no CI gate on deploy → red tests reached prod). |
 | K dead weight | ✅ | §16: **O-11** — remove `@cashfreepayments/cashfree-js` (dead), migrate 2 `@/lib/r2` shim importers, Shiprocket per F-10. Unused-export sweep owed (low value). |
@@ -2026,3 +2026,51 @@ multiple unrelated workstreams and gone straight to `origin/main`, which auto-de
      check** before merge, and ideally gate `deploy.yml` on it (or run `npm test` inside the
      deploy script before the build, failing closed).
   4. If multiple agent sessions must share a tree, give each its own git worktree.
+
+---
+
+## 19. Area H — running-app walk (2026-09-03)
+
+**Environment (user-provided):** app `http://localhost:3000` (Next dev, config from `.env.local`);
+DB = scratch **copy of production** (`motoxplus_audit`) over an SSH tunnel on `localhost:5434`;
+Razorpay disabled; R2 credentials are dummy (→ R2-backed images 404 — **environmental, not a
+defect**); email no-ops. Dataset: 20 orders, **0 shipments** — some empty states are genuine
+gaps, others just an empty dataset; kept separate below.
+
+### Correction to earlier setup guidance (my error)
+
+I previously told the user a thin `.env` is fine because "dev mode only warns on missing env
+vars." **Wrong.** `src/lib/env.ts`'s import-time `validateEnv()` warns-not-throws in dev
+(lines 72–83), but that is the *secondary* check. The **primary boot hook**,
+`src/instrumentation-node.ts`, runs on every `next dev` / `next start` startup and does
+`process.exit(1)` unconditionally (no `NODE_ENV` guard) when `getMissingEnvVars()` is non-empty
+— i.e. when any of `DATABASE_URL, NEXTAUTH_URL, NEXTAUTH_SECRET, R2_ACCOUNT_ID,
+R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL, JWT_SECRET,
+RESEND_API_KEY, EMAIL_FROM, ENCRYPTION_KEY` is empty or starts with `replace_with` / `your_`.
+It *also* boot-validates `@/lib/delhivery/config` and `process.exit(1)`s on failure. So local
+dev needs **non-placeholder** values for all of the above (dummy strings that don't start with
+the two banned prefixes are accepted — which is why R2 images 404 rather than the app refusing
+to boot). The "thin env" framing is retracted.
+
+### F-37 (P2, J/D) — `prisma.config.ts` loads `.env` only, never `.env.local`
+
+`prisma.config.ts:3` is `import "dotenv/config"` — `dotenv`'s zero-config loader reads **`.env`
+and nothing else**. `next dev` / `next build` load the full cascade
+(`.env.local` > `.env.development` > `.env`). So the Next app and every Prisma **CLI** command
+(`prisma migrate {dev,deploy,reset}`, `prisma db {push,seed}`, `prisma studio`) can resolve
+**different `DATABASE_URL`s** whenever `.env.local` overrides `.env`.
+
+- **Already bit us:** the user put the scratch-DB URL in `.env.local`; the first
+  `prisma db seed` ran against their **local dev DB** instead (`.env`), silently.
+- **The real hazard is destructive:** `prisma migrate reset` / `prisma db push --force-reset`
+  drop and recreate the schema. A developer who keeps prod (or a shared staging) URL in `.env`
+  and a local override in `.env.local` will have the app talk to local while
+  `npm run db:migrate` / a reset targets the **`.env`** database. Silent, no confirmation that
+  names the DB.
+- **Fix:** make `prisma.config.ts` load the same precedence Next does —
+  `import { config } from "dotenv"; config({ path: [".env.local", ".env"] });` (first file wins
+  per key, dotenv ≥16.4) — or, at minimum, `console.warn` when `.env.local` exists and defines
+  `DATABASE_URL`. Cheap; removes a whole class of wrong-database accident.
+- **Severity:** P2 — conditional on a `.env.local` override existing, but the blast radius
+  (destructive command against the wrong DB, no name in the prompt) and the fact it *already*
+  caused a wrong-DB write put it above P3.
