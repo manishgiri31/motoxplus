@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
-import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone, Info, ShieldCheck, Building2, Wallet, Lock } from "lucide-react";
+import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone, Info, ShieldCheck, Building2, Wallet, Lock, Zap, Clock } from "lucide-react";
 import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-type PaymentType = "ADVANCE_20" | "FULL_100" | "COD" | "DIRECT_UPI";
+type PaymentType = "ADVANCE_20" | "FULL_100" | "DIRECT_UPI";
 
 interface CartItem {
   product: {
@@ -65,6 +65,12 @@ interface DeliveryForm {
 // Razorpay integration change.
 const RAZORPAY_ENABLED = process.env.NEXT_PUBLIC_RAZORPAY_ENABLED === "true";
 
+// Pure COD (0% upfront) was removed 2026-09-13 — every option now collects at
+// least some payment upfront. Full payment gets dispatch priority; the 20%
+// advance option still leaves 80% to be collected as cash/COD by the courier
+// at delivery (unchanged on the backend — see lib/delhivery/shipment.ts),
+// which is why it's queued behind fully-paid orders. deliveryNote/deliveryTone
+// drive the priority messaging rendered under each option below.
 const ALL_PAYMENT_OPTIONS = [
   {
     id: "DIRECT_UPI" as PaymentType,
@@ -74,6 +80,8 @@ const ALL_PAYMENT_OPTIONS = [
     badge: null,
     requiresUpi: true,
     requiresRazorpay: false,
+    deliveryNote: "Priority dispatch — paid in full",
+    deliveryTone: "fast" as const,
   },
   {
     id: "FULL_100" as PaymentType,
@@ -83,24 +91,19 @@ const ALL_PAYMENT_OPTIONS = [
     badge: "Recommended",
     requiresUpi: false,
     requiresRazorpay: true,
+    deliveryNote: "Priority dispatch — ships first",
+    deliveryTone: "fast" as const,
   },
   {
     id: "ADVANCE_20" as PaymentType,
-    title: "20% Advance via Razorpay",
-    subtitle: "Pay 20% now, balance before delivery",
+    title: "20% Advance, Balance on Delivery",
+    subtitle: "Pay 20% now, remaining 80% collected as cash/COD at delivery",
     icon: <CreditCard size={18} className="text-blue-400" />,
     badge: null,
     requiresUpi: false,
     requiresRazorpay: true,
-  },
-  {
-    id: "COD" as PaymentType,
-    title: "Cash on Delivery",
-    subtitle: "Pay full amount when order is delivered",
-    icon: <Truck size={18} className="text-green-400" />,
-    badge: "COD",
-    requiresUpi: false,
-    requiresRazorpay: false,
+    deliveryNote: "Standard dispatch — queued behind full-payment orders",
+    deliveryTone: "standard" as const,
   },
 ];
 
@@ -114,10 +117,13 @@ function calcShipping(orderTotal: number): number {
 export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState<CartSummary | null>(null);
-  // COD is always available; only default to a Razorpay option when the
-  // merchant account is actually configured, otherwise a disabled option
-  // would be selected by default with no way for the user to have chosen it.
-  const [paymentType, setPaymentType] = useState<PaymentType>(RAZORPAY_ENABLED ? "FULL_100" : "COD");
+  // Pure COD was removed — default to full payment via Razorpay when the
+  // merchant account is configured, otherwise Direct UPI (manual bank
+  // transfer), the only other live path today. The UPI-settings effect below
+  // re-selects "DIRECT_UPI" once it confirms that's actually enabled; if an
+  // admin ever disables UPI while Razorpay is still off, no payment option
+  // would be selectable at all — keep at least one of the two on.
+  const [paymentType, setPaymentType] = useState<PaymentType>(RAZORPAY_ENABLED ? "FULL_100" : "DIRECT_UPI");
   const [upiEnabled, setUpiEnabled] = useState(false);
   const [notes, setNotes] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -258,30 +264,6 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleCOD = async () => {
-    setLoading(true);
-    try {
-      const orderRes = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...buildOrderPayload(), paymentType: "COD" }),
-      });
-
-      const data = await safeJson(orderRes);
-      if (!orderRes.ok || !data?.order) {
-        alert(data?.error || "Failed to place order. Please try again.");
-        return;
-      }
-
-      router.push(`/dealer/orders/${data.order.id}?success=1`);
-    } catch (err) {
-      console.error("[Checkout] COD order failed:", err);
-      alert("Could not reach the server. Check your connection and try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleOnlinePayment = async () => {
     setLoading(true);
     try {
@@ -399,8 +381,7 @@ export default function CheckoutPage() {
       alert("Please accept the Terms of Service and Cancellation Policy to place your order.");
       return;
     }
-    if (paymentType === "COD") handleCOD();
-    else if (paymentType === "DIRECT_UPI") handleDirectUpi();
+    if (paymentType === "DIRECT_UPI") handleDirectUpi();
     else handleOnlinePayment();
   };
 
@@ -565,7 +546,11 @@ export default function CheckoutPage() {
 
       {/* Payment options */}
       <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
-        <h3 className="text-[var(--text-primary)] font-bold mb-5">Payment Method</h3>
+        <h3 className="text-[var(--text-primary)] font-bold mb-1">Payment Method</h3>
+        <p className="text-[var(--text-muted)] text-xs mb-5 flex items-center gap-1.5">
+          <Zap size={12} className="text-green-500" />
+          Fully paid orders are picked and dispatched first.
+        </p>
         <div className="space-y-3">
           {ALL_PAYMENT_OPTIONS.filter((o) => (!o.requiresUpi || upiEnabled) && (!o.requiresRazorpay || RAZORPAY_ENABLED)).map((option) => {
             const isSelected = paymentType === option.id;
@@ -592,7 +577,7 @@ export default function CheckoutPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-[var(--text-primary)] font-semibold text-sm">{option.title}</span>
                     {option.badge && (
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${option.badge === "COD" ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-red-900/20 text-red-400">
                         {option.badge}
                       </span>
                     )}
@@ -600,13 +585,17 @@ export default function CheckoutPage() {
                   <div className="text-[var(--text-muted)] text-xs">{option.subtitle}</div>
                   {option.id === "ADVANCE_20" && (
                     <div className="text-[var(--text-muted)] text-[11px] mt-0.5">
-                      Then <span className="text-[var(--text-secondary)] font-medium">{formatCurrency(balanceAfterAdvance)}</span> before delivery
+                      Then <span className="text-[var(--text-secondary)] font-medium">{formatCurrency(balanceAfterAdvance)}</span> on delivery
                     </div>
                   )}
+                  <div className={`flex items-center gap-1 mt-1 text-[11px] font-semibold ${option.deliveryTone === "fast" ? "text-green-500" : "text-amber-500"}`}>
+                    {option.deliveryTone === "fast" ? <Zap size={11} /> : <Clock size={11} />}
+                    {option.deliveryNote}
+                  </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="text-[var(--text-primary)] font-black">{formatCurrency(amount)}</div>
-                  <div className="text-[var(--text-muted)] text-[10px]">{option.id === "COD" ? "on delivery" : "pay now"}</div>
+                  <div className="text-[var(--text-muted)] text-[10px]">pay now</div>
                 </div>
               </button>
             );
@@ -628,11 +617,12 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {paymentType === "COD" && (
-          <div className="mt-4 flex items-start gap-3 bg-green-900/10 border border-green-800/30 rounded-sm p-3">
-            <Truck size={16} className="text-green-400 flex-shrink-0 mt-0.5" />
-            <p className="text-green-400 text-xs leading-relaxed">
-              Your order will be confirmed immediately. Pay <strong>{formatCurrency(grandTotal)}</strong> in cash when delivered.
+        {paymentType === "ADVANCE_20" && (
+          <div className="mt-4 flex items-start gap-3 bg-amber-900/10 border border-amber-800/30 rounded-sm p-3">
+            <Clock size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-400 text-xs leading-relaxed">
+              The remaining <strong>{formatCurrency(grandTotal * 0.8)}</strong> is collected in cash/UPI by the courier at
+              delivery. Full-payment orders are dispatched first — advance orders are queued behind them.
             </p>
           </div>
         )}
@@ -685,11 +675,11 @@ export default function CheckoutPage() {
         <div className="flex justify-between items-center mb-5">
           <div>
             <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">
-              {paymentType === "COD" ? "Amount on Delivery" : "Amount to Pay Now"}
+              Amount to Pay Now
             </div>
             <div className="text-[var(--text-primary)] font-black text-2xl">{formatCurrency(amountDue)}</div>
           </div>
-          {paymentType !== "COD" && (
+          {paymentType !== "DIRECT_UPI" && (
             <div className="text-right">
               <div className="text-[var(--text-muted)] text-xs">via</div>
               <div className="text-[var(--text-primary)] font-bold text-sm">Razorpay</div>
@@ -731,8 +721,6 @@ export default function CheckoutPage() {
         >
           {loading ? (
             <><Spinner size={16} />Processing...</>
-          ) : paymentType === "COD" ? (
-            <><Truck size={16} />Confirm COD Order<ChevronRight size={16} /></>
           ) : paymentType === "DIRECT_UPI" ? (
             <><Smartphone size={16} />Place Order & Pay via UPI<ChevronRight size={16} /></>
           ) : (
@@ -741,9 +729,7 @@ export default function CheckoutPage() {
         </button>
 
         <p className="text-[var(--text-muted)] text-xs text-center mt-3">
-          {paymentType === "COD"
-            ? "Order confirmed instantly. Shipment created via Delhivery."
-            : paymentType === "DIRECT_UPI"
+          {paymentType === "DIRECT_UPI"
             ? "No extra charges. Pay directly to MotoXPlus bank account."
             : "Secured by Razorpay. Shipment created after payment."}
         </p>

@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateOrderNumber, generateInvoiceNumber, roundToPaise } from "@/lib/utils";
-import { autoCreateShipment } from "@/lib/delhivery";
+import { generateOrderNumber, roundToPaise } from "@/lib/utils";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
-import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
-import { notifyOrderEvent } from "@/lib/push/order-notifications";
 
 const FREE_DELIVERY_THRESHOLD = 25000;
 
@@ -93,7 +90,14 @@ export async function POST(req: NextRequest) {
     clientShippingCost,
   } = await req.json();
 
-  if (!paymentType || !["ADVANCE_20", "FULL_100", "COD"].includes(paymentType)) {
+  // Pure COD (nothing paid upfront) was removed 2026-09-13 — every new order
+  // is either paid in full now or via a 20% advance now with the remaining
+  // 80% collected as cash/COD by the courier at delivery (see
+  // lib/delhivery/shipment.ts's codAmount/paymentMode derivation, which
+  // already keys off amountDue rather than this label). Historical orders
+  // with paymentType COD still exist and are handled read-only everywhere
+  // else (cancellation, shipment, invoices) — only creation is blocked here.
+  if (!paymentType || !["ADVANCE_20", "FULL_100"].includes(paymentType)) {
     return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
   }
 
@@ -153,7 +157,6 @@ export async function POST(req: NextRequest) {
   subtotal = roundToPaise(subtotal);
   gstAmount = roundToPaise(gstAmount);
 
-  const isCOD = paymentType === "COD";
   const shippingCost = calcShipping(subtotal + gstAmount);
 
   const grandTotal = roundToPaise(subtotal + gstAmount + shippingCost);
@@ -162,104 +165,60 @@ export async function POST(req: NextRequest) {
     paymentType === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal
   );
 
-  let order;
-  try {
-    order = await prisma.$transaction(async (tx) => {
-      const created = await tx.order.create({
-        data: {
-          orderNumber: generateOrderNumber(),
-          dealerId: dealer.id,
-          subtotal,
-          gstAmount,
-          shippingCost,
-          grandTotal,
-          paymentType,
-          amountDue,
-          amountPaid: 0,
-          notes: isCOD ? `[COD ORDER] ${notes || ""}`.trim() : notes,
-          status: isCOD ? "CONFIRMED" : "PENDING",
-          paymentStatus: isCOD ? "PENDING" : "PENDING",
-          // COD orders are created already CONFIRMED, so stock is reserved
-          // immediately; prepaid orders reserve it later, at payment
-          // confirmation (see payments/verify and admin/payments/verify).
-          stockReserved: isCOD,
-          shippingAddress: deliveryAddress,
-          deliveryName: deliveryName || dealer.ownerName,
-          deliveryPhone: deliveryPhone || dealer.phone,
-          deliveryCity: deliveryCity || dealer.city,
-          deliveryState: deliveryState || dealer.state,
-          deliveryPincode,
-          items: {
-            create: cart.items.map((item) => {
-              const unitPrice = item.variant?.price ?? item.product.price;
-              // total derived from the already-rounded gstAmount (rather than its
-              // own independent unitPrice*qty*(1+gstRate/100) expression) so the
-              // two can't drift apart by a floating-point epsilon.
-              const itemGstAmount = roundToPaise((unitPrice * item.quantity * item.product.gstRate) / 100);
-              const itemTotal = roundToPaise(unitPrice * item.quantity + itemGstAmount);
-              return {
-                productId: item.productId,
-                variantId: item.variantId ?? null,
-                variantLabel: item.variant?.label ?? null,
-                variantSku: (item.variant as any)?.sku ?? null,
-                quantity: item.quantity,
-                unitPrice,
-                gstRate: item.product.gstRate,
-                gstAmount: itemGstAmount,
-                total: itemTotal,
-              };
-            }),
-          },
-        },
-      });
-
-      if (isCOD) {
-        await decrementStock(
-          tx,
-          cart.items.map((item) => ({
+  // Every order (ADVANCE_20 or FULL_100) is now born PENDING/unreserved —
+  // stock is only decremented and the invoice only generated at payment
+  // finalization (lib/payments/finalize.ts for Razorpay, admin/payments/[id]/
+  // verify for manual UPI). This used to branch on isCOD (COD orders were
+  // created pre-CONFIRMED with stock reserved immediately); that branch was
+  // removed with pure COD itself on 2026-09-13 — see the PaymentType.COD
+  // doc comment in prisma/schema.prisma.
+  const order = await prisma.order.create({
+    data: {
+      orderNumber: generateOrderNumber(),
+      dealerId: dealer.id,
+      subtotal,
+      gstAmount,
+      shippingCost,
+      grandTotal,
+      paymentType,
+      amountDue,
+      amountPaid: 0,
+      notes,
+      status: "PENDING",
+      paymentStatus: "PENDING",
+      stockReserved: false,
+      shippingAddress: deliveryAddress,
+      deliveryName: deliveryName || dealer.ownerName,
+      deliveryPhone: deliveryPhone || dealer.phone,
+      deliveryCity: deliveryCity || dealer.city,
+      deliveryState: deliveryState || dealer.state,
+      deliveryPincode,
+      items: {
+        create: cart.items.map((item) => {
+          const unitPrice = item.variant?.price ?? item.product.price;
+          // total derived from the already-rounded gstAmount (rather than its
+          // own independent unitPrice*qty*(1+gstRate/100) expression) so the
+          // two can't drift apart by a floating-point epsilon.
+          const itemGstAmount = roundToPaise((unitPrice * item.quantity * item.product.gstRate) / 100);
+          const itemTotal = roundToPaise(unitPrice * item.quantity + itemGstAmount);
+          return {
             productId: item.productId,
             variantId: item.variantId ?? null,
+            variantLabel: item.variant?.label ?? null,
+            variantSku: (item.variant as any)?.sku ?? null,
             quantity: item.quantity,
-          }))
-        );
-
-        await tx.invoice.create({
-          data: {
-            invoiceNumber: generateInvoiceNumber(),
-            orderId: created.id,
-            dealerId: dealer.id,
-            subtotal,
-            gstAmount,
-            grandTotal,
-          },
-        });
-      }
-
-      return created;
-    });
-  } catch (err) {
-    if (err instanceof InsufficientStockError) {
-      return NextResponse.json(
-        { error: "Some items in your cart are no longer available in the requested quantity. Please update your cart." },
-        { status: 409 }
-      );
-    }
-    throw err;
-  }
+            unitPrice,
+            gstRate: item.product.gstRate,
+            gstAmount: itemGstAmount,
+            total: itemTotal,
+          };
+        }),
+      },
+    },
+  });
 
   // Clear cart
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-  // COD orders are born CONFIRMED — auto-create the Delhivery shipment and
-  // notify the dealer, exactly as the prepaid path does once payment lands.
-  // Both are fire-and-forget: a Delhivery outage must never fail order
-  // placement. autoCreateShipment is gated by DELHIVERY_AUTO_SHIPMENT, records
-  // its outcome on OrderEvent, and is idempotent (advisory lock in
-  // createDelhiveryShipment).
-  if (isCOD) {
-    void autoCreateShipment(order.id);
-    void notifyOrderEvent(order.id, "ORDER_CONFIRMED");
-  }
-
-  return NextResponse.json({ order, isCOD });
+  return NextResponse.json({ order });
 }

@@ -80,8 +80,7 @@ export default function TermsPage() {
                 and a binding contract is formed only when:
               </p>
               <ul>
-                <li>For <strong className="text-[var(--ink)]">online payments (Full / 20% Advance)</strong>: when payment is successfully verified and the order status changes to <em>Confirmed</em>.</li>
-                <li>For <strong className="text-[var(--ink)]">Cash on Delivery (COD)</strong>: when the order is submitted and immediately auto-confirmed by the system.</li>
+                <li>For <strong className="text-[var(--ink)]">online payments (Full Payment or 20% Advance)</strong>: when payment is successfully verified and the order status changes to <em>Confirmed</em>. Every order requires at least a 20% payment at placement — the Company no longer offers a zero-advance Cash on Delivery option.</li>
               </ul>
               <p className="mt-3">
                 The Company reserves the right to cancel any order before dispatch due to stock unavailability,
@@ -107,20 +106,14 @@ export default function TermsPage() {
                 <div>
                   <p className="font-semibold text-[var(--ink)] mb-1">6.2 20% Advance Payment</p>
                   <p>
-                    A minimum 20% advance is due at order placement. The remaining 80% balance must be paid
-                    before goods are dispatched. Orders will not be shipped until the full balance is settled.
+                    A minimum 20% advance is due at order placement via Razorpay. The remaining 80% balance is
+                    collected in cash or UPI by the delivery agent at the time of delivery. Advance-payment
+                    orders are queued for dispatch behind fully-paid orders. The Company reserves the right to
+                    withdraw or restrict this option for any dealer, delivery location, or order value.
                   </p>
                 </div>
                 <div>
-                  <p className="font-semibold text-[var(--ink)] mb-1">6.3 Cash on Delivery (COD)</p>
-                  <p>
-                    For COD orders, the full invoice amount is payable in cash to the delivery agent at the
-                    time of delivery. COD availability is subject to your delivery location and order value.
-                    The Company reserves the right to withdraw COD as a payment option for any dealer.
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold text-[var(--ink)] mb-1">6.4 Failed Payments</p>
+                  <p className="font-semibold text-[var(--ink)] mb-1">6.3 Failed Payments</p>
                   <p>
                     If an online payment fails, the order remains in <em>Pending</em> status and is not
                     processed. Contact support to retry or choose an alternate payment method.

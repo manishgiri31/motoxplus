@@ -4,7 +4,7 @@ import { DEFAULT_CANCELLATION_POLICY } from "@/lib/orders/cancellation";
 
 export const metadata = {
   title: "Cancellation Policy | MotoXPlus India Pvt. Ltd.",
-  description: "Cancellation charges, refund timelines, and COD terms for orders placed on the MotoXPlus India dealer portal.",
+  description: "Cancellation charges and refund timelines for orders placed on the MotoXPlus India dealer portal.",
 };
 
 export default async function CancellationPolicyPage() {
@@ -85,14 +85,17 @@ export default async function CancellationPolicyPage() {
             </p>
           </Section>
 
-          <Section title="4. Cash on Delivery (COD) orders">
+          <Section title="4. 20% Advance orders — balance on delivery">
             <p>
-              If you haven&apos;t paid anything yet (pure COD, no advance), cancelling before dispatch is free — there&apos;s
-              nothing to deduct a charge from, and no refund to process.
+              MotoXPlus no longer offers a zero-advance Cash on Delivery option — every order requires at least a
+              20% payment at placement. On a 20% Advance order, the remaining 80% is collected in cash or UPI by
+              the delivery agent at the time of delivery.
             </p>
             <p>
-              Once a COD order has shipped, it can&apos;t be cancelled online. Please refuse the delivery at your
-              doorstep, or contact support to arrange a return.
+              Because at least 20% is always paid upfront, Advance orders are cancelled the same way as
+              fully-paid orders — the two-tier charge in Section 1 applies, calculated on the amount you actually
+              paid (the 20% advance). There is no separate free-cancellation case, and a shipped Advance order can
+              still be cancelled online at the after-dispatch rate.
             </p>
           </Section>
 

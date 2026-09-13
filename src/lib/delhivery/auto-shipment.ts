@@ -3,8 +3,10 @@ import { createDelhiveryShipment } from "./shipment";
 
 /**
  * Master switch for AUTOMATIC Delhivery shipment creation — the order reaches
- * CONFIRMED (COD at placement, prepaid at payment finalization) and a shipment
- * is created without an operator doing anything.
+ * CONFIRMED at payment finalization (Razorpay verify/webhook or manual UPI
+ * admin-verify — pure COD, which used to reach CONFIRMED at placement, was
+ * removed 2026-09-13) and a shipment is created without an operator doing
+ * anything.
  *
  * Default ON. Auto-creation is skipped ONLY when DELHIVERY_AUTO_SHIPMENT is
  * explicitly "false" (case-insensitive, surrounding whitespace ignored). Unset,
