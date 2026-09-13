@@ -177,7 +177,7 @@ interface LinkedProductData {
   name: string;
   partNumber: string;
   price: number;
-  stock: number;
+  stockStatus: "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
   category: { name: string };
   productImages: { imageUrl: string }[];
 }

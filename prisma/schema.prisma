@@ -187,7 +187,9 @@ model Product {
   images          String[]
   compatibility   String[]
   isActive        Boolean                        @default(true)
-  stock           Int                            @default(0)
+  /// @deprecated superseded by stockStatus; kept only for historical/backfill reference
+  stock           Int?                           @default(0)
+  stockStatus     ProductStockStatus             @default(IN_STOCK)
   createdAt       DateTime                       @default(now())
   updatedAt       DateTime                       @updatedAt
   brand           String                         @default("MOTOXPLUS")
@@ -219,7 +221,7 @@ model Product {
   @@index([categoryId, isActive])
   @@index([isActive, createdAt])
   @@index([vendorId])
-  @@index([stock])
+  @@index([stockStatus])
 }
 
 model ProductVariant {
@@ -1482,4 +1484,10 @@ enum VehicleDetectionInput {
 enum DevicePlatform {
   IOS
   ANDROID
+}
+
+enum ProductStockStatus {
+  IN_STOCK
+  FEW_LEFT
+  OUT_OF_STOCK
 }

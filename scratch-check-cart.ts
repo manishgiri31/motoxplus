@@ -16,17 +16,16 @@ async function main() {
     if (cart.items.length === 0) continue;
     console.log(`\nDealer: ${cart.dealer?.user?.email ?? cart.dealerId}`);
     for (const item of cart.items) {
-      const relevantStock = item.variant ? item.variant.stock : item.product.stock;
       const relevantActive = item.variant ? item.variant.isActive : true;
-      const problem =
-        !item.product.isActive || !relevantActive || relevantStock < item.quantity;
+      const outOfStock = item.variant ? item.variant.stock < item.quantity : item.product.stockStatus === "OUT_OF_STOCK";
+      const problem = !item.product.isActive || !relevantActive || outOfStock;
       console.log(JSON.stringify({
         product: item.product.name,
         productActive: item.product.isActive,
         variantId: item.variantId,
         variantLabel: item.variant?.label,
         variantActive: item.variant?.isActive,
-        productStock: item.product.stock,
+        productStockStatus: item.product.stockStatus,
         variantStock: item.variant?.stock,
         requestedQty: item.quantity,
         FLAGGED_UNAVAILABLE: problem,

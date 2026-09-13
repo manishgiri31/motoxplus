@@ -34,8 +34,12 @@ const securityHeaders = [
       // Next.js inline scripts + Razorpay checkout SDK
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.razorpay.com",
       "style-src 'self' 'unsafe-inline'",
-      // Images: self, blob, data URIs, R2 CDN, Unsplash
-      "img-src 'self' blob: data: https://*.r2.dev https://pub-966fa80d99d64e388b250232523a507f.r2.dev https://images.unsplash.com https://motoxplus.com",
+      // Images: self, blob, data URIs, R2 CDN, Unsplash.
+      // cdn.shopify.com is TEMPORARY — the catalogue migrated from the eauto.co.in
+      // Shopify store still points at Shopify's CDN. Remove this entry once every
+      // ProductImage.imageUrl has been re-hosted on R2, otherwise the whole
+      // catalogue's imagery dies the day that store is switched off.
+      "img-src 'self' blob: data: https://*.r2.dev https://pub-966fa80d99d64e388b250232523a507f.r2.dev https://images.unsplash.com https://motoxplus.com https://cdn.shopify.com",
       // Video (VideoPlate, src/components/ui/video-plate.tsx) — was previously unset,
       // which falls back to default-src 'self' and silently blocks any R2-hosted video.
       "media-src 'self' blob: https://*.r2.dev https://pub-966fa80d99d64e388b250232523a507f.r2.dev https://motoxplus.com",
@@ -146,6 +150,14 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "motoxplus.com",
+      },
+      // TEMPORARY — migrated eauto.co.in catalogue images still live on Shopify's
+      // CDN. Drop this once the R2 re-host pass has rewritten every
+      // ProductImage.imageUrl, and remove cdn.shopify.com from the CSP img-src above
+      // at the same time.
+      {
+        protocol: "https",
+        hostname: "cdn.shopify.com",
       },
     ],
   },

@@ -220,7 +220,7 @@ export default function ProductImportPage() {
                 "GST Rate",
                 "HSN Code",
                 "MOQ",
-                "Stock",
+                "Stock Status",
               ].map((col) => (
                 <span
                   key={col}
@@ -231,7 +231,7 @@ export default function ProductImportPage() {
               ))}
             </div>
             <p className="text-[var(--text-muted)] text-[10px] mt-2">
-              Category must match an existing category name exactly (case-insensitive). GST Rate: 0, 5, 12, 18, or 28. HSN Code: exactly 8 digits.
+              Category must match an existing category name exactly (case-insensitive). GST Rate: 0, 5, 12, 18, or 28. HSN Code: exactly 8 digits. Stock Status: In Stock, Few Left, or Out of Stock (defaults to In Stock if left blank).
             </p>
           </div>
 

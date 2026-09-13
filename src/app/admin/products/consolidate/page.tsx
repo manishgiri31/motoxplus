@@ -7,6 +7,7 @@ import {
   ChevronRight, Zap, List, ChevronDown, ChevronUp, RefreshCw,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { productStockLabel } from "@/lib/stock-status";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,7 +16,7 @@ interface ProductRow {
   name: string;
   partNumber: string;
   price: number;
-  stock: number;
+  stockStatus: "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
 }
 
 interface AutoGroup {
@@ -36,7 +37,7 @@ interface Suggestion {
   partNumber: string;
   price: number;
   mrp: number | null;
-  stock: number;
+  stock: number | null;
 }
 
 interface VariantEdit {
@@ -595,7 +596,7 @@ function ManualMode() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="text-[var(--text-primary)] text-sm font-bold">{formatCurrency(product.price)}</div>
-                      <div className="text-[var(--text-muted)] text-xs">Stock: {product.stock}</div>
+                      <div className="text-[var(--text-muted)] text-xs">{productStockLabel(product.stockStatus)}</div>
                     </div>
                     {isSel && (
                       <button

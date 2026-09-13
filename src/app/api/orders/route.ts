@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
   const unavailable = cart.items.filter((item) => {
     if (!item.product.isActive) return true;
     if (item.variant) return !item.variant.isActive || item.variant.stock < item.quantity;
-    return item.product.stock < item.quantity;
+    return item.product.stockStatus === "OUT_OF_STOCK";
   });
   if (unavailable.length > 0) {
     return NextResponse.json(

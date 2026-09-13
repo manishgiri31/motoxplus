@@ -1,9 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
-import Image from "next/image";
-import { Plus, Package, Truck, FileSpreadsheet, GitMerge, Search } from "lucide-react";
-import { AdminProductActions } from "@/components/admin/product-actions";
+import { Plus, Truck, FileSpreadsheet, GitMerge, Search } from "lucide-react";
+import { ProductsTable } from "@/components/admin/products-table";
 import { buildSearchWhere } from "@/lib/product-search";
 
 const SORT_OPTIONS = [
@@ -160,83 +158,7 @@ export default async function AdminProductsPage(
         ))}
       </div>
 
-      <div className="glass border border-[var(--border-color)] rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[var(--border-color)]">
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Product</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Category</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Part No.</th>
-              <th className="px-4 py-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-widest">Price</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden sm:table-cell">Stock</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {products.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-16 text-center text-[var(--text-muted)]">
-                  {search ? `No products found matching "${search}"` : "No products found"}
-                </td>
-              </tr>
-            ) : products.map((product) => (
-              <tr key={product.id} className="hover:bg-white/2 transition-colors">
-                <td className="px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-10 h-10 bg-zinc-900 rounded-xl flex-shrink-0 overflow-hidden">
-                      {(() => {
-                        const thumb = (product as any).productImages?.[0]?.imageUrl || product.images[0];
-                        return thumb ? (
-                          <Image src={thumb} alt={product.name} fill className="object-cover" sizes="40px" unoptimized />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package size={16} className="text-gray-600" />
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-[var(--text-primary)] font-bold text-sm">{product.name}</div>
-                        {(product as any).vendor && (
-                          <span className="bg-amber-900/30 text-amber-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border border-amber-900/40 flex items-center gap-1">
-                            <Truck size={8} />
-                            {(product as any).vendor.companyName}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[var(--text-muted)] text-xs font-mono">{product.sku}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-4 hidden md:table-cell">
-                  <span className="text-[var(--text-muted)] text-xs">{product.category.name}</span>
-                </td>
-                <td className="px-4 py-4 hidden lg:table-cell">
-                  <span className="text-[var(--text-muted)] text-xs font-mono">{product.partNumber}</span>
-                </td>
-                <td className="px-4 py-4 text-right">
-                  <span className="text-[var(--text-primary)] font-bold text-sm">{formatCurrency(product.price)}</span>
-                </td>
-                <td className="px-4 py-4 hidden sm:table-cell">
-                  <span className={`text-sm font-bold ${product.stock > 10 ? "text-green-400" : product.stock > 0 ? "text-yellow-400" : "text-red-400"}`}>
-                    {product.stock}
-                  </span>
-                </td>
-                <td className="px-4 py-4">
-                  <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-xl ${product.isActive ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
-                    {product.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="px-4 py-4">
-                  <AdminProductActions productId={product.id} productName={product.name} isActive={product.isActive} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ProductsTable products={products as any} search={search} />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-8">

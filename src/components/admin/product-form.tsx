@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProductImageUploader, ImageUploaderRef } from "@/components/admin/product-image-uploader";
+import { PRODUCT_STOCK_STATUS_OPTIONS } from "@/lib/stock-status";
 
 interface Category { id: string; name: string; }
 interface Props {
@@ -60,7 +61,7 @@ export function ProductForm({ categories, product }: Props) {
     hsnCode: product?.hsnCode || "",
     // Inventory
     moq: product?.moq?.toString() || "10",
-    stock: product?.stock?.toString() || "0",
+    stockStatus: product?.stockStatus || "IN_STOCK",
     // Product Identity
     brand: product?.brand || "MOTOXPLUS",
     warranty: product?.warranty || "No Warranty",
@@ -109,7 +110,7 @@ export function ProductForm({ categories, product }: Props) {
       gstRate: parseFloat(form.gstRate),
       hsnCode: form.hsnCode,
       moq: parseInt(form.moq),
-      stock: parseInt(form.stock),
+      stockStatus: form.stockStatus,
       brand: form.brand,
       warranty: form.warranty,
       countryOfOrigin: form.countryOfOrigin,
@@ -345,8 +346,10 @@ export function ProductForm({ categories, product }: Props) {
             <input required type="number" min="10" step="10" value={form.moq} onChange={(e) => set("moq", e.target.value)} className={INPUT} placeholder="10" />
           </div>
           <div>
-            <label className={LABEL}>Stock Quantity <span className="text-red-500">*</span></label>
-            <input required type="number" min="0" value={form.stock} onChange={(e) => set("stock", e.target.value)} className={INPUT} placeholder="0" />
+            <label className={LABEL}>Stock Status <span className="text-red-500">*</span></label>
+            <select required value={form.stockStatus} onChange={(e) => set("stockStatus", e.target.value)} className={INPUT}>
+              {PRODUCT_STOCK_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </div>
         </div>
       </div>

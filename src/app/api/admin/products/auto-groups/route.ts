@@ -25,7 +25,7 @@ interface ProductRow {
   partNumber: string;
   price: number;
   mrp: number | null;
-  stock: number;
+  stockStatus: "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
 }
 
 interface Group {
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
       partNumber: true,
       price: true,
       mrp: true,
-      stock: true,
+      stockStatus: true,
     },
     orderBy: { name: "asc" },
     take: 500,
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
     partNumber: p.partNumber,
     price: p.price,
     mrp: p.mrp,
-    stock: p.stock,
+    stockStatus: p.stockStatus,
   }));
 
   const groups = autoGroupProducts(rows, minWords);
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
         name: p.name,
         partNumber: p.partNumber,
         price: p.price,
-        stock: p.stock,
+        stockStatus: p.stockStatus,
       })),
       suggestedParentId: g.products[0].id,
     })),

@@ -5,6 +5,24 @@ import { uniqueProductSlug } from "@/lib/slug";
 const VALID_GST = [0, 5, 12, 18, 28];
 const VALID_WARRANTY = ["No Warranty", "3 Months", "6 Months", "12 Months"];
 
+type ProductStockStatus = "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
+
+const STOCK_STATUS_ALIASES: Record<string, ProductStockStatus> = {
+  "in stock": "IN_STOCK",
+  "in_stock": "IN_STOCK",
+  "few left": "FEW_LEFT",
+  "few_left": "FEW_LEFT",
+  "out of stock": "OUT_OF_STOCK",
+  "out_of_stock": "OUT_OF_STOCK",
+};
+
+// Blank cell defaults to IN_STOCK; an unrecognized value is a validation error
+// (same treatment as GST Rate/Warranty) rather than a silent default.
+function parseStockStatus(raw: string): ProductStockStatus | null {
+  if (!raw) return "IN_STOCK";
+  return STOCK_STATUS_ALIASES[raw.trim().toLowerCase()] ?? null;
+}
+
 const CATEGORY_HSN: Record<string, string> = {
   "brake parts":        "87149400",
   "engine parts":       "84099900",
@@ -55,7 +73,7 @@ interface ValidatedRow {
     gstRate: number;
     hsnCode: string;
     moq: number;
-    stock: number;
+    stockStatus: ProductStockStatus;
     brand: string;
     warranty: string;
     countryOfOrigin: string;
@@ -149,8 +167,8 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
     const moq = toInt(row, "MOQ") ?? 10;
     if (moq <= 0) errors.push("MOQ must be > 0");
 
-    const stock = toInt(row, "Stock", "Stock Quantity") ?? 0;
-    if (stock < 0) errors.push("Stock must be >= 0");
+    const stockStatus = parseStockStatus(str(row, "Stock Status"));
+    if (!stockStatus) errors.push("Stock Status must be one of: In Stock, Few Left, Out of Stock");
 
     if (errors.length > 0) {
       report.failed++;
@@ -179,7 +197,7 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
         gstRate: gstRate!,
         hsnCode,
         moq,
-        stock,
+        stockStatus: stockStatus!,
         brand: str(row, "Brand") || "MOTOXPLUS",
         warranty: VALID_WARRANTY.includes(warrantyRaw) ? warrantyRaw : "No Warranty",
         countryOfOrigin: str(row, "Country of Origin") || "India",
@@ -303,7 +321,7 @@ export function generateTemplate(): Buffer {
     "GST Rate",
     "HSN Code",
     "MOQ",
-    "Stock",
+    "Stock Status",
     "Brand",
     "Warranty",
     "Country of Origin",
@@ -321,7 +339,7 @@ export function generateTemplate(): Buffer {
     "18",
     "87149400",
     "10",
-    "100",
+    "In Stock",
     "MOTOXPLUS",
     "6 Months",
     "India",

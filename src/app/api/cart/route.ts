@@ -60,14 +60,13 @@ export async function POST(req: NextRequest) {
 
   // Validate variant if provided, and get its MOQ + stock
   let effectiveMoq = product.moq;
-  let availableStock = product.stock;
+  let variant: Awaited<ReturnType<typeof prisma.productVariant.findUnique>> = null;
   if (variantId) {
-    const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
+    variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
     if (!variant || variant.productId !== productId || !variant.isActive) {
       return NextResponse.json({ error: "Invalid variant" }, { status: 400 });
     }
-    if ((variant as any).moq != null) effectiveMoq = (variant as any).moq;
-    availableStock = variant.stock;
+    if (variant.moq != null) effectiveMoq = variant.moq;
   }
 
   // Validate MOQ
@@ -78,19 +77,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Reject up front rather than letting the dealer discover it at checkout —
-  // the cart previously accepted any quantity with no stock check at all.
-  if (quantity > availableStock) {
-    return NextResponse.json(
-      {
-        error:
-          availableStock > 0
-            ? `Only ${availableStock} in stock. Please reduce the quantity.`
-            : "This item is currently out of stock.",
-        availableStock,
-      },
-      { status: 409 }
-    );
+  // Reject up front rather than letting the dealer discover it at checkout.
+  // Variants still track a real countable quantity, so a variant order is
+  // capped to it; a plain product is governed by the admin-set stockStatus
+  // instead of a number, so it's either orderable or it isn't.
+  if (variant) {
+    if (quantity > variant.stock) {
+      return NextResponse.json(
+        {
+          error:
+            variant.stock > 0
+              ? `Only ${variant.stock} in stock. Please reduce the quantity.`
+              : "This item is currently out of stock.",
+          availableStock: variant.stock,
+        },
+        { status: 409 }
+      );
+    }
+  } else if (product.stockStatus === "OUT_OF_STOCK") {
+    return NextResponse.json({ error: "This item is currently out of stock." }, { status: 409 });
   }
 
   // Get or create cart

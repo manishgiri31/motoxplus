@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, Lock, Package, ChevronLeft, ChevronRight, X, Clock, Zap, Heart, Eye, Scale, Check, Palette } from "lucide-react";
+import { productStockLabel } from "@/lib/stock-status";
 
 const RECENT_KEY = "motox_recent_searches";
 const WISHLIST_KEY = "motox_wishlist";
@@ -30,7 +31,7 @@ interface Product {
   mrp?: number | null;
   gstRate: number;
   moq: number;
-  stock: number;
+  stockStatus: "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
   category: { name: string; slug: string };
 }
 
@@ -676,7 +677,8 @@ export function ProductCatalog({
               : null;
             const isWishlisted = wishlist.includes(product.id);
             const isComparing = compareIds.includes(product.id);
-            const outOfStock = product.stock <= 0;
+            const outOfStock = product.stockStatus === "OUT_OF_STOCK";
+            const fewLeft = product.stockStatus === "FEW_LEFT";
             const colors = colorCount(product);
 
             return (
@@ -714,6 +716,11 @@ export function ProductCatalog({
                     {outOfStock && (
                       <span className="bg-[rgb(var(--carbon-950))] text-white/80 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
                         Out of Stock
+                      </span>
+                    )}
+                    {fewLeft && (
+                      <span className="bg-[var(--sig-warn-fg)] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                        Few Left
                       </span>
                     )}
                   </div>
@@ -904,8 +911,8 @@ export function ProductCatalog({
                     <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2.5 py-1">
                       MOQ {quickView.moq}
                     </span>
-                    <span className={`text-[10px] uppercase tracking-wide font-bold rounded-full px-2.5 py-1 ${quickView.stock > 0 ? "text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)]" : "text-[var(--text-muted)] bg-[var(--bg-secondary)]"}`}>
-                      {quickView.stock > 0 ? "In Stock" : "Out of Stock"}
+                    <span className={`text-[10px] uppercase tracking-wide font-bold rounded-full px-2.5 py-1 ${quickView.stockStatus !== "OUT_OF_STOCK" ? "text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)]" : "text-[var(--text-muted)] bg-[var(--bg-secondary)]"}`}>
+                      {productStockLabel(quickView.stockStatus)}
                     </span>
                   </div>
                   <Link
@@ -971,7 +978,7 @@ export function ProductCatalog({
                         { label: "Price", render: (p: Product) => `₹${p.price.toLocaleString("en-IN")}` },
                         { label: "MRP", render: (p: Product) => (p.mrp ? `₹${p.mrp.toLocaleString("en-IN")}` : "—") },
                         { label: "MOQ", render: (p: Product) => String(p.moq) },
-                        { label: "Stock", render: (p: Product) => (p.stock > 0 ? "In Stock" : "Out of Stock") },
+                        { label: "Stock", render: (p: Product) => productStockLabel(p.stockStatus) },
                       ].map((row) => (
                         <tr key={row.label} className="border-t border-[var(--border-color)]">
                           <td className="py-3 pr-4 text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold align-top">

@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation";
 import { Search, ShoppingCart, CheckCircle, Plus, Minus, ChevronRight } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { formatCurrency } from "@/lib/utils";
-import { getStockStatus, stockStatusLabel } from "@/lib/stock-status";
+import { productStockLabel, productStockBadgeClass } from "@/lib/stock-status";
+
+type ProductStockStatus = "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
 
 interface ProductImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
 
@@ -23,7 +25,7 @@ interface Product {
   moq: number;
   images: string[];
   productImages?: ProductImage[];
-  stock: number;
+  stockStatus: ProductStockStatus;
   vendorId?: string | null;
   category: { name: string };
   _count?: { variants: number };
@@ -56,14 +58,11 @@ export function DealerProductCatalog({
   const [cartError, setCartError] = useState<string | null>(null);
   const totalPages = Math.ceil(total / pageSize);
 
-  // Largest multiple of MOQ that still fits within available stock — 0 means
-  // the dealer can't place a valid order at all (stock below one MOQ batch).
-  const maxOrderQty = (product: Product) => Math.floor(product.stock / product.moq) * product.moq;
-  const canOrder = (product: Product) => maxOrderQty(product) >= product.moq;
-  const getQuantity = (product: Product) => {
-    const max = maxOrderQty(product);
-    return Math.min(quantities[product.id] || product.moq, max || product.moq);
-  };
+  // Plain products no longer track a countable quantity — orderability is
+  // governed entirely by the admin-set stockStatus, so there's no numeric
+  // ceiling to cap the quantity stepper at, just the MOQ step size.
+  const canOrder = (product: Product) => product.stockStatus !== "OUT_OF_STOCK";
+  const getQuantity = (product: Product) => quantities[product.id] || product.moq;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,12 +151,8 @@ export function DealerProductCatalog({
         {products.map((product) => {
           const hasVariants = (product._count?.variants ?? 0) > 0;
           const isInStock = canOrder(product);
-          const stockLabel = product.stock < product.moq ? "Out of Stock" : stockStatusLabel(product.stock);
-          const stockBadgeCls = !isInStock
-            ? "bg-red-500/15 text-red-500"
-            : getStockStatus(product.stock) === "low_stock"
-            ? "bg-amber-500/15 text-amber-500"
-            : "bg-green-500/15 text-green-600";
+          const stockLabel = productStockLabel(product.stockStatus);
+          const stockBadgeCls = productStockBadgeClass(product.stockStatus);
           const thumb =
             product.productImages && product.productImages.length > 0
               ? (product.productImages.find((i) => i.isPrimary) || product.productImages[0]).imageUrl
@@ -254,8 +249,7 @@ export function DealerProductCatalog({
                     </button>
                     <span className="px-2 text-[var(--text-primary)] text-sm font-bold min-w-[28px] text-center">{getQuantity(product)}</span>
                     <button
-                      onClick={() => setQuantities((q) => ({ ...q, [product.id]: Math.min(getQuantity(product) + product.moq, maxOrderQty(product)) }))}
-                      disabled={getQuantity(product) >= maxOrderQty(product)}
+                      onClick={() => setQuantities((q) => ({ ...q, [product.id]: getQuantity(product) + product.moq }))}
                       className="px-2.5 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
                     >
                       <Plus size={12} />

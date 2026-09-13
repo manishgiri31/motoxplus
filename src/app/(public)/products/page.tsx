@@ -68,7 +68,7 @@ export default async function ProductsPage(
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: [{ stock: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ stockStatus: "asc" }, { createdAt: "desc" }],
     }),
     prisma.category.findMany({
       where: { isActive: true },

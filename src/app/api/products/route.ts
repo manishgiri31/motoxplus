@@ -26,7 +26,7 @@ const productSchema = z.object({
   gstRate: z.number().default(18),
   hsnCode: z.string().length(8, "HSN code must be exactly 8 digits").regex(/^\d{8}$/, "HSN code must be 8 digits"),
   moq: z.number().min(1).default(1),
-  stock: z.number().min(0).default(0),
+  stockStatus: z.enum(["IN_STOCK", "FEW_LEFT", "OUT_OF_STOCK"]).default("IN_STOCK"),
   // Product identity
   brand: z.string().default("MOTOXPLUS"),
   oemNumber: z.string().optional(),
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: [{ stock: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ stockStatus: "asc" }, { createdAt: "desc" }],
     }),
     prisma.product.count({ where }),
   ]);

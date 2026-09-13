@@ -10,7 +10,9 @@ import {
   Shield, Tag, PackageOpen, AlertTriangle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { getStockStatus, stockStatusLabel } from "@/lib/stock-status";
+import { getStockStatus, stockStatusLabel, productStockLabel } from "@/lib/stock-status";
+
+type ProductStockStatus = "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
 
 interface ProductImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
 interface VariantImage { id: string; imageUrl: string; isPrimary: boolean; sortOrder: number; }
@@ -48,7 +50,7 @@ interface Product {
   price: number;
   mrp?: number | null;
   moq: number;
-  stock: number;
+  stockStatus: ProductStockStatus;
   gstRate: number;
   hsnCode?: string;
   brand?: string;
@@ -166,12 +168,32 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
   const activeMoq = resolvedVariant?.moq ?? product.moq;
   const activeSku = resolvedVariant?.sku ?? product.sku;
   const activePartNumber = resolvedVariant?.partNumber ?? product.partNumber;
-  const activeStock = hasVariants ? (resolvedVariant?.stock ?? 0) : product.stock;
   const priceWithGST = activePrice * (1 + product.gstRate / 100);
-  const outOfStock = hasVariants ? !!resolvedVariant && resolvedVariant.stock <= 0 : product.stock <= 0;
-  // Largest MOQ-multiple that still fits within available stock — 0 means no
-  // valid order can be placed even though some stock may remain.
-  const maxOrderQty = Math.floor(activeStock / activeMoq) * activeMoq;
+  const outOfStock = hasVariants
+    ? !!resolvedVariant && resolvedVariant.stock <= 0
+    : product.stockStatus === "OUT_OF_STOCK";
+  // Variants still track a real countable quantity, so their max order
+  // quantity is capped to the largest MOQ-multiple that fits within it (0
+  // means no valid order can be placed even though some stock may remain). A
+  // plain product is governed by stockStatus, not a number — Infinity means
+  // "no numeric cap", with outOfStock disabling ordering entirely instead.
+  const maxOrderQty = hasVariants
+    ? Math.floor((resolvedVariant?.stock ?? 0) / activeMoq) * activeMoq
+    : outOfStock ? 0 : Infinity;
+
+  // Availability badge shown next to the part-info grid — variants read off
+  // their real numeric stock, a plain product off its admin-set stockStatus.
+  const stockBadge: { tone: "ok" | "warn" | "danger"; label: string } | null = hasVariants
+    ? resolvedVariant
+      ? {
+          tone: getStockStatus(resolvedVariant.stock) === "in_stock" ? "ok" : getStockStatus(resolvedVariant.stock) === "low_stock" ? "warn" : "danger",
+          label: stockStatusLabel(resolvedVariant.stock),
+        }
+      : null
+    : {
+        tone: product.stockStatus === "IN_STOCK" ? "ok" : product.stockStatus === "FEW_LEFT" ? "warn" : "danger",
+        label: productStockLabel(product.stockStatus),
+      };
 
   // Check if a value is available given current other-dimension selections
   const isValueAvailable = (dim: Dim, val: string): boolean => {
@@ -415,7 +437,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               { label: "SKU", value: activeSku, mono: true },
               ...(product.oemNumber ? [{ label: "OEM Number", value: product.oemNumber, mono: true }] : []),
               { label: "MOQ", value: `${activeMoq} pcs` },
-              ...(hasVariants && resolvedVariant ? [{ label: "Stock", value: `${activeStock} pcs` }] : []),
+              ...(hasVariants && resolvedVariant ? [{ label: "Stock", value: `${resolvedVariant.stock} pcs` }] : []),
               { label: "GST Rate", value: `${product.gstRate}%` },
               ...(product.hsnCode ? [{ label: "HSN Code", value: product.hsnCode, mono: true }] : []),
               ...(product.countryOfOrigin ? [{ label: "Country of Origin", value: product.countryOfOrigin }] : []),
@@ -430,15 +452,17 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
           </div>
 
           {/* Stock availability */}
-          {(!hasVariants || resolvedVariant) && (
+          {stockBadge && (
             <div
               className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-3 py-1 mb-6 border rounded-sm w-fit ${
-                getStockStatus(activeStock) === "in_stock"
+                stockBadge.tone === "ok"
                   ? "bg-[var(--sig-ok-bg)] text-[var(--sig-ok-fg)] border-[var(--sig-ok-bd)]"
-                  : "bg-[var(--sig-warn-bg)] text-[var(--sig-warn-fg)] border-[var(--sig-warn-bd)]"
+                  : stockBadge.tone === "warn"
+                  ? "bg-[var(--sig-warn-bg)] text-[var(--sig-warn-fg)] border-[var(--sig-warn-bd)]"
+                  : "bg-[var(--sig-danger-bg)] text-[var(--sig-danger-fg)] border-[var(--sig-danger-bd)]"
               }`}
             >
-              {stockStatusLabel(activeStock)}
+              {stockBadge.label}
             </div>
           )}
 
@@ -732,7 +756,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                   type="number"
                   value={quantity}
                   min={activeMoq}
-                  max={maxOrderQty > 0 ? maxOrderQty : undefined}
+                  max={Number.isFinite(maxOrderQty) && maxOrderQty > 0 ? maxOrderQty : undefined}
                   step={activeMoq}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);

@@ -119,7 +119,7 @@ export default async function ProductDetailPage(
             productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
           },
           take: 8,
-          orderBy: [{ stock: "desc" }, { createdAt: "desc" }],
+          orderBy: [{ stockStatus: "asc" }, { createdAt: "desc" }],
         });
       }
     }
@@ -198,7 +198,7 @@ export default async function ProductDetailPage(
             priceCurrency: "INR",
             price: product.price,
             availability:
-              product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              product.stockStatus !== "OUT_OF_STOCK" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
             itemCondition: "https://schema.org/NewCondition",
           },
         }}
