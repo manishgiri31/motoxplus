@@ -142,13 +142,68 @@ model Dealer {
   gstVerifiedAt      DateTime?
   panNumber          String?
   shopAddress        String?
+  // Cached running balance — always equal to the sum of this dealer's
+  // DealerDuesEntry.amount rows (see that model). Kept denormalized on the
+  // Dealer row for a fast read at checkout ("Previous Dues" line), same
+  // pattern as Order's cached subtotal/gstAmount/grandTotal rather than
+  // summing items on every read. Positive = dealer owes MotoXplus.
+  outstandingDues    Float               @default(0)
   cart               Cart?
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   deviceTokens       DeviceToken[]
   documents          DealerDocument[]
+  duesEntries        DealerDuesEntry[]
   invoices           Invoice[]
   orders             Order[]
   paymentSubmissions PaymentSubmission[]
+}
+
+/**
+ * Append-only audit ledger behind Dealer.outstandingDues — every change to
+ * the cached balance (system-generated or admin-entered) gets its own row
+ * here, never a silent mutation of outstandingDues alone. amount is signed
+ * (positive = due added, negative = due reduced/collected/waived);
+ * balanceAfter snapshots Dealer.outstandingDues right after this entry so
+ * the ledger is self-verifying (each row's own truth) rather than only
+ * reconstructable by replaying the whole history.
+ *
+ * Why dues exist at all instead of writing off an uncollectible scheme
+ * shortfall (see lib/schemes/adjustment.ts's applySchemeAdjustmentToRefund):
+ * the scheme goods already left the warehouse — forgiving the gap would
+ * make "place a big order, take the scheme goods, pay a small advance, then
+ * cancel" a working exploit. The debt follows the dealer instead.
+ */
+model DealerDuesEntry {
+  id              String           @id @default(cuid())
+  dealerId        String
+  amount          Float
+  balanceAfter    Float
+  reason          DealerDuesReason
+  // SCHEME_SHORTFALL: the order whose cancellation/adjustment created this entry.
+  // COLLECTED_AT_CHECKOUT: the new order whose payment collected it.
+  // ADMIN_ADJUSTMENT / ADMIN_WAIVER: usually null.
+  orderId         String?
+  note            String?          @db.VarChar(500)
+  createdAt       DateTime         @default(now())
+  // Null for SYSTEM-generated entries (SCHEME_SHORTFALL, COLLECTED_AT_CHECKOUT).
+  createdByUserId String?
+  // Reuses CancelActor (DEALER/ADMIN/SYSTEM) rather than a near-duplicate
+  // enum — DEALER is never actually written here (a dealer's own checkout
+  // triggers a SYSTEM-attributed COLLECTED_AT_CHECKOUT entry, not a
+  // DEALER-attributed one), but the shape matches exactly.
+  createdByRole   CancelActor
+  dealer          Dealer           @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  order           Order?           @relation(fields: [orderId], references: [id])
+
+  @@index([dealerId, createdAt])
+  @@index([orderId])
+}
+
+enum DealerDuesReason {
+  SCHEME_SHORTFALL
+  COLLECTED_AT_CHECKOUT
+  ADMIN_ADJUSTMENT
+  ADMIN_WAIVER
 }
 
 model Admin {
@@ -377,11 +432,16 @@ model Order {
   // lib/schemes/adjustment.ts. Always tracked as its own line, never merged
   // into OrderCancellation.feeAmount or OrderItemCancellation.feeAmount.
   schemeAdjustmentAmount Float               @default(0)
+  // How much of the dealer's Dealer.outstandingDues this order's payment
+  // collected — shown as its own "Previous Dues" checkout/invoice line, on
+  // top of (not instead of) this order's own subtotal/GST/shipping.
+  duesCollected      Float               @default(0)
   invoice            Invoice?
   dealer             Dealer              @relation(fields: [dealerId], references: [id])
   cancellation       OrderCancellation?
   itemCancellations  OrderItemCancellation[]
   schemeRedemption   SchemeRedemption?
+  duesEntries        DealerDuesEntry[]
   events             OrderEvent[]
   items              OrderItem[]
   payments           Payment[]

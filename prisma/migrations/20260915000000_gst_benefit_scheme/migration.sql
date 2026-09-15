@@ -1,6 +1,9 @@
 -- CreateEnum
 CREATE TYPE "SchemeRedemptionStatus" AS ENUM ('ACTIVE', 'ADJUSTED', 'CANCELLED');
 
+-- CreateEnum
+CREATE TYPE "DealerDuesReason" AS ENUM ('SCHEME_SHORTFALL', 'COLLECTED_AT_CHECKOUT', 'ADMIN_ADJUSTMENT', 'ADMIN_WAIVER');
+
 -- AlterEnum
 -- New value only — no existing OrderStatus row is touched, nothing in this
 -- migration reads/writes the new value, so it's safe to add inside the same
@@ -17,7 +20,11 @@ ALTER TABLE "CartItem" ADD COLUMN     "isSchemeItem" BOOLEAN NOT NULL DEFAULT fa
 
 -- AlterTable
 ALTER TABLE "Order" ADD COLUMN     "schemeBenefitValue" DOUBLE PRECISION NOT NULL DEFAULT 0,
-ADD COLUMN     "schemeAdjustmentAmount" DOUBLE PRECISION NOT NULL DEFAULT 0;
+ADD COLUMN     "schemeAdjustmentAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "duesCollected" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "Dealer" ADD COLUMN     "outstandingDues" DOUBLE PRECISION NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "OrderItem" ADD COLUMN     "isSchemeItem" BOOLEAN NOT NULL DEFAULT false,
@@ -79,6 +86,22 @@ CREATE TABLE "OrderItemCancellation" (
 );
 
 -- CreateTable
+CREATE TABLE "DealerDuesEntry" (
+    "id" TEXT NOT NULL,
+    "dealerId" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "balanceAfter" DOUBLE PRECISION NOT NULL,
+    "reason" "DealerDuesReason" NOT NULL,
+    "orderId" TEXT,
+    "note" VARCHAR(500),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdByUserId" TEXT,
+    "createdByRole" "CancelActor" NOT NULL,
+
+    CONSTRAINT "DealerDuesEntry_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "SchemeCategory" (
     "schemeId" TEXT NOT NULL,
     "categoryId" TEXT NOT NULL,
@@ -107,6 +130,12 @@ CREATE INDEX "OrderItemCancellation_orderItemId_idx" ON "OrderItemCancellation"(
 -- CreateIndex
 CREATE INDEX "SchemeCategory_categoryId_idx" ON "SchemeCategory"("categoryId");
 
+-- CreateIndex
+CREATE INDEX "DealerDuesEntry_dealerId_createdAt_idx" ON "DealerDuesEntry"("dealerId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "DealerDuesEntry_orderId_idx" ON "DealerDuesEntry"("orderId");
+
 -- AddForeignKey
 ALTER TABLE "SchemeRedemption" ADD CONSTRAINT "SchemeRedemption_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -124,3 +153,9 @@ ALTER TABLE "SchemeCategory" ADD CONSTRAINT "SchemeCategory_schemeId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "SchemeCategory" ADD CONSTRAINT "SchemeCategory_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DealerDuesEntry" ADD CONSTRAINT "DealerDuesEntry_dealerId_fkey" FOREIGN KEY ("dealerId") REFERENCES "Dealer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DealerDuesEntry" ADD CONSTRAINT "DealerDuesEntry_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE SET NULL ON UPDATE CASCADE;
