@@ -171,6 +171,7 @@ model Category {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   products    Product[]
+  schemes     SchemeCategory[]
 }
 
 model Product {
@@ -313,6 +314,10 @@ model Cart {
   dealerId  String     @unique
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  // Plain string, not a relation — same "audit-field, no FK" convention as
+  // OrderCancellation.waivedByUserId. One scheme per cart (mirrors the
+  // one-scheme-per-order rule on SchemeRedemption.orderId).
+  schemeId  String?
   dealer    Dealer     @relation(fields: [dealerId], references: [id], onDelete: Cascade)
   items     CartItem[]
 
@@ -320,16 +325,21 @@ model Cart {
 }
 
 model CartItem {
-  id        String          @id @default(cuid())
-  cartId    String
-  productId String
-  quantity  Int             @default(1)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  variantId String?
-  cart      Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  id           String          @id @default(cuid())
+  cartId       String
+  productId    String
+  quantity     Int             @default(1)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  variantId    String?
+  // True for a scheme freebie line added via POST /api/cart/scheme. Price is
+  // never snapshotted here (cart never snapshots price, see product/variant
+  // relations below) — display reads Product.price live, same as every other
+  // cart item; the discount/₹0 total is computed only at order creation.
+  isSchemeItem Boolean         @default(false)
+  cart         Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product      Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant      ProductVariant? @relation(fields: [variantId], references: [id])
 
   @@index([cartId])
   @@index([productId])
@@ -358,9 +368,20 @@ model Order {
   deliveryState      String?
   shippingCost       Float               @default(0)
   stockReserved      Boolean             @default(false)
+  // Sum of the GST Benefit granted to this order (18%-of-taxable-value by
+  // default, see Scheme.benefitPercent) — the face value of the scheme items'
+  // dealer price, not a cash discount off paid items.
+  schemeBenefitValue     Float               @default(0)
+  // Running total of money clawed back from this order's refunds because the
+  // dealer kept scheme goods a shrunk/cancelled order no longer earned — see
+  // lib/schemes/adjustment.ts. Always tracked as its own line, never merged
+  // into OrderCancellation.feeAmount or OrderItemCancellation.feeAmount.
+  schemeAdjustmentAmount Float               @default(0)
   invoice            Invoice?
   dealer             Dealer              @relation(fields: [dealerId], references: [id])
   cancellation       OrderCancellation?
+  itemCancellations  OrderItemCancellation[]
+  schemeRedemption   SchemeRedemption?
   events             OrderEvent[]
   items              OrderItem[]
   payments           Payment[]
@@ -397,9 +418,116 @@ model OrderCancellation {
   waived                   Boolean          @default(false)
   waivedByUserId           String?
   waivedAt                 DateTime?
+  // Deducted from refundAmount above ON TOP of feeAmount, never combined with
+  // it (two separate invoice/credit-note lines: "Cancellation Fee" and
+  // "Scheme Adjustment"). Non-zero only when this order had an ACTIVE/ADJUSTED
+  // SchemeRedemption AND the order had already been dispatched at cancel time
+  // — nothing dispatched means the scheme goods never left the warehouse, so
+  // the redemption is simply voided (status CANCELLED) with no charge. See
+  // lib/schemes/adjustment.ts computeFullCancelSchemeAdjustment.
+  schemeAdjustmentAmount   Float            @default(0)
   order                    Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([refundStatus])
+}
+
+/**
+ * "GST Benefit Scheme" — B2B dealer gets extra products worth
+ * benefitPercent% (default 18%) of their order's taxable value, billed at
+ * full dealer price on the invoice with a 100% "Scheme Discount" line
+ * against each (Section 15(3)), so no ITC reversal under 17(5)(h). See
+ * lib/schemes/pricing.ts for the valuation and lib/schemes/adjustment.ts for
+ * the cancellation-time money-adjustment rules.
+ */
+model Scheme {
+  id                 String             @id @default(cuid())
+  name               String
+  code               String             @unique
+  isActive           Boolean            @default(true)
+  benefitPercent     Float              @default(18)
+  minOrderValue      Float
+  maxBenefitValue    Float?
+  startsAt           DateTime
+  endsAt             DateTime
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  // Empty = every category is eligible. Explicit join model (not an implicit
+  // Prisma m2m) — deliberately, so the join table's DDL (composite PK, FK
+  // names, index) is a plain, version-stable Prisma mapping instead of
+  // depending on how a given Prisma version happens to shape an implicit m2m
+  // table, which could not be verified against a live DB before this
+  // migration ships. See SchemeCategory below.
+  eligibleCategories SchemeCategory[]
+  redemptions        SchemeRedemption[]
+
+  @@index([isActive, startsAt, endsAt])
+}
+
+model SchemeCategory {
+  schemeId   String
+  categoryId String
+  scheme     Scheme   @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([schemeId, categoryId])
+  @@index([categoryId])
+}
+
+/**
+ * One row per order that used a scheme (Order.id is @unique here — one
+ * scheme per order, enforced at the DB level). status starts ACTIVE, moves
+ * to ADJUSTED once any money has been clawed back via
+ * Order.schemeAdjustmentAmount (partial cancel shortfall, or a post-dispatch
+ * full cancel), and to CANCELLED only when nothing was ever dispatched and
+ * the whole order is cancelled (scheme goods never left the warehouse, so
+ * the redemption is simply voided with no charge).
+ */
+model SchemeRedemption {
+  id            String                 @id @default(cuid())
+  orderId       String                 @unique
+  schemeId      String
+  benefitValue  Float
+  itemsValue    Float
+  status         SchemeRedemptionStatus @default(ACTIVE)
+  createdAt     DateTime               @default(now())
+  order         Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  scheme        Scheme                 @relation(fields: [schemeId], references: [id])
+
+  @@index([schemeId])
+}
+
+/**
+ * Line-item ("partial") cancellation ledger — cancels a quantity of one
+ * OrderItem while the rest of the order stays active (Order.status moves to
+ * PARTIALLY_CANCELLED, not CANCELLED). Distinct from OrderCancellation,
+ * which is the existing whole-order cancel record.
+ *
+ * schemeAdjustmentAmount is always its own field, never folded into
+ * feeAmount — the dealer-facing breakdown keeps "Cancellation Fee" and
+ * "Scheme Adjustment" as two separate lines (see lib/schemes/adjustment.ts).
+ * refundAmount is the net actually returned: the cancelled quantity's paid
+ * value, minus feeAmount, minus schemeAdjustmentAmount, floored at 0.
+ */
+model OrderItemCancellation {
+  id                     String            @id @default(cuid())
+  orderId                String
+  orderItemId            String
+  quantity               Int
+  feeAmount              Float
+  schemeAdjustmentAmount Float             @default(0)
+  refundAmount           Float
+  reasonCode             CancelReasonCode
+  reason                 String?           @db.VarChar(500)
+  cancelledAt            DateTime          @default(now())
+  cancelledByUserId      String
+  cancelledByRole        CancelActor
+  refundStatus           RefundStatus      @default(NOT_APPLICABLE)
+  refundId               String?
+  order                  Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem              OrderItem         @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([orderItemId])
 }
 
 /**
@@ -456,21 +584,37 @@ model DeviceToken {
 }
 
 model OrderItem {
-  id           String          @id @default(cuid())
-  orderId      String
-  productId    String
-  quantity     Int
-  unitPrice    Float
-  gstRate      Float
-  gstAmount    Float
-  total        Float
-  createdAt    DateTime        @default(now())
-  variantId    String?
-  variantLabel String?
-  variantSku   String?
-  order        Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product      Product         @relation(fields: [productId], references: [id])
-  variant      ProductVariant? @relation(fields: [variantId], references: [id])
+  id                  String                  @id @default(cuid())
+  orderId             String
+  productId           String
+  quantity            Int
+  unitPrice           Float
+  gstRate             Float
+  gstAmount           Float
+  total               Float
+  createdAt           DateTime                @default(now())
+  variantId           String?
+  variantLabel        String?
+  variantSku          String?
+  // True for a scheme freebie line. unitPrice/gstRate above still carry the
+  // item's real dealer rate/GST% (so the gross line reads at full value on
+  // the invoice); schemeDiscountAmount is the 100% "Scheme Discount" line
+  // that brings the taxable value — and so gstAmount/total — to 0 (Section
+  // 15(3)). dealerPriceAtOrder is a dedicated snapshot for the scheme
+  // subsystem's own bookkeeping (SchemeRedemption.itemsValue accounting),
+  // kept separate from unitPrice so scheme math never depends on a generic
+  // invoice field's semantics changing later.
+  isSchemeItem         Boolean                 @default(false)
+  schemeDiscountAmount Float                   @default(0)
+  dealerPriceAtOrder   Float?
+  // How much of `quantity` has been removed via partial cancellation so far
+  // (OrderItemCancellation rows). Remaining live quantity = quantity -
+  // cancelledQuantity. Never decremented back up — a re-add is a new order.
+  cancelledQuantity    Int                     @default(0)
+  order                Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product              Product                 @relation(fields: [productId], references: [id])
+  variant              ProductVariant?         @relation(fields: [variantId], references: [id])
+  cancellations        OrderItemCancellation[]
 }
 
 model Payment {
@@ -1284,6 +1428,16 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
   RETURNED
+  // At least one OrderItem was line-item-cancelled (OrderItemCancellation)
+  // but the order still has active items left — distinct from CANCELLED,
+  // which means every item is gone.
+  PARTIALLY_CANCELLED
+}
+
+enum SchemeRedemptionStatus {
+  ACTIVE
+  ADJUSTED
+  CANCELLED
 }
 
 enum PaymentStatus {
