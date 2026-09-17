@@ -7,7 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, Package, Truck, FileText, CreditCard, MapPin, Ban } from "lucide-react";
 import { AdminOrderStatus } from "@/components/admin/order-status";
 import { CancelOrderAction } from "@/components/orders/cancel-order-action";
-import { CANCELLABLE_STATUSES } from "@/lib/orders/cancellation";
+import { isCancellableStatus } from "@/lib/orders/cancellation";
 
 const WAIVE_ROLES = ["SUPER_ADMIN", "ACCOUNTS"];
 
@@ -80,7 +80,7 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
               {order.status}
             </span>
             <AdminOrderStatus orderId={order.id} currentStatus={order.status} />
-            {CANCELLABLE_STATUSES.includes(order.status) && (
+            {isCancellableStatus(order.status) && (
               <CancelOrderAction orderId={order.id} allowWaive={canWaive} />
             )}
           </div>

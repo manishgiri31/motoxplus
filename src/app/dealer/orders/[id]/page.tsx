@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { CANCELLABLE_STATUSES } from "@/lib/orders/cancellation";
+import { isCancellableStatus } from "@/lib/orders/cancellation";
 import { CancelOrderAction } from "@/components/orders/cancel-order-action";
 
 export default async function OrderDetailPage(
@@ -57,7 +57,7 @@ export default async function OrderDetailPage(
           }`}>
             {order.status}
           </span>
-          {CANCELLABLE_STATUSES.includes(order.status) && <CancelOrderAction orderId={order.id} />}
+          {isCancellableStatus(order.status) && <CancelOrderAction orderId={order.id} />}
         </div>
       </div>
 

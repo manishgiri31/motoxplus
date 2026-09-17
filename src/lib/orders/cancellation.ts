@@ -143,6 +143,15 @@ export function calculateCancellation(params: {
 export const CANCELLABLE_STATUSES: OrderStatusForCancellation[] = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED"];
 
 /**
+ * Narrows the full Prisma OrderStatus (which includes PARTIALLY_CANCELLED and
+ * other values outside this module's closed OrderStatusForCancellation union)
+ * down to a safe `.includes()` check against CANCELLABLE_STATUSES.
+ */
+export function isCancellableStatus(status: string): status is OrderStatusForCancellation {
+  return CANCELLABLE_STATUSES.includes(status as OrderStatusForCancellation);
+}
+
+/**
  * TEMPORARY STOPGAP — see docs/delhivery-open-items.md item 1. Does NOT
  * touch evaluateCancellation/calculateCancellation above: those still
  * correctly return ok:true/POST_SHIP/20% for a SHIPPED FULL_100 or
