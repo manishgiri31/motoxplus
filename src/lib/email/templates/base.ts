@@ -42,7 +42,7 @@ export function baseTemplate(title: string, content: string): string {
       <div class="footer">
         <div class="footer-text">
           MOTOXPLUS India Private Limited<br/>
-          RZ-43/291, Street No. 6, Geetanjali Park, Sagarpur West, New Delhi 110046<br/>
+          Ground Floor, RSR-11, Kh.No.443, Main Nasirpur Road, Palam Village, New Delhi 110045<br/>
           GST: 07AAUCM5765B1Z4 &nbsp;|&nbsp; info@motoxplus.com &nbsp;|&nbsp; +91 88168 12379<br/><br/>
           This is an automated email. Please do not reply to this message.
         </div>

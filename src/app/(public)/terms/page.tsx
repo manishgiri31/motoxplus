@@ -41,7 +41,7 @@ export default function TermsPage() {
 
             <Section title="1. Definitions">
               <ul>
-                <li><strong className="text-[var(--ink)]">&ldquo;Company&rdquo;</strong> means MotoXPlus India Private Limited (GSTIN: 07AAUCM5765B1Z4), registered at RZ-43/291, Nashirpur, New Delhi – 110045.</li>
+                <li><strong className="text-[var(--ink)]">&ldquo;Company&rdquo;</strong> means MotoXPlus India Private Limited (GSTIN: 07AAUCM5765B1Z4), registered at Ground Floor, RSR-11, Kh.No.443, Main Nasirpur Road, Palam Village, New Delhi – 110045.</li>
                 <li><strong className="text-[var(--ink)]">&ldquo;Dealer&rdquo;</strong> means a registered business entity that has created an account to purchase products through the dealer portal.</li>
                 <li><strong className="text-[var(--ink)]">&ldquo;Platform&rdquo;</strong> means the website motoxplus.in and all associated web applications.</li>
                 <li><strong className="text-[var(--ink)]">&ldquo;Products&rdquo;</strong> means automotive spare parts listed on the Platform.</li>
@@ -215,7 +215,7 @@ export default function TermsPage() {
             <Section title="15. Contact">
               <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-5 mt-4">
                 <p className="text-[var(--ink)] font-bold mb-1">MotoXPlus India Private Limited</p>
-                <p className="text-[var(--muted)] text-sm">RZ-43/291, Nashirpur, New Delhi – 110045</p>
+                <p className="text-[var(--muted)] text-sm">Ground Floor, RSR-11, Kh.No.443, Main Nasirpur Road, Palam Village, New Delhi – 110045</p>
                 <p className="text-[var(--muted)] text-sm">
                   Email:{" "}
                   <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>

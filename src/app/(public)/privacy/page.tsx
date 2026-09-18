@@ -180,7 +180,7 @@ export default function PrivacyPolicyPage() {
               <p>If you have questions about this Privacy Policy, please contact:</p>
               <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-5 mt-4 not-prose">
                 <p className="text-[var(--ink)] font-bold mb-1">MotoXPlus India Private Limited</p>
-                <p className="text-[var(--muted)] text-sm">RZ-43/291, Nashirpur, New Delhi – 110045</p>
+                <p className="text-[var(--muted)] text-sm">Ground Floor, RSR-11, Kh.No.443, Main Nasirpur Road, Palam Village, New Delhi – 110045</p>
                 <p className="text-[var(--muted)] text-sm">
                   Email:{" "}
                   <a href="mailto:info@motoxplus.com" className="text-red-500 hover:underline">info@motoxplus.com</a>
