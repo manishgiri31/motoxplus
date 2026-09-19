@@ -4,9 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { baseTemplate } from "@/lib/email/templates/base";
-import { generateInvoiceNumber, escapeHtml } from "@/lib/utils";
+import { escapeHtml } from "@/lib/utils";
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 import { notifyOrderEvent } from "@/lib/push/order-notifications";
+import { createInvoice } from "@/lib/invoicing/create-invoice";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -83,15 +84,15 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 
       // Generate invoice if not already created
       if (!submission.order.invoice) {
-        await tx.invoice.create({
-          data: {
-            invoiceNumber: generateInvoiceNumber(),
-            orderId: submission.orderId,
+        await createInvoice(tx, {
+          order: {
+            id: submission.orderId,
             dealerId: submission.dealerId,
             subtotal: submission.order.subtotal ?? 0,
             gstAmount: submission.order.gstAmount ?? 0,
             grandTotal: submission.order.grandTotal,
           },
+          channel: submission.order.channel,
         });
       }
     });

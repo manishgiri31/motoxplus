@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { generateInvoiceNumber, roundToPaise } from "@/lib/utils";
+import { roundToPaise } from "@/lib/utils";
 import { autoCreateShipment } from "@/lib/delhivery";
 import { decrementStock } from "@/lib/orders/stock";
 import { notifyOrderEvent } from "@/lib/push/order-notifications";
+import { createInvoice } from "@/lib/invoicing/create-invoice";
 
 export interface FinalizeCapturedPaymentResult {
   /** false only for the single call that actually performed the transition. */
@@ -80,17 +81,17 @@ export async function finalizeCapturedPayment(params: {
       }))
     );
 
-    invoiceNumber = generateInvoiceNumber();
-    await tx.invoice.create({
-      data: {
-        invoiceNumber,
-        orderId,
+    const invoice = await createInvoice(tx, {
+      order: {
+        id: orderId,
         dealerId: order.dealerId,
         subtotal: order.subtotal,
         gstAmount: order.gstAmount,
         grandTotal: order.grandTotal,
       },
+      channel: order.channel,
     });
+    invoiceNumber = invoice.invoiceNumber;
   });
 
   const alreadyProcessed = invoiceNumber === null;

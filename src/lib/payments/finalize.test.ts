@@ -46,6 +46,7 @@ const ORDER = {
   id: "o1",
   dealerId: "d1",
   paymentType: "FULL_100",
+  channel: "B2B",
   amountDue: 1000,
   grandTotal: 1000,
   subtotal: 900,
@@ -97,6 +98,19 @@ describe("finalizeCapturedPayment — F-05 (Payment→PAID inside the transactio
     expect(txMock.order.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "o1", stockReserved: false }, data: expect.objectContaining({ status: "CONFIRMED" }) })
     );
+    // lib/invoicing/create-invoice.ts is the single place that writes the
+    // Invoice row — verify it's fed the order's own channel, not a hardcoded one.
+    expect(txMock.invoice.create).toHaveBeenCalledWith({
+      data: {
+        invoiceNumber: "INV-TEST-1",
+        orderId: "o1",
+        dealerId: "d1",
+        subtotal: 900,
+        gstAmount: 100,
+        grandTotal: 1000,
+        channel: "B2B",
+      },
+    });
   });
 
   it("second caller (order already finalized) is a safe no-op returning the existing invoice", async () => {
