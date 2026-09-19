@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, roundToPaise } from "@/lib/utils";
 import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone, Info, ShieldCheck, Building2, Wallet, Lock, Zap, Clock } from "lucide-react";
 import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
+import { computeOrderPricing } from "@/lib/pricing/compute";
+import { computeShippingQuote, FREE_DELIVERY_THRESHOLD } from "@/lib/shipping/quote";
 
 declare global {
   interface Window {
@@ -107,13 +109,6 @@ const ALL_PAYMENT_OPTIONS = [
   },
 ];
 
-const FREE_DELIVERY_THRESHOLD = 25000;
-
-function calcShipping(orderTotal: number): number {
-  if (orderTotal >= FREE_DELIVERY_THRESHOLD) return 0;
-  return Math.round(orderTotal * 0.05 * 100) / 100;
-}
-
 export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState<CartSummary | null>(null);
@@ -173,17 +168,25 @@ export default function CheckoutPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.items) {
-          const unitPrice = (item: any) => item.variant?.price ?? item.product.price;
-          const subtotal = data.items.reduce(
-            (sum: number, item: any) => sum + unitPrice(item) * item.quantity,
-            0
-          );
-          const gstAmount = data.items.reduce(
-            (sum: number, item: any) =>
-              sum + (unitPrice(item) * item.quantity * item.product.gstRate) / 100,
-            0
-          );
-          setCart({ subtotal, gstAmount, items: data.items });
+          // Same computeOrderPricing() the server uses to build the actual
+          // order (see /api/orders) — per-line rounding, order totals
+          // derived from the already-rounded lines. productId/variantId
+          // aren't used in the arithmetic (pass-through only), so a missing
+          // one here can't affect the numbers; kept only so this preview
+          // can never silently drift from what gets charged.
+          const pricing = computeOrderPricing({
+            channel: "B2B",
+            items: data.items.map((item: any) => ({
+              productId: item.productId ?? "",
+              variantId: item.variantId ?? null,
+              variantLabel: item.variant?.label ?? null,
+              variantSku: item.variant?.sku ?? null,
+              quantity: item.quantity,
+              unitPrice: item.variant?.price ?? item.product.price,
+              gstRate: item.product.gstRate,
+            })),
+          });
+          setCart({ subtotal: pricing.subtotal, gstAmount: pricing.gstAmount, items: data.items });
         }
         setCartLoading(false);
       });
@@ -211,16 +214,17 @@ export default function CheckoutPage() {
     document.body.appendChild(script);
   }, []);
 
-  const orderTotal = (cart?.subtotal ?? 0) + (cart?.gstAmount ?? 0);
-  // Mirrors the server's unconditional calcShipping(orderTotal) in /api/orders —
-  // shipping cost doesn't depend on courier serviceability (that only affects
-  // the "may be outside courier coverage" delivery-arrangement notice below).
-  // Gating this on serviceabilityResult used to show ₹0 shipping (and a lower
-  // grand total) whenever the check hadn't resolved yet, e.g. while the
-  // Delhivery API was slow/unreachable, even though the order actually created
-  // moments later always carried the real shipping charge — a bait-and-switch
-  // between what checkout displayed and what the dealer was actually billed.
-  const shippingCost = cart ? calcShipping(orderTotal) : 0;
+  const orderTotal = roundToPaise((cart?.subtotal ?? 0) + (cart?.gstAmount ?? 0));
+  // Mirrors the server's unconditional computeShippingQuote(orderTotal) in
+  // /api/orders — shipping cost doesn't depend on courier serviceability
+  // (that only affects the "may be outside courier coverage" delivery-
+  // arrangement notice below). Gating this on serviceabilityResult used to
+  // show ₹0 shipping (and a lower grand total) whenever the check hadn't
+  // resolved yet, e.g. while the Delhivery API was slow/unreachable, even
+  // though the order actually created moments later always carried the real
+  // shipping charge — a bait-and-switch between what checkout displayed and
+  // what the dealer was actually billed.
+  const shippingCost = cart ? computeShippingQuote({ channel: "B2B", orderTotal }).shippingCost : 0;
   const freeDeliveryRemaining = Math.max(0, FREE_DELIVERY_THRESHOLD - orderTotal);
   const freeDeliveryProgress = Math.min(100, (orderTotal / FREE_DELIVERY_THRESHOLD) * 100);
 

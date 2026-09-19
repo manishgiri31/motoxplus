@@ -4,13 +4,8 @@ import { generateOrderNumber, roundToPaise } from "@/lib/utils";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
-
-const FREE_DELIVERY_THRESHOLD = 25000;
-
-function calcShipping(orderTotal: number): number {
-  if (orderTotal >= FREE_DELIVERY_THRESHOLD) return 0;
-  return Math.round(orderTotal * 0.05 * 100) / 100;
-}
+import { computeOrderPricing } from "@/lib/pricing/compute";
+import { computeShippingQuote } from "@/lib/shipping/quote";
 
 export async function GET(req: NextRequest) {
   // Accepts either the web NextAuth session or the mobile/plain-login JWT
@@ -140,26 +135,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let subtotal = 0;
-  let gstAmount = 0;
+  // B2C-EXPANSION-PLAN.md Phase 0 — channel seam. This route only ever
+  // creates B2B dealer orders (POST above already 401s any non-DEALER
+  // role), so "B2B" is passed explicitly rather than left to Order.channel's
+  // schema default. computeOrderPricing/computeShippingQuote are pure
+  // (no DB) — see src/lib/pricing/compute.ts and src/lib/shipping/quote.ts,
+  // and their golden test (src/lib/__tests__/golden-b2b-order.test.ts) for
+  // the exact numbers this must keep producing.
+  const channel = "B2B" as const;
 
-  for (const item of cart.items) {
-    const unitPrice = item.variant?.price ?? item.product.price;
-    const itemSubtotal = unitPrice * item.quantity;
-    const itemGST = (itemSubtotal * item.product.gstRate) / 100;
-    subtotal += itemSubtotal;
-    gstAmount += itemGST;
-  }
+  const pricing = computeOrderPricing({
+    channel,
+    items: cart.items.map((item) => ({
+      productId: item.productId,
+      variantId: item.variantId,
+      variantLabel: item.variant?.label ?? null,
+      variantSku: (item.variant as any)?.sku ?? null,
+      quantity: item.quantity,
+      unitPrice: item.variant?.price ?? item.product.price,
+      gstRate: item.product.gstRate,
+    })),
+  });
 
-  // Round at each step — these are stored as Float columns, and summing many
-  // unrounded unitPrice*quantity*gstRate/100 terms accumulates floating-point
-  // drift (see roundToPaise in lib/utils.ts).
-  subtotal = roundToPaise(subtotal);
-  gstAmount = roundToPaise(gstAmount);
-
-  const shippingCost = calcShipping(subtotal + gstAmount);
-
-  const grandTotal = roundToPaise(subtotal + gstAmount + shippingCost);
+  const orderTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
+  const { shippingCost } = computeShippingQuote({ channel, orderTotal });
+  const grandTotal = roundToPaise(orderTotal + shippingCost);
 
   const amountDue = roundToPaise(
     paymentType === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal
@@ -176,8 +176,9 @@ export async function POST(req: NextRequest) {
     data: {
       orderNumber: generateOrderNumber(),
       dealerId: dealer.id,
-      subtotal,
-      gstAmount,
+      channel,
+      subtotal: pricing.subtotal,
+      gstAmount: pricing.gstAmount,
       shippingCost,
       grandTotal,
       paymentType,
@@ -193,27 +194,7 @@ export async function POST(req: NextRequest) {
       deliveryCity: deliveryCity || dealer.city,
       deliveryState: deliveryState || dealer.state,
       deliveryPincode,
-      items: {
-        create: cart.items.map((item) => {
-          const unitPrice = item.variant?.price ?? item.product.price;
-          // total derived from the already-rounded gstAmount (rather than its
-          // own independent unitPrice*qty*(1+gstRate/100) expression) so the
-          // two can't drift apart by a floating-point epsilon.
-          const itemGstAmount = roundToPaise((unitPrice * item.quantity * item.product.gstRate) / 100);
-          const itemTotal = roundToPaise(unitPrice * item.quantity + itemGstAmount);
-          return {
-            productId: item.productId,
-            variantId: item.variantId ?? null,
-            variantLabel: item.variant?.label ?? null,
-            variantSku: (item.variant as any)?.sku ?? null,
-            quantity: item.quantity,
-            unitPrice,
-            gstRate: item.product.gstRate,
-            gstAmount: itemGstAmount,
-            total: itemTotal,
-          };
-        }),
-      },
+      items: { create: pricing.lines },
     },
   });
 

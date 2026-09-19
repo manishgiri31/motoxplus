@@ -166,7 +166,6 @@ model Dealer {
  * balanceAfter snapshots Dealer.outstandingDues right after this entry so
  * the ledger is self-verifying (each row's own truth) rather than only
  * reconstructable by replaying the whole history.
- *
  * Why dues exist at all instead of writing off an uncollectible scheme
  * shortfall (see lib/schemes/adjustment.ts's applySchemeAdjustmentToRefund):
  * the scheme goods already left the warehouse — forgiving the gap would
@@ -216,15 +215,15 @@ model Admin {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
+  id          String           @id @default(cuid())
+  name        String           @unique
+  slug        String           @unique
   description String?
   image       String?
-  sortOrder   Int       @default(0)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   products    Product[]
   schemes     SchemeCategory[]
 }
@@ -401,52 +400,55 @@ model CartItem {
 }
 
 model Order {
-  id                 String              @id @default(cuid())
-  orderNumber        String              @unique
-  dealerId           String
-  subtotal           Float
-  gstAmount          Float
-  grandTotal         Float
-  paymentType        PaymentType
-  amountPaid         Float               @default(0)
-  amountDue          Float
-  status             OrderStatus         @default(PENDING)
-  paymentStatus      PaymentStatus       @default(PENDING)
-  notes              String?
-  shippingAddress    String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  deliveryCity       String?
-  deliveryName       String?
-  deliveryPhone      String?
-  deliveryPincode    String?
-  deliveryState      String?
-  shippingCost       Float               @default(0)
-  stockReserved      Boolean             @default(false)
+  id                     String                  @id @default(cuid())
+  orderNumber            String                  @unique
+  dealerId               String
+  subtotal               Float
+  gstAmount              Float
+  grandTotal             Float
+  paymentType            PaymentType
+  // B2C expansion Phase 0 (B2C-EXPANSION-PLAN.md) — additive, defaults every
+  // existing row to B2B. Nothing sets B2C yet; see lib/pricing, lib/shipping.
+  channel                OrderChannel            @default(B2B)
+  amountPaid             Float                   @default(0)
+  amountDue              Float
+  status                 OrderStatus             @default(PENDING)
+  paymentStatus          PaymentStatus           @default(PENDING)
+  notes                  String?
+  shippingAddress        String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  deliveryCity           String?
+  deliveryName           String?
+  deliveryPhone          String?
+  deliveryPincode        String?
+  deliveryState          String?
+  shippingCost           Float                   @default(0)
+  stockReserved          Boolean                 @default(false)
   // Sum of the GST Benefit granted to this order (18%-of-taxable-value by
   // default, see Scheme.benefitPercent) — the face value of the scheme items'
   // dealer price, not a cash discount off paid items.
-  schemeBenefitValue     Float               @default(0)
+  schemeBenefitValue     Float                   @default(0)
   // Running total of money clawed back from this order's refunds because the
   // dealer kept scheme goods a shrunk/cancelled order no longer earned — see
   // lib/schemes/adjustment.ts. Always tracked as its own line, never merged
   // into OrderCancellation.feeAmount or OrderItemCancellation.feeAmount.
-  schemeAdjustmentAmount Float               @default(0)
+  schemeAdjustmentAmount Float                   @default(0)
   // How much of the dealer's Dealer.outstandingDues this order's payment
   // collected — shown as its own "Previous Dues" checkout/invoice line, on
   // top of (not instead of) this order's own subtotal/GST/shipping.
-  duesCollected      Float               @default(0)
-  invoice            Invoice?
-  dealer             Dealer              @relation(fields: [dealerId], references: [id])
-  cancellation       OrderCancellation?
-  itemCancellations  OrderItemCancellation[]
-  schemeRedemption   SchemeRedemption?
-  duesEntries        DealerDuesEntry[]
-  events             OrderEvent[]
-  items              OrderItem[]
-  payments           Payment[]
-  paymentSubmissions PaymentSubmission[]
-  shipment           Shipment?
+  duesCollected          Float                   @default(0)
+  invoice                Invoice?
+  dealer                 Dealer                  @relation(fields: [dealerId], references: [id])
+  cancellation           OrderCancellation?
+  itemCancellations      OrderItemCancellation[]
+  schemeRedemption       SchemeRedemption?
+  duesEntries            DealerDuesEntry[]
+  events                 OrderEvent[]
+  items                  OrderItem[]
+  payments               Payment[]
+  paymentSubmissions     PaymentSubmission[]
+  shipment               Shipment?
 
   @@index([dealerId, status])
   @@index([dealerId, createdAt])
@@ -543,15 +545,15 @@ model SchemeCategory {
  * the redemption is simply voided with no charge).
  */
 model SchemeRedemption {
-  id            String                 @id @default(cuid())
-  orderId       String                 @unique
-  schemeId      String
-  benefitValue  Float
-  itemsValue    Float
-  status         SchemeRedemptionStatus @default(ACTIVE)
-  createdAt     DateTime               @default(now())
-  order         Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  scheme        Scheme                 @relation(fields: [schemeId], references: [id])
+  id           String                 @id @default(cuid())
+  orderId      String                 @unique
+  schemeId     String
+  benefitValue Float
+  itemsValue   Float
+  status       SchemeRedemptionStatus @default(ACTIVE)
+  createdAt    DateTime               @default(now())
+  order        Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  scheme       Scheme                 @relation(fields: [schemeId], references: [id])
 
   @@index([schemeId])
 }
@@ -561,7 +563,6 @@ model SchemeRedemption {
  * OrderItem while the rest of the order stays active (Order.status moves to
  * PARTIALLY_CANCELLED, not CANCELLED). Distinct from OrderCancellation,
  * which is the existing whole-order cancel record.
- *
  * schemeAdjustmentAmount is always its own field, never folded into
  * feeAmount — the dealer-facing breakdown keeps "Cancellation Fee" and
  * "Scheme Adjustment" as two separate lines (see lib/schemes/adjustment.ts).
@@ -569,22 +570,22 @@ model SchemeRedemption {
  * value, minus feeAmount, minus schemeAdjustmentAmount, floored at 0.
  */
 model OrderItemCancellation {
-  id                     String            @id @default(cuid())
+  id                     String           @id @default(cuid())
   orderId                String
   orderItemId            String
   quantity               Int
   feeAmount              Float
-  schemeAdjustmentAmount Float             @default(0)
+  schemeAdjustmentAmount Float            @default(0)
   refundAmount           Float
   reasonCode             CancelReasonCode
-  reason                 String?           @db.VarChar(500)
-  cancelledAt            DateTime          @default(now())
+  reason                 String?          @db.VarChar(500)
+  cancelledAt            DateTime         @default(now())
   cancelledByUserId      String
   cancelledByRole        CancelActor
-  refundStatus           RefundStatus      @default(NOT_APPLICABLE)
+  refundStatus           RefundStatus     @default(NOT_APPLICABLE)
   refundId               String?
-  order                  Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderItem              OrderItem         @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  order                  Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem              OrderItem        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([orderItemId])
@@ -594,7 +595,6 @@ model OrderItemCancellation {
  * Singleton config row — always queried/updated by the fixed id "singleton"
  * (seeded once in prisma/seed.ts), not `findFirst()`, so there's no ambiguity
  * if a second row is ever accidentally created.
- *
  * Float, not Decimal — every other money/percent field in this schema
  * (Order.grandTotal, Product.gstRate, OrderCancellation.feePercent, etc.) is
  * Float with app-level rounding via roundToPaise(); introducing Decimal here
@@ -644,18 +644,18 @@ model DeviceToken {
 }
 
 model OrderItem {
-  id                  String                  @id @default(cuid())
-  orderId             String
-  productId           String
-  quantity            Int
-  unitPrice           Float
-  gstRate             Float
-  gstAmount           Float
-  total               Float
-  createdAt           DateTime                @default(now())
-  variantId           String?
-  variantLabel        String?
-  variantSku          String?
+  id                   String                  @id @default(cuid())
+  orderId              String
+  productId            String
+  quantity             Int
+  unitPrice            Float
+  gstRate              Float
+  gstAmount            Float
+  total                Float
+  createdAt            DateTime                @default(now())
+  variantId            String?
+  variantLabel         String?
+  variantSku           String?
   // True for a scheme freebie line. unitPrice/gstRate above still carry the
   // item's real dealer rate/GST% (so the gross line reads at full value on
   // the invoice); schemeDiscountAmount is the 100% "Scheme Discount" line
@@ -697,20 +697,24 @@ model Payment {
 }
 
 model Invoice {
-  id            String    @id @default(cuid())
-  invoiceNumber String    @unique
-  orderId       String    @unique
+  id            String       @id @default(cuid())
+  invoiceNumber String       @unique
+  orderId       String       @unique
   dealerId      String
   pdfUrl        String?
   subtotal      Float
   gstAmount     Float
   grandTotal    Float
-  issuedAt      DateTime  @default(now())
+  // B2C expansion Phase 0 (B2C-EXPANSION-PLAN.md) — additive, defaults every
+  // existing row to B2B. Mirrors Order.channel; set from it at invoice
+  // creation once lib/invoicing lands (separate, later commit).
+  channel       OrderChannel @default(B2B)
+  issuedAt      DateTime     @default(now())
   dueDate       DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  dealer        Dealer    @relation(fields: [dealerId], references: [id])
-  order         Order     @relation(fields: [orderId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  dealer        Dealer       @relation(fields: [dealerId], references: [id])
+  order         Order        @relation(fields: [orderId], references: [id])
 }
 
 model Vendor {
@@ -1516,6 +1520,15 @@ enum PaymentType {
   /// Cancellation (lib/orders/cancellation.ts) and shipment (lib/delhivery/
   /// shipment.ts) logic still handle it correctly for pre-existing orders.
   COD
+}
+
+/// Phase 0 of the B2C expansion (see B2C-EXPANSION-PLAN.md) — added
+/// 2026-09-18, additive only. Every existing Order/Invoice row defaults to
+/// B2B; nothing writes B2C yet (no B2C channel exists in the app). Order.
+/// channel and Invoice.channel below are the only two places this is used.
+enum OrderChannel {
+  B2B
+  B2C
 }
 
 enum CancelReasonCode {
