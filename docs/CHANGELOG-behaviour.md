@@ -2,7 +2,7 @@
 
 Record of intentional behaviour changes (not pure refactors/extractions),
 with what changed, why, and measured production impact at the time. See
-[[b2b-b2c-plan.md]] for the wider Phase 0 context.
+[b2b-b2c-plan.md](./b2b-b2c-plan.md) for the wider Phase 0 context.
 
 ---
 
@@ -53,7 +53,7 @@ drift between `Order.gstAmount` and `Σ OrderItem.gstAmount`.
 **Process note:** this fix shipped bundled inside the same commit as the
 pure structural extraction (inline `/api/orders` logic →
 `src/lib/pricing/compute.ts`) and the channel-seam scaffolding (migration,
-`route.ts`, checkout page). Per [[b2b-b2c-plan.md]]'s commit discipline,
+`route.ts`, checkout page). Per this project's commit discipline,
 a behaviour change like this belongs in its own commit, separate from
 extraction. It wasn't, this time — decision was to document it here
 rather than rewrite already-pushed `main` history. Going forward:
