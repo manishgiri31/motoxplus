@@ -51,6 +51,10 @@ const ORDER = {
   grandTotal: 1000,
   subtotal: 900,
   gstAmount: 100,
+  cgstAmount: 50,
+  sgstAmount: 50,
+  igstAmount: 0,
+  placeOfSupply: "Delhi",
   items: [{ productId: "p1", variantId: null, quantity: 1 }],
 };
 
@@ -108,6 +112,10 @@ describe("finalizeCapturedPayment — F-05 (Payment→PAID inside the transactio
         subtotal: 900,
         gstAmount: 100,
         grandTotal: 1000,
+        cgstAmount: 50,
+        sgstAmount: 50,
+        igstAmount: 0,
+        placeOfSupply: "Delhi",
         channel: "B2B",
       },
     });

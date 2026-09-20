@@ -7,6 +7,10 @@ interface InvoiceOrderInput {
   subtotal: number;
   gstAmount: number;
   grandTotal: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  placeOfSupply: string | null;
 }
 
 /**
@@ -18,6 +22,12 @@ interface InvoiceOrderInput {
  * order's stockReserved state-transition guard, the admin route checks
  * `!order.invoice` — this function only builds and inserts the row, so
  * those two guards can't drift into divergent invoice-shape behavior.
+ *
+ * cgst/sgst/igst/placeOfSupply are copied from the Order, not recomputed —
+ * the split was already derived once at order-creation time (see
+ * lib/tax/gst-split.ts and POST /api/orders) from the delivery state that
+ * was current then. Re-deriving here could disagree if the seller-state
+ * setting changed in between.
  */
 export async function createInvoice(
   tx: Prisma.TransactionClient,
@@ -32,6 +42,10 @@ export async function createInvoice(
       subtotal: params.order.subtotal,
       gstAmount: params.order.gstAmount,
       grandTotal: params.order.grandTotal,
+      cgstAmount: params.order.cgstAmount,
+      sgstAmount: params.order.sgstAmount,
+      igstAmount: params.order.igstAmount,
+      placeOfSupply: params.order.placeOfSupply,
       channel: params.channel,
     },
   });

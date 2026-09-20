@@ -7,6 +7,8 @@ import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-bud
 import { computeOrderPricing } from "@/lib/pricing/compute";
 import { computeShippingQuote } from "@/lib/shipping/quote";
 import { validateSchemeSelection, type SchemeItemCandidate } from "@/lib/schemes/cart-validation";
+import { computeGstSplit, UnrecognizedStateError } from "@/lib/tax/gst-split";
+import { getSellerState } from "@/lib/tax/seller-state";
 
 export async function GET(req: NextRequest) {
   // Accepts either the web NextAuth session or the mobile/plain-login JWT
@@ -223,6 +225,28 @@ export async function POST(req: NextRequest) {
     paymentType === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal
   );
 
+  // GST split (CGST+SGST vs IGST) — computed once here from the order's own
+  // delivery state, persisted on the Order, and mirrored onto the Invoice at
+  // invoice-creation time (see lib/invoicing/create-invoice.ts) rather than
+  // re-derived there, same "compute once, carry forward" discipline as
+  // Order.channel. Place of supply is the delivery address's state, not the
+  // dealer's registered state — a dealer can ship to a different state than
+  // their own registration.
+  const placeOfSupply = deliveryState || dealer.state;
+  const sellerState = await getSellerState();
+  let gstSplit;
+  try {
+    gstSplit = computeGstSplit({ placeOfSupply, sellerState, gstAmount: pricing.gstAmount });
+  } catch (err) {
+    if (err instanceof UnrecognizedStateError) {
+      return NextResponse.json(
+        { error: `Could not determine GST for delivery state "${err.state}". Please check the delivery address.` },
+        { status: 400 }
+      );
+    }
+    throw err;
+  }
+
   // Every order (ADVANCE_20 or FULL_100) is now born PENDING/unreserved —
   // stock is only decremented and the invoice only generated at payment
   // finalization (lib/payments/finalize.ts for Razorpay, admin/payments/[id]/
@@ -248,6 +272,10 @@ export async function POST(req: NextRequest) {
         paymentStatus: "PENDING",
         stockReserved: false,
         schemeBenefitValue: schemeValidation?.ok ? schemeValidation.itemsValue : 0,
+        cgstAmount: gstSplit.cgstAmount,
+        sgstAmount: gstSplit.sgstAmount,
+        igstAmount: gstSplit.igstAmount,
+        placeOfSupply,
         shippingAddress: deliveryAddress,
         deliveryName: deliveryName || dealer.ownerName,
         deliveryPhone: deliveryPhone || dealer.phone,

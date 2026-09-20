@@ -438,6 +438,18 @@ model Order {
   // collected — shown as its own "Previous Dues" checkout/invoice line, on
   // top of (not instead of) this order's own subtotal/GST/shipping.
   duesCollected          Float                   @default(0)
+  // GST split of gstAmount above — additive, computed once at order creation
+  // (see lib/tax/gst-split.ts) from placeOfSupply vs. the seller's
+  // registered state (lib/tax/seller-state.ts). cgstAmount + sgstAmount +
+  // igstAmount always equals gstAmount exactly; same-state orders get
+  // cgst+sgst (split evenly), inter-state orders get igst only. Mirrored
+  // onto Invoice at invoice-creation time, not re-derived there.
+  cgstAmount             Float                   @default(0)
+  sgstAmount             Float                   @default(0)
+  igstAmount             Float                   @default(0)
+  // The delivery address's state, not the dealer's registered state — a
+  // dealer can ship to a different state than their own registration.
+  placeOfSupply          String?
   invoice                Invoice?
   dealer                 Dealer                  @relation(fields: [dealerId], references: [id])
   cancellation           OrderCancellation?
@@ -707,8 +719,17 @@ model Invoice {
   grandTotal    Float
   // B2C expansion Phase 0 (B2C-EXPANSION-PLAN.md) — additive, defaults every
   // existing row to B2B. Mirrors Order.channel; set from it at invoice
-  // creation once lib/invoicing lands (separate, later commit).
+  // creation (see lib/invoicing/create-invoice.ts).
   channel       OrderChannel @default(B2B)
+  // Mirrors Order.cgstAmount/sgstAmount/igstAmount/placeOfSupply — copied
+  // from the order at invoice-creation time, not re-derived (see
+  // lib/tax/gst-split.ts and lib/invoicing/create-invoice.ts). Required on
+  // a B2C invoice PDF (CGST/SGST/IGST break-up) even when the B2C UI itself
+  // never shows a GST line.
+  cgstAmount    Float        @default(0)
+  sgstAmount    Float        @default(0)
+  igstAmount    Float        @default(0)
+  placeOfSupply String?
   issuedAt      DateTime     @default(now())
   dueDate       DateTime?
   createdAt     DateTime     @default(now())

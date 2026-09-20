@@ -91,6 +91,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
             subtotal: submission.order.subtotal ?? 0,
             gstAmount: submission.order.gstAmount ?? 0,
             grandTotal: submission.order.grandTotal,
+            cgstAmount: submission.order.cgstAmount,
+            sgstAmount: submission.order.sgstAmount,
+            igstAmount: submission.order.igstAmount,
+            placeOfSupply: submission.order.placeOfSupply,
           },
           channel: submission.order.channel,
         });

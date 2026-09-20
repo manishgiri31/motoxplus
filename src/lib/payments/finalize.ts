@@ -88,6 +88,10 @@ export async function finalizeCapturedPayment(params: {
         subtotal: order.subtotal,
         gstAmount: order.gstAmount,
         grandTotal: order.grandTotal,
+        cgstAmount: order.cgstAmount,
+        sgstAmount: order.sgstAmount,
+        igstAmount: order.igstAmount,
+        placeOfSupply: order.placeOfSupply,
       },
       channel: order.channel,
     });
