@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { categoryBySlug } from "@/lib/vehicle-categories";
 import {
@@ -11,6 +13,7 @@ import {
 import { VehicleDetailClient } from "@/components/vehicles/vehicle-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
+import { isDealerViewer, stripWholesalePrice, stripWholesalePriceFromList } from "@/lib/pricing/public-visibility";
 
 export async function generateMetadata(
   props: {
@@ -138,6 +141,15 @@ export default async function VehicleDetailPage(
       }),
     ]);
 
+  const session = await getServerSession(authOptions);
+  const isDealer = isDealerViewer(session);
+  // Wholesale price never reaches a guest/non-dealer viewer on this page —
+  // applies to every product surface here (compatible parts, accessories,
+  // recommendations), not just the main catalog.
+  const safeCompatibleProducts = stripWholesalePriceFromList(compatibleProducts, isDealer);
+  const safeAccessories = accessories.map((a) => ({ ...a, product: stripWholesalePrice(a.product, isDealer) }));
+  const safeRecommendations = recommendations.map((r) => ({ ...r, product: stripWholesalePrice(r.product, isDealer) }));
+
   return (
     <>
       <JsonLd
@@ -161,11 +173,11 @@ export default async function VehicleDetailPage(
         vehicle={JSON.parse(JSON.stringify(vehicle))}
         categorySlug={cat.slug}
         sections={JSON.parse(JSON.stringify(sections))}
-        compatibleProducts={JSON.parse(JSON.stringify(compatibleProducts))}
+        compatibleProducts={JSON.parse(JSON.stringify(safeCompatibleProducts))}
         compatibleCount={compatibleCount}
         reviews={JSON.parse(JSON.stringify(reviews))}
-        accessories={JSON.parse(JSON.stringify(accessories))}
-        recommendations={JSON.parse(JSON.stringify(recommendations))}
+        accessories={JSON.parse(JSON.stringify(safeAccessories))}
+        recommendations={JSON.parse(JSON.stringify(safeRecommendations))}
         faqs={JSON.parse(JSON.stringify(faqs))}
         relatedVehicles={JSON.parse(JSON.stringify(relatedVehicles))}
         selection={{

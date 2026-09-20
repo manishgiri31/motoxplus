@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductDetailClient } from "@/components/products/product-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata, truncate, SITE_NAME_SHORT } from "@/lib/seo";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
+import { isDealerViewer, stripWholesalePrice, stripWholesalePriceFromList } from "@/lib/pricing/public-visibility";
 
 type SearchParams = { vehicle?: string; variant?: string; section?: string };
 
@@ -55,11 +58,14 @@ export async function generateMetadata(
 
   const titleSuffix = ` – Buy Online | ${SITE_NAME_SHORT}`;
   const title = `${truncate(p.name, 60 - titleSuffix.length)}${titleSuffix}`;
-  const priceLine = `₹${p.price.toLocaleString("en-IN")}`;
+  // Public SEO metadata is the same for every visitor (crawlers included) —
+  // never the wholesale rate, only MRP. Omitted entirely if MRP isn't set
+  // rather than falling back to the wholesale price.
+  const priceLine = p.mrp ? `MRP ₹${p.mrp.toLocaleString("en-IN")}` : "";
   const description = truncate(
     p.description
-      ? `${p.description} ${priceLine}. Part No. ${p.partNumber}.`
-      : `${p.name} — OEM-compatible ${p.category.name.toLowerCase()} by ${p.brand}, manufactured in ${p.countryOfOrigin}. Part No. ${p.partNumber}. ${priceLine}.`,
+      ? `${p.description}${priceLine ? ` ${priceLine}.` : ""} Part No. ${p.partNumber}.`
+      : `${p.name} — OEM-compatible ${p.category.name.toLowerCase()} by ${p.brand}, manufactured in ${p.countryOfOrigin}. Part No. ${p.partNumber}.${priceLine ? ` ${priceLine}.` : ""}`,
     155
   );
 
@@ -80,6 +86,9 @@ export default async function ProductDetailPage(
   const params = await props.params;
   const searchParams = await props.searchParams;
   const { product, legacySlug } = await resolveBySlugOrLegacyId(params.slug);
+
+  const session = await getServerSession(authOptions);
+  const isDealer = isDealerViewer(session);
 
   if (!product) {
     if (legacySlug) permanentRedirect(`/products/${legacySlug}${redirectQueryString(searchParams)}`);
@@ -196,7 +205,9 @@ export default async function ProductDetailPage(
             "@type": "Offer",
             url: productUrl,
             priceCurrency: "INR",
-            price: product.price,
+            // MRP, never the wholesale rate — structured data is public and
+            // crawled/parsed by search engines regardless of who's browsing.
+            ...(product.mrp ? { price: product.mrp } : {}),
             availability:
               product.stockStatus !== "OUT_OF_STOCK" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
             itemCondition: "https://schema.org/NewCondition",
@@ -234,8 +245,8 @@ export default async function ProductDetailPage(
       </div>
 
       <ProductDetailClient
-        product={JSON.parse(JSON.stringify(product))}
-        relatedProducts={JSON.parse(JSON.stringify(relatedProducts))}
+        product={JSON.parse(JSON.stringify(stripWholesalePrice(product, isDealer)))}
+        relatedProducts={JSON.parse(JSON.stringify(stripWholesalePriceFromList(relatedProducts, isDealer)))}
         vehicleContext={vehicleContext}
       />
     </div>

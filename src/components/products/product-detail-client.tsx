@@ -27,7 +27,8 @@ interface ProductVariant {
   finish: string | null;
   size: string | null;
   extra: string | null;
-  price: number;
+  // Wholesale rate — present only for a signed-in dealer viewer.
+  price?: number;
   mrp: number | null;
   stock: number;
   moq: number | null;
@@ -47,7 +48,9 @@ interface Product {
   productImages?: ProductImage[];
   variants?: ProductVariant[];
   compatibility: string[];
-  price: number;
+  // Wholesale rate — present only for a signed-in dealer viewer; stripped
+  // server-side for everyone else (see (public)/products/[slug]/page.tsx).
+  price?: number;
   mrp?: number | null;
   moq: number;
   stockStatus: ProductStockStatus;
@@ -163,12 +166,16 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
     );
   })();
 
+  // Wholesale price/GST math below is dealer-only data — undefined here for
+  // any non-dealer viewer, because the server already stripped it before
+  // this component ever received its props (see (public)/products/[slug]/
+  // page.tsx). Only referenced inside `isDealer`-gated JSX below.
   const activePrice = resolvedVariant ? resolvedVariant.price : product.price;
   const activeMrp = resolvedVariant ? (resolvedVariant.mrp ?? product.mrp) : product.mrp;
   const activeMoq = resolvedVariant?.moq ?? product.moq;
   const activeSku = resolvedVariant?.sku ?? product.sku;
   const activePartNumber = resolvedVariant?.partNumber ?? product.partNumber;
-  const priceWithGST = activePrice * (1 + product.gstRate / 100);
+  const priceWithGST = activePrice != null ? activePrice * (1 + product.gstRate / 100) : undefined;
   const outOfStock = hasVariants
     ? !!resolvedVariant && resolvedVariant.stock <= 0
     : product.stockStatus === "OUT_OF_STOCK";
@@ -677,20 +684,20 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               <div className="flex items-baseline gap-6 mb-3 flex-wrap">
                 <div>
                   <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Wholesale Price (excl. GST)</div>
-                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
+                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice ?? 0)}</div>
                 </div>
                 <div>
                   <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Incl. {product.gstRate}% GST</div>
-                  <div className="tnum text-xl font-bold text-[var(--ink)]">{formatCurrency(priceWithGST)}</div>
+                  <div className="tnum text-xl font-bold text-[var(--ink)]">{formatCurrency(priceWithGST ?? 0)}</div>
                 </div>
-                {activeMrp && activeMrp > activePrice && (
+                {activeMrp != null && activePrice != null && activeMrp > activePrice && (
                   <div>
                     <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
                     <div className="tnum text-lg font-bold text-[var(--muted)] line-through">{formatCurrency(activeMrp)}</div>
                   </div>
                 )}
               </div>
-              {activeMrp && activeMrp > activePrice && (
+              {activeMrp != null && activePrice != null && activeMrp > activePrice && (
                 <div className="flex items-center gap-2 mb-3 bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-sm px-3 py-1.5 w-fit">
                   <Tag size={11} className="text-[var(--sig-ok-fg)]" />
                   <span className="text-[var(--sig-ok-fg)] text-xs font-semibold">
@@ -701,43 +708,34 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               <div className="border-t border-[var(--line)] pt-3 mt-1 space-y-1">
                 <div className="flex justify-between text-xs text-[var(--muted)]">
                   <span>Base × {quantity} pcs</span>
-                  <span className="tnum">{formatCurrency(activePrice * quantity)}</span>
+                  <span className="tnum">{formatCurrency((activePrice ?? 0) * quantity)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-[var(--muted)]">
                   <span>GST ({product.gstRate}%)</span>
-                  <span className="tnum">{formatCurrency(activePrice * quantity * product.gstRate / 100)}</span>
+                  <span className="tnum">{formatCurrency((activePrice ?? 0) * quantity * product.gstRate / 100)}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-[var(--ink)] pt-1 border-t border-[var(--line)]">
                   <span>Total for {quantity} pcs (excl. shipping)</span>
-                  <span className="tnum text-[var(--red)]">{formatCurrency(priceWithGST * quantity)}</span>
+                  <span className="tnum text-[var(--red)]">{formatCurrency((priceWithGST ?? 0) * quantity)}</span>
                 </div>
               </div>
             </div>
           ) : (
+            // Guest / non-dealer: MRP only — never the wholesale rate, which
+            // this component's `product` prop doesn't even carry for this
+            // viewer (stripped server-side before it got here).
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
               <div className="flex items-baseline gap-6 mb-3 flex-wrap">
                 <div>
-                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Wholesale Price</div>
-                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
-                </div>
-                {activeMrp && activeMrp > activePrice && (
-                  <div>
-                    <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
-                    <div className="tnum text-xl font-bold text-[var(--muted)] line-through">{formatCurrency(activeMrp)}</div>
+                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP (incl. taxes)</div>
+                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">
+                    {activeMrp != null ? formatCurrency(activeMrp) : "—"}
                   </div>
-                )}
-              </div>
-              {activeMrp && activeMrp > activePrice && (
-                <div className="flex items-center gap-2 mb-3 bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-sm px-3 py-1.5 w-fit">
-                  <Tag size={11} className="text-[var(--sig-ok-fg)]" />
-                  <span className="text-[var(--sig-ok-fg)] text-xs font-semibold">
-                    {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP — Exclusive wholesale price
-                  </span>
                 </div>
-              )}
+              </div>
               <div className="flex items-center gap-2 mt-3 border border-[var(--red)]/25 rounded-sm px-3 py-2 w-fit">
                 <Lock size={12} className="text-[var(--red)] flex-shrink-0" />
-                <span className="text-[var(--red)] text-xs font-semibold">Login as Dealer to place orders</span>
+                <span className="text-[var(--red)] text-xs font-semibold">Login as Dealer to see wholesale pricing and place orders</span>
               </div>
             </div>
           )}

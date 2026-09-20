@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/r2";
 import { slugify, uniqueProductSlug } from "@/lib/slug";
+import { canSeeWholesalePrice, stripWholesalePrice } from "@/lib/pricing/public-visibility";
 
 const INCLUDE_IMAGES = {
   category: true,
@@ -20,7 +21,13 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
   });
 
   if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(product);
+
+  // Wholesale price is a B2B dealer rate — never sent to a guest or other
+  // unauthorized caller. This route has no auth requirement to view a
+  // product (public product pages/admin tooling both use it), so the price
+  // field itself is stripped rather than gating the whole route.
+  const session = await getServerSession(authOptions);
+  return NextResponse.json(stripWholesalePrice(product, canSeeWholesalePrice(session)));
 }
 
 export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {

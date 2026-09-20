@@ -7,6 +7,7 @@ import { buildSearchWhere } from "@/lib/product-search";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
 import { uniqueProductSlug } from "@/lib/slug";
 import { Prisma } from "@prisma/client";
+import { canSeeWholesalePrice, stripWholesalePriceFromList } from "@/lib/pricing/public-visibility";
 
 function autoSku(partNumber: string): string {
   const base = partNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 14);
@@ -55,12 +56,13 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get("page") || "1");
   const pageSize = parseInt(searchParams.get("pageSize") || "12");
   const adminAllParam = searchParams.get("adminAll") === "1";
+  const session = await getServerSession(authOptions);
   // Only admins may bypass the isActive filter
-  let adminAll = false;
-  if (adminAllParam) {
-    const session = await getServerSession(authOptions);
-    adminAll = !!session && ["ADMIN", "SUPER_ADMIN"].includes(session.user.role);
-  }
+  const adminAll = adminAllParam && !!session && ["ADMIN", "SUPER_ADMIN"].includes(session.user.role);
+  // Wholesale price is a B2B dealer rate — never sent to a guest or other
+  // unauthorized caller, not even hidden client-side. See lib/pricing/
+  // public-visibility.ts.
+  const canSeePrice = canSeeWholesalePrice(session);
 
   const searchWhere = search ? await buildSearchWhere(search, !adminAll) : {};
 
@@ -95,7 +97,7 @@ export async function GET(req: NextRequest) {
     ...vehicleWhere,
   };
 
-  const [products, total] = await Promise.all([
+  const [rawProducts, total] = await Promise.all([
     prisma.product.findMany({
       where,
       include: {
@@ -108,6 +110,8 @@ export async function GET(req: NextRequest) {
     }),
     prisma.product.count({ where }),
   ]);
+
+  const products = stripWholesalePriceFromList(rawProducts, canSeePrice);
 
   return NextResponse.json({ products, total, page, pageSize });
 }
