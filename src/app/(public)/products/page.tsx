@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductCatalog } from "@/components/products/product-catalog";
 import { buildSearchWhere } from "@/lib/product-search";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
 import { Eyebrow } from "@/components/ui/technical";
-import { isDealerViewer, stripWholesalePriceFromList } from "@/lib/pricing/public-visibility";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -57,10 +54,7 @@ export default async function ProductsPage(
     ...vehicleWhere,
   };
 
-  const session = await getServerSession(authOptions);
-  const isDealer = isDealerViewer(session);
-
-  const [rawProducts, categories, totalProducts] = await Promise.all([
+  const [products, categories, totalProducts] = await Promise.all([
     (prisma.product as any).findMany({
       where: baseWhere,
       include: {
@@ -83,10 +77,6 @@ export default async function ProductsPage(
     prisma.product.count({ where: baseWhere }),
   ]);
 
-  // Wholesale price never leaves the server for a guest/non-dealer viewer —
-  // stripped here, before the RSC->client prop boundary, not hidden in the UI.
-  const products = stripWholesalePriceFromList(rawProducts, isDealer);
-
   return (
     <div className="min-h-screen bg-[var(--paper)]">
       {/* Header */}
@@ -100,12 +90,7 @@ export default async function ProductsPage(
             {vehicleName ? (
               <>Showing {totalProducts} part{totalProducts === 1 ? "" : "s"} compatible with <span className="text-[var(--ink)] font-semibold">{vehicleName}</span>.</>
             ) : (
-              <>
-                {totalProducts}+ products across all categories.{" "}
-                {isDealer
-                  ? "Wholesale prices and MRP shown below — place your order directly."
-                  : "MRP shown below — sign in as a dealer to see wholesale pricing and place orders."}
-              </>
+              <>{totalProducts}+ products across all categories. Dealer prices and MRP shown below — sign in as a dealer to place orders.</>
             )}
           </p>
         </div>

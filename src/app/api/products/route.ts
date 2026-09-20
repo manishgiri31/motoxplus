@@ -7,7 +7,7 @@ import { buildSearchWhere } from "@/lib/product-search";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
 import { uniqueProductSlug } from "@/lib/slug";
 import { Prisma } from "@prisma/client";
-import { canSeeWholesalePrice, stripWholesalePriceFromList } from "@/lib/pricing/public-visibility";
+import { canSeeWholesalePrice } from "@/lib/pricing/public-visibility";
 
 function autoSku(partNumber: string): string {
   const base = partNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 14);
@@ -57,12 +57,20 @@ export async function GET(req: NextRequest) {
   const pageSize = parseInt(searchParams.get("pageSize") || "12");
   const adminAllParam = searchParams.get("adminAll") === "1";
   const session = await getServerSession(authOptions);
+  // This route is only ever called by authenticated admin tooling (bulk
+  // edit, vehicle-diagram product assignment, consolidation) — the public
+  // storefront pages fetch products via direct Prisma calls in their own
+  // Server Components, not through this API. Requiring auth here isn't
+  // about hiding price (the storefront shows it to everyone, deliberately —
+  // dealer pricing is the pitch) — it's so a script can't hit this route
+  // anonymously and scrape the full structured catalog in bulk, which is a
+  // materially easier target than scraping rendered HTML pages one at a
+  // time. See lib/pricing/public-visibility.ts.
+  if (!canSeeWholesalePrice(session)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   // Only admins may bypass the isActive filter
-  const adminAll = adminAllParam && !!session && ["ADMIN", "SUPER_ADMIN"].includes(session.user.role);
-  // Wholesale price is a B2B dealer rate — never sent to a guest or other
-  // unauthorized caller, not even hidden client-side. See lib/pricing/
-  // public-visibility.ts.
-  const canSeePrice = canSeeWholesalePrice(session);
+  const adminAll = adminAllParam && ["ADMIN", "SUPER_ADMIN"].includes(session!.user.role);
 
   const searchWhere = search ? await buildSearchWhere(search, !adminAll) : {};
 
@@ -97,7 +105,7 @@ export async function GET(req: NextRequest) {
     ...vehicleWhere,
   };
 
-  const [rawProducts, total] = await Promise.all([
+  const [products, total] = await Promise.all([
     prisma.product.findMany({
       where,
       include: {
@@ -110,8 +118,6 @@ export async function GET(req: NextRequest) {
     }),
     prisma.product.count({ where }),
   ]);
-
-  const products = stripWholesalePriceFromList(rawProducts, canSeePrice);
 
   return NextResponse.json({ products, total, page, pageSize });
 }

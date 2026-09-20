@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductDetailClient } from "@/components/products/product-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata, truncate, SITE_NAME_SHORT } from "@/lib/seo";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
-import { isDealerViewer, stripWholesalePrice, stripWholesalePriceFromList } from "@/lib/pricing/public-visibility";
 
 type SearchParams = { vehicle?: string; variant?: string; section?: string };
 
@@ -86,9 +83,6 @@ export default async function ProductDetailPage(
   const params = await props.params;
   const searchParams = await props.searchParams;
   const { product, legacySlug } = await resolveBySlugOrLegacyId(params.slug);
-
-  const session = await getServerSession(authOptions);
-  const isDealer = isDealerViewer(session);
 
   if (!product) {
     if (legacySlug) permanentRedirect(`/products/${legacySlug}${redirectQueryString(searchParams)}`);
@@ -245,8 +239,8 @@ export default async function ProductDetailPage(
       </div>
 
       <ProductDetailClient
-        product={JSON.parse(JSON.stringify(stripWholesalePrice(product, isDealer)))}
-        relatedProducts={JSON.parse(JSON.stringify(stripWholesalePriceFromList(relatedProducts, isDealer)))}
+        product={JSON.parse(JSON.stringify(product))}
+        relatedProducts={JSON.parse(JSON.stringify(relatedProducts))}
         vehicleContext={vehicleContext}
       />
     </div>

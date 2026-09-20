@@ -6,14 +6,25 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/r2";
 import { slugify, uniqueProductSlug } from "@/lib/slug";
-import { canSeeWholesalePrice, stripWholesalePrice } from "@/lib/pricing/public-visibility";
+import { canSeeWholesalePrice } from "@/lib/pricing/public-visibility";
 
 const INCLUDE_IMAGES = {
   category: true,
   productImages: { orderBy: [{ isPrimary: "desc" as const }, { sortOrder: "asc" as const }] },
 };
 
+// Only authenticated admin tooling (product-form.tsx, product-actions.tsx)
+// calls this route — the public product pages resolve their own data via
+// direct Prisma calls in a Server Component, not this API. This previously
+// had no auth check at all, meaning a script could enumerate every product
+// id and pull the full catalog (including wholesale price) with no barrier
+// whatsoever. See lib/pricing/public-visibility.ts.
 export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!canSeeWholesalePrice(session)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const params = await props.params;
   const product = await prisma.product.findUnique({
     where: { id: params.id },
@@ -21,13 +32,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
   });
 
   if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  // Wholesale price is a B2B dealer rate — never sent to a guest or other
-  // unauthorized caller. This route has no auth requirement to view a
-  // product (public product pages/admin tooling both use it), so the price
-  // field itself is stripped rather than gating the whole route.
-  const session = await getServerSession(authOptions);
-  return NextResponse.json(stripWholesalePrice(product, canSeeWholesalePrice(session)));
+  return NextResponse.json(product);
 }
 
 export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {

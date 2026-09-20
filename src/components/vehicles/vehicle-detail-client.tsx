@@ -145,9 +145,7 @@ interface CompatibleProduct {
   slug: string;
   name: string;
   partNumber: string;
-  // Wholesale rate — present only for a signed-in dealer viewer; stripped
-  // server-side for everyone else.
-  price?: number;
+  price: number;
   mrp: number | null;
   moq: number;
   images: string[];
@@ -178,9 +176,7 @@ interface LinkedProductData {
   slug: string;
   name: string;
   partNumber: string;
-  // Wholesale rate — present only for a signed-in dealer viewer; stripped
-  // server-side for everyone else.
-  price?: number;
+  price: number;
   mrp?: number | null;
   stockStatus: "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
   category: { name: string };
@@ -654,14 +650,11 @@ export function VehicleDetailClient({
                       )}
                       <div className="pt-3 border-t border-[var(--line)] flex items-end justify-between">
                         <div>
+                          <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
                           <div className="tnum text-[var(--red)] font-black text-base leading-tight">
-                            {typeof p.price === "number"
-                              ? `₹${p.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
-                              : p.mrp
-                              ? `MRP ₹${p.mrp.toLocaleString("en-IN")}`
-                              : "—"}
+                            ₹{p.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </div>
-                          {typeof p.price === "number" && p.mrp && p.mrp > p.price && (
+                          {p.mrp && p.mrp > p.price && (
                             <span className="tnum text-[var(--muted)] text-[10px] line-through">
                               MRP ₹{p.mrp.toLocaleString("en-IN")}
                             </span>
@@ -875,14 +868,9 @@ function LinkedProductCard({ product, isDealer }: { product: LinkedProductData; 
       <div className="p-3.5">
         <div className="text-[var(--muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">{product.partNumber}</div>
         <h3 className="text-[var(--ink)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-[var(--red)] transition-colors">{product.name}</h3>
+        <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
         <div className="flex items-center justify-between">
-          <span className="tnum text-[var(--red)] font-black text-sm">
-            {typeof product.price === "number"
-              ? `₹${product.price.toLocaleString("en-IN")}`
-              : product.mrp
-              ? `MRP ₹${product.mrp.toLocaleString("en-IN")}`
-              : "—"}
-          </span>
+          <span className="tnum text-[var(--red)] font-black text-sm">₹{product.price.toLocaleString("en-IN")}</span>
           {!isDealer && (
             <div className="flex items-center gap-1 border border-[var(--red)]/20 rounded-sm px-2 py-0.5">
               <Lock size={8} className="text-[var(--red)]" />

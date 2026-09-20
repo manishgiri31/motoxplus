@@ -27,9 +27,7 @@ interface Product {
   productImages?: ProductImage[];
   variants?: { color: string | null }[];
   compatibility: string[];
-  // Wholesale rate — present only for a signed-in dealer viewer; stripped
-  // server-side for everyone else (see (public)/products/page.tsx).
-  price?: number;
+  price: number;
   mrp?: number | null;
   gstRate: number;
   moq: number;
@@ -674,16 +672,9 @@ export function ProductCatalog({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.map((product) => {
             const thumb = productThumb(product);
-            // product.price is only present for a signed-in dealer viewer —
-            // stripped server-side for everyone else (see (public)/products/
-            // page.tsx), so this naturally disables the wholesale-derived
-            // "% OFF" badge for guests along with the price itself.
-            const wholesalePrice: number | undefined = product.price;
-            const hasWholesalePrice = typeof wholesalePrice === "number";
-            const discountPct = wholesalePrice != null && product.mrp && product.mrp > wholesalePrice
-              ? Math.round(((product.mrp - wholesalePrice) / product.mrp) * 100)
+            const discountPct = product.mrp && product.mrp > product.price
+              ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
               : null;
-            const displayPrice = wholesalePrice ?? product.mrp;
             const isWishlisted = wishlist.includes(product.id);
             const isComparing = compareIds.includes(product.id);
             const outOfStock = product.stockStatus === "OUT_OF_STOCK";
@@ -790,16 +781,14 @@ export function ProductCatalog({
                   <div className="pt-3 border-t border-[var(--border-color)]">
                     <div className="flex items-end justify-between gap-2">
                       <div>
+                        <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
                         <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
-                          {displayPrice != null ? `₹${displayPrice.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}
+                          ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                         </div>
-                        {wholesalePrice != null && product.mrp && product.mrp > wholesalePrice && (
+                        {product.mrp && product.mrp > product.price && (
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
                           </div>
-                        )}
-                        {!hasWholesalePrice && (
-                          <div className="text-[var(--text-muted)] text-[10px] mt-0.5">MRP (incl. taxes)</div>
                         )}
                       </div>
                       <span className="text-[var(--text-muted)] text-[9px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
@@ -909,11 +898,12 @@ export function ProductCatalog({
                       {quickView.description}
                     </p>
                   )}
+                  <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Dealer Price</div>
                   <div className="flex items-end gap-3 mb-4">
                     <span className="text-[var(--red)] font-black text-2xl">
-                      ₹{(typeof quickView.price === "number" ? quickView.price : quickView.mrp)?.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                      ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                     </span>
-                    {typeof quickView.price === "number" && quickView.mrp && quickView.mrp > quickView.price && (
+                    {quickView.mrp && quickView.mrp > quickView.price && (
                       <span className="text-[var(--text-muted)] text-sm line-through mb-1">
                         MRP ₹{quickView.mrp.toLocaleString("en-IN")}
                       </span>
@@ -987,7 +977,7 @@ export function ProductCatalog({
                         { label: "Name", render: (p: Product) => p.name },
                         { label: "Part No.", render: (p: Product) => p.partNumber },
                         { label: "Category", render: (p: Product) => p.category.name },
-                        { label: "Price", render: (p: Product) => `₹${(typeof p.price === "number" ? p.price : p.mrp ?? 0).toLocaleString("en-IN")}` },
+                        { label: "Price", render: (p: Product) => `₹${p.price.toLocaleString("en-IN")}` },
                         { label: "MRP", render: (p: Product) => (p.mrp ? `₹${p.mrp.toLocaleString("en-IN")}` : "—") },
                         { label: "MOQ", render: (p: Product) => String(p.moq) },
                         { label: "Stock", render: (p: Product) => productStockLabel(p.stockStatus) },

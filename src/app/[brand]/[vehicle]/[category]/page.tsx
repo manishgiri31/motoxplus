@@ -2,15 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompatibleProducts } from "@/lib/vehicle/compatibility";
 import { categoryBySlug } from "@/lib/vehicle-categories";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
-import { ChevronRight, Lock } from "lucide-react";
-import { isDealerViewer, stripWholesalePriceFromList } from "@/lib/pricing/public-visibility";
+import { ChevronRight } from "lucide-react";
 
 interface Params {
   brand: string;
@@ -60,11 +57,7 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
   const params = await props.params;
   const data = await resolve(params);
   if (!data) notFound();
-  const { manufacturer, vehicle, category, vehicleCategory } = data;
-  const session = await getServerSession(authOptions);
-  // Wholesale price never reaches a guest/non-dealer viewer here — this is a
-  // heavily-crawled SEO landing page, not just a UI concern.
-  const products = stripWholesalePriceFromList(data.products, isDealerViewer(session));
+  const { manufacturer, vehicle, category, products, vehicleCategory } = data;
   const pageUrl = absoluteUrl(`/${params.brand}/${params.vehicle}/${params.category}`);
 
   return (
@@ -151,16 +144,14 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
                   <div className="p-4">
                     <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">{p.partNumber}</div>
                     <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{p.name}</h3>
-                    <div className="pt-3 border-t border-[var(--border-color)] flex items-end justify-between">
-                      <span className="text-red-500 font-black text-base">
-                        {typeof p.price === "number" ? `₹${p.price.toLocaleString("en-IN")}` : p.mrp ? `MRP ₹${p.mrp.toLocaleString("en-IN")}` : "—"}
-                      </span>
-                      {typeof p.price !== "number" && (
-                        <div className="flex items-center gap-1.5 glass border border-red-500/20 rounded-full px-2 py-1">
-                          <Lock size={9} className="text-red-500" />
-                          <span className="text-red-500 text-[9px] font-bold">Login</span>
-                        </div>
-                      )}
+                    <div className="pt-3 border-t border-[var(--border-color)]">
+                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
+                      <div className="flex items-end justify-between gap-2">
+                        <span className="text-red-500 font-black text-base">₹{p.price.toLocaleString("en-IN")}</span>
+                        {p.mrp && p.mrp > p.price && (
+                          <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{p.mrp.toLocaleString("en-IN")}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Link>
