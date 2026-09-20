@@ -25,6 +25,7 @@ import {
   Banknote,
   Bike,
   Undo2,
+  Gift,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const navItems = [
   { icon: FileText, label: "Invoices", href: "/admin/invoices" },
   { icon: Banknote, label: "Payments", href: "/admin/payments" },
   { icon: Undo2, label: "Refunds", href: "/admin/refunds" },
+  { icon: Gift, label: "GST Schemes", href: "/admin/schemes" },
   { icon: Truck, label: "Vendors", href: "/admin/vendors" },
 ];
 const procurementItems = [

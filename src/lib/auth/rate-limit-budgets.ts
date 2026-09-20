@@ -85,6 +85,14 @@ export const RATE_LIMITS = {
     perIdentifier: { max: 15, windowSeconds: 60 * 60, failMode: "open" } as Budget,
     perIP: { max: 30, windowSeconds: 60 * 60, failMode: "open" } as Budget,
   },
+  // Applying/replacing a scheme on the cart re-validates against the DB every
+  // call (see POST /api/cart/scheme) — cheap individually, but a tight loop
+  // of apply/remove is still wasted DB load, not a money-moving action, so
+  // this budget is looser than ORDER_CREATE/ORDER_CANCEL.
+  SCHEME_APPLY: {
+    perIdentifier: { max: 20, windowSeconds: 60 * 60, failMode: "open" } as Budget,
+    perIP: { max: 30, windowSeconds: 60 * 60, failMode: "open" } as Budget,
+  },
   SEARCH_PUBLIC: {
     perIP: { max: 120, windowSeconds: 60, failMode: "open" } as Budget,
   },

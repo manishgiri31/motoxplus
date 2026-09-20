@@ -3,6 +3,7 @@ import {
   recomputeSchemeShortfall,
   computeFullCancelSchemeAdjustment,
   applySchemeAdjustmentToRefund,
+  computeFullCancelWithRefund,
 } from "./adjustment";
 import type { SchemeTerms } from "./pricing";
 
@@ -179,6 +180,43 @@ describe("rounding and refund-capping — case 7", () => {
     expect(applySchemeAdjustmentToRefund({ refundBeforeAdjustment: -10, schemeAdjustment: 500 })).toEqual({
       adjustmentApplied: 0,
       refundAfterAdjustment: 0,
+    });
+  });
+});
+
+// Case 8: the composed whole-order-cancel + refund helper both the cancellation
+// preview and the actual cancel endpoint share.
+describe("computeFullCancelWithRefund — case 8", () => {
+  it("nothing dispatched -> no adjustment, full refund untouched, redemption CANCELLED", () => {
+    const result = computeFullCancelWithRefund({ itemsValue: 5000, dispatched: false, refundBeforeAdjustment: 9000 });
+    expect(result).toEqual({
+      schemeAdjustmentAmount: 0,
+      adjustmentApplied: 0,
+      uncollectedShortfall: 0,
+      refundAfterAdjustment: 9000,
+      redemptionStatus: "CANCELLED",
+    });
+  });
+
+  it("dispatched, refund pool covers the full clawback -> no dealer dues", () => {
+    const result = computeFullCancelWithRefund({ itemsValue: 5000, dispatched: true, refundBeforeAdjustment: 9000 });
+    expect(result).toEqual({
+      schemeAdjustmentAmount: 5000,
+      adjustmentApplied: 5000,
+      uncollectedShortfall: 0,
+      refundAfterAdjustment: 4000,
+      redemptionStatus: "ADJUSTED",
+    });
+  });
+
+  it("dispatched, refund pool insufficient -> refund floored at 0, remainder is the uncollected shortfall", () => {
+    const result = computeFullCancelWithRefund({ itemsValue: 5000, dispatched: true, refundBeforeAdjustment: 3000 });
+    expect(result).toEqual({
+      schemeAdjustmentAmount: 5000,
+      adjustmentApplied: 3000,
+      uncollectedShortfall: 2000,
+      refundAfterAdjustment: 0,
+      redemptionStatus: "ADJUSTED",
     });
   });
 });

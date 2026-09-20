@@ -13,6 +13,7 @@ import {
   type ShipmentStatusValue,
 } from "./cancellation";
 import { getCancellationPolicy, getCarrierStaleDays } from "./cancellation-policy";
+import { computeFullCancelWithRefund } from "@/lib/schemes/adjustment";
 
 export interface GateOrder {
   id: string;
@@ -21,10 +22,12 @@ export interface GateOrder {
   grandTotal: number;
   amountPaid: number;
   shipment: { waybill: string; status: string; createdAt: Date } | null;
+  schemeRedemption: { itemsValue: number } | null;
 }
 
 export const ORDER_INCLUDE_FOR_GATE = {
   shipment: { select: { waybill: true, status: true, createdAt: true } },
+  schemeRedemption: { select: { itemsValue: true } },
 } as const;
 
 function shipmentFacts(order: GateOrder, now: Date) {
@@ -64,6 +67,7 @@ export type CancellationQuotePayload =
       stage: CancellationStage;
       chargePercent: number;
       chargeAmount: number;
+      schemeAdjustmentAmount: number;
       grandTotal: number;
       amountPaid: number;
       refundAmount: number;
@@ -112,14 +116,32 @@ export async function buildCancellationQuote(
 
   const feePercent = stage === "PRE_SHIP" ? policy.preShipChargePercent : policy.postShipChargePercent;
   const quote = calculateCancellation({ feePercent, amountPaid: order.amountPaid });
+
+  // Same scheme-adjustment calculation POST .../cancel will actually apply —
+  // shown here too so the dealer's confirmation dialog and the refund they
+  // receive can never quietly disagree (see computeFullCancelWithRefund doc
+  // comment).
+  let schemeAdjustmentAmount = 0;
+  let refundAmount = quote.refundAmount;
+  if (order.schemeRedemption) {
+    const result = computeFullCancelWithRefund({
+      itemsValue: order.schemeRedemption.itemsValue,
+      dispatched: stage === "POST_SHIP",
+      refundBeforeAdjustment: quote.refundAmount,
+    });
+    schemeAdjustmentAmount = result.adjustmentApplied;
+    refundAmount = result.refundAfterAdjustment;
+  }
+
   return {
     allowed: true,
     stage,
     chargePercent: quote.feePercent,
     chargeAmount: quote.feeAmount,
+    schemeAdjustmentAmount,
     grandTotal: order.grandTotal,
     amountPaid: order.amountPaid,
-    refundAmount: quote.refundAmount,
+    refundAmount,
     waived: quote.waived,
     ...(carrierStatus ? { carrierStatus } : {}),
   };
@@ -136,6 +158,7 @@ export async function loadGateOrder(orderId: string): Promise<GateOrder | null> 
       grandTotal: true,
       amountPaid: true,
       shipment: { select: { waybill: true, status: true, createdAt: true } },
+      schemeRedemption: { select: { itemsValue: true } },
     },
   });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
+import { validateSchemeSelection, type SchemeItemCandidate } from "@/lib/schemes/cart-validation";
 
 // Accepts either the web NextAuth session or the mobile/plain-login JWT
 // (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
@@ -33,7 +34,49 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(cart || { items: [] });
+  if (!cart) return NextResponse.json({ items: [] });
+
+  // A scheme applied earlier can go stale by the time the dealer reopens the
+  // cart (window closed, min order value no longer cleared because they
+  // dropped a regular item, category eligibility changed, a picked freebie
+  // went out of stock...). Re-validate on every read rather than trusting
+  // Cart.schemeId — if it's no longer valid, clear it quietly (this is a
+  // read, not a mutating action the dealer explicitly asked for) and tell
+  // the client via `schemeCleared` instead of erroring the whole cart load.
+  if (cart.schemeId) {
+    const regularItems = cart.items.filter((i) => !i.isSchemeItem);
+    const schemeCartItems = cart.items.filter((i) => i.isSchemeItem);
+    const schemeItems: SchemeItemCandidate[] = schemeCartItems.map((i) => ({
+      productId: i.productId,
+      quantity: i.quantity,
+      dealerPrice: i.variant?.price ?? i.product.price,
+      categoryId: i.product.categoryId,
+      stockStatus: i.product.stockStatus,
+      variantStock: i.variant?.stock ?? null,
+    }));
+
+    const validation = await validateSchemeSelection({
+      schemeId: cart.schemeId,
+      regularItems: regularItems.map((i) => ({ unitPrice: i.variant?.price ?? i.product.price, quantity: i.quantity })),
+      schemeItems,
+    });
+
+    if (!validation.ok) {
+      await prisma.$transaction([
+        prisma.cartItem.deleteMany({ where: { cartId: cart.id, isSchemeItem: true } }),
+        prisma.cart.update({ where: { id: cart.id }, data: { schemeId: null } }),
+      ]);
+      return NextResponse.json({
+        ...cart,
+        schemeId: null,
+        items: regularItems,
+        schemeCleared: true,
+        schemeClearedReason: validation.reason,
+      });
+    }
+  }
+
+  return NextResponse.json(cart);
 }
 
 export async function POST(req: NextRequest) {

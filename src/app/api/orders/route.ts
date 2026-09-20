@@ -6,6 +6,7 @@ import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/veri
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
 import { computeOrderPricing } from "@/lib/pricing/compute";
 import { computeShippingQuote } from "@/lib/shipping/quote";
+import { validateSchemeSelection, type SchemeItemCandidate } from "@/lib/schemes/cart-validation";
 
 export async function GET(req: NextRequest) {
   // Accepts either the web NextAuth session or the mobile/plain-login JWT
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
 
   const cart = await prisma.cart.findUnique({
     where: { dealerId: dealer.id },
-    include: { items: { include: { product: true, variant: true } } },
+    include: { items: { include: { product: { include: { category: true } }, variant: true } } },
   });
 
   if (!cart || cart.items.length === 0) {
@@ -144,9 +145,15 @@ export async function POST(req: NextRequest) {
   // the exact numbers this must keep producing.
   const channel = "B2B" as const;
 
+  // Scheme freebie lines are priced/taxed separately below (full rate +
+  // 100% "Scheme Discount", never mixed into the regular pricing math) —
+  // see lib/schemes/pricing.ts / OrderItem.schemeDiscountAmount doc comment.
+  const regularItems = cart.items.filter((item) => !item.isSchemeItem);
+  const schemeCartItems = cart.items.filter((item) => item.isSchemeItem);
+
   const pricing = computeOrderPricing({
     channel,
-    items: cart.items.map((item) => ({
+    items: regularItems.map((item) => ({
       productId: item.productId,
       variantId: item.variantId,
       variantLabel: item.variant?.label ?? null,
@@ -155,6 +162,57 @@ export async function POST(req: NextRequest) {
       unitPrice: item.variant?.price ?? item.product.price,
       gstRate: item.product.gstRate,
     })),
+  });
+
+  // Re-validate the applied scheme from scratch — never trust that it was
+  // still valid when it was set on the cart. Client-supplied benefit is
+  // never trusted; see lib/schemes/cart-validation.ts.
+  let schemeValidation: Awaited<ReturnType<typeof validateSchemeSelection>> | null = null;
+  if (cart.schemeId) {
+    const schemeItems: SchemeItemCandidate[] = schemeCartItems.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      dealerPrice: item.variant?.price ?? item.product.price,
+      categoryId: item.product.categoryId,
+      stockStatus: item.product.stockStatus,
+      variantStock: item.variant?.stock ?? null,
+    }));
+    schemeValidation = await validateSchemeSelection({
+      schemeId: cart.schemeId,
+      regularItems: regularItems.map((item) => ({
+        unitPrice: item.variant?.price ?? item.product.price,
+        quantity: item.quantity,
+      })),
+      schemeItems,
+    });
+    if (!schemeValidation.ok) {
+      return NextResponse.json(
+        {
+          error: `Your GST Benefit selection is no longer valid: ${schemeValidation.reason}. Please review the free items in your cart before placing the order.`,
+          code: "SCHEME_INVALID",
+        },
+        { status: 409 }
+      );
+    }
+  }
+
+  const schemeLines = schemeCartItems.map((item) => {
+    const dealerPrice = item.variant?.price ?? item.product.price;
+    const lineValue = roundToPaise(dealerPrice * item.quantity);
+    return {
+      productId: item.productId,
+      variantId: item.variantId,
+      variantLabel: item.variant?.label ?? null,
+      variantSku: (item.variant as any)?.sku ?? null,
+      quantity: item.quantity,
+      unitPrice: dealerPrice,
+      gstRate: item.product.gstRate,
+      gstAmount: 0,
+      total: 0,
+      isSchemeItem: true,
+      schemeDiscountAmount: lineValue,
+      dealerPriceAtOrder: dealerPrice,
+    };
   });
 
   const orderTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
@@ -172,34 +230,53 @@ export async function POST(req: NextRequest) {
   // created pre-CONFIRMED with stock reserved immediately); that branch was
   // removed with pure COD itself on 2026-09-13 — see the PaymentType.COD
   // doc comment in prisma/schema.prisma.
-  const order = await prisma.order.create({
-    data: {
-      orderNumber: generateOrderNumber(),
-      dealerId: dealer.id,
-      channel,
-      subtotal: pricing.subtotal,
-      gstAmount: pricing.gstAmount,
-      shippingCost,
-      grandTotal,
-      paymentType,
-      amountDue,
-      amountPaid: 0,
-      notes,
-      status: "PENDING",
-      paymentStatus: "PENDING",
-      stockReserved: false,
-      shippingAddress: deliveryAddress,
-      deliveryName: deliveryName || dealer.ownerName,
-      deliveryPhone: deliveryPhone || dealer.phone,
-      deliveryCity: deliveryCity || dealer.city,
-      deliveryState: deliveryState || dealer.state,
-      deliveryPincode,
-      items: { create: pricing.lines },
-    },
+  const order = await prisma.$transaction(async (tx) => {
+    const created = await tx.order.create({
+      data: {
+        orderNumber: generateOrderNumber(),
+        dealerId: dealer.id,
+        channel,
+        subtotal: pricing.subtotal,
+        gstAmount: pricing.gstAmount,
+        shippingCost,
+        grandTotal,
+        paymentType,
+        amountDue,
+        amountPaid: 0,
+        notes,
+        status: "PENDING",
+        paymentStatus: "PENDING",
+        stockReserved: false,
+        schemeBenefitValue: schemeValidation?.ok ? schemeValidation.itemsValue : 0,
+        shippingAddress: deliveryAddress,
+        deliveryName: deliveryName || dealer.ownerName,
+        deliveryPhone: deliveryPhone || dealer.phone,
+        deliveryCity: deliveryCity || dealer.city,
+        deliveryState: deliveryState || dealer.state,
+        deliveryPincode,
+        items: { create: [...pricing.lines, ...schemeLines] },
+      },
+    });
+
+    if (schemeValidation?.ok) {
+      await tx.schemeRedemption.create({
+        data: {
+          orderId: created.id,
+          schemeId: schemeValidation.scheme.id,
+          benefitValue: schemeValidation.benefit,
+          itemsValue: schemeValidation.itemsValue,
+        },
+      });
+    }
+
+    return created;
   });
 
-  // Clear cart
-  await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+  // Clear cart (regular + scheme items, and the scheme selection itself).
+  await prisma.$transaction([
+    prisma.cartItem.deleteMany({ where: { cartId: cart.id } }),
+    prisma.cart.update({ where: { id: cart.id }, data: { schemeId: null } }),
+  ]);
 
   return NextResponse.json({ order });
 }

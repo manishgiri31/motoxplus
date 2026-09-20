@@ -18,6 +18,7 @@ import { getCancellationPolicy } from "@/lib/orders/cancellation-policy";
 import { resolveDealerGate, buildCancellationQuote, type GateOrder } from "@/lib/orders/cancellation-gate";
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
 import { notifyOrderEvent } from "@/lib/push/order-notifications";
+import { computeFullCancelWithRefund } from "@/lib/schemes/adjustment";
 
 const WAIVE_ROLES = ["SUPER_ADMIN", "ACCOUNTS"];
 const CANCEL_ROLES = ["ADMIN", "SUPER_ADMIN", "ACCOUNTS"];
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       items: true,
       payments: true,
       shipment: { select: { waybill: true, status: true, createdAt: true } },
+      schemeRedemption: true,
     },
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -100,6 +102,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     grandTotal: order.grandTotal,
     amountPaid: order.amountPaid,
     shipment: order.shipment,
+    schemeRedemption: order.schemeRedemption ? { itemsValue: order.schemeRedemption.itemsValue } : null,
   };
 
   // Carrier-aware dealer gate (F-02 / F-04). Replaces the Order.status-only
@@ -150,7 +153,32 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 
   const quote = calculateCancellation({ feePercent: effectiveFeePercent, amountPaid: order.amountPaid });
   const feeAmount = wantsWaive ? 0 : quote.feeAmount;
-  const refundAmount = wantsWaive ? order.amountPaid : quote.refundAmount;
+  const refundBeforeSchemeAdjustment = wantsWaive ? order.amountPaid : quote.refundAmount;
+
+  // Scheme Adjustment is always its own line, deducted ON TOP of the
+  // cancellation fee above — never combined with it, and never skipped by a
+  // fee waive (waiving is about the cancellation fee, not the GST Benefit
+  // goods the dealer already has). See lib/schemes/adjustment.ts and the
+  // OrderCancellation.schemeAdjustmentAmount doc comment.
+  let schemeAdjustmentAmount = 0;
+  let uncollectedSchemeShortfall = 0;
+  let schemeRedemptionStatus: "CANCELLED" | "ADJUSTED" | null = null;
+  let refundAmount = refundBeforeSchemeAdjustment;
+  if (order.schemeRedemption) {
+    // effectiveStage is already this route's own signal for "has this order
+    // progressed past dispatch" (it's what sets the 2%/20% fee tier) — reused
+    // here rather than introducing a second, possibly-disagreeing notion of
+    // "dispatched".
+    const result = computeFullCancelWithRefund({
+      itemsValue: order.schemeRedemption.itemsValue,
+      dispatched: effectiveStage === "POST_SHIP",
+      refundBeforeAdjustment: refundBeforeSchemeAdjustment,
+    });
+    schemeAdjustmentAmount = result.adjustmentApplied;
+    uncollectedSchemeShortfall = result.uncollectedShortfall;
+    schemeRedemptionStatus = result.redemptionStatus;
+    refundAmount = result.refundAfterAdjustment;
+  }
 
   // ── Cancel the real Delhivery parcel FIRST (F-04) ──────────────────────────
   // Delhivery before money (docs/delhivery-open-items.md item 1). If the carrier
@@ -179,7 +207,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       // against — count 0 means a concurrent request changed the order.
       const guarded = await tx.order.updateMany({
         where: { id: order.id, status: order.status },
-        data: { status: "CANCELLED", amountDue: 0, stockReserved: false },
+        data: { status: "CANCELLED", amountDue: 0, stockReserved: false, schemeAdjustmentAmount },
       });
       if (guarded.count === 0) throw new OrderChangedError();
 
@@ -198,6 +226,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
           feeAmount,
           amountPaidAtCancellation: order.amountPaid,
           refundAmount,
+          schemeAdjustmentAmount,
           reasonCode,
           reason,
           cancelledByUserId: userId,
@@ -208,6 +237,37 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
           waivedAt: wantsWaive ? new Date() : null,
         },
       });
+
+      if (schemeRedemptionStatus) {
+        await tx.schemeRedemption.update({
+          where: { orderId: order.id },
+          data: { status: schemeRedemptionStatus },
+        });
+      }
+
+      // The refund pool couldn't cover the full clawback — the shortfall
+      // follows the dealer to their next order (Dealer.outstandingDues)
+      // rather than being written off (see DealerDuesEntry doc comment: the
+      // scheme goods already left the warehouse, forgiving the gap would
+      // make "order big, take the goods, pay a small advance, cancel" free).
+      if (uncollectedSchemeShortfall > 0) {
+        const updatedDealer = await tx.dealer.update({
+          where: { id: order.dealerId },
+          data: { outstandingDues: { increment: uncollectedSchemeShortfall } },
+          select: { outstandingDues: true },
+        });
+        await tx.dealerDuesEntry.create({
+          data: {
+            dealerId: order.dealerId,
+            amount: uncollectedSchemeShortfall,
+            balanceAfter: updatedDealer.outstandingDues,
+            reason: "SCHEME_SHORTFALL",
+            orderId: order.id,
+            note: `Uncollected GST Benefit clawback on cancellation of order ${order.orderNumber} — refund pool insufficient.`,
+            createdByRole: "SYSTEM",
+          },
+        });
+      }
 
       await tx.orderEvent.create({
         data: {
@@ -291,6 +351,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     stage: effectiveStage,
     chargePercent: effectiveFeePercent,
     chargeAmount: feeAmount,
+    schemeAdjustmentAmount,
+    uncollectedSchemeShortfall,
     refundAmount,
     refundStatus: cancellation?.refundStatus,
     waived: wantsWaive,

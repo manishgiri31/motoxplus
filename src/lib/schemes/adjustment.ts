@@ -106,3 +106,44 @@ export function applySchemeAdjustmentToRefund(params: ApplySchemeAdjustmentInput
   const refundAfterAdjustment = roundToPaise(available - adjustmentApplied);
   return { adjustmentApplied, refundAfterAdjustment };
 }
+
+export interface FullCancelWithRefundInput {
+  /** The scheme redemption's granted item value (dealer price total). */
+  itemsValue: number;
+  /** Whether anything on the order had already left the warehouse. */
+  dispatched: boolean;
+  /** The refund this cancellation would otherwise pay out, after any cancellation fee — before the scheme adjustment. */
+  refundBeforeAdjustment: number;
+}
+
+export interface FullCancelWithRefundResult {
+  /** The theoretical full clawback (0 if nothing dispatched) — before capping at what the refund can afford. */
+  schemeAdjustmentAmount: number;
+  /** What actually got deducted from the refund — capped at refundBeforeAdjustment. */
+  adjustmentApplied: number;
+  /** schemeAdjustmentAmount − adjustmentApplied — what the refund pool couldn't cover (goes to Dealer.outstandingDues). */
+  uncollectedShortfall: number;
+  refundAfterAdjustment: number;
+  redemptionStatus: "CANCELLED" | "ADJUSTED";
+}
+
+/**
+ * Composes computeFullCancelSchemeAdjustment + applySchemeAdjustmentToRefund into the one calculation both the
+ * cancellation-preview quote and the actual cancel endpoint need — so a dealer's confirmation dialog and the refund
+ * they actually receive can never quietly disagree about the scheme adjustment (same principle as
+ * buildCancellationQuote/POST .../cancel already share for the cancellation fee itself).
+ */
+export function computeFullCancelWithRefund(params: FullCancelWithRefundInput): FullCancelWithRefundResult {
+  const fullCancel = computeFullCancelSchemeAdjustment({ itemsValue: params.itemsValue, dispatched: params.dispatched });
+  const applied = applySchemeAdjustmentToRefund({
+    refundBeforeAdjustment: params.refundBeforeAdjustment,
+    schemeAdjustment: fullCancel.schemeAdjustmentAmount,
+  });
+  return {
+    schemeAdjustmentAmount: fullCancel.schemeAdjustmentAmount,
+    adjustmentApplied: applied.adjustmentApplied,
+    uncollectedShortfall: roundToPaise(fullCancel.schemeAdjustmentAmount - applied.adjustmentApplied),
+    refundAfterAdjustment: applied.refundAfterAdjustment,
+    redemptionStatus: fullCancel.redemptionStatus,
+  };
+}
