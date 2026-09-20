@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Download, Printer } from "lucide-react";
 
@@ -11,6 +11,10 @@ interface InvoiceData {
   subtotal: number;
   gstAmount: number;
   grandTotal: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  placeOfSupply: string | null;
   dealer: {
     companyName: string;
     gstNumber: string;
@@ -33,6 +37,8 @@ interface InvoiceData {
       gstRate: number;
       gstAmount: number;
       total: number;
+      isSchemeItem: boolean;
+      schemeDiscountAmount: number;
       product: { name: string; partNumber: string; sku: string; hsnCode?: string; countryOfOrigin?: string; packageWeight?: number | null; brand?: string };
     }>;
   };
@@ -99,12 +105,16 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
     doc.text(`${invoice.dealer.state} - ${invoice.dealer.pincode}`, 15, 105);
     doc.text(`GST: ${invoice.dealer.gstNumber}`, 15, 111);
     doc.text(`Phone: ${invoice.dealer.phone}`, 15, 117);
+    if (invoice.placeOfSupply) {
+      doc.text(`Place of Supply: ${invoice.placeOfSupply}`, 15, 123);
+    }
 
-    // Items table
-    autoTable(doc, {
-      startY: 128,
-      head: [["#", "Part No.", "HSN", "Product", "Qty", "Unit Price", "GST", "Total"]],
-      body: invoice.order.items.map((item, i) => [
+    // Items table — a scheme (GST Benefit) item gets a second row directly
+    // beneath it showing the 100% "Scheme Discount" line (Section 15(3)),
+    // separate from the ₹0 the dealer portal UI shows for it.
+    const tableBody: (string | number)[][] = [];
+    invoice.order.items.forEach((item, i) => {
+      tableBody.push([
         i + 1,
         item.product.partNumber,
         item.product.hsnCode || "",
@@ -113,7 +123,15 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
         formatCurrency(item.unitPrice),
         `${item.gstRate}%`,
         formatCurrency(item.total),
-      ]),
+      ]);
+      if (item.isSchemeItem) {
+        tableBody.push(["", "", "", "Less: Scheme Discount (GST Benefit — Sec. 15(3))", "", "", "", `-${formatCurrency(item.schemeDiscountAmount)}`]);
+      }
+    });
+    autoTable(doc, {
+      startY: invoice.placeOfSupply ? 134 : 128,
+      head: [["#", "Part No.", "HSN", "Product", "Qty", "Unit Price", "GST", "Total"]],
+      body: tableBody,
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [250, 250, 250] },
@@ -128,19 +146,35 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
     doc.text(`GST Amount:`, 130, finalY + 15);
     doc.text(formatCurrency(invoice.gstAmount), 185, finalY + 15, { align: "right" });
 
+    let gstLineY = finalY + 15;
+    doc.setFontSize(8);
+    if (invoice.igstAmount > 0) {
+      gstLineY += 5;
+      doc.text(`  IGST:`, 130, gstLineY);
+      doc.text(formatCurrency(invoice.igstAmount), 185, gstLineY, { align: "right" });
+    } else {
+      gstLineY += 5;
+      doc.text(`  CGST:`, 130, gstLineY);
+      doc.text(formatCurrency(invoice.cgstAmount), 185, gstLineY, { align: "right" });
+      gstLineY += 5;
+      doc.text(`  SGST:`, 130, gstLineY);
+      doc.text(formatCurrency(invoice.sgstAmount), 185, gstLineY, { align: "right" });
+    }
+    doc.setFontSize(10);
+
     doc.setFillColor(220, 38, 38);
-    doc.rect(125, finalY + 18, 75, 10, "F");
+    doc.rect(125, gstLineY + 3, 75, 10, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    doc.text("Grand Total:", 130, finalY + 25);
-    doc.text(formatCurrency(invoice.grandTotal), 185, finalY + 25, { align: "right" });
+    doc.text("Grand Total:", 130, gstLineY + 10);
+    doc.text(formatCurrency(invoice.grandTotal), 185, gstLineY + 10, { align: "right" });
 
     doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.text(`Amount Paid: ${formatCurrency(invoice.order.amountPaid)}`, 15, finalY + 30);
+    doc.text(`Amount Paid: ${formatCurrency(invoice.order.amountPaid)}`, 15, gstLineY + 15);
     if (invoice.order.amountDue > 0) {
-      doc.text(`Balance Due: ${formatCurrency(invoice.order.amountDue)}`, 15, finalY + 37);
+      doc.text(`Balance Due: ${formatCurrency(invoice.order.amountDue)}`, 15, gstLineY + 22);
     }
 
     // Footer
@@ -220,6 +254,9 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
               <div className="text-[var(--text-muted)] text-sm">{invoice.dealer.state} - {invoice.dealer.pincode}</div>
               <div className="text-[var(--text-muted)] text-sm">GST: {invoice.dealer.gstNumber}</div>
               <div className="text-[var(--text-muted)] text-sm">Phone: {invoice.dealer.phone}</div>
+              {invoice.placeOfSupply && (
+                <div className="text-[var(--text-muted)] text-sm mt-1">Place of Supply: {invoice.placeOfSupply}</div>
+              )}
             </div>
           </div>
 
@@ -239,21 +276,33 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
             </thead>
             <tbody className="divide-y divide-[var(--border-color)]">
               {invoice.order.items.map((item, i) => (
-                <tr key={i}>
-                  <td className="py-3 text-[var(--text-muted)] text-sm">{i + 1}</td>
-                  <td className="py-3 text-[var(--text-muted)] text-sm font-mono">{item.product.partNumber}</td>
-                  <td className="py-3 text-[var(--text-muted)] text-sm font-mono">{item.product.hsnCode || "—"}</td>
-                  <td className="py-3 text-[var(--text-primary)] text-sm">
-                    {item.product.name}
-                    {item.product.countryOfOrigin && (
-                      <div className="text-[var(--text-muted)] text-[10px]">Origin: {item.product.countryOfOrigin}</div>
-                    )}
-                  </td>
-                  <td className="py-3 text-right text-[var(--text-secondary)] text-sm">{item.quantity}</td>
-                  <td className="py-3 text-right text-[var(--text-secondary)] text-sm">{formatCurrency(item.unitPrice)}</td>
-                  <td className="py-3 text-right text-[var(--text-secondary)] text-sm">{item.gstRate}%</td>
-                  <td className="py-3 text-right text-[var(--text-primary)] font-bold text-sm">{formatCurrency(item.total)}</td>
-                </tr>
+                <Fragment key={i}>
+                  <tr>
+                    <td className="py-3 text-[var(--text-muted)] text-sm">{i + 1}</td>
+                    <td className="py-3 text-[var(--text-muted)] text-sm font-mono">{item.product.partNumber}</td>
+                    <td className="py-3 text-[var(--text-muted)] text-sm font-mono">{item.product.hsnCode || "—"}</td>
+                    <td className="py-3 text-[var(--text-primary)] text-sm">
+                      {item.product.name}
+                      {item.product.countryOfOrigin && (
+                        <div className="text-[var(--text-muted)] text-[10px]">Origin: {item.product.countryOfOrigin}</div>
+                      )}
+                    </td>
+                    <td className="py-3 text-right text-[var(--text-secondary)] text-sm">{item.quantity}</td>
+                    <td className="py-3 text-right text-[var(--text-secondary)] text-sm">{formatCurrency(item.unitPrice)}</td>
+                    <td className="py-3 text-right text-[var(--text-secondary)] text-sm">{item.gstRate}%</td>
+                    <td className="py-3 text-right text-[var(--text-primary)] font-bold text-sm">{formatCurrency(item.total)}</td>
+                  </tr>
+                  {item.isSchemeItem && (
+                    <tr>
+                      <td colSpan={7} className="pb-3 text-right text-amber-500 text-xs italic">
+                        Less: Scheme Discount (GST Benefit — Sec. 15(3))
+                      </td>
+                      <td className="pb-3 text-right text-amber-500 text-xs font-bold">
+                        -{formatCurrency(item.schemeDiscountAmount)}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -269,6 +318,23 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
                 <span className="text-[var(--text-muted)]">GST Amount</span>
                 <span className="text-[var(--text-primary)]">{formatCurrency(invoice.gstAmount)}</span>
               </div>
+              {invoice.igstAmount > 0 ? (
+                <div className="flex justify-between text-xs pl-3">
+                  <span className="text-[var(--text-muted)]">IGST</span>
+                  <span className="text-[var(--text-secondary)]">{formatCurrency(invoice.igstAmount)}</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between text-xs pl-3">
+                    <span className="text-[var(--text-muted)]">CGST</span>
+                    <span className="text-[var(--text-secondary)]">{formatCurrency(invoice.cgstAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs pl-3">
+                    <span className="text-[var(--text-muted)]">SGST</span>
+                    <span className="text-[var(--text-secondary)]">{formatCurrency(invoice.sgstAmount)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between bg-red-600 px-4 py-2 rounded-sm font-bold">
                 <span className="text-[var(--text-primary)]">Grand Total</span>
                 <span className="text-[var(--text-primary)]">{formatCurrency(invoice.grandTotal)}</span>

@@ -81,18 +81,56 @@ function computeB2BPricing(items: PricingItemInput[]): OrderPricing {
 }
 
 /**
+ * B2C retail pricing. No B2C catalogue/checkout page calls this yet (B2C
+ * customer auth + catalogue are a later phase) — this is the pricing rule
+ * ready for when one does, kept here rather than scattered across UI
+ * components per the channel-seam design (B2C-EXPANSION-PLAN.md Phase 0).
+ *
+ * Unlike B2B, item.unitPrice here is Product.mrp — GST-INCLUSIVE, the one
+ * number a retail customer sees (no separate GST line in that UI). The tax
+ * is reverse-calculated out of that inclusive price rather than added on
+ * top, because gstAmount/subtotal must still mean the same thing on both
+ * channels: the invoice PDF needs a real CGST/SGST/IGST break-up (see
+ * lib/tax/gst-split.ts) even though the B2C UI never shows one.
+ *
+ * Same reconciliation discipline as B2B: each line's gstAmount is rounded
+ * independently, and order-level subtotal/gstAmount are derived by summing
+ * the already-rounded lines.
+ */
+function computeB2CPricing(items: PricingItemInput[]): OrderPricing {
+  const lines: PricingLine[] = items.map((item) => {
+    const lineInclusive = roundToPaise(item.unitPrice * item.quantity);
+    const lineTaxable = roundToPaise(lineInclusive / (1 + item.gstRate / 100));
+    const gstAmount = roundToPaise(lineInclusive - lineTaxable);
+    return {
+      productId: item.productId,
+      variantId: item.variantId ?? null,
+      variantLabel: item.variantLabel ?? null,
+      variantSku: item.variantSku ?? null,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      gstRate: item.gstRate,
+      gstAmount,
+      total: lineInclusive,
+    };
+  });
+
+  const subtotal = roundToPaise(lines.reduce((sum, l) => sum + (l.total - l.gstAmount), 0));
+  const gstAmount = roundToPaise(lines.reduce((sum, l) => sum + l.gstAmount, 0));
+
+  return { subtotal, gstAmount, lines };
+}
+
+/**
  * Channel-aware entry point (B2C-EXPANSION-PLAN.md Phase 0 — the channel
- * seam). Only one pricing strategy exists today; B2C will get its own rule
- * (retailPrice, see Phase 2/3 of the plan) once the B2C catalogue exists.
- * Until then both channels compute identically — this branch is structure,
- * not behavior.
+ * seam).
  */
 export function computeOrderPricing(params: {
   channel: OrderChannel;
   items: PricingItemInput[];
 }): OrderPricing {
   if (params.channel === "B2C") {
-    return computeB2BPricing(params.items);
+    return computeB2CPricing(params.items);
   }
   return computeB2BPricing(params.items);
 }

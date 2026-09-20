@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Truck } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Truck, Info } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { SchemeBenefitPanel } from "@/components/dealer/scheme-benefit-panel";
 
 interface CartItem {
   id: string;
+  productId: string;
   quantity: number;
   variantId: string | null;
+  isSchemeItem: boolean;
   variant: {
     id: string;
     label: string;
@@ -31,6 +34,8 @@ interface CartItem {
 
 export default function CartPage() {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [schemeId, setSchemeId] = useState<string | null>(null);
+  const [schemeClearedReason, setSchemeClearedReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
 
@@ -39,11 +44,16 @@ export default function CartPage() {
     if (res.ok) {
       const data = await res.json();
       setItems(data.items || []);
+      setSchemeId(data.schemeId ?? null);
+      setSchemeClearedReason(data.schemeCleared ? data.schemeClearedReason || "Your GST Benefit selection was no longer valid and was removed." : null);
     }
     setLoading(false);
   };
 
   useEffect(() => { fetchCart(); }, []);
+
+  const regularItems = items.filter((i) => !i.isSchemeItem);
+  const schemeCartItems = items.filter((i) => i.isSchemeItem);
 
   const updateQuantity = async (itemId: string, productId: string, quantity: number, variantId: string | null) => {
     setUpdating(itemId);
@@ -69,8 +79,10 @@ export default function CartPage() {
 
   const FREE_DELIVERY_THRESHOLD = 25000;
   const itemPrice = (item: CartItem) => item.variant?.price ?? item.product.price;
-  const subtotal = items.reduce((sum, item) => sum + itemPrice(item) * item.quantity, 0);
-  const gstAmount = items.reduce(
+  // Scheme (free) items never count toward subtotal/GST/shipping — they're
+  // priced at ₹0 on the order, same as at checkout (see /api/orders).
+  const subtotal = regularItems.reduce((sum, item) => sum + itemPrice(item) * item.quantity, 0);
+  const gstAmount = regularItems.reduce(
     (sum, item) => sum + (itemPrice(item) * item.quantity * item.product.gstRate) / 100,
     0
   );
@@ -120,7 +132,13 @@ export default function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Items */}
           <div className="lg:col-span-2 space-y-3">
-            {items.map((item) => (
+            {schemeClearedReason && (
+              <div className="flex items-start gap-2 glass border border-amber-900/40 rounded-sm p-3 text-xs text-amber-400">
+                <Info size={14} className="flex-shrink-0 mt-0.5" />
+                {schemeClearedReason}
+              </div>
+            )}
+            {regularItems.map((item) => (
               <div
                 key={item.id}
                 className={`glass border border-[var(--border-color)] rounded-sm p-4 flex items-center gap-4 transition-opacity ${
@@ -209,6 +227,13 @@ export default function CartPage() {
           <div>
             <div className="glass border border-[var(--border-color)] rounded-sm p-6 sticky top-4">
               <h3 className="text-[var(--text-primary)] font-bold text-lg mb-6">Order Summary</h3>
+
+              <SchemeBenefitPanel
+                subtotal={subtotal}
+                appliedSchemeId={schemeId}
+                schemeItems={schemeCartItems}
+                onChanged={fetchCart}
+              />
 
               {/* Free delivery bar */}
               {orderTotal < FREE_DELIVERY_THRESHOLD ? (

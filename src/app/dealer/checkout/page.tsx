@@ -20,6 +20,9 @@ declare global {
 type PaymentType = "ADVANCE_20" | "FULL_100" | "DIRECT_UPI";
 
 interface CartItem {
+  productId?: string;
+  variantId?: string | null;
+  isSchemeItem?: boolean;
   product: {
     name: string;
     price: number;
@@ -36,6 +39,7 @@ interface CartSummary {
   subtotal: number;
   gstAmount: number;
   items: CartItem[];
+  schemeItems: CartItem[];
 }
 
 interface ServiceabilityResult {
@@ -168,6 +172,12 @@ export default function CheckoutPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.items) {
+          // Scheme (free) items are priced/taxed separately server-side
+          // (₹0, see /api/orders) — excluded here too so this preview can't
+          // overstate what's actually charged.
+          const regularItems = data.items.filter((item: any) => !item.isSchemeItem);
+          const schemeItems = data.items.filter((item: any) => item.isSchemeItem);
+
           // Same computeOrderPricing() the server uses to build the actual
           // order (see /api/orders) — per-line rounding, order totals
           // derived from the already-rounded lines. productId/variantId
@@ -176,7 +186,7 @@ export default function CheckoutPage() {
           // can never silently drift from what gets charged.
           const pricing = computeOrderPricing({
             channel: "B2B",
-            items: data.items.map((item: any) => ({
+            items: regularItems.map((item: any) => ({
               productId: item.productId ?? "",
               variantId: item.variantId ?? null,
               variantLabel: item.variant?.label ?? null,
@@ -186,7 +196,7 @@ export default function CheckoutPage() {
               gstRate: item.product.gstRate,
             })),
           });
-          setCart({ subtotal: pricing.subtotal, gstAmount: pricing.gstAmount, items: data.items });
+          setCart({ subtotal: pricing.subtotal, gstAmount: pricing.gstAmount, items: regularItems, schemeItems });
         }
         setCartLoading(false);
       });
@@ -513,6 +523,24 @@ export default function CheckoutPage() {
               <span className="text-[var(--text-primary)]">{formatCurrency(item.product.price * item.quantity)}</span>
             </div>
           ))}
+          {cart.schemeItems.length > 0 && (
+            <div className="pt-2 mt-2 border-t border-dashed border-[var(--border-color)] space-y-2">
+              <div className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">GST Benefit — Free Items</div>
+              {cart.schemeItems.map((item: any, i: number) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-[var(--text-secondary)]">
+                    {item.product.name} × {item.quantity}
+                  </span>
+                  <span>
+                    <span className="text-gray-600 line-through mr-2">
+                      {formatCurrency((item.variant?.price ?? item.product.price) * item.quantity)}
+                    </span>
+                    <span className="text-green-400 font-bold">₹0</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="border-t border-[var(--border-color)] pt-4 space-y-2">
           <div className="flex justify-between text-sm">
@@ -523,6 +551,12 @@ export default function CheckoutPage() {
             <span className="text-[var(--text-muted)]">GST</span>
             <span className="text-[var(--text-primary)]">{formatCurrency(cart.gstAmount)}</span>
           </div>
+          {cart.schemeItems.length > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-[var(--text-muted)]">Scheme Items</span>
+              <span className="text-green-400 font-semibold">₹0</span>
+            </div>
+          )}
           {/* Free delivery progress bar */}
           {orderTotal < FREE_DELIVERY_THRESHOLD ? (
             <div className="py-2 border-t border-[var(--border-color)] mt-2">
