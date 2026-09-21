@@ -8,6 +8,7 @@ declare module "next-auth" {
     dealerId?: string;
     isSuperAdmin?: boolean;
     vendorId?: string;
+    customerId?: string;
     department?: StaffDepartment;
     emailVerified?: boolean;
     mobileVerified?: boolean;
@@ -25,6 +26,7 @@ declare module "next-auth" {
       dealerId?: string;
       isSuperAdmin?: boolean;
       vendorId?: string;
+      customerId?: string;
       department?: StaffDepartment;
       emailVerified?: boolean;
       mobileVerified?: boolean;
@@ -41,6 +43,7 @@ declare module "next-auth/jwt" {
     dealerId?: string;
     isSuperAdmin?: boolean;
     vendorId?: string;
+    customerId?: string;
     department?: StaffDepartment;
     emailVerified?: boolean;
     mobileVerified?: boolean;

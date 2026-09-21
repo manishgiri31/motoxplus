@@ -16,7 +16,7 @@ export function resolveIdentifier(raw: string): Identifier {
   return { kind: "email", value: raw.trim().toLowerCase() };
 }
 
-const USER_WITH_RELATIONS = { dealer: true, vendor: true, admin: true } satisfies Prisma.UserInclude;
+const USER_WITH_RELATIONS = { dealer: true, vendor: true, admin: true, customer: true } satisfies Prisma.UserInclude;
 
 export type UserWithRelations = Prisma.UserGetPayload<{ include: typeof USER_WITH_RELATIONS }>;
 
@@ -38,6 +38,7 @@ export function buildSessionClaims(user: UserWithRelations) {
     dealerId: user.dealer?.id ?? undefined,
     isSuperAdmin: user.admin?.isSuperAdmin ?? false,
     vendorId: user.vendor?.id ?? undefined,
+    customerId: user.customer?.id ?? undefined,
     department: user.department ?? undefined,
     emailVerified: !!user.emailVerified,
     mobileVerified: user.mobileVerified,

@@ -32,5 +32,47 @@ export async function getVerifiedVendor(userId: string) {
   return vendor;
 }
 
+// B2C customers have no approval step and no email-verification requirement
+// (signup is phone-OTP only, see /api/auth/customer/register) — only
+// mobileVerified + isActive gate order-placing/payment routes, mirroring
+// getVerifiedDealer's shape but without the email/dealerStatus checks.
+export async function getVerifiedCustomer(userId: string) {
+  const customer = await prisma.customer.findUnique({
+    where: { userId },
+    include: { user: true },
+  });
+  if (!customer) return null;
+  if (!customer.user.isActive) return null;
+  if (!customer.user.mobileVerified) return null;
+  return customer;
+}
+
 export const ACCOUNT_NOT_VERIFIED_MESSAGE =
   "Your account is not verified or is not active. Please complete email and mobile verification, or contact support if your account has been suspended.";
+
+export type OrderActor =
+  | { channel: "B2B"; dealer: NonNullable<Awaited<ReturnType<typeof getVerifiedDealer>>> }
+  | { channel: "B2C"; customer: NonNullable<Awaited<ReturnType<typeof getVerifiedCustomer>>> };
+
+/**
+ * Single lookup every cart/order/payment route calls instead of its own
+ * `role !== "DEALER"` + getVerifiedDealer() pair (B2C-EXPANSION-PLAN.md
+ * Phase 2 — "role check bikhra hua nahi"). Returns null for anyone who isn't
+ * a verified dealer or verified customer — an unverified/suspended account of
+ * either kind, or any other role (ADMIN/STAFF/VENDOR) trying to place an
+ * order.
+ */
+export async function resolveOrderActor(userId: string): Promise<OrderActor | null> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!user) return null;
+
+  if (user.role === "DEALER") {
+    const dealer = await getVerifiedDealer(userId);
+    return dealer ? { channel: "B2B", dealer } : null;
+  }
+  if (user.role === "CUSTOMER") {
+    const customer = await getVerifiedCustomer(userId);
+    return customer ? { channel: "B2C", customer } : null;
+  }
+  return null;
+}

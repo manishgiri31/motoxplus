@@ -38,6 +38,26 @@ model User {
   sessions            Session[]
   userSessions        UserSession[]
   vendor              Vendor?
+  customer            Customer?
+}
+
+/**
+ * B2C retail customer profile (Phase 2, B2C-EXPANSION-PLAN.md). Deliberately
+ * thin — name/phone/email already live on User, same as Admin. Exists as its
+ * own table (rather than Order.customerId -> User.id directly) so it can grow
+ * saved addresses / DPDP consent records later without another migration to
+ * Order/Cart/Invoice, mirroring the Dealer/Vendor profile pattern.
+ */
+model Customer {
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cart               Cart?
+  orders             Order[]
+  invoices           Invoice[]
+  paymentSubmissions PaymentSubmission[]
 }
 
 model LoginHistory {
@@ -363,17 +383,26 @@ model StorageAuditLog {
   createdAt DateTime @default(now())
 }
 
+// B2C-EXPANSION-PLAN.md Phase 2 — dealerId/customerId are both nullable, and a
+// DB CHECK (num_nonnulls("dealerId", "customerId") = 1, see the
+// 20260921000000_b2c_customer migration — Prisma's PSL has no CHECK
+// constraint syntax, so this isn't visible here) enforces exactly one owner.
+// Every existing row has dealerId set, so the CHECK is satisfied on day one
+// with no backfill.
 model Cart {
-  id        String     @id @default(cuid())
-  dealerId  String     @unique
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id         String     @id @default(cuid())
+  dealerId   String?    @unique
+  customerId String?    @unique
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
   // Plain string, not a relation — same "audit-field, no FK" convention as
   // OrderCancellation.waivedByUserId. One scheme per cart (mirrors the
-  // one-scheme-per-order rule on SchemeRedemption.orderId).
-  schemeId  String?
-  dealer    Dealer     @relation(fields: [dealerId], references: [id], onDelete: Cascade)
-  items     CartItem[]
+  // one-scheme-per-order rule on SchemeRedemption.orderId). B2C carts never
+  // set this — schemes are a B2B-only concept.
+  schemeId   String?
+  dealer     Dealer?    @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  customer   Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items      CartItem[]
 
   @@index([updatedAt])
 }
@@ -399,10 +428,13 @@ model CartItem {
   @@index([productId])
 }
 
+// dealerId/customerId both nullable — see the Cart model's doc comment above
+// for the exactly-one-owner CHECK constraint (same convention here).
 model Order {
   id                     String                  @id @default(cuid())
   orderNumber            String                  @unique
-  dealerId               String
+  dealerId               String?
+  customerId             String?
   subtotal               Float
   gstAmount              Float
   grandTotal             Float
@@ -451,7 +483,8 @@ model Order {
   // dealer can ship to a different state than their own registration.
   placeOfSupply          String?
   invoice                Invoice?
-  dealer                 Dealer                  @relation(fields: [dealerId], references: [id])
+  dealer                 Dealer?                 @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  customer               Customer?               @relation(fields: [customerId], references: [id], onDelete: Restrict)
   cancellation           OrderCancellation?
   itemCancellations      OrderItemCancellation[]
   schemeRedemption       SchemeRedemption?
@@ -464,6 +497,7 @@ model Order {
 
   @@index([dealerId, status])
   @@index([dealerId, createdAt])
+  @@index([customerId, createdAt])
   @@index([status, createdAt])
   @@index([paymentStatus])
   @@index([createdAt])
@@ -708,11 +742,14 @@ model Payment {
   @@index([razorpayOrderId])
 }
 
+// dealerId/customerId both nullable — see the Cart model's doc comment above
+// for the exactly-one-owner CHECK constraint (same convention here).
 model Invoice {
   id            String       @id @default(cuid())
   invoiceNumber String       @unique
   orderId       String       @unique
-  dealerId      String
+  dealerId      String?
+  customerId    String?
   pdfUrl        String?
   subtotal      Float
   gstAmount     Float
@@ -734,8 +771,11 @@ model Invoice {
   dueDate       DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  dealer        Dealer       @relation(fields: [dealerId], references: [id])
+  dealer        Dealer?      @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  customer      Customer?    @relation(fields: [customerId], references: [id], onDelete: Restrict)
   order         Order        @relation(fields: [orderId], references: [id])
+
+  @@index([customerId])
 }
 
 model Vendor {
@@ -1042,10 +1082,13 @@ model Warehouse {
   updatedAt DateTime @updatedAt
 }
 
+// dealerId/customerId both nullable — see the Cart model's doc comment above
+// for the exactly-one-owner CHECK constraint (same convention here).
 model PaymentSubmission {
   id              String              @id @default(cuid())
   orderId         String
-  dealerId        String
+  dealerId        String?
+  customerId      String?
   paymentMethod   DirectPaymentMethod
   utrNumber       String              @unique
   payerName       String
@@ -1065,11 +1108,13 @@ model PaymentSubmission {
   submittedAt     DateTime            @default(now())
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
-  dealer          Dealer              @relation(fields: [dealerId], references: [id])
+  dealer          Dealer?             @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+  customer        Customer?           @relation(fields: [customerId], references: [id], onDelete: Restrict)
   order           Order               @relation(fields: [orderId], references: [id])
 
   @@index([status, createdAt])
   @@index([dealerId])
+  @@index([customerId])
   @@index([orderId])
 }
 
@@ -1472,6 +1517,7 @@ model VehicleDownload {
 enum UserRole {
   GUEST
   DEALER
+  CUSTOMER
   ADMIN
   SUPER_ADMIN
   VENDOR

@@ -25,3 +25,18 @@ export function normalizeIndianMobile(input: string): string | null {
 
   return MOBILE_REGEX.test(digits) ? digits : null;
 }
+
+// RFC 2606 reserves .invalid as a domain that can never resolve — used here
+// so a B2C customer who skips the optional email field still gets a value in
+// User.email (NOT NULL, and relied on as non-null across ~40 files/67 call
+// sites) that can never accidentally receive real mail if something tries to
+// send to it before isPlaceholderEmail() is checked.
+const PLACEHOLDER_EMAIL_DOMAIN = "phone.motoxplus.invalid";
+
+export function placeholderEmailForMobile(mobile: string): string {
+  return `${mobile}@${PLACEHOLDER_EMAIL_DOMAIN}`;
+}
+
+export function isPlaceholderEmail(email: string): boolean {
+  return email.endsWith(`@${PLACEHOLDER_EMAIL_DOMAIN}`);
+}

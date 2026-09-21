@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const findUser = () =>
     prisma.user.findUnique({
       where: isMobileMethod ? { mobileNumber: identifier } : { email: identifier },
-      include: { dealer: true, vendor: true, admin: true },
+      include: { dealer: true, vendor: true, admin: true, customer: true },
     });
 
   // If OTP provided, verify it (step 2)
@@ -56,6 +56,17 @@ export async function POST(req: NextRequest) {
     if (!user.isActive) return NextResponse.json({ error: "Account disabled" }, { status: 403 });
     const lockStatus = await isAccountLocked(user.id);
     if (lockStatus.locked) return NextResponse.json({ error: "Account locked. Try later." }, { status: 423 });
+
+    // A CUSTOMER account has no separate /verify-mobile step (unlike
+    // dealer/vendor, whose mobileVerified is set there instead) — signup is
+    // this same phone-OTP flow end to end, so successfully verifying a
+    // WHATSAPP-delivered LOGIN code against this exact mobile number *is* the
+    // mobile-verification event. Scoped to isMobileMethod && CUSTOMER only,
+    // so dealer/vendor's existing separate verification step is untouched.
+    if (isMobileMethod && user.role === "CUSTOMER" && !user.mobileVerified) {
+      await prisma.user.update({ where: { id: user.id }, data: { mobileVerified: true, mobileVerifiedAt: new Date() } });
+      user.mobileVerified = true;
+    }
 
     // Clear the OTP_VERIFY abuse counter for this identifier/IP on a
     // successful login — same "reset on success" contract as the password

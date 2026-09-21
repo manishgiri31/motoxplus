@@ -30,6 +30,20 @@ export default withAuth(
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
 
+    // /account is the B2C customer portal — only CUSTOMER may reach it;
+    // every other authenticated role is bounced to its own portal (or /login
+    // for a guest, via the `authorized` callback below since /account is in
+    // the matcher). A CUSTOMER straying into /dealer, /admin, or /vendor is
+    // sent back to /account, same as every other cross-portal redirect above.
+    if (pathname.startsWith("/account") && role && role !== "CUSTOMER") {
+      if (role === "DEALER") return NextResponse.redirect(new URL("/dealer/dashboard", req.url));
+      if (role === "VENDOR") return NextResponse.redirect(new URL("/vendor/dashboard", req.url));
+      if (ADMIN_ROLES.includes(role)) return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+    }
+    if ((pathname.startsWith("/dealer") || pathname.startsWith("/admin") || pathname.startsWith("/vendor")) && role === "CUSTOMER") {
+      return NextResponse.redirect(new URL("/account", req.url));
+    }
+
     // Mandatory email/mobile verification — dealers and vendors both.
     // A correct password always issues a session (see src/lib/auth.ts); this is
     // where we actually route unverified users, instead of blocking login.
@@ -63,6 +77,7 @@ export default withAuth(
       if (role === "DEALER") return NextResponse.redirect(new URL("/dealer/dashboard", req.url));
       if (ADMIN_ROLES.includes(role)) return NextResponse.redirect(new URL("/admin/dashboard", req.url));
       if (role === "VENDOR") return NextResponse.redirect(new URL("/vendor/dashboard", req.url));
+      if (role === "CUSTOMER") return NextResponse.redirect(new URL("/account", req.url));
     }
 
     return NextResponse.next();
@@ -88,6 +103,7 @@ export default withAuth(
           pathname.startsWith("/dealer") ||
           pathname.startsWith("/admin") ||
           pathname.startsWith("/vendor") ||
+          pathname.startsWith("/account") ||
           VERIFICATION_PAGES.some((p) => pathname.startsWith(p))
         ) {
           return !!token;
@@ -103,6 +119,7 @@ export const config = {
     "/dealer/:path*",
     "/admin/:path*",
     "/vendor/:path*",
+    "/account/:path*",
     "/login",
     "/register",
     "/forgot-password",
