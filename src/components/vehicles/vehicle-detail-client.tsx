@@ -246,6 +246,9 @@ export function VehicleDetailClient({
 }) {
   const { data: session } = useSession();
   const isDealer = session?.user?.role === "DEALER";
+  // B2C-EXPANSION-PLAN.md Phase 2: a logged-in retail customer sees MRP
+  // (GST-inclusive) here too, not the wholesale Dealer Price.
+  const isCustomer = session?.user?.role === "CUSTOMER";
   const [selectedColorId, setSelectedColorId] = useState<string | null>(vehicle.colors[0]?.id ?? null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [openFaqId, setOpenFaqId] = useState<string | null>(null);
@@ -649,18 +652,31 @@ export function VehicleDetailClient({
                         </div>
                       )}
                       <div className="pt-3 border-t border-[var(--line)] flex items-end justify-between">
-                        <div>
-                          <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
-                          <div className="tnum text-[var(--red)] font-black text-base leading-tight">
-                            ₹{p.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                        {isCustomer ? (
+                          <div>
+                            <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">MRP</div>
+                            {p.mrp ? (
+                              <div className="tnum text-[var(--red)] font-black text-base leading-tight">
+                                ₹{p.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                              </div>
+                            ) : (
+                              <span className="tnum text-[var(--muted)] text-xs">Not available for retail</span>
+                            )}
                           </div>
-                          {p.mrp && p.mrp > p.price && (
-                            <span className="tnum text-[var(--muted)] text-[10px] line-through">
-                              MRP ₹{p.mrp.toLocaleString("en-IN")}
-                            </span>
-                          )}
-                        </div>
-                        {!isDealer && (
+                        ) : (
+                          <div>
+                            <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
+                            <div className="tnum text-[var(--red)] font-black text-base leading-tight">
+                              ₹{p.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                            </div>
+                            {p.mrp && p.mrp > p.price && (
+                              <span className="tnum text-[var(--muted)] text-[10px] line-through">
+                                MRP ₹{p.mrp.toLocaleString("en-IN")}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {!isDealer && !isCustomer && (
                           <div className="flex items-center gap-1.5 border border-[var(--red)]/20 rounded-sm px-2 py-1">
                             <Lock size={9} className="text-[var(--red)]" />
                             <span className="text-[var(--red)] text-[9px] font-bold">Login</span>
@@ -690,7 +706,7 @@ export function VehicleDetailClient({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
               {recommendations.map((r) => (
-                <LinkedProductCard key={r.id} product={r.product} isDealer={isDealer} />
+                <LinkedProductCard key={r.id} product={r.product} isDealer={isDealer} isCustomer={isCustomer} />
               ))}
             </div>
           )}
@@ -711,7 +727,7 @@ export function VehicleDetailClient({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
               {accessories.map((a) => (
-                <LinkedProductCard key={a.id} product={a.product} isDealer={isDealer} />
+                <LinkedProductCard key={a.id} product={a.product} isDealer={isDealer} isCustomer={isCustomer} />
               ))}
             </div>
           )}
@@ -851,7 +867,7 @@ export function VehicleDetailClient({
   );
 }
 
-function LinkedProductCard({ product, isDealer }: { product: LinkedProductData; isDealer: boolean }) {
+function LinkedProductCard({ product, isDealer, isCustomer }: { product: LinkedProductData; isDealer: boolean; isCustomer: boolean }) {
   const thumb = product.productImages[0]?.imageUrl;
   return (
     <Link
@@ -868,10 +884,18 @@ function LinkedProductCard({ product, isDealer }: { product: LinkedProductData; 
       <div className="p-3.5">
         <div className="text-[var(--muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">{product.partNumber}</div>
         <h3 className="text-[var(--ink)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-[var(--red)] transition-colors">{product.name}</h3>
-        <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
+        <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">{isCustomer ? "MRP" : "Dealer Price"}</div>
         <div className="flex items-center justify-between">
-          <span className="tnum text-[var(--red)] font-black text-sm">₹{product.price.toLocaleString("en-IN")}</span>
-          {!isDealer && (
+          {isCustomer ? (
+            product.mrp ? (
+              <span className="tnum text-[var(--red)] font-black text-sm">₹{product.mrp.toLocaleString("en-IN")}</span>
+            ) : (
+              <span className="tnum text-[var(--muted)] text-xs">Not available for retail</span>
+            )
+          ) : (
+            <span className="tnum text-[var(--red)] font-black text-sm">₹{product.price.toLocaleString("en-IN")}</span>
+          )}
+          {!isDealer && !isCustomer && (
             <div className="flex items-center gap-1 border border-[var(--red)]/20 rounded-sm px-2 py-0.5">
               <Lock size={8} className="text-[var(--red)]" />
               <span className="text-[var(--red)] text-[9px] font-bold">Login</span>

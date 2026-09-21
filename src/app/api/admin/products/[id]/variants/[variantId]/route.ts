@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -38,7 +39,7 @@ export async function PATCH(
       ...(body.finish !== undefined && { finish: body.finish?.trim() || null }),
       ...(body.size !== undefined && { size: body.size?.trim() || null }),
       ...(body.extra !== undefined && { extra: body.extra?.trim() || null }),
-      ...(body.price !== undefined && { price: parseFloat(body.price) }),
+      ...(body.price !== undefined && { price: roundToCharmPrice(parseFloat(body.price)) }),
       ...(body.mrp !== undefined && { mrp: body.mrp ? parseFloat(body.mrp) : null }),
       ...(body.stock !== undefined && { stock: parseInt(body.stock) }),
       ...(body.moq !== undefined && { moq: body.moq ? parseInt(body.moq) : null }),

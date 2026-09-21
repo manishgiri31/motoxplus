@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { baseTemplate } from "@/lib/email/templates/base";
 import { getCurrentUserId } from "@/lib/auth/current-user";
-import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
+import { resolveOrderActor, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
 import { escapeHtml } from "@/lib/utils";
+import { isPlaceholderEmail } from "@/lib/phone";
 
 // Accepts the web NextAuth session or the mobile/plain-login JWT (cookie or
 // Bearer) via getCurrentUserId — see lib/auth/current-user.ts. Same pattern
@@ -19,10 +20,6 @@ export async function POST(req: NextRequest) {
 
   const userId = await getCurrentUserId(req);
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  if (!authUser || authUser.role !== "DEALER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -48,11 +45,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Payment screenshot is required." }, { status: 400 });
   }
 
-  const dealer = await getVerifiedDealer(userId);
-  if (!dealer) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
+  const actor = await resolveOrderActor(userId);
+  if (!actor) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
 
+  // actor.dealer/.customer already include their `user` relation (see
+  // getVerifiedDealer/getVerifiedCustomer) — no need to re-fetch the order
+  // with a dealer/customer include just to reach an email address below.
   const order = await prisma.order.findFirst({
-    where: { id: orderId, dealerId: dealer.id },
+    where: actor.channel === "B2C" ? { id: orderId, customerId: actor.customer.id } : { id: orderId, dealerId: actor.dealer.id },
   });
   if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
 
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   const submission = await prisma.paymentSubmission.create({
     data: {
       orderId: order.id,
-      dealerId: dealer.id,
+      ...(actor.channel === "B2C" ? { customerId: actor.customer.id } : { dealerId: actor.dealer.id }),
       paymentMethod: paymentMethod as "UPI" | "BANK_TRANSFER",
       utrNumber: utrNumber.trim().toUpperCase(),
       payerName: payerName.trim(),
@@ -98,11 +98,15 @@ export async function POST(req: NextRequest) {
   const safeUtr = escapeHtml(utrNumber.trim().toUpperCase());
   const methodLabel = paymentMethod === "UPI" ? "Direct UPI" : "Bank Transfer";
 
-  // Sent to the dealer's own verified account email — never the client-supplied
+  // Sent to the account's own verified email — never the client-supplied
   // payerEmail — so this can't be used to relay attacker-controlled HTML to an
-  // arbitrary third-party address from our verified sending domain.
-  sendEmail({
-    to: dealer.user.email,
+  // arbitrary third-party address from our verified sending domain. A B2C
+  // customer who skipped the optional email field has a placeholder
+  // (`@phone.motoxplus.invalid`, see lib/phone.ts) — skip sending to that,
+  // there's no real inbox behind it.
+  const ownerEmail = actor.channel === "B2C" ? actor.customer.user.email : actor.dealer.user.email;
+  if (!isPlaceholderEmail(ownerEmail)) sendEmail({
+    to: ownerEmail,
     subject: `Payment Submitted — Order #${order.orderNumber} | MOTOXPLUS`,
     html: baseTemplate("Payment Submitted", `
       <div class="title">Payment Submitted for Verification</div>
@@ -123,15 +127,17 @@ export async function POST(req: NextRequest) {
 
   // Notify admin team
   const adminEmail = process.env.ACCOUNTS_EMAIL || "accounts@motoxplus.in";
+  const ownerLabel = actor.channel === "B2C" ? "Retail customer" : "Dealer";
+  const ownerName = actor.channel === "B2C" ? (actor.customer.user.name || "Customer") : actor.dealer.companyName;
   sendEmail({
     to: adminEmail,
     subject: `[ACTION REQUIRED] Payment Submission — Order #${order.orderNumber}`,
     html: baseTemplate("New Payment Submission", `
       <div class="title">Payment Requires Verification</div>
-      <p class="text">A dealer has submitted payment proof for order <strong style="color:#fff;">#${order.orderNumber}</strong>.</p>
+      <p class="text">A ${actor.channel === "B2C" ? "retail customer" : "dealer"} has submitted payment proof for order <strong style="color:#fff;">#${order.orderNumber}</strong>.</p>
       <div class="otp-box" style="text-align:left;">
         <table style="width:100%;border-collapse:collapse;">
-          <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Dealer</td><td style="color:#fff;font-size:13px;text-align:right;">${escapeHtml(dealer.companyName)}</td></tr>
+          <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">${ownerLabel}</td><td style="color:#fff;font-size:13px;text-align:right;">${escapeHtml(ownerName)}</td></tr>
           <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Amount</td><td style="color:#DC2626;font-size:13px;font-weight:700;text-align:right;">₹${order.amountDue.toFixed(2)}</td></tr>
           <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">UTR</td><td style="color:#fff;font-size:13px;font-family:monospace;text-align:right;">${safeUtr}</td></tr>
           <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Method</td><td style="color:#fff;font-size:13px;text-align:right;">${methodLabel}</td></tr>

@@ -30,7 +30,9 @@ export default async function DealerProductsPage(
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: { createdAt: "desc" },
+      // Enum declaration order (MOTOXPLUS, EAUTO_IMPORT, VENDOR) is what makes
+      // `asc` here put our own catalog first — see (public)/products/page.tsx.
+      orderBy: [{ source: "asc" }, { createdAt: "desc" }],
     }),
     prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
     prisma.product.count({ where }),

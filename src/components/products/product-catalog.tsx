@@ -151,6 +151,11 @@ export function ProductCatalog({
   const router = useRouter();
   const totalPages = Math.ceil(totalProducts / pageSize);
   const isDealer = session?.user?.role === "DEALER";
+  // B2C-EXPANSION-PLAN.md Phase 2: a logged-in retail customer sees one
+  // GST-inclusive number (MRP) — no Dealer Price, no strikethrough/%-off, no
+  // MOQ badge (B2C ignores MOQ entirely). Guest/dealer/admin views are
+  // untouched (commit 7ec1eb6 — showing wholesale to guests is deliberate).
+  const isCustomer = session?.user?.role === "CUSTOMER";
 
   // Preserves the active vehicle/variant/section filter across search, category,
   // pagination, and into the product detail page — without this, navigating away
@@ -779,29 +784,42 @@ export function ProductCatalog({
                     </div>
                   )}
                   <div className="pt-3 border-t border-[var(--border-color)]">
-                    <div className="flex items-end justify-between gap-2">
+                    {isCustomer ? (
                       <div>
-                        <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
-                        <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
-                          ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
-                        </div>
-                        {product.mrp && product.mrp > product.price && (
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
+                        <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">MRP, incl. of all taxes</div>
+                        {product.mrp ? (
+                          <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
+                            ₹{product.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </div>
+                        ) : (
+                          <div className="text-[var(--text-muted)] text-sm font-semibold">Not available for retail</div>
                         )}
                       </div>
-                      <span className="text-[var(--text-muted)] text-[9px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
-                        MOQ {product.moq}
-                      </span>
-                    </div>
+                    ) : (
+                      <div className="flex items-end justify-between gap-2">
+                        <div>
+                          <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
+                          <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
+                            ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                          </div>
+                          {product.mrp && product.mrp > product.price && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[var(--text-muted)] text-[9px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
+                          MOQ {product.moq}
+                        </span>
+                      </div>
+                    )}
                     {colors > 0 && (
                       <div className="mt-2 flex items-center gap-1.5 text-[var(--text-muted)] text-[10px] font-semibold">
                         <Palette size={11} className="text-[var(--red)]/80" />
                         {colors} colour{colors === 1 ? "" : "s"} available
                       </div>
                     )}
-                    {!isDealer && (
+                    {!isDealer && !isCustomer && (
                       <div className="mt-2 flex items-center gap-1.5 border border-[var(--red)]/25 bg-[var(--red-soft)] rounded-full px-2.5 py-1 w-fit">
                         <Lock size={9} className="text-[var(--red)]" />
                         <span className="text-[var(--red)] text-[9px] font-bold">Login to Order</span>
@@ -898,21 +916,40 @@ export function ProductCatalog({
                       {quickView.description}
                     </p>
                   )}
-                  <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Dealer Price</div>
-                  <div className="flex items-end gap-3 mb-4">
-                    <span className="text-[var(--red)] font-black text-2xl">
-                      ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
-                    </span>
-                    {quickView.mrp && quickView.mrp > quickView.price && (
-                      <span className="text-[var(--text-muted)] text-sm line-through mb-1">
-                        MRP ₹{quickView.mrp.toLocaleString("en-IN")}
+                  {isCustomer ? (
+                    <>
+                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">MRP, incl. of all taxes</div>
+                      <div className="flex items-end gap-3 mb-4">
+                        {quickView.mrp ? (
+                          <span className="text-[var(--red)] font-black text-2xl">
+                            ₹{quickView.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                          </span>
+                        ) : (
+                          <span className="text-[var(--text-muted)] text-sm font-semibold">Not available for retail</span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Dealer Price</div>
+                      <div className="flex items-end gap-3 mb-4">
+                        <span className="text-[var(--red)] font-black text-2xl">
+                          ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                        </span>
+                        {quickView.mrp && quickView.mrp > quickView.price && (
+                          <span className="text-[var(--text-muted)] text-sm line-through mb-1">
+                            MRP ₹{quickView.mrp.toLocaleString("en-IN")}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  <div className="flex items-center gap-2 mb-6">
+                    {!isCustomer && (
+                      <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2.5 py-1">
+                        MOQ {quickView.moq}
                       </span>
                     )}
-                  </div>
-                  <div className="flex items-center gap-2 mb-6">
-                    <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2.5 py-1">
-                      MOQ {quickView.moq}
-                    </span>
                     <span className={`text-[10px] uppercase tracking-wide font-bold rounded-full px-2.5 py-1 ${quickView.stockStatus !== "OUT_OF_STOCK" ? "text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)]" : "text-[var(--text-muted)] bg-[var(--bg-secondary)]"}`}>
                       {productStockLabel(quickView.stockStatus)}
                     </span>

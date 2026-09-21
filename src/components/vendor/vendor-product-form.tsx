@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
+import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 interface Category { id: string; name: string; }
 interface Props {
@@ -48,7 +49,7 @@ export function VendorProductForm({ categories, defaultMarkup }: Props) {
   const set = (k: keyof typeof form, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   const computedPrice = form.vendorCostPrice
-    ? (parseFloat(form.vendorCostPrice) * (1 + defaultMarkup / 100)).toFixed(2)
+    ? roundToCharmPrice(parseFloat(form.vendorCostPrice) * (1 + defaultMarkup / 100)).toString()
     : null;
 
   const handleSubmit = async (e: React.FormEvent) => {

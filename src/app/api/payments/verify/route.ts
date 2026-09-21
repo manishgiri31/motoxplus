@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { getCurrentUserId } from "@/lib/auth/current-user";
-import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
+import { resolveOrderActor, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { getRazorpay } from "@/lib/razorpay";
 import { InsufficientStockError } from "@/lib/orders/stock";
 import { finalizeCapturedPayment } from "@/lib/payments/finalize";
@@ -32,10 +32,6 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  if (!authUser || authUser.role !== "DEALER") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = await req.json();
   if (
@@ -57,13 +53,16 @@ export async function POST(req: NextRequest) {
 
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-    // Ensure the order belongs to the requesting dealer, and that the
-    // account is still verified/approved (not just holding a valid session).
-    const dealer = await getVerifiedDealer(userId);
-    if (!dealer) {
+    // Ensure the order belongs to the requesting account (dealer or B2C
+    // customer), and that the account is still verified/active (not just
+    // holding a valid session).
+    const actor = await resolveOrderActor(userId);
+    if (!actor) {
       return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
     }
-    if (order.dealerId !== dealer.id) {
+    const ownerId = actor.channel === "B2C" ? actor.customer.id : actor.dealer.id;
+    const orderOwnerId = actor.channel === "B2C" ? order.customerId : order.dealerId;
+    if (orderOwnerId !== ownerId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

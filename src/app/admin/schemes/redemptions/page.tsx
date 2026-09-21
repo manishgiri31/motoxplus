@@ -105,7 +105,7 @@ export default async function SchemeRedemptionsPage(
                     #{r.order.orderNumber}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-[var(--text-primary)]">{r.order.dealer.companyName}</td>
+                <td className="px-4 py-3 text-[var(--text-primary)]">{r.order.dealer?.companyName ?? "—"}</td>
                 <td className="px-4 py-3 text-[var(--text-muted)]">
                   {r.scheme.name} <span className="font-mono text-xs">({r.scheme.code})</span>
                 </td>

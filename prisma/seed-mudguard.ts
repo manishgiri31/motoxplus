@@ -11,6 +11,14 @@ import path from "path";
 
 const prisma = new PrismaClient();
 
+// Charm-pricing convention: whole rupee, last digit 3/6/7/9 (nearest, ties
+// up). Mirrors src/lib/pricing/charm-price.ts.
+const LAST_DIGIT_DELTA = [-1, 2, 1, 0, -1, 1, 0, 0, 1, 0] as const;
+function roundToCharmPrice(value: number): number {
+  const rounded = Math.round(value);
+  return rounded + LAST_DIGIT_DELTA[((rounded % 10) + 10) % 10];
+}
+
 interface ExcelRow {
   "Product Name": string;
   SKU: string;
@@ -132,7 +140,7 @@ async function main() {
   console.log(`Read ${rows.length} rows from Excel`);
 
   const minMrp = Math.min(...rows.map((r) => Number(r.MRP)));
-  const masterPrice = parseFloat((minMrp * 0.3).toFixed(2));
+  const masterPrice = roundToCharmPrice(minMrp * 0.3);
 
   const allCompat = Array.from(
     new Set(
@@ -187,7 +195,7 @@ async function main() {
       partNumber: String(r["Part Number"] || r.SKU),
       vehicleModel,
       extra,
-      price: parseFloat((Number(r.MRP) * 0.3).toFixed(2)),
+      price: roundToCharmPrice(Number(r.MRP) * 0.3),
       mrp: Number(r.MRP),
       stock: Number(r.Stock),
       moq: Number(r.MOQ),

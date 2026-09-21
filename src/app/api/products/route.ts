@@ -8,6 +8,7 @@ import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle
 import { uniqueProductSlug } from "@/lib/slug";
 import { Prisma } from "@prisma/client";
 import { canSeeWholesalePrice } from "@/lib/pricing/public-visibility";
+import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 function autoSku(partNumber: string): string {
   const base = partNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 14);
@@ -22,7 +23,7 @@ const productSchema = z.object({
   description: z.string().optional(),
   categoryId: z.string(),
   // Pricing & inventory
-  price: z.number().min(0),
+  price: z.number().min(0).transform(roundToCharmPrice),
   mrp: z.number().min(0).optional(),
   gstRate: z.number().default(18),
   hsnCode: z.string().length(8, "HSN code must be exactly 8 digits").regex(/^\d{8}$/, "HSN code must be 8 digits"),

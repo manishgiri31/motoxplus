@@ -82,6 +82,10 @@ export async function notifyOrderEvent(orderId: string, event: OrderNotification
       },
     });
     if (!order) return;
+    // B2C customers have no dealer mobile app / DeviceToken rows — nothing to
+    // push to. (B2C order-status notifications are a later phase; see
+    // B2C-EXPANSION-PLAN.md Phase 4.)
+    if (!order.dealerId) return;
 
     const { title, body } = buildMessage(order, event);
 

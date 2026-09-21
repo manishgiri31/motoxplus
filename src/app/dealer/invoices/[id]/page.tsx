@@ -25,9 +25,20 @@ export default async function InvoiceDetailPage(props: { params: Promise<{ id: s
 
   if (!invoice || invoice.dealerId !== dealer.id) notFound();
 
+  const billTo = {
+    name: invoice.dealer!.companyName,
+    subName: invoice.dealer!.ownerName,
+    address: invoice.dealer!.address ?? "",
+    city: invoice.dealer!.city,
+    state: invoice.dealer!.state,
+    pincode: invoice.dealer!.pincode ?? "",
+    gstNumber: invoice.dealer!.gstNumber,
+    phone: invoice.dealer!.phone,
+  };
+
   return (
     <div>
-      <InvoiceView invoice={JSON.parse(JSON.stringify(invoice))} />
+      <InvoiceView invoice={JSON.parse(JSON.stringify({ ...invoice, billTo }))} />
     </div>
   );
 }

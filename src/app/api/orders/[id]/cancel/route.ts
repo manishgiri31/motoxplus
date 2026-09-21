@@ -251,14 +251,20 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       // scheme goods already left the warehouse, forgiving the gap would
       // make "order big, take the goods, pay a small advance, cancel" free).
       if (uncollectedSchemeShortfall > 0) {
+        // Scheme shortfall only ever exists on a B2B order (GST Benefit
+        // schemes are dealer-only, B2C never has a SchemeRedemption row —
+        // see computeFullCancelWithRefund's callers), so order.dealerId is
+        // always set whenever this branch runs, even though the column is
+        // nullable at the type level (B2C-EXPANSION-PLAN.md Phase 2).
+        const dealerId = order.dealerId!;
         const updatedDealer = await tx.dealer.update({
-          where: { id: order.dealerId },
+          where: { id: dealerId },
           data: { outstandingDues: { increment: uncollectedSchemeShortfall } },
           select: { outstandingDues: true },
         });
         await tx.dealerDuesEntry.create({
           data: {
-            dealerId: order.dealerId,
+            dealerId,
             amount: uncollectedSchemeShortfall,
             balanceAfter: updatedDealer.outstandingDues,
             reason: "SCHEME_SHORTFALL",

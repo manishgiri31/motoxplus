@@ -68,7 +68,10 @@ export default async function ProductsPage(
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: [{ stockStatus: "asc" }, { createdAt: "desc" }],
+      // Enum is declared MOTOXPLUS, EAUTO_IMPORT, VENDOR — Postgres native enums
+      // sort by that declaration order, so `asc` here gives us own catalog first,
+      // then eAuto-migrated stock, then vendor-submitted products.
+      orderBy: [{ source: "asc" }, { stockStatus: "asc" }, { createdAt: "desc" }],
     }),
     prisma.category.findMany({
       where: { isActive: true },

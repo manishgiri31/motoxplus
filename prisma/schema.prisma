@@ -257,7 +257,7 @@ model Product {
   categoryId      String
   weight          Float?
   moq             Int                            @default(1)
-  price           Float
+  price           Int
   gstRate         Float                          @default(18)
   images          String[]
   compatibility   String[]
@@ -280,6 +280,7 @@ model Product {
   mrp             Float?
   vendorCostPrice Float?
   vendorId        String?
+  source          ProductSource                  @default(MOTOXPLUS)
   slug            String                         @unique
   cartItems       CartItem[]
   orderItems      OrderItem[]
@@ -305,7 +306,7 @@ model ProductVariant {
   label        String
   color        String?
   extra        String?
-  price        Float
+  price        Int
   mrp          Float?
   stock        Int            @default(0)
   isActive     Boolean        @default(true)
@@ -1784,4 +1785,10 @@ enum ProductStockStatus {
   IN_STOCK
   FEW_LEFT
   OUT_OF_STOCK
+}
+
+enum ProductSource {
+  MOTOXPLUS
+  EAUTO_IMPORT
+  VENDOR
 }

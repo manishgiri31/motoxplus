@@ -18,6 +18,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
     where: { id: params.id },
     include: {
       dealer: true,
+      customer: { include: { user: true } },
       order: {
         include: {
           items: {
@@ -33,7 +34,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
 
   if (!invoice) notFound();
 
-  const { order, dealer } = invoice;
+  const { order, dealer, customer } = invoice;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -84,14 +85,28 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
         <div className="grid grid-cols-2 gap-6 px-6 py-5 border-b border-[var(--border-color)]">
           <div>
             <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Bill To</p>
-            <p className="text-[var(--text-primary)] font-bold text-sm">{dealer.companyName}</p>
-            <p className="text-[var(--text-muted)] text-xs mt-0.5">{dealer.ownerName}</p>
-            <p className="text-[var(--text-muted)] text-xs mt-0.5">{dealer.address}</p>
-            <p className="text-[var(--text-muted)] text-xs mt-0.5">
-              {[dealer.city, dealer.state, dealer.pincode].filter(Boolean).join(", ")}
-            </p>
-            <p className="text-[var(--text-muted)] text-xs mt-1">GST: {dealer.gstNumber}</p>
-            <p className="text-[var(--text-muted)] text-xs mt-0.5">Ph: {dealer.phone}</p>
+            {dealer ? (
+              <>
+                <p className="text-[var(--text-primary)] font-bold text-sm">{dealer.companyName}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">{dealer.ownerName}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">{dealer.address}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">
+                  {[dealer.city, dealer.state, dealer.pincode].filter(Boolean).join(", ")}
+                </p>
+                <p className="text-[var(--text-muted)] text-xs mt-1">GST: {dealer.gstNumber}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">Ph: {dealer.phone}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-[var(--text-primary)] font-bold text-sm">Retail customer</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">{order.deliveryName ?? customer?.user.name ?? "—"}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">{order.shippingAddress}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">
+                  {[order.deliveryCity, order.deliveryState, order.deliveryPincode].filter(Boolean).join(", ")}
+                </p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">Ph: {order.deliveryPhone}</p>
+              </>
+            )}
           </div>
           <div className="text-right">
             <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Invoice Details</p>

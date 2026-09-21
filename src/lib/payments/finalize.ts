@@ -85,6 +85,7 @@ export async function finalizeCapturedPayment(params: {
       order: {
         id: orderId,
         dealerId: order.dealerId,
+        customerId: order.customerId,
         subtotal: order.subtotal,
         gstAmount: order.gstAmount,
         grandTotal: order.grandTotal,

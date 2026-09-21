@@ -7,6 +7,7 @@ import { Prisma } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/r2";
 import { slugify, uniqueProductSlug } from "@/lib/slug";
 import { canSeeWholesalePrice } from "@/lib/pricing/public-visibility";
+import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 const INCLUDE_IMAGES = {
   category: true,
@@ -82,6 +83,10 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
   // Update product fields (strip image-management keys)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { images: _images, ...productData } = data;
+
+  if (typeof productData.price === "number") {
+    productData.price = roundToCharmPrice(productData.price);
+  }
 
   // Slug is stable by default — it's only touched if the admin explicitly sends
   // one (e.g. via a "SEO" field in the edit form). Silently re-slugging on every

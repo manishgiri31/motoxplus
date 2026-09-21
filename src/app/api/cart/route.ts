@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth/current-user";
-import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
+import { resolveOrderActor, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { validateSchemeSelection, type SchemeItemCandidate } from "@/lib/schemes/cart-validation";
+import { resolveUnitPrice } from "@/lib/pricing/resolve";
 
 // Accepts either the web NextAuth session or the mobile/plain-login JWT
 // (cookie or Bearer) via getCurrentUserId — see lib/auth/current-user.ts.
@@ -11,17 +12,28 @@ export async function GET(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  if (!authUser || authUser.role !== "DEALER") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const actor = await resolveOrderActor(userId);
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (actor.channel === "B2C") {
+    // B2C carts never carry a scheme selection (GST Benefit is a B2B-only
+    // concept) — no re-validation needed, just read straight through.
+    const cart = await prisma.cart.findUnique({
+      where: { customerId: actor.customer.id },
+      include: {
+        items: {
+          include: {
+            product: { include: { category: true } },
+            variant: true,
+          },
+        },
+      },
+    });
+    if (!cart) return NextResponse.json({ items: [] });
+    return NextResponse.json(cart);
   }
 
-  const dealer = await prisma.dealer.findUnique({
-    where: { userId },
-  });
-
-  if (!dealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
-
+  const dealer = actor.dealer;
   const cart = await prisma.cart.findUnique({
     where: { dealerId: dealer.id },
     include: {
@@ -84,10 +96,6 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  if (!authUser || authUser.role !== "DEALER") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const { productId, quantity, variantId } = await req.json();
 
@@ -95,32 +103,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const dealer = await getVerifiedDealer(userId);
-  if (!dealer) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
+  const actor = await resolveOrderActor(userId);
+  if (!actor) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
 
   const product = await prisma.product.findUnique({ where: { id: productId, isActive: true } });
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-  // Validate variant if provided, and get its MOQ + stock
-  let effectiveMoq = product.moq;
   let variant: Awaited<ReturnType<typeof prisma.productVariant.findUnique>> = null;
   if (variantId) {
     variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
     if (!variant || variant.productId !== productId || !variant.isActive) {
       return NextResponse.json({ error: "Invalid variant" }, { status: 400 });
     }
-    if (variant.moq != null) effectiveMoq = variant.moq;
   }
 
-  // Validate MOQ
-  if (quantity < effectiveMoq || quantity % effectiveMoq !== 0) {
-    return NextResponse.json(
-      { error: `Quantity must be a multiple of MOQ (${effectiveMoq})` },
-      { status: 400 }
-    );
+  if (actor.channel === "B2C") {
+    // D9: MOQ doesn't apply to B2C — 1 piece is a valid order. But a product
+    // with no retail price set (Product.mrp / variant.mrp both null) isn't
+    // orderable at retail at all (never falls back to the wholesale rate —
+    // see lib/pricing/resolve.ts).
+    if (resolveUnitPrice({ channel: "B2C", product, variant }) === null) {
+      return NextResponse.json({ error: "This item isn't available for retail purchase yet." }, { status: 400 });
+    }
+  } else {
+    // Validate variant if provided, and get its MOQ + stock
+    let effectiveMoq = product.moq;
+    if (variant && variant.moq != null) effectiveMoq = variant.moq;
+
+    if (quantity < effectiveMoq || quantity % effectiveMoq !== 0) {
+      return NextResponse.json(
+        { error: `Quantity must be a multiple of MOQ (${effectiveMoq})` },
+        { status: 400 }
+      );
+    }
   }
 
-  // Reject up front rather than letting the dealer discover it at checkout.
+  // Reject up front rather than letting the buyer discover it at checkout.
   // Variants still track a real countable quantity, so a variant order is
   // capped to it; a plain product is governed by the admin-set stockStatus
   // instead of a number, so it's either orderable or it isn't.
@@ -141,10 +159,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "This item is currently out of stock." }, { status: 409 });
   }
 
-  // Get or create cart
-  let cart = await prisma.cart.findUnique({ where: { dealerId: dealer.id } });
+  // Get or create cart — scoped to whichever owner column this channel uses
+  // (Cart.dealerId / Cart.customerId, exactly one set — see the migration's
+  // owner-exactly-one CHECK).
+  const cartWhere = actor.channel === "B2C" ? { customerId: actor.customer.id } : { dealerId: actor.dealer.id };
+  let cart = await prisma.cart.findUnique({ where: cartWhere });
   if (!cart) {
-    cart = await prisma.cart.create({ data: { dealerId: dealer.id } });
+    cart = await prisma.cart.create({ data: cartWhere });
   }
 
   // Find existing cart item for this product+variant combination
@@ -180,23 +201,21 @@ export async function DELETE(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  if (!authUser || authUser.role !== "DEALER") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   const { itemId } = await req.json();
   if (!itemId) return NextResponse.json({ error: "Item ID required" }, { status: 400 });
 
-  const dealer = await prisma.dealer.findUnique({ where: { userId } });
-  if (!dealer) return NextResponse.json({ error: "Dealer not found" }, { status: 404 });
+  const actor = await resolveOrderActor(userId);
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const cart = await prisma.cart.findUnique({ where: { dealerId: dealer.id } });
+  const cart = await prisma.cart.findUnique({
+    where: actor.channel === "B2C" ? { customerId: actor.customer.id } : { dealerId: actor.dealer.id },
+  });
   if (!cart) return NextResponse.json({ error: "Cart not found" }, { status: 404 });
 
-  // Scope the delete to this dealer's own cart — `delete({ where: { id: itemId } })`
-  // would remove *any* cart item by id regardless of which dealer's cart it
-  // belongs to, since cartId was never checked (IDOR).
+  // Scope the delete to this account's own cart — `delete({ where: { id: itemId } })`
+  // would remove *any* cart item by id regardless of which cart it belongs
+  // to, since cartId was never checked (IDOR).
   const { count } = await prisma.cartItem.deleteMany({
     where: { id: itemId, cartId: cart.id },
   });

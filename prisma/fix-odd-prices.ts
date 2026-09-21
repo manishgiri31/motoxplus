@@ -1,8 +1,9 @@
 /**
- * One-off maintenance: rounds every Product.price up to the nearest odd
- * whole rupee (no decimals, last digit never even) — same charm-pricing
- * convention already used by the cable seed script. Skips products whose
- * price is already an odd whole number.
+ * One-off maintenance: snaps every Product.price to the nearest whole
+ * rupee whose last digit is 3, 6, 7, or 9 (ties broken upward) — the
+ * charm-pricing convention for this catalog, mirrored in
+ * src/lib/pricing/charm-price.ts and the product_price_charm_int
+ * migration. Skips products already on an allowed value.
  *
  * Run: npm run db:fix-odd-prices
  */
@@ -40,9 +41,11 @@ async function withRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
   throw new Error("unreachable");
 }
 
-function roundUpToOddWhole(value: number): number {
-  const ceiled = Math.ceil(value);
-  return ceiled % 2 === 0 ? ceiled + 1 : ceiled;
+const LAST_DIGIT_DELTA = [-1, 2, 1, 0, -1, 1, 0, 0, 1, 0] as const;
+
+function roundToCharmPrice(value: number): number {
+  const rounded = Math.round(value);
+  return rounded + LAST_DIGIT_DELTA[((rounded % 10) + 10) % 10];
 }
 
 async function main(): Promise<void> {
@@ -57,7 +60,7 @@ async function main(): Promise<void> {
   let failed = 0;
 
   for (const product of products) {
-    const newPrice = roundUpToOddWhole(product.price);
+    const newPrice = roundToCharmPrice(product.price);
     if (newPrice === product.price) {
       unchanged += 1;
       continue;

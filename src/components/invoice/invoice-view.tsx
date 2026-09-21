@@ -15,16 +15,20 @@ interface InvoiceData {
   sgstAmount: number;
   igstAmount: number;
   placeOfSupply: string | null;
-  dealer: {
-    companyName: string;
-    gstNumber: string;
-    ownerName: string;
-    phone: string;
+  // Normalized recipient — built by the caller from either invoice.dealer
+  // (B2B) or invoice.customer + the order's delivery fields (B2C), so this
+  // component never branches on channel itself. gstNumber is null for a B2C
+  // invoice (no GSTIN is ever collected from a retail customer) and that
+  // line simply isn't rendered.
+  billTo: {
+    name: string;
+    subName: string | null;
     address: string;
     city: string;
     state: string;
     pincode: string;
-    user: { email: string };
+    gstNumber: string | null;
+    phone: string;
   };
   order: {
     orderNumber: string;
@@ -99,12 +103,12 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
     doc.setFont("helvetica", "bold");
     doc.text("Bill To:", 15, 80);
     doc.setFont("helvetica", "normal");
-    doc.text(invoice.dealer.companyName, 15, 87);
-    doc.text(invoice.dealer.ownerName, 15, 93);
-    doc.text(`${invoice.dealer.address}, ${invoice.dealer.city}`, 15, 99);
-    doc.text(`${invoice.dealer.state} - ${invoice.dealer.pincode}`, 15, 105);
-    doc.text(`GST: ${invoice.dealer.gstNumber}`, 15, 111);
-    doc.text(`Phone: ${invoice.dealer.phone}`, 15, 117);
+    doc.text(invoice.billTo.name, 15, 87);
+    if (invoice.billTo.subName) doc.text(invoice.billTo.subName, 15, 93);
+    doc.text(`${invoice.billTo.address}, ${invoice.billTo.city}`, 15, 99);
+    doc.text(`${invoice.billTo.state} - ${invoice.billTo.pincode}`, 15, 105);
+    if (invoice.billTo.gstNumber) doc.text(`GST: ${invoice.billTo.gstNumber}`, 15, 111);
+    doc.text(`Phone: ${invoice.billTo.phone}`, 15, 117);
     if (invoice.placeOfSupply) {
       doc.text(`Place of Supply: ${invoice.placeOfSupply}`, 15, 123);
     }
@@ -248,12 +252,12 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
             </div>
             <div>
               <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Bill To</div>
-              <div className="text-[var(--text-primary)] font-bold">{invoice.dealer.companyName}</div>
-              <div className="text-[var(--text-muted)] text-sm">{invoice.dealer.ownerName}</div>
-              <div className="text-[var(--text-muted)] text-sm">{invoice.dealer.address}, {invoice.dealer.city}</div>
-              <div className="text-[var(--text-muted)] text-sm">{invoice.dealer.state} - {invoice.dealer.pincode}</div>
-              <div className="text-[var(--text-muted)] text-sm">GST: {invoice.dealer.gstNumber}</div>
-              <div className="text-[var(--text-muted)] text-sm">Phone: {invoice.dealer.phone}</div>
+              <div className="text-[var(--text-primary)] font-bold">{invoice.billTo.name}</div>
+              {invoice.billTo.subName && <div className="text-[var(--text-muted)] text-sm">{invoice.billTo.subName}</div>}
+              <div className="text-[var(--text-muted)] text-sm">{invoice.billTo.address}, {invoice.billTo.city}</div>
+              <div className="text-[var(--text-muted)] text-sm">{invoice.billTo.state} - {invoice.billTo.pincode}</div>
+              {invoice.billTo.gstNumber && <div className="text-[var(--text-muted)] text-sm">GST: {invoice.billTo.gstNumber}</div>}
+              <div className="text-[var(--text-muted)] text-sm">Phone: {invoice.billTo.phone}</div>
               {invoice.placeOfSupply && (
                 <div className="text-[var(--text-muted)] text-sm mt-1">Place of Supply: {invoice.placeOfSupply}</div>
               )}

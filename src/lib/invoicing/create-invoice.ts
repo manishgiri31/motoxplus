@@ -3,7 +3,8 @@ import { generateInvoiceNumber } from "@/lib/utils";
 
 interface InvoiceOrderInput {
   id: string;
-  dealerId: string;
+  dealerId: string | null;
+  customerId: string | null;
   subtotal: number;
   gstAmount: number;
   grandTotal: number;
@@ -28,6 +29,10 @@ interface InvoiceOrderInput {
  * lib/tax/gst-split.ts and POST /api/orders) from the delivery state that
  * was current then. Re-deriving here could disagree if the seller-state
  * setting changed in between.
+ *
+ * dealerId/customerId are carried straight from the Order — exactly one is
+ * set (B2C-EXPANSION-PLAN.md Phase 2's owner-exactly-one CHECK), never
+ * re-derived from channel here.
  */
 export async function createInvoice(
   tx: Prisma.TransactionClient,
@@ -39,6 +44,7 @@ export async function createInvoice(
       invoiceNumber,
       orderId: params.order.id,
       dealerId: params.order.dealerId,
+      customerId: params.order.customerId,
       subtotal: params.order.subtotal,
       gstAmount: params.order.gstAmount,
       grandTotal: params.order.grandTotal,

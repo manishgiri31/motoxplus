@@ -35,8 +35,9 @@ export default async function AdminInvoicesPage(
     prisma.invoice.findMany({
       where,
       include: {
-        order: { select: { orderNumber: true, paymentStatus: true, amountDue: true } },
+        order: { select: { orderNumber: true, paymentStatus: true, amountDue: true, deliveryName: true } },
         dealer: { select: { companyName: true, ownerName: true } },
+        customer: { select: { user: { select: { name: true } } } },
       },
       orderBy: { issuedAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -113,8 +114,17 @@ export default async function AdminInvoicesPage(
                     </span>
                   </td>
                   <td className="px-4 py-4 hidden md:table-cell">
-                    <div className="text-[var(--text-primary)] text-sm font-semibold">{invoice.dealer.companyName}</div>
-                    <div className="text-[var(--text-muted)] text-xs">{invoice.dealer.ownerName}</div>
+                    {invoice.dealer ? (
+                      <>
+                        <div className="text-[var(--text-primary)] text-sm font-semibold">{invoice.dealer.companyName}</div>
+                        <div className="text-[var(--text-muted)] text-xs">{invoice.dealer.ownerName}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-[var(--text-primary)] text-sm font-semibold">Retail customer</div>
+                        <div className="text-[var(--text-muted)] text-xs">{invoice.order.deliveryName ?? invoice.customer?.user.name ?? "—"}</div>
+                      </>
+                    )}
                   </td>
                   <td className="px-4 py-4 hidden lg:table-cell">
                     <Link

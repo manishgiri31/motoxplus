@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { baseTemplate } from "@/lib/email/templates/base";
 import { escapeHtml } from "@/lib/utils";
+import { isPlaceholderEmail } from "@/lib/phone";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -22,7 +23,14 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 
   const submission = await prisma.paymentSubmission.findUnique({
     where: { id: params.id },
-    include: { order: { include: { dealer: { include: { user: { select: { email: true } } } } } } },
+    include: {
+      order: {
+        include: {
+          dealer: { include: { user: { select: { email: true } } } },
+          customer: { include: { user: { select: { email: true } } } },
+        },
+      },
+    },
   });
 
   if (!submission) return NextResponse.json({ error: "Submission not found." }, { status: 404 });
@@ -47,11 +55,16 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }),
   ]);
 
-  // Notify dealer — sent to the dealer's own account email, not the
+  // Notify the account — sent to its own verified email, not the
   // client-supplied payerEmail captured at submission time, and with all
-  // submission-sourced fields HTML-escaped before interpolation.
-  sendEmail({
-    to: submission.order.dealer.user.email,
+  // submission-sourced fields HTML-escaped before interpolation. A B2C
+  // customer who skipped the optional email field has a placeholder — no
+  // real inbox to send to.
+  const isB2C = submission.order.channel === "B2C";
+  const ownerEmail = submission.order.dealer?.user.email ?? submission.order.customer?.user.email;
+  const portalOrdersPath = isB2C ? `/account/orders/${submission.orderId}` : `/dealer/orders/${submission.orderId}`;
+  if (ownerEmail && !isPlaceholderEmail(ownerEmail)) sendEmail({
+    to: ownerEmail,
     subject: `Payment Rejected — Order #${submission.order.orderNumber} | MOTOXPLUS`,
     html: baseTemplate("Payment Rejected", `
       <div class="title">Payment Could Not Be Verified</div>
@@ -66,10 +79,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
           <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Submitted UTR</td><td style="color:#fff;font-size:13px;font-family:monospace;text-align:right;">${escapeHtml(submission.utrNumber)}</td></tr>
         </table>
       </div>
-      <p class="text">Please resubmit your payment details from your dealer portal. If you believe this is an error, contact us at accounts@motoxplus.in</p>
-      <a href="${process.env.NEXTAUTH_URL || "https://motoxplus.com"}/dealer/orders/${submission.orderId}" class="btn" style="text-decoration:none;display:inline-block;margin-top:16px;">Go to Order</a>
+      <p class="text">Please resubmit your payment details from your ${isB2C ? "account" : "dealer"} portal. If you believe this is an error, contact us at accounts@motoxplus.in</p>
+      <a href="${process.env.NEXTAUTH_URL || "https://motoxplus.com"}${portalOrdersPath}" class="btn" style="text-decoration:none;display:inline-block;margin-top:16px;">Go to Order</a>
     `),
   }).catch(() => {});
 
-  return NextResponse.json({ message: "Payment rejected. Dealer has been notified." });
+  return NextResponse.json({ message: "Payment rejected. Buyer has been notified." });
 }

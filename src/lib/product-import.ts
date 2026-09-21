@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/prisma";
 import { uniqueProductSlug } from "@/lib/slug";
+import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 const VALID_GST = [0, 5, 12, 18, 28];
 const VALID_WARRANTY = ["No Warranty", "3 Months", "6 Months", "12 Months"];
@@ -154,7 +155,7 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
     if (mrp === null || mrp < 0) errors.push("MRP required and must be >= 0");
 
     // Wholesale price is always 70% off MRP (auto-calculated)
-    const price = mrp !== null ? parseFloat((mrp * 0.30).toFixed(2)) : null;
+    const price = mrp !== null ? roundToCharmPrice(mrp * 0.30) : null;
 
     const gstRate = toNum(row, "GST Rate");
     if (gstRate === null) errors.push("GST Rate required");
@@ -272,7 +273,11 @@ export async function processImport(buffer: ArrayBuffer): Promise<ImportReport> 
         // with the `update` branch above, and slug should stay stable across
         // re-imports of an existing SKU, not be recomputed on every update.
         const created = await prisma.product.create({
-          data: { ...row.data, slug: await uniqueProductSlug(row.data.name) },
+          // This importer is the admin bulk-add path for our own catalog (vendor
+          // submissions and the eAuto migration go through separate paths) — tag
+          // it explicitly rather than leaning on the schema default so it stays
+          // correct even if that default ever changes.
+          data: { ...row.data, source: "MOTOXPLUS", slug: await uniqueProductSlug(row.data.name) },
         });
         if (row.imageUrls.length > 0) {
           await prisma.productImage.createMany({

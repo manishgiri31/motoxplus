@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ok, badRequest, unauthorized, forbidden, notFound, serverError } from "@/lib/api";
 import { getCurrentUserId } from "@/lib/auth/current-user";
-import { getVerifiedDealer, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
+import { resolveOrderActor, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { getRazorpay } from "@/lib/razorpay";
 
 // Same flag the checkout page uses to hide the Full Payment/20% Advance
@@ -20,10 +20,6 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return unauthorized();
   }
-  const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  if (!authUser || authUser.role !== "DEALER") {
-    return unauthorized();
-  }
 
   let body: { orderId?: string };
   try {
@@ -38,14 +34,16 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const [order, dealer] = await Promise.all([
+    const [order, actor] = await Promise.all([
       prisma.order.findUnique({ where: { id: orderId } }),
-      getVerifiedDealer(userId),
+      resolveOrderActor(userId),
     ]);
 
     if (!order) return notFound("Order");
-    if (!dealer) return forbidden(ACCOUNT_NOT_VERIFIED_MESSAGE);
-    if (order.dealerId !== dealer.id) return forbidden();
+    if (!actor) return forbidden(ACCOUNT_NOT_VERIFIED_MESSAGE);
+    const ownerId = actor.channel === "B2C" ? actor.customer.id : actor.dealer.id;
+    const orderOwnerId = actor.channel === "B2C" ? order.customerId : order.dealerId;
+    if (orderOwnerId !== ownerId) return forbidden();
 
     if (order.amountDue <= 0) {
       return badRequest("No payment due on this order");
@@ -59,7 +57,7 @@ export async function POST(req: NextRequest) {
       receipt: order.orderNumber,
       notes: {
         orderId: order.id,
-        dealerId: dealer.id,
+        ...(actor.channel === "B2C" ? { customerId: actor.customer.id } : { dealerId: actor.dealer.id }),
       },
     });
 

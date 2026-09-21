@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { uniqueProductSlug } from "@/lib/slug";
+import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 import { z } from "zod";
 
 const vendorProductSchema = z.object({
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     const markupPercent = markupSetting ? parseFloat(markupSetting.value) : 20;
 
     // Auto-calculate dealer price from vendor cost + markup
-    const price = data.vendorCostPrice * (1 + markupPercent / 100);
+    const price = roundToCharmPrice(data.vendorCostPrice * (1 + markupPercent / 100));
 
     const product = await prisma.product.create({
       data: {
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
         price,
         markupPercent,
         vendorId: vendor.id,
+        source: "VENDOR",
         isActive: false, // pending admin review
         images: [],
       },

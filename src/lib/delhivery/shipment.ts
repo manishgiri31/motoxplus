@@ -192,15 +192,19 @@ async function createShipmentLocked(
   order: ShipmentOrder
 ): Promise<{ waybill: string; trackingUrl: string }> {
   const orderId = order.id;
-  const destPincode = order.deliveryPincode || order.dealer.pincode;
-  const destCity = order.deliveryCity || order.dealer.city;
-  const destState = order.deliveryState || order.dealer.state;
-  const destAddress = order.shippingAddress || order.dealer.address;
-  const destName = order.deliveryName || order.dealer.ownerName;
-  const destPhone = order.deliveryPhone || order.dealer.phone;
+  // order.dealer is null for a B2C order (Order.dealerId/.dealer are optional
+  // — B2C-EXPANSION-PLAN.md Phase 2); its own delivery fields are always
+  // populated at creation time for that channel, so the `?? order.dealer?.x`
+  // fallback only ever matters for a B2B order's historical/missing field.
+  const destPincode = order.deliveryPincode || order.dealer?.pincode;
+  const destCity = order.deliveryCity || order.dealer?.city;
+  const destState = order.deliveryState || order.dealer?.state;
+  const destAddress = order.shippingAddress || order.dealer?.address;
+  const destName = order.deliveryName || order.dealer?.ownerName;
+  const destPhone = order.deliveryPhone || order.dealer?.phone;
 
-  if (!destAddress || !destPincode) {
-    throw new Error(`Order ${orderId} has no shipping address/pincode and dealer has none on file — cannot create shipment`);
+  if (!destAddress || !destPincode || !destPhone || !destCity || !destState || !destName) {
+    throw new Error(`Order ${orderId} has no shipping address/pincode/phone/city/state/name and dealer has none on file — cannot create shipment`);
   }
 
   const totalWeight = order.items.reduce((sum, item) => {

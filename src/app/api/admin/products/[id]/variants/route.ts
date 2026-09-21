@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 async function requireAdmin() {
   const session = await getServerSession(authOptions);
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       finish: finish?.trim() || null,
       size: size?.trim() || null,
       extra: extra?.trim() || null,
-      price: parseFloat(price),
+      price: roundToCharmPrice(parseFloat(price)),
       mrp: mrp ? parseFloat(mrp) : null,
       stock: stock ? parseInt(stock) : 0,
       moq: moq ? parseInt(moq) : null,

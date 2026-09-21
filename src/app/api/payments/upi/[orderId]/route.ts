@@ -12,16 +12,21 @@ export async function GET(req: NextRequest, props: { params: Promise<{ orderId: 
   const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
   if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // A missing dealerFilter previously meant "no scoping at all" for any
+  // A missing ownerFilter previously meant "no scoping at all" for any
   // authenticated non-DEALER role (VENDOR/STAFF/SALES/... all hold valid
   // NextAuth sessions) — that let any logged-in account read any dealer's
-  // UPI/bank payment details by guessing an orderId. Only DEALER (scoped to
-  // their own order) and the accounts-facing staff roles may proceed.
-  let dealerFilter: { dealerId: string } | null = null;
+  // UPI/bank payment details by guessing an orderId. Only DEALER/CUSTOMER
+  // (scoped to their own order) and the accounts-facing staff roles may
+  // proceed.
+  let ownerFilter: { dealerId: string } | { customerId: string } | null = null;
   if (authUser.role === "DEALER") {
     const dealer = await prisma.dealer.findUnique({ where: { userId } });
     if (!dealer) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    dealerFilter = { dealerId: dealer.id };
+    ownerFilter = { dealerId: dealer.id };
+  } else if (authUser.role === "CUSTOMER") {
+    const customer = await prisma.customer.findUnique({ where: { userId } });
+    if (!customer) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    ownerFilter = { customerId: customer.id };
   } else if (!STAFF_ROLES.includes(authUser.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -29,10 +34,11 @@ export async function GET(req: NextRequest, props: { params: Promise<{ orderId: 
   const order = await prisma.order.findFirst({
     where: {
       id: params.orderId,
-      ...(dealerFilter ?? {}),
+      ...(ownerFilter ?? {}),
     },
     include: {
       dealer: { include: { user: { select: { email: true, name: true } } } },
+      customer: { include: { user: { select: { email: true, name: true } } } },
       items: { include: { product: { include: { productImages: { where: { isPrimary: true }, take: 1 } } } } },
       paymentSubmissions: { orderBy: { createdAt: "desc" }, take: 1 },
     },

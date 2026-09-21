@@ -172,13 +172,19 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
   const outOfStock = hasVariants
     ? !!resolvedVariant && resolvedVariant.stock <= 0
     : product.stockStatus === "OUT_OF_STOCK";
+  const isCustomer = session?.user?.role === "CUSTOMER";
+  // B2C-EXPANSION-PLAN.md Phase 2 (D9): MOQ is a B2B-only concept — a retail
+  // customer can order a single piece. Everything below that would otherwise
+  // step/snap in multiples of activeMoq (initial quantity, +/- stepper,
+  // manual-entry snapping, max-order-quantity granularity) uses this instead.
+  const effectiveMoq = isCustomer ? 1 : activeMoq;
   // Variants still track a real countable quantity, so their max order
   // quantity is capped to the largest MOQ-multiple that fits within it (0
   // means no valid order can be placed even though some stock may remain). A
   // plain product is governed by stockStatus, not a number — Infinity means
   // "no numeric cap", with outOfStock disabling ordering entirely instead.
   const maxOrderQty = hasVariants
-    ? Math.floor((resolvedVariant?.stock ?? 0) / activeMoq) * activeMoq
+    ? Math.floor((resolvedVariant?.stock ?? 0) / effectiveMoq) * effectiveMoq
     : outOfStock ? 0 : Infinity;
 
   // Availability badge shown next to the part-info grid — variants read off
@@ -234,7 +240,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
     (resolvedVariant?.color && isCssColor(resolvedVariant.color) ? resolvedVariant.color : null);
 
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [quantity, setQuantity] = useState(activeMoq);
+  const [quantity, setQuantity] = useState(effectiveMoq);
   const [addedToCart, setAddedToCart] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -249,13 +255,17 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [modelDropdownOpen]);
-  // Clamp quantity to new MOQ, then to whatever stock is actually available
+  // Clamp quantity to new MOQ, then to whatever stock is actually available.
+  // Depends on effectiveMoq (not activeMoq) so it also re-snaps once
+  // useSession() resolves from "loading" to a CUSTOMER session (session
+  // starts undefined on first render, so the quantity state's initial value
+  // above can't already know isCustomer).
   useEffect(() => {
     setQuantity((q) => {
-      const snapped = Math.max(activeMoq, Math.round(q / activeMoq) * activeMoq || activeMoq);
+      const snapped = Math.max(effectiveMoq, Math.round(q / effectiveMoq) * effectiveMoq || effectiveMoq);
       return maxOrderQty > 0 ? Math.min(snapped, maxOrderQty) : snapped;
     });
-  }, [activeMoq, maxOrderQty]);
+  }, [effectiveMoq, maxOrderQty]);
 
   const isDealer = session?.user?.role === "DEALER";
 
@@ -289,7 +299,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
   const next = () => setSelectedIdx((i) => (i + 1) % gallery.length);
 
   const handleAddToCart = async () => {
-    if (!isDealer) { router.push("/login"); return; }
+    if (!isDealer && !isCustomer) { router.push("/login"); return; }
     if (hasVariants && !resolvedVariant) return;
     setLoading(true);
     try {
@@ -303,7 +313,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
         }),
       });
       if (res.ok) {
-        router.push("/dealer/cart");
+        router.push(isCustomer ? "/account/cart" : "/dealer/cart");
       }
     } catch { /* ignore */ } finally { setLoading(false); }
   };
@@ -436,9 +446,11 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               { label: "Part Number", value: activePartNumber, mono: true },
               { label: "SKU", value: activeSku, mono: true },
               ...(product.oemNumber ? [{ label: "OEM Number", value: product.oemNumber, mono: true }] : []),
-              { label: "MOQ", value: `${activeMoq} pcs` },
+              // MOQ is a B2B-only concept (D9) — hidden from a retail customer,
+              // who can order a single piece.
+              ...(isCustomer ? [] : [{ label: "MOQ", value: `${activeMoq} pcs` }]),
               ...(hasVariants && resolvedVariant ? [{ label: "Stock", value: `${resolvedVariant.stock} pcs` }] : []),
-              { label: "GST Rate", value: `${product.gstRate}%` },
+              ...(isCustomer ? [] : [{ label: "GST Rate", value: `${product.gstRate}%` }]),
               ...(product.hsnCode ? [{ label: "HSN Code", value: product.hsnCode, mono: true }] : []),
               ...(product.countryOfOrigin ? [{ label: "Country of Origin", value: product.countryOfOrigin }] : []),
             ].map((item) => (
@@ -671,63 +683,83 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
             </div>
           )}
 
-          {/* ── Pricing — shown to every visitor; the "Dealer Price" framing
-              itself is the pitch to sign up, not something to hide. Only
-              placing an order (below) requires a dealer login. ── */}
-          <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
-            <div className="flex items-baseline gap-6 mb-3 flex-wrap">
-              <div>
-                <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Dealer Price (excl. GST)</div>
-                <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
-              </div>
-              <div>
-                <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Incl. {product.gstRate}% GST</div>
-                <div className="tnum text-xl font-bold text-[var(--ink)]">{formatCurrency(priceWithGST)}</div>
-              </div>
-              {activeMrp && activeMrp > activePrice && (
-                <div>
-                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
-                  <div className="tnum text-lg font-bold text-[var(--muted)] line-through">{formatCurrency(activeMrp)}</div>
+          {/* ── Pricing. Guest/dealer/admin: the existing Dealer Price + MRP
+              pitch (commit 7ec1eb6) — placing an order needs a dealer login.
+              Logged-in CUSTOMER: one GST-inclusive number, no separate GST
+              line, no "off MRP" framing (B2C-EXPANSION-PLAN.md Phase 2). ── */}
+          {isCustomer ? (
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
+              <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP, incl. of all taxes</div>
+              {activeMrp ? (
+                <div className="tnum font-display text-3xl font-bold text-[var(--red)] mb-3">{formatCurrency(activeMrp)}</div>
+              ) : (
+                <div className="text-[var(--muted)] text-sm font-semibold mb-3">Not available for retail</div>
+              )}
+              {activeMrp && (
+                <div className="border-t border-[var(--line)] pt-3 mt-1">
+                  <div className="flex justify-between text-sm font-bold text-[var(--ink)]">
+                    <span>Total for {quantity} pc{quantity === 1 ? "" : "s"} (excl. shipping)</span>
+                    <span className="tnum text-[var(--red)]">{formatCurrency(activeMrp * quantity)}</span>
+                  </div>
                 </div>
               )}
             </div>
-            {activeMrp && activeMrp > activePrice && (
-              <div className="flex items-center gap-2 mb-3 bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-sm px-3 py-1.5 w-fit">
-                <Tag size={11} className="text-[var(--sig-ok-fg)]" />
-                <span className="text-[var(--sig-ok-fg)] text-xs font-semibold">
-                  {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP — Exclusive dealer price
-                </span>
-              </div>
-            )}
-            {isDealer ? (
-              <div className="border-t border-[var(--line)] pt-3 mt-1 space-y-1">
-                <div className="flex justify-between text-xs text-[var(--muted)]">
-                  <span>Base × {quantity} pcs</span>
-                  <span className="tnum">{formatCurrency(activePrice * quantity)}</span>
+          ) : (
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
+              <div className="flex items-baseline gap-6 mb-3 flex-wrap">
+                <div>
+                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Dealer Price (excl. GST)</div>
+                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
                 </div>
-                <div className="flex justify-between text-xs text-[var(--muted)]">
-                  <span>GST ({product.gstRate}%)</span>
-                  <span className="tnum">{formatCurrency(activePrice * quantity * product.gstRate / 100)}</span>
+                <div>
+                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Incl. {product.gstRate}% GST</div>
+                  <div className="tnum text-xl font-bold text-[var(--ink)]">{formatCurrency(priceWithGST)}</div>
                 </div>
-                <div className="flex justify-between text-sm font-bold text-[var(--ink)] pt-1 border-t border-[var(--line)]">
-                  <span>Total for {quantity} pcs (excl. shipping)</span>
-                  <span className="tnum text-[var(--red)]">{formatCurrency(priceWithGST * quantity)}</span>
+                {activeMrp && activeMrp > activePrice && (
+                  <div>
+                    <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
+                    <div className="tnum text-lg font-bold text-[var(--muted)] line-through">{formatCurrency(activeMrp)}</div>
+                  </div>
+                )}
+              </div>
+              {activeMrp && activeMrp > activePrice && (
+                <div className="flex items-center gap-2 mb-3 bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-sm px-3 py-1.5 w-fit">
+                  <Tag size={11} className="text-[var(--sig-ok-fg)]" />
+                  <span className="text-[var(--sig-ok-fg)] text-xs font-semibold">
+                    {Math.round(((activeMrp - activePrice) / activeMrp) * 100)}% off MRP — Exclusive dealer price
+                  </span>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 mt-1 border border-[var(--red)]/25 rounded-sm px-3 py-2 w-fit">
-                <Lock size={12} className="text-[var(--red)] flex-shrink-0" />
-                <span className="text-[var(--red)] text-xs font-semibold">Login as Dealer to place orders</span>
-              </div>
-            )}
-          </div>
+              )}
+              {isDealer ? (
+                <div className="border-t border-[var(--line)] pt-3 mt-1 space-y-1">
+                  <div className="flex justify-between text-xs text-[var(--muted)]">
+                    <span>Base × {quantity} pcs</span>
+                    <span className="tnum">{formatCurrency(activePrice * quantity)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-[var(--muted)]">
+                    <span>GST ({product.gstRate}%)</span>
+                    <span className="tnum">{formatCurrency(activePrice * quantity * product.gstRate / 100)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-bold text-[var(--ink)] pt-1 border-t border-[var(--line)]">
+                    <span>Total for {quantity} pcs (excl. shipping)</span>
+                    <span className="tnum text-[var(--red)]">{formatCurrency(priceWithGST * quantity)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mt-1 border border-[var(--red)]/25 rounded-sm px-3 py-2 w-fit">
+                  <Lock size={12} className="text-[var(--red)] flex-shrink-0" />
+                  <span className="text-[var(--red)] text-xs font-semibold">Login to place orders</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Quantity + Add to Cart ── */}
-          {isDealer && (
+          {(isDealer || (isCustomer && activeMrp)) && (
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-[var(--card)] border border-[var(--line)] rounded-sm overflow-hidden">
                 <button
-                  onClick={() => setQuantity(Math.max(activeMoq, quantity - activeMoq))}
+                  onClick={() => setQuantity(Math.max(effectiveMoq, quantity - effectiveMoq))}
                   className="px-4 py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition-colors"
                 >
                   <Minus size={14} />
@@ -735,24 +767,24 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                 <input
                   type="number"
                   value={quantity}
-                  min={activeMoq}
+                  min={effectiveMoq}
                   max={Number.isFinite(maxOrderQty) && maxOrderQty > 0 ? maxOrderQty : undefined}
-                  step={activeMoq}
+                  step={effectiveMoq}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
                     if (!isNaN(v) && v > 0) setQuantity(v);
                   }}
                   onBlur={(e) => {
                     const v = parseInt(e.target.value, 10);
-                    if (isNaN(v) || v <= 0) { setQuantity(activeMoq); return; }
-                    // Snap to nearest multiple of MOQ, minimum 1× MOQ, capped at available stock
-                    const snapped = Math.max(activeMoq, Math.round(v / activeMoq) * activeMoq);
+                    if (isNaN(v) || v <= 0) { setQuantity(effectiveMoq); return; }
+                    // Snap to nearest multiple of MOQ (1, for a customer), capped at available stock
+                    const snapped = Math.max(effectiveMoq, Math.round(v / effectiveMoq) * effectiveMoq);
                     setQuantity(maxOrderQty > 0 ? Math.min(snapped, maxOrderQty) : snapped);
                   }}
                   className="tnum w-16 text-center text-[var(--ink)] font-bold bg-transparent focus:outline-none py-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
-                  onClick={() => setQuantity(maxOrderQty > 0 ? Math.min(quantity + activeMoq, maxOrderQty) : quantity)}
+                  onClick={() => setQuantity(maxOrderQty > 0 ? Math.min(quantity + effectiveMoq, maxOrderQty) : quantity)}
                   disabled={maxOrderQty > 0 && quantity >= maxOrderQty}
                   className="px-4 py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
                 >
@@ -781,12 +813,12 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
             </div>
           )}
 
-          {!isDealer && (
+          {!isDealer && !isCustomer && (
             <Link
               href="/login"
               className="block w-full text-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
             >
-              Login as Dealer to Order
+              Login to Order
             </Link>
           )}
         </div>

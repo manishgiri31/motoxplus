@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProductImageUploader, ImageUploaderRef } from "@/components/admin/product-image-uploader";
 import { PRODUCT_STOCK_STATUS_OPTIONS } from "@/lib/stock-status";
+import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 interface Category { id: string; name: string; }
 interface Props {
@@ -237,8 +238,8 @@ export function ProductForm({ categories, product }: Props) {
                   onChange={(e) => {
                     set("markupPercent", e.target.value);
                     if (e.target.value && vendorCostPrice) {
-                      const computed = (vendorCostPrice * (1 + parseFloat(e.target.value) / 100)).toFixed(2);
-                      set("price", computed);
+                      const computed = roundToCharmPrice(vendorCostPrice * (1 + parseFloat(e.target.value) / 100));
+                      set("price", computed.toString());
                     }
                   }}
                   className={INPUT}
@@ -250,7 +251,7 @@ export function ProductForm({ categories, product }: Props) {
                 <div className="text-[var(--text-muted)] text-xs mb-1">Base Price (excl. GST)</div>
                 <div className="text-[var(--text-primary)] font-black text-lg">
                   {form.markupPercent && vendorCostPrice
-                    ? `₹${(vendorCostPrice * (1 + parseFloat(form.markupPercent) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
+                    ? `₹${roundToCharmPrice(vendorCostPrice * (1 + parseFloat(form.markupPercent) / 100)).toLocaleString("en-IN")}`
                     : form.price ? `₹${parseFloat(form.price).toLocaleString("en-IN")}` : "—"}
                 </div>
               </div>
@@ -291,7 +292,7 @@ export function ProductForm({ categories, product }: Props) {
               onChange={(e) => {
                 set("mrp", e.target.value);
                 if (e.target.value) {
-                  set("price", (parseFloat(e.target.value) * 0.30).toFixed(2));
+                  set("price", roundToCharmPrice(parseFloat(e.target.value) * 0.30).toString());
                 }
               }}
               className={INPUT + " border-blue-900/40 focus:border-blue-500/60"}
@@ -301,10 +302,10 @@ export function ProductForm({ categories, product }: Props) {
           </div>
           <div>
             <label className={LABEL}>Wholesale Price excl. GST (₹) — 70% off MRP</label>
-            <input required type="number" step="0.01" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} className={INPUT + " border-green-900/40 focus:border-green-500/60"} placeholder="Auto from MRP" />
+            <input required type="number" step="1" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} className={INPUT + " border-green-900/40 focus:border-green-500/60"} placeholder="Auto from MRP" />
             <p className="text-green-500 text-[10px] mt-1">
               {form.mrp
-                ? `= ₹${(parseFloat(form.mrp) * 0.30).toLocaleString("en-IN", { maximumFractionDigits: 2 })} (30% of MRP)`
+                ? `= ₹${roundToCharmPrice(parseFloat(form.mrp) * 0.30).toLocaleString("en-IN")} (30% of MRP)`
                 : "Auto-filled when MRP is set"}
             </p>
           </div>

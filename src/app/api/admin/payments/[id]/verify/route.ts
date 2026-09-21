@@ -8,6 +8,7 @@ import { escapeHtml } from "@/lib/utils";
 import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 import { notifyOrderEvent } from "@/lib/push/order-notifications";
 import { createInvoice } from "@/lib/invoicing/create-invoice";
+import { isPlaceholderEmail } from "@/lib/phone";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       order: {
         include: {
           dealer: { include: { user: { select: { email: true } } } },
+          customer: { include: { user: { select: { email: true } } } },
           invoice: true,
           items: true,
         },
@@ -88,6 +90,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
           order: {
             id: submission.orderId,
             dealerId: submission.dealerId,
+            customerId: submission.customerId,
             subtotal: submission.order.subtotal ?? 0,
             gstAmount: submission.order.gstAmount ?? 0,
             grandTotal: submission.order.grandTotal,
@@ -117,14 +120,21 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   // Reload the order with invoice for email
   const updatedOrder = await prisma.order.findUnique({
     where: { id: submission.orderId },
-    include: { invoice: true, dealer: { include: { user: { select: { email: true } } } } },
+    include: {
+      invoice: true,
+      dealer: { include: { user: { select: { email: true } } } },
+      customer: { include: { user: { select: { email: true } } } },
+    },
   });
 
-  // Notify dealer — sent to the dealer's own account email, not the
+  // Notify the account — sent to its own verified email, not the
   // client-supplied payerEmail captured at submission time, and with all
-  // submission-sourced fields HTML-escaped before interpolation.
-  sendEmail({
-    to: submission.order.dealer.user.email,
+  // submission-sourced fields HTML-escaped before interpolation. A B2C
+  // customer who skipped the optional email field has a placeholder
+  // (`@phone.motoxplus.invalid`) — nothing to send to.
+  const ownerEmail = submission.order.dealer?.user.email ?? submission.order.customer?.user.email;
+  if (ownerEmail && !isPlaceholderEmail(ownerEmail)) sendEmail({
+    to: ownerEmail,
     subject: `Payment Verified — Order #${submission.order.orderNumber} | MOTOXPLUS`,
     html: baseTemplate("Payment Verified", `
       <div class="title">✓ Payment Verified</div>
@@ -140,7 +150,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       </div>
       ${notes ? `<p class="small">Note from accounts: ${escapeHtml(String(notes))}</p>` : ""}
       <hr class="divider"/>
-      <p class="small">A tax invoice has been generated. You can view and download it from your dealer portal. Your order will be dispatched as per the production schedule.</p>
+      <p class="small">A tax invoice has been generated. You can view and download it from your ${submission.order.channel === "B2C" ? "account" : "dealer"} portal. Your order will be dispatched as per the production schedule.</p>
     `),
   }).catch(() => {});
 

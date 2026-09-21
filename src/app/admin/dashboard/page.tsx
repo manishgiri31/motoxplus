@@ -40,7 +40,7 @@ export default async function AdminDashboardPage() {
     prisma.order.findMany({
       take: 8,
       orderBy: { createdAt: "desc" },
-      include: { dealer: { include: { user: true } } },
+      include: { dealer: { include: { user: true } }, customer: { include: { user: true } } },
     }),
     prisma.dealer.findMany({
       take: 5,
@@ -123,7 +123,9 @@ export default async function AdminDashboardPage() {
                   </div>
                   <div>
                     <PartNo className="text-[var(--text-primary)] text-xs font-bold">{order.orderNumber}</PartNo>
-                    <div className="text-[var(--text-muted)] text-[10px] mt-0.5">{order.dealer.companyName}</div>
+                    <div className="text-[var(--text-muted)] text-[10px] mt-0.5">
+                      {order.dealer?.companyName ?? `Retail · ${order.deliveryName ?? order.customer?.user.name ?? "Customer"}`}
+                    </div>
                   </div>
                 </div>
                 <div className="text-right flex items-center gap-3">

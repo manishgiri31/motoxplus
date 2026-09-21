@@ -37,8 +37,9 @@ export default async function AdminPaymentsPage(
     prisma.paymentSubmission.findMany({
       where,
       include: {
-        order: { select: { orderNumber: true, grandTotal: true, amountDue: true, status: true, createdAt: true } },
+        order: { select: { orderNumber: true, grandTotal: true, amountDue: true, status: true, createdAt: true, deliveryName: true } },
         dealer: { select: { companyName: true, ownerName: true, phone: true, city: true, state: true } },
+        customer: { select: { user: { select: { name: true } } } },
       },
       orderBy: { submittedAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -129,8 +130,10 @@ export default async function AdminPaymentsPage(
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-xs mb-3">
                       <div>
-                        <div className="text-[var(--text-muted)]">Dealer</div>
-                        <div className="text-[var(--text-primary)] font-semibold truncate">{sub.dealer.companyName}</div>
+                        <div className="text-[var(--text-muted)]">{sub.dealer ? "Dealer" : "Retail customer"}</div>
+                        <div className="text-[var(--text-primary)] font-semibold truncate">
+                          {sub.dealer?.companyName ?? sub.order.deliveryName ?? sub.customer?.user.name ?? "—"}
+                        </div>
                       </div>
                       <div>
                         <div className="text-[var(--text-muted)]">Amount</div>

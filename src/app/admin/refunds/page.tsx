@@ -108,7 +108,7 @@ export default async function AdminRefundsPage(props: { searchParams: Promise<{ 
                     </Link>
                     <span className={statusBadge(c.refundStatus)}>{c.refundStatus}</span>
                   </div>
-                  <p className="text-[var(--text-muted)] text-xs">{c.order.dealer.companyName} · {formatDate(c.cancelledAt)}</p>
+                  <p className="text-[var(--text-muted)] text-xs">{c.order.dealer?.companyName ?? "Retail customer"} · {formatDate(c.cancelledAt)}</p>
                   {c.refundError && <p className="text-red-400 text-xs mt-1">{c.refundError}</p>}
                 </div>
                 <div className="text-right flex-shrink-0">

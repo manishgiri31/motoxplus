@@ -148,13 +148,15 @@ function parseItem(raw: string, group: string): ParsedItem {
 }
 
 /**
- * Rounds a price up to the nearest odd whole rupee (charm-pricing
- * convention for this catalog): 34.5→35, 31.7→33, 42.2→43, 47.5→49.
- * Never decreases the price; an already-odd whole number is left as-is.
+ * Snaps a price to the nearest whole rupee whose last digit is 3, 6, 7,
+ * or 9 (charm-pricing convention for this catalog, ties broken upward):
+ * 34.5→33, 31.7→33, 42.2→43, 47.5→49. Mirrors src/lib/pricing/charm-price.ts.
  */
-function roundUpToOddWhole(value: number): number {
-  const ceiled = Math.ceil(value);
-  return ceiled % 2 === 0 ? ceiled + 1 : ceiled;
+const LAST_DIGIT_DELTA = [-1, 2, 1, 0, -1, 1, 0, 0, 1, 0] as const;
+
+function roundToCharmPrice(value: number): number {
+  const rounded = Math.round(value);
+  return rounded + LAST_DIGIT_DELTA[((rounded % 10) + 10) % 10];
 }
 
 function buildDescription(typeLabel: string, action: string, vehicles: string[]): string {
@@ -204,7 +206,7 @@ async function main(): Promise<void> {
       const name = `MOTOXPLUS ${type.label} — ${displayVehicles}`;
       const description = buildDescription(type.label, type.action, vehicles);
 
-      const price = roundUpToOddWhole(item.price);
+      const price = roundToCharmPrice(item.price);
       const mrp = parseFloat(item.mrp.toFixed(2));
 
       // Each product is handled independently: a permanent failure on one
