@@ -43,6 +43,7 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
     where: { id: params.id },
     include: {
       dealer: { include: { user: true } },
+      customer: { include: { user: true } },
       items: { include: { product: { include: { productImages: { where: { isPrimary: true }, take: 1 } } } } },
       payments: { orderBy: { createdAt: "desc" } },
       invoice: true,
@@ -236,13 +237,21 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
             </div>
           )}
 
-          {/* Dealer */}
+          {/* Dealer / customer */}
           <div className="glass border border-[var(--border-color)] rounded-xl p-4">
-            <h2 className="font-semibold text-[var(--text-primary)] text-sm mb-3">Dealer</h2>
-            <p className="text-[var(--text-primary)] text-sm font-medium">{(order.dealer as any).companyName}</p>
-            <p className="text-[var(--text-muted)] text-xs mt-0.5">{(order.dealer as any).user?.email}</p>
-            {(order.dealer as any).phone && (
-              <p className="text-[var(--text-muted)] text-xs mt-0.5">{(order.dealer as any).phone}</p>
+            <h2 className="font-semibold text-[var(--text-primary)] text-sm mb-3">{order.dealer ? "Dealer" : "Retail Customer"}</h2>
+            {order.dealer ? (
+              <>
+                <p className="text-[var(--text-primary)] text-sm font-medium">{order.dealer.companyName}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">{order.dealer.user?.email}</p>
+                {order.dealer.phone && <p className="text-[var(--text-muted)] text-xs mt-0.5">{order.dealer.phone}</p>}
+              </>
+            ) : (
+              <>
+                <p className="text-[var(--text-primary)] text-sm font-medium">{order.deliveryName ?? order.customer?.user.name ?? "Customer"}</p>
+                <p className="text-[var(--text-muted)] text-xs mt-0.5">{order.customer?.user.email}</p>
+                {order.deliveryPhone && <p className="text-[var(--text-muted)] text-xs mt-0.5">{order.deliveryPhone}</p>}
+              </>
             )}
           </div>
 

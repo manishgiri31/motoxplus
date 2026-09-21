@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompatibleProducts } from "@/lib/vehicle/compatibility";
 import { categoryBySlug } from "@/lib/vehicle-categories";
@@ -59,6 +61,8 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
   if (!data) notFound();
   const { manufacturer, vehicle, category, products, vehicleCategory } = data;
   const pageUrl = absoluteUrl(`/${params.brand}/${params.vehicle}/${params.category}`);
+  const session = await getServerSession(authOptions);
+  const isCustomer = session?.user?.role === "CUSTOMER";
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -145,13 +149,26 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
                     <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">{p.partNumber}</div>
                     <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{p.name}</h3>
                     <div className="pt-3 border-t border-[var(--border-color)]">
-                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
-                      <div className="flex items-end justify-between gap-2">
-                        <span className="text-red-500 font-black text-base">₹{p.price.toLocaleString("en-IN")}</span>
-                        {p.mrp && p.mrp > p.price && (
-                          <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{p.mrp.toLocaleString("en-IN")}</span>
-                        )}
-                      </div>
+                      {isCustomer ? (
+                        <>
+                          <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">MRP</div>
+                          {p.mrp ? (
+                            <span className="text-red-500 font-black text-base">₹{p.mrp.toLocaleString("en-IN")}</span>
+                          ) : (
+                            <span className="text-[var(--text-muted)] text-xs">Not available for retail</span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
+                          <div className="flex items-end justify-between gap-2">
+                            <span className="text-red-500 font-black text-base">₹{p.price.toLocaleString("en-IN")}</span>
+                            {p.mrp && p.mrp > p.price && (
+                              <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{p.mrp.toLocaleString("en-IN")}</span>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </Link>

@@ -27,7 +27,7 @@ export default async function AdminOrdersPage(
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
       where,
-      include: { dealer: { include: { user: true } }, invoice: true },
+      include: { dealer: { include: { user: true } }, customer: { include: { user: true } }, invoice: true },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -66,7 +66,7 @@ export default async function AdminOrdersPage(
           <thead>
             <tr className="border-b border-[var(--border-color)]">
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Order</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Dealer</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Dealer / Customer</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Date</th>
               <th className="px-4 py-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-widest">Amount</th>
               <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
@@ -85,8 +85,19 @@ export default async function AdminOrdersPage(
                   )}
                 </td>
                 <td className="px-4 py-4 hidden md:table-cell">
-                  <div className="text-[var(--text-primary)] text-sm">{(order.dealer as any).companyName}</div>
-                  <div className="text-[var(--text-muted)] text-xs">{(order.dealer as any).user?.email}</div>
+                  {order.dealer ? (
+                    <>
+                      <div className="text-[var(--text-primary)] text-sm">{order.dealer.companyName}</div>
+                      <div className="text-[var(--text-muted)] text-xs">{order.dealer.user?.email}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-[var(--text-primary)] text-sm">
+                        Retail · {order.deliveryName ?? order.customer?.user.name ?? "Customer"}
+                      </div>
+                      <div className="text-[var(--text-muted)] text-xs">{order.customer?.user.email}</div>
+                    </>
+                  )}
                 </td>
                 <td className="px-4 py-4 hidden lg:table-cell">
                   <span className="text-[var(--text-muted)] text-sm">{formatDate(order.createdAt)}</span>

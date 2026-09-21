@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductCatalog } from "@/components/products/product-catalog";
 import { buildSearchWhere } from "@/lib/product-search";
@@ -19,6 +21,8 @@ export default async function ProductsPage(
   const page = parseInt(searchParams.page || "1");
   const pageSize = 12;
   const search = searchParams.search?.trim();
+  const session = await getServerSession(authOptions);
+  const isCustomer = session?.user?.role === "CUSTOMER";
 
   const searchWhere = search ? await buildSearchWhere(search, true) : {};
 
@@ -92,6 +96,8 @@ export default async function ProductsPage(
           <p className="text-[var(--muted)] mt-3 max-w-xl">
             {vehicleName ? (
               <>Showing {totalProducts} part{totalProducts === 1 ? "" : "s"} compatible with <span className="text-[var(--ink)] font-semibold">{vehicleName}</span>.</>
+            ) : isCustomer ? (
+              <>{totalProducts}+ products across all categories. Prices shown are MRP, inclusive of all taxes.</>
             ) : (
               <>{totalProducts}+ products across all categories. Dealer prices and MRP shown below — sign in as a dealer to place orders.</>
             )}
