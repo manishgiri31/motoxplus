@@ -10,6 +10,7 @@ import {
   Shield, Tag, PackageOpen, AlertTriangle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { getExGstFromInclusive } from "@/lib/pricing/compute";
 import { getStockStatus, stockStatusLabel, productStockLabel } from "@/lib/stock-status";
 
 type ProductStockStatus = "IN_STOCK" | "FEW_LEFT" | "OUT_OF_STOCK";
@@ -169,6 +170,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
   const activeSku = resolvedVariant?.sku ?? product.sku;
   const activePartNumber = resolvedVariant?.partNumber ?? product.partNumber;
   const priceWithGST = activePrice * (1 + product.gstRate / 100);
+  const customerExGst = activeMrp ? getExGstFromInclusive(activeMrp, product.gstRate) : null;
   const outOfStock = hasVariants
     ? !!resolvedVariant && resolvedVariant.stock <= 0
     : product.stockStatus === "OUT_OF_STOCK";
@@ -683,28 +685,16 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
             </div>
           )}
 
-          {/* ── Pricing. Guest/dealer/admin: the existing Dealer Price + MRP
-              pitch (commit 7ec1eb6) — placing an order needs a dealer login.
-              Logged-in CUSTOMER: one GST-inclusive number, no separate GST
-              line, no "off MRP" framing (B2C-EXPANSION-PLAN.md Phase 2). ── */}
-          {isCustomer ? (
-            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
-              <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP, incl. of all taxes</div>
-              {activeMrp ? (
-                <div className="tnum font-display text-3xl font-bold text-[var(--red)] mb-3">{formatCurrency(activeMrp)}</div>
-              ) : (
-                <div className="text-[var(--muted)] text-sm font-semibold mb-3">Not available for retail</div>
-              )}
-              {activeMrp && (
-                <div className="border-t border-[var(--line)] pt-3 mt-1">
-                  <div className="flex justify-between text-sm font-bold text-[var(--ink)]">
-                    <span>Total for {quantity} pc{quantity === 1 ? "" : "s"} (excl. shipping)</span>
-                    <span className="tnum text-[var(--red)]">{formatCurrency(activeMrp * quantity)}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
+          {/* ── Pricing. Dealer: unchanged ex-GST + off-MRP breakdown
+              (commit 7ec1eb6). Guest: same wholesale (Dealer Price) figure —
+              that decision stays — but restructured so the inclusive price
+              is always visible (Legal Metrology / Consumer Protection
+              E-Commerce Rules 2020: a prospective consumer must be able to
+              see the tax-inclusive price, not just ex-GST). Customer: same
+              ex-GST-primary layout, built off Product.mrp (already
+              GST-inclusive) with the ex-GST figure reverse-calculated via
+              getExGstFromInclusive — see lib/pricing/compute.ts. ── */}
+          {isDealer ? (
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
               <div className="flex items-baseline gap-6 mb-3 flex-wrap">
                 <div>
@@ -730,27 +720,52 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
                   </span>
                 </div>
               )}
-              {isDealer ? (
-                <div className="border-t border-[var(--line)] pt-3 mt-1 space-y-1">
-                  <div className="flex justify-between text-xs text-[var(--muted)]">
-                    <span>Base × {quantity} pcs</span>
-                    <span className="tnum">{formatCurrency(activePrice * quantity)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-[var(--muted)]">
-                    <span>GST ({product.gstRate}%)</span>
-                    <span className="tnum">{formatCurrency(activePrice * quantity * product.gstRate / 100)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-bold text-[var(--ink)] pt-1 border-t border-[var(--line)]">
-                    <span>Total for {quantity} pcs (excl. shipping)</span>
-                    <span className="tnum text-[var(--red)]">{formatCurrency(priceWithGST * quantity)}</span>
-                  </div>
+              <div className="border-t border-[var(--line)] pt-3 mt-1 space-y-1">
+                <div className="flex justify-between text-xs text-[var(--muted)]">
+                  <span>Base × {quantity} pcs</span>
+                  <span className="tnum">{formatCurrency(activePrice * quantity)}</span>
                 </div>
+                <div className="flex justify-between text-xs text-[var(--muted)]">
+                  <span>GST ({product.gstRate}%)</span>
+                  <span className="tnum">{formatCurrency(activePrice * quantity * product.gstRate / 100)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold text-[var(--ink)] pt-1 border-t border-[var(--line)]">
+                  <span>Total for {quantity} pcs (excl. shipping)</span>
+                  <span className="tnum text-[var(--red)]">{formatCurrency(priceWithGST * quantity)}</span>
+                </div>
+              </div>
+            </div>
+          ) : isCustomer ? (
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
+              <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Price (excl. GST)</div>
+              {activeMrp && customerExGst !== null ? (
+                <>
+                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(customerExGst)}</div>
+                  <div className="text-[var(--muted)] text-sm font-semibold mt-1">+ {product.gstRate}% GST</div>
+                  <div className="text-[var(--muted)] text-xs mt-0.5">({formatCurrency(activeMrp)} incl. GST)</div>
+                </>
               ) : (
-                <div className="flex items-center gap-2 mt-1 border border-[var(--red)]/25 rounded-sm px-3 py-2 w-fit">
-                  <Lock size={12} className="text-[var(--red)] flex-shrink-0" />
-                  <span className="text-[var(--red)] text-xs font-semibold">Login to place orders</span>
+                <div className="text-[var(--muted)] text-sm font-semibold mb-3">Not available for retail</div>
+              )}
+              {activeMrp && (
+                <div className="border-t border-[var(--line)] pt-3 mt-3">
+                  <div className="flex justify-between text-sm font-bold text-[var(--ink)]">
+                    <span>Total for {quantity} pc{quantity === 1 ? "" : "s"} (excl. shipping)</span>
+                    <span className="tnum text-[var(--red)]">{formatCurrency(activeMrp * quantity)}</span>
+                  </div>
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
+              <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Dealer Price (excl. GST)</div>
+              <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
+              <div className="text-[var(--muted)] text-sm font-semibold mt-1">+ {product.gstRate}% GST</div>
+              <div className="text-[var(--muted)] text-xs mt-0.5">({formatCurrency(priceWithGST)} incl. GST)</div>
+              <div className="flex items-center gap-2 mt-3 border border-[var(--red)]/25 rounded-sm px-3 py-2 w-fit">
+                <Lock size={12} className="text-[var(--red)] flex-shrink-0" />
+                <span className="text-[var(--red)] text-xs font-semibold">Login to place orders</span>
+              </div>
             </div>
           )}
 

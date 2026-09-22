@@ -134,3 +134,14 @@ export function computeOrderPricing(params: {
   }
   return computeB2BPricing(params.items);
 }
+
+/**
+ * Reverse-calculates the ex-GST price out of a GST-inclusive amount (e.g.
+ * Product.mrp), the same formula computeB2CPricing uses per line. Exported
+ * for display-only UI (catalog/detail pages) that needs to show the
+ * ex-GST figure alongside the inclusive one without going through the
+ * cart/order pricing pipeline.
+ */
+export function getExGstFromInclusive(inclusive: number, gstRate: number): number {
+  return roundToPaise(inclusive / (1 + gstRate / 100));
+}

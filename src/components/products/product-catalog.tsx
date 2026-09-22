@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, Lock, Package, ChevronLeft, ChevronRight, X, Clock, Zap, Heart, Eye, Scale, Check, Palette } from "lucide-react";
 import { productStockLabel } from "@/lib/stock-status";
+import { getExGstFromInclusive } from "@/lib/pricing/compute";
 
 const RECENT_KEY = "motox_recent_searches";
 const WISHLIST_KEY = "motox_wishlist";
@@ -786,21 +787,46 @@ export function ProductCatalog({
                   <div className="pt-3 border-t border-[var(--border-color)]">
                     {isCustomer ? (
                       <div>
-                        <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">MRP, incl. of all taxes</div>
+                        <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Price (excl. GST)</div>
                         {product.mrp ? (
-                          <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
-                            ₹{product.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
-                          </div>
+                          <>
+                            <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
+                              ₹{getExGstFromInclusive(product.mrp, product.gstRate).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                            </div>
+                            <div className="text-[var(--text-muted)] text-[10px] font-semibold mt-0.5">+ {product.gstRate}% GST</div>
+                            <div className="text-[var(--text-muted)] text-[10px] mt-0.5">(₹{product.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)</div>
+                          </>
                         ) : (
                           <div className="text-[var(--text-muted)] text-sm font-semibold">Not available for retail</div>
                         )}
                       </div>
-                    ) : (
+                    ) : isDealer ? (
                       <div className="flex items-end justify-between gap-2">
                         <div>
                           <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
                           <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
                             ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                          </div>
+                          {product.mrp && product.mrp > product.price && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[var(--text-muted)] text-[9px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
+                          MOQ {product.moq}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-end justify-between gap-2">
+                        <div>
+                          <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price (excl. GST)</div>
+                          <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
+                            ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-[var(--text-muted)] text-[10px] font-semibold mt-0.5">+ {product.gstRate}% GST</div>
+                          <div className="text-[var(--text-muted)] text-[10px] mt-0.5">
+                            (₹{(product.price * (1 + product.gstRate / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)
                           </div>
                           {product.mrp && product.mrp > product.price && (
                             <div className="flex items-center gap-1.5 mt-0.5">
@@ -917,32 +943,48 @@ export function ProductCatalog({
                     </p>
                   )}
                   {isCustomer ? (
-                    <>
-                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">MRP, incl. of all taxes</div>
-                      <div className="flex items-end gap-3 mb-4">
-                        {quickView.mrp ? (
+                    <div className="mb-4">
+                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Price (excl. GST)</div>
+                      {quickView.mrp ? (
+                        <>
                           <span className="text-[var(--red)] font-black text-2xl">
-                            ₹{quickView.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                            ₹{getExGstFromInclusive(quickView.mrp, quickView.gstRate).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </span>
-                        ) : (
-                          <span className="text-[var(--text-muted)] text-sm font-semibold">Not available for retail</span>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
+                          <div className="text-[var(--text-muted)] text-[10px] font-semibold mt-0.5">+ {quickView.gstRate}% GST</div>
+                          <div className="text-[var(--text-muted)] text-[10px] mt-0.5">(₹{quickView.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)</div>
+                        </>
+                      ) : (
+                        <span className="text-[var(--text-muted)] text-sm font-semibold">Not available for retail</span>
+                      )}
+                    </div>
+                  ) : isDealer ? (
+                    <div className="mb-4">
                       <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Dealer Price</div>
-                      <div className="flex items-end gap-3 mb-4">
-                        <span className="text-[var(--red)] font-black text-2xl">
-                          ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                      <span className="text-[var(--red)] font-black text-2xl">
+                        ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                      </span>
+                      {quickView.mrp && quickView.mrp > quickView.price && (
+                        <span className="text-[var(--text-muted)] text-sm line-through mb-1 ml-2">
+                          MRP ₹{quickView.mrp.toLocaleString("en-IN")}
                         </span>
-                        {quickView.mrp && quickView.mrp > quickView.price && (
-                          <span className="text-[var(--text-muted)] text-sm line-through mb-1">
-                            MRP ₹{quickView.mrp.toLocaleString("en-IN")}
-                          </span>
-                        )}
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mb-4">
+                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Dealer Price (excl. GST)</div>
+                      <span className="text-[var(--red)] font-black text-2xl">
+                        ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                      </span>
+                      <div className="text-[var(--text-muted)] text-[10px] font-semibold mt-0.5">+ {quickView.gstRate}% GST</div>
+                      <div className="text-[var(--text-muted)] text-[10px] mt-0.5">
+                        (₹{(quickView.price * (1 + quickView.gstRate / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)
                       </div>
-                    </>
+                      {quickView.mrp && quickView.mrp > quickView.price && (
+                        <span className="text-[var(--text-muted)] text-sm line-through mb-1">
+                          MRP ₹{quickView.mrp.toLocaleString("en-IN")}
+                        </span>
+                      )}
+                    </div>
                   )}
                   <div className="flex items-center gap-2 mb-6">
                     {!isCustomer && (
@@ -1014,8 +1056,17 @@ export function ProductCatalog({
                         { label: "Name", render: (p: Product) => p.name },
                         { label: "Part No.", render: (p: Product) => p.partNumber },
                         { label: "Category", render: (p: Product) => p.category.name },
-                        { label: "Price", render: (p: Product) => `₹${p.price.toLocaleString("en-IN")}` },
-                        { label: "MRP", render: (p: Product) => (p.mrp ? `₹${p.mrp.toLocaleString("en-IN")}` : "—") },
+                        isCustomer
+                          ? {
+                              label: "Price (excl. GST)",
+                              render: (p: Product) =>
+                                p.mrp ? `₹${getExGstFromInclusive(p.mrp, p.gstRate).toLocaleString("en-IN")} + ${p.gstRate}% GST` : "—",
+                            }
+                          : {
+                              label: "Dealer Price (excl. GST)",
+                              render: (p: Product) => `₹${p.price.toLocaleString("en-IN")} + ${p.gstRate}% GST`,
+                            },
+                        { label: "MRP, incl. GST", render: (p: Product) => (p.mrp ? `₹${p.mrp.toLocaleString("en-IN")}` : "—") },
                         { label: "MOQ", render: (p: Product) => String(p.moq) },
                         { label: "Stock", render: (p: Product) => productStockLabel(p.stockStatus) },
                       ].map((row) => (
