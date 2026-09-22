@@ -27,6 +27,7 @@ export function ProductCategories({ categories }: { categories: HomeCategory[] }
             <Reveal key={cat.id} delay={i * 0.05}>
               <IndustrialCard
                 index={String(i + 1).padStart(2, "0")}
+                eyebrow="Category"
                 title={cat.name}
                 description={cat.description ?? undefined}
                 href={`/products?category=${cat.slug}`}
