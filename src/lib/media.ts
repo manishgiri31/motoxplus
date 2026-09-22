@@ -42,10 +42,12 @@ export type MediaSlotId =
   | "home.factory.reel"
   | "about.facility.exterior"
   | "about.leadership.team"
-  | "manufacturing.process.stamping"
-  | "manufacturing.process.plating"
-  | "manufacturing.process.assembly"
-  | "manufacturing.process.packaging"
+  | "manufacturing.stage.raw-material"
+  | "manufacturing.stage.precision"
+  | "manufacturing.stage.quality-control"
+  | "manufacturing.stage.surface-treatment"
+  | "manufacturing.stage.performance-testing"
+  | "manufacturing.stage.packaging"
   | "quality.lab.dimensional"
   | "quality.lab.salt-spray"
   | "quality.lab.durability"
@@ -57,12 +59,13 @@ export type MediaSlotId =
 export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   "home.hero.primary": {
     kind: "video",
-    src: null,
+    src: "/motoxplus/videos/hero-factory-master-shot.mp4",
     poster: null,
     alt: "MOTOXPLUS manufacturing floor — precision stamping and assembly of automotive spare parts",
     aspect: "16/9",
     brief:
       "Wide factory floor shot or short loop (10–20s): stamping press or assembly line in motion, workers in PPE, warm practical lighting. This is the homepage hero background — needs to read calmly at low opacity behind headline text, so avoid fast motion or bright highlights in the center-left third.",
+    credit: "MOTOXPLUS India Pvt. Ltd. — factory master shot, 2026",
   },
   "home.hero.alt-1": {
     kind: "image",
@@ -101,12 +104,13 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   },
   "home.factory.reel": {
     kind: "video",
-    src: null,
+    src: "/motoxplus/videos/precision-manufacturing.mp4",
     poster: null,
-    alt: "MOTOXPLUS factory tour — from raw material to packaged part",
+    alt: "Controlled precision manufacturing at the MOTOXPLUS facility",
     aspect: "16/9",
     brief:
       "Longer factory-tour cut (30–60s) for a dedicated Manufacturing page section, can have real motion/cuts unlike the hero loop.",
+    credit: "MOTOXPLUS India Pvt. Ltd. — precision manufacturing, 2026",
   },
   "about.facility.exterior": {
     kind: "image",
@@ -122,33 +126,55 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
     aspect: "3/2",
     brief: "Team or leadership photo for the About page — optional, skip if not desired.",
   },
-  "manufacturing.process.stamping": {
-    kind: "image",
-    src: null,
-    alt: "Sheet-metal stamping stage of the manufacturing process",
-    aspect: "1/1",
-    brief: "Process-rail step 1: stamping. Square crop for the process-step rail.",
+  "manufacturing.stage.raw-material": {
+    kind: "video",
+    src: "/motoxplus/videos/raw-material.mp4",
+    poster: null,
+    alt: "Raw material selection and incoming inspection at MOTOXPLUS",
+    aspect: "16/9",
+    brief: "Six-stage timeline, stage 01: raw material selection / incoming inspection.",
+    credit: "MOTOXPLUS India Pvt. Ltd. — raw material, 2026",
   },
-  "manufacturing.process.plating": {
-    kind: "image",
-    src: null,
-    alt: "Surface plating and finishing stage of the manufacturing process",
-    aspect: "1/1",
-    brief: "Process-rail step 2: plating/finishing. Square crop.",
+  "manufacturing.stage.precision": {
+    kind: "video",
+    src: "/motoxplus/videos/cnc-precision-machining.mp4",
+    poster: null,
+    alt: "CNC precision machining at the MOTOXPLUS facility",
+    aspect: "16/9",
+    brief: "Six-stage timeline, stage 02: precision manufacturing / CNC machining.",
+    credit: "MOTOXPLUS India Pvt. Ltd. — CNC precision machining, 2026",
   },
-  "manufacturing.process.assembly": {
-    kind: "image",
+  "manufacturing.stage.quality-control": {
+    kind: "video",
     src: null,
-    alt: "Assembly stage of the manufacturing process",
-    aspect: "1/1",
-    brief: "Process-rail step 3: assembly. Square crop.",
+    poster: null,
+    alt: "Multi-point dimensional and visual quality inspection at MOTOXPLUS",
+    aspect: "16/9",
+    brief: "Six-stage timeline, stage 03: multi-point dimensional + visual QC inspection.",
   },
-  "manufacturing.process.packaging": {
-    kind: "image",
+  "manufacturing.stage.surface-treatment": {
+    kind: "video",
     src: null,
-    alt: "Packaging and dispatch stage of the manufacturing process",
-    aspect: "1/1",
-    brief: "Process-rail step 4: packaging/dispatch. Square crop.",
+    poster: null,
+    alt: "Surface treatment and coating stage at MOTOXPLUS",
+    aspect: "16/9",
+    brief: "Six-stage timeline, stage 04: surface treatment / coating / finishing.",
+  },
+  "manufacturing.stage.performance-testing": {
+    kind: "video",
+    src: null,
+    poster: null,
+    alt: "Performance and functional validation testing at MOTOXPLUS",
+    aspect: "16/9",
+    brief: "Six-stage timeline, stage 05: functional / performance validation testing.",
+  },
+  "manufacturing.stage.packaging": {
+    kind: "video",
+    src: null,
+    poster: null,
+    alt: "Final inspection and dealer-ready packaging at MOTOXPLUS",
+    aspect: "16/9",
+    brief: "Six-stage timeline, stage 06: final inspection + dealer-ready packaging.",
   },
   "quality.lab.dimensional": {
     kind: "image",

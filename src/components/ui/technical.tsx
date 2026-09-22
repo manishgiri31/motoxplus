@@ -282,3 +282,31 @@ export function BlueprintGrid({
 export function Hatch({ className }: { className?: string }) {
   return <div aria-hidden className={cn("pointer-events-none absolute inset-0 hatch-45", className)} />;
 }
+
+/** Compact monospace metadata tag — "SKU / MX-BRK-001", "ISO 9001:2015", "PROCESS / 04".
+ *  Distinct from Eyebrow (a section-header device) and Badge (a tone-colored status pill):
+ *  this is a neutral inline technical readout, meant to sit on photography (`invert`) or
+ *  beside a spec/heading on paper (default). */
+export function TechnicalLabel({
+  children,
+  invert,
+  className,
+}: {
+  children: React.ReactNode;
+  invert?: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 whitespace-nowrap px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-tech",
+        invert
+          ? "bg-black/45 text-white backdrop-blur-sm"
+          : "border border-[var(--line)] bg-[var(--card)] text-[var(--muted)]",
+        className
+      )}
+    >
+      {children}
+    </span>
+  );
+}
