@@ -39,7 +39,7 @@ export function MediaHero({ media, eyebrow, headline, description, actions, meta
     >
       <div className="absolute inset-0">
         {asset.kind === "video" ? (
-          <VideoPlate id={media} controls="minimal" className="h-full w-full" />
+          <VideoPlate id={media} className="h-full w-full" />
         ) : (
           <MediaSlot id={media} sizes="100vw" priority className="h-full w-full" fit="cover" />
         )}

@@ -17,7 +17,7 @@ export interface ManufacturingTimelineProps {
 function StageMedia({ stage }: { stage: ManufacturingStageData }) {
   const asset = getMedia(stage.media);
   return asset.kind === "video" ? (
-    <VideoPlate id={stage.media} controls="minimal" />
+    <VideoPlate id={stage.media} />
   ) : (
     <MediaSlot id={stage.media} sizes="(min-width: 1024px) 45vw, 100vw" fit="cover" />
   );

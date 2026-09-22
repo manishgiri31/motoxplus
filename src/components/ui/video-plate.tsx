@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { media as getMedia, isPending, type MediaSlotId } from "@/lib/media";
 import { CornerFrame } from "./technical";
@@ -34,7 +33,7 @@ export interface VideoPlateProps {
   id: MediaSlotId;
   autoplay?: boolean;
   loop?: boolean;
-  controls?: "minimal" | "full" | "none";
+  controls?: "full" | "none";
   caption?: string;
   className?: string;
 }
@@ -42,23 +41,16 @@ export interface VideoPlateProps {
 /**
  * globals.css's reduced-motion block stops CSS animations/transitions but has
  * NO effect on `<video autoplay>` — this component's own matchMedia gate is
- * what actually satisfies prefers-reduced-motion for video. It also always
- * renders a visible pause control when autoplaying (WCAG 2.2.2 — auto-playing
- * content beyond 5s needs one) and pauses on tab blur.
+ * what actually satisfies prefers-reduced-motion for video (it still pauses
+ * on tab blur and for reduced-motion/save-data users; there's just no manual
+ * play/pause affordance in the UI).
  */
-export function VideoPlate({ id, autoplay = true, loop = true, controls = "minimal", caption, className }: VideoPlateProps) {
+export function VideoPlate({ id, autoplay = true, loop = true, controls = "none", caption, className }: VideoPlateProps) {
   const asset = getMedia(id);
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const [playing, setPlaying] = React.useState(false);
   const [current, setCurrent] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
-
-  // controls="none" is only valid when autoplay is off — an auto-playing,
-  // uncontrollable video is an accessibility dead end. Assert in dev.
-  if (process.env.NODE_ENV !== "production" && autoplay && controls === "none") {
-    console.error(`VideoPlate(${id}): controls="none" is not allowed together with autoplay.`);
-  }
 
   React.useEffect(() => {
     const el = videoRef.current;
@@ -106,13 +98,6 @@ export function VideoPlate({ id, autoplay = true, loop = true, controls = "minim
     );
   }
 
-  const togglePlay = () => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (el.paused) el.play().catch(() => {});
-    else el.pause();
-  };
-
   return (
     <div
       ref={containerRef}
@@ -128,29 +113,17 @@ export function VideoPlate({ id, autoplay = true, loop = true, controls = "minim
         preload="metadata"
         poster={asset.poster ?? undefined}
         className="absolute inset-0 h-full w-full object-cover"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
         onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
       >
         <source src={asset.src as string} />
       </video>
 
-      {controls !== "none" && (
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 p-4">
-          <button
-            type="button"
-            onClick={togglePlay}
-            aria-label={playing ? "Pause video" : "Play video"}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
-          >
-            {playing ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
-          </button>
-          {controls === "full" && (
-            <span className="tnum text-[10px] text-white/70">
-              <Numeral value={formatTime(current)} /> / <Numeral value={formatTime(duration)} />
-            </span>
-          )}
+      {controls === "full" && (
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-end p-4">
+          <span className="tnum text-[10px] text-white/70">
+            <Numeral value={formatTime(current)} /> / <Numeral value={formatTime(duration)} />
+          </span>
         </div>
       )}
 

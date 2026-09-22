@@ -27,7 +27,7 @@ export function ManufacturingIntro() {
 
         <Reveal delay={0.1}>
           <div className="relative">
-            <VideoPlate id="home.factory.reel" controls="minimal" />
+            <VideoPlate id="home.factory.reel" />
             <div className="mt-4 flex flex-wrap gap-2">
               {ANNOTATIONS.map((label) => (
                 <TechnicalLabel key={label}>{label}</TechnicalLabel>
