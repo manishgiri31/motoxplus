@@ -473,7 +473,13 @@ export function ProductCatalog({
                       role="option"
                       aria-selected={i === activeSuggestion}
                       onClick={() => handleSuggestionClick(s)}
-                      onMouseEnter={() => setActiveSuggestion(i)}
+                      onMouseEnter={() => {
+                        setActiveSuggestion(i);
+                        // Suggestion rows are buttons (role="option" inside a combobox
+                        // listbox), not <Link>, so they don't get Next's automatic
+                        // hover-prefetch — trigger it manually instead.
+                        router.prefetch(detailHref(s.slug));
+                      }}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                         i === activeSuggestion
                           ? "bg-red-600/10 border-l-2 border-red-600"

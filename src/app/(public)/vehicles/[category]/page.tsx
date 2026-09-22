@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { categoryBySlug } from "@/lib/vehicle-categories";
 import { VehicleGrid } from "@/components/vehicles/vehicle-grid";
+import { getVehiclesByCategory } from "@/lib/catalog/queries";
 
 export async function generateMetadata(
   props: {
@@ -21,11 +21,7 @@ export default async function VehicleCategoryPage(props: { params: Promise<{ cat
   const cat = categoryBySlug(params.category);
   if (!cat) notFound();
 
-  const vehicles = await prisma.vehicle.findMany({
-    where: { category: cat.value, isActive: true },
-    include: { manufacturer: { select: { name: true, logo: true } } },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-  });
+  const vehicles = await getVehiclesByCategory(cat.value);
 
   return (
     <div className="min-h-screen bg-[var(--paper)]">

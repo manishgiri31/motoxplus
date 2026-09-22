@@ -1,6 +1,6 @@
 import { ShieldCheck, BadgeCheck, FileCheck2, Factory } from "lucide-react";
 import { SectionIntro } from "@/components/ui/section-intro";
-import { MediaSlot } from "@/components/ui/media";
+import { VideoPlate } from "@/components/ui/video-plate";
 import { Rule } from "@/components/ui/technical";
 import { Reveal, RevealGroup, RevealItem } from "@/components/ui/reveal";
 import { MetricCounter } from "@/components/ui/metric-counter";
@@ -58,7 +58,7 @@ export function QualitySection() {
 
           <Reveal delay={0.1}>
             <div className="relative">
-              <MediaSlot id="quality.lab.dimensional" sizes="(min-width: 1024px) 45vw, 100vw" frame="corner" />
+              <VideoPlate id="manufacturing.stage.quality-control" />
               <div className="absolute -bottom-6 -right-6 hidden bg-[var(--paper)] p-5 shadow-[var(--elev-3)] sm:block">
                 <MetricCounter value={98} suffix="%" label="Quality Pass Rate" accent />
               </div>

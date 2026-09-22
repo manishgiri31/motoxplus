@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
 
@@ -20,6 +21,7 @@ export async function PATCH(
   if (body.isActive !== undefined) data.isActive = body.isActive === true || body.isActive === "true";
 
   const generation = await prisma.vehicleGeneration.update({ where: { id: params.genId }, data });
+  revalidateTag("vehicles");
   return NextResponse.json(generation);
 }
 
@@ -31,5 +33,6 @@ export async function DELETE(
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await prisma.vehicleGeneration.delete({ where: { id: params.genId } });
+  revalidateTag("vehicles");
   return NextResponse.json({ success: true });
 }

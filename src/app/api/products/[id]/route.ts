@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -133,6 +133,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
     if (existing?.slug) revalidatePath(`/products/${existing.slug}`);
     if (product.slug !== existing?.slug) revalidatePath(`/products/${product.slug}`);
     revalidatePath("/products");
+    revalidateTag("products");
 
     return NextResponse.json(product);
   } catch (err) {
@@ -179,6 +180,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
 
   revalidatePath("/products");
   revalidatePath("/admin/products");
+  revalidateTag("products");
 
   return NextResponse.json({ success: true });
 }

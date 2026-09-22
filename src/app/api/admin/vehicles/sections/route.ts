@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
 
@@ -30,5 +31,6 @@ export async function POST(req: NextRequest) {
       isActive: isActive === "false" ? false : true,
     },
   });
+  revalidateTag("vehicles");
   return NextResponse.json(section, { status: 201 });
 }

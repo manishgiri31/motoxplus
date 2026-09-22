@@ -67,7 +67,7 @@ interface Product {
 }
 
 interface VehicleContext { slug: string; name: string; }
-interface Props { product: Product; relatedProducts: Product[]; vehicleContext?: VehicleContext | null; }
+interface Props { product: Product; vehicleContext?: VehicleContext | null; children?: React.ReactNode; }
 
 // Attribute dimensions for Amazon-style selection
 const DIMS = ["color", "vehicleModel", "finish", "size", "extra"] as const;
@@ -115,7 +115,7 @@ function getExtraColor(val: string | null | undefined): string | null {
   return null;
 }
 
-export function ProductDetailClient({ product, relatedProducts, vehicleContext }: Props) {
+export function ProductDetailClient({ product, vehicleContext, children }: Props) {
   const { data: session } = useSession();
   const router = useRouter();
   const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -244,7 +244,6 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [quantity, setQuantity] = useState(effectiveMoq);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   // Reset gallery index when variant changes
   useEffect(() => { setSelectedIdx(0); }, [resolvedVariant?.id]);
@@ -303,7 +302,10 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
   const handleAddToCart = async () => {
     if (!isDealer && !isCustomer) { router.push("/login"); return; }
     if (hasVariants && !resolvedVariant) return;
-    setLoading(true);
+    // Instant feedback — button flips to "Added" the same frame as the
+    // click; the network write + navigation follow in the background.
+    // Reverts if the write actually fails.
+    setAddedToCart(true);
     try {
       const res = await fetch("/api/cart", {
         method: "POST",
@@ -316,14 +318,13 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
       });
       if (res.ok) {
         router.push(isCustomer ? "/account/cart" : "/dealer/cart");
+      } else {
+        setAddedToCart(false);
       }
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch {
+      setAddedToCart(false);
+    }
   };
-
-  const getRelatedThumb = (p: Product) =>
-    p.productImages && p.productImages.length > 0
-      ? p.productImages.find((i) => i.isPrimary)?.imageUrl || p.productImages[0]?.imageUrl
-      : p.images[0];
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
@@ -808,7 +809,7 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
               </div>
               <button
                 onClick={handleAddToCart}
-                disabled={loading || addedToCart || (hasVariants && !resolvedVariant) || !!outOfStock}
+                disabled={addedToCart || (hasVariants && !resolvedVariant) || !!outOfStock}
                 className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider ${
                   addedToCart
                     ? "bg-[var(--sig-ok-fg)] text-white"
@@ -839,56 +840,10 @@ export function ProductDetailClient({ product, relatedProducts, vehicleContext }
         </div>
       </div>
 
-      {/* Related Products */}
-      {relatedProducts.length > 0 && (
-        <div>
-          <div className="flex items-end justify-between mb-8 gap-4 flex-wrap">
-            <h2 className="font-display text-2xl font-bold text-[var(--ink)]">
-              {vehicleContext ? (
-                <>More parts for <span className="text-[var(--red)]">{vehicleContext.name}</span></>
-              ) : (
-                <>More from <span className="text-[var(--red)]">{product.category.name}</span></>
-              )}
-            </h2>
-            {vehicleContext && (
-              <Link
-                href={`/products?vehicle=${vehicleContext.slug}`}
-                className="text-[var(--red)] hover:text-[var(--red-hover)] text-xs font-bold uppercase tracking-wider transition-colors"
-              >
-                View all →
-              </Link>
-            )}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
-            {relatedProducts.map((p) => {
-              const thumb = getRelatedThumb(p);
-              return (
-                <Link
-                  key={p.id}
-                  href={`/products/${p.slug}${vehicleContext ? `?vehicle=${vehicleContext.slug}` : ""}`}
-                  className="group bg-[var(--card)] hover:bg-[var(--paper)] transition-colors block"
-                >
-                  <div className="relative h-36 bg-[var(--paper)] border-b border-[var(--line)]">
-                    {thumb ? (
-                      <Image src={thumb} alt={p.name} fill className="object-cover" sizes="300px" unoptimized />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="text-4xl text-[var(--line)] font-black">◈</div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="text-[var(--muted)] text-[10px] font-mono mb-1">{p.partNumber}</div>
-                    <h4 className="text-[var(--ink)] text-sm font-bold line-clamp-2 group-hover:text-[var(--red)] transition-colors">
-                      {p.name}
-                    </h4>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Related Products — fetched + rendered server-side, streamed in via
+          Suspense from the page (src/app/(public)/products/[slug]/page.tsx)
+          so it never blocks the gallery/price/add-to-cart above from painting. */}
+      {children}
     </div>
   );
 }

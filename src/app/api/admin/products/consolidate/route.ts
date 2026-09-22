@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
     return { created: created.count + (includeParentAsVariant ? 1 : 0) };
   });
 
+  revalidateTag("products");
   return NextResponse.json({
     success: true,
     parentProductId,

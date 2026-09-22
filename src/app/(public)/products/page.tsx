@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { ProductCatalog } from "@/components/products/product-catalog";
-import { buildSearchWhere } from "@/lib/product-search";
-import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
+import { getCatalogList } from "@/lib/catalog/queries";
 import { Eyebrow } from "@/components/ui/technical";
 
 export const metadata: Metadata = {
@@ -19,70 +17,24 @@ export default async function ProductsPage(
 ) {
   const searchParams = await props.searchParams;
   const page = parseInt(searchParams.page || "1");
-  const pageSize = 12;
   const search = searchParams.search?.trim();
+  // Session is used ONLY for this page's header copy below — never for the
+  // catalog data itself. Product rows (price + mrp) are identical for every
+  // viewer regardless of role (see lib/pricing/channel.ts displayChannel()),
+  // so getCatalogList() below is safe to cache without a role in its key;
+  // this isCustomer check stays outside that cache and re-evaluates fresh
+  // on every request.
   const session = await getServerSession(authOptions);
   const isCustomer = session?.user?.role === "CUSTOMER";
 
-  const searchWhere = search ? await buildSearchWhere(search, true) : {};
-
-  let vehicleWhere = {};
-  let vehicleName: string | undefined;
-  if (searchParams.vehicle) {
-    const vehicle = await prisma.vehicle.findUnique({ where: { slug: searchParams.vehicle } });
-    if (vehicle) {
-      vehicleName = vehicle.name;
-      const [selectedVariant, selectedSection] = await Promise.all([
-        searchParams.variant
-          ? prisma.vehicleVariant.findFirst({ where: { vehicleId: vehicle.id, slug: searchParams.variant } })
-          : Promise.resolve(null),
-        searchParams.section
-          ? prisma.vehiclePartSection.findFirst({ where: { slug: searchParams.section } })
-          : Promise.resolve(null),
-      ]);
-      const filter: CompatibilityFilter = {
-        vehicleId: vehicle.id,
-        variantId: selectedVariant?.id ?? null,
-        generationId: selectedVariant?.generationId ?? null,
-        sectionId: selectedSection?.id ?? null,
-      };
-      const productIds = await getCompatibleProductIds(filter);
-      vehicleWhere = { id: { in: productIds } };
-    }
-  }
-
-  const baseWhere = {
-    isActive: true,
-    ...(searchParams.category && { category: { slug: searchParams.category } }),
-    ...searchWhere,
-    ...vehicleWhere,
-  };
-
-  const [products, categories, totalProducts] = await Promise.all([
-    (prisma.product as any).findMany({
-      where: baseWhere,
-      include: {
-        category: true,
-        productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
-        variants: {
-          where: { isActive: true, color: { not: null } },
-          select: { color: true },
-          take: 6,
-        },
-      },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      // Enum is declared MOTOXPLUS, EAUTO_IMPORT, VENDOR — Postgres native enums
-      // sort by that declaration order, so `asc` here gives us own catalog first,
-      // then eAuto-migrated stock, then vendor-submitted products.
-      orderBy: [{ source: "asc" }, { stockStatus: "asc" }, { createdAt: "desc" }],
-    }),
-    prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-    }),
-    prisma.product.count({ where: baseWhere }),
-  ]);
+  const { products, categories, totalProducts, vehicleName, pageSize } = await getCatalogList({
+    category: searchParams.category,
+    search,
+    page,
+    vehicle: searchParams.vehicle,
+    variant: searchParams.variant,
+    section: searchParams.section,
+  });
 
   return (
     <div className="min-h-screen bg-[var(--paper)]">

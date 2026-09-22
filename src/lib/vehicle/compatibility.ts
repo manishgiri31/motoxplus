@@ -1,6 +1,15 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { CompatibilityConfidence, CompatibilitySource, Prisma } from "@prisma/client";
 import { buildVehicleCompatibilityWhere } from "@/lib/product-search";
+
+// 5 min — this engine is a pure DB read with no session/role dependency (see
+// displayChannel() in lib/pricing/channel.ts: price/mrp are the same columns
+// for every viewer, role only changes what's *rendered* downstream), so
+// caching it can't leak dealer pricing to a guest or vice versa. Invalidated
+// by revalidateTag("products") / revalidateTag("vehicles") on any mutation
+// that touches Product, ProductCompatibility, or Vehicle data.
+const COMPATIBILITY_REVALIDATE = 300;
 
 /**
  * Central compatibility engine: resolves which products fit a given
@@ -137,64 +146,80 @@ async function resolveCompatibleProductIds(
   return byProduct;
 }
 
-export async function getCompatibleProductIds(filter: CompatibilityFilter): Promise<string[]> {
-  const byProduct = await resolveCompatibleProductIds(filter);
-  return Array.from(byProduct.keys());
-}
+export const getCompatibleProductIds = unstable_cache(
+  async function getCompatibleProductIds(filter: CompatibilityFilter): Promise<string[]> {
+    const byProduct = await resolveCompatibleProductIds(filter);
+    return Array.from(byProduct.keys());
+  },
+  ["compatibility-product-ids-v1"],
+  { revalidate: COMPATIBILITY_REVALIDATE, tags: ["products", "vehicles"] }
+);
 
-export async function getCompatibleProducts(
-  filter: CompatibilityFilter,
-  opts: { take?: number; activeOnly?: boolean } = {}
-): Promise<CompatibleProduct[]> {
-  const { take, activeOnly = true } = opts;
-  const byProduct = await resolveCompatibleProductIds(filter);
-  const productIds = Array.from(byProduct.keys());
-  if (productIds.length === 0) return [];
+export const getCompatibleProducts = unstable_cache(
+  async function getCompatibleProducts(
+    filter: CompatibilityFilter,
+    opts: { take?: number; activeOnly?: boolean } = {}
+  ): Promise<CompatibleProduct[]> {
+    const { take, activeOnly = true } = opts;
+    const byProduct = await resolveCompatibleProductIds(filter);
+    const productIds = Array.from(byProduct.keys());
+    if (productIds.length === 0) return [];
 
-  const products = await prisma.product.findMany({
-    where: {
-      id: { in: productIds },
-      ...(activeOnly ? { isActive: true } : {}),
-    },
-    include: {
-      category: true,
-      productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
-    },
-    take,
-    orderBy: { createdAt: "desc" },
-  });
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+        ...(activeOnly ? { isActive: true } : {}),
+      },
+      include: {
+        category: true,
+        productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
+      },
+      take,
+      orderBy: { createdAt: "desc" },
+    });
 
-  return products.map((p) => ({ ...p, fitment: byProduct.get(p.id)! }));
-}
+    return products.map((p) => ({ ...p, fitment: byProduct.get(p.id)! }));
+  },
+  ["compatibility-products-v1"],
+  { revalidate: COMPATIBILITY_REVALIDATE, tags: ["products", "vehicles"] }
+);
 
-export async function getCompatibilityCount(
-  filter: CompatibilityFilter,
-  activeOnly = true
-): Promise<number> {
-  const byProduct = await resolveCompatibleProductIds(filter);
-  const productIds = Array.from(byProduct.keys());
-  if (productIds.length === 0) return 0;
-  return prisma.product.count({
-    where: { id: { in: productIds }, ...(activeOnly ? { isActive: true } : {}) },
-  });
-}
+export const getCompatibilityCount = unstable_cache(
+  async function getCompatibilityCount(
+    filter: CompatibilityFilter,
+    activeOnly = true
+  ): Promise<number> {
+    const byProduct = await resolveCompatibleProductIds(filter);
+    const productIds = Array.from(byProduct.keys());
+    if (productIds.length === 0) return 0;
+    return prisma.product.count({
+      where: { id: { in: productIds }, ...(activeOnly ? { isActive: true } : {}) },
+    });
+  },
+  ["compatibility-count-v1"],
+  { revalidate: COMPATIBILITY_REVALIDATE, tags: ["products", "vehicles"] }
+);
 
 /**
  * Bike sections that have at least one active compatibility row for this
  * vehicle — powers the section-navigation UI (falls back to empty when the
  * vehicle only has legacy string-matched parts).
  */
-export async function getVehicleSections(vehicleId: string) {
-  const rows = await prisma.productCompatibility.findMany({
-    where: { vehicleId, isActive: true, sectionId: { not: null } },
-    select: { sectionId: true },
-    distinct: ["sectionId"],
-  });
-  const sectionIds = rows.map((r) => r.sectionId).filter((id): id is string => Boolean(id));
-  if (sectionIds.length === 0) return [];
+export const getVehicleSections = unstable_cache(
+  async function getVehicleSections(vehicleId: string) {
+    const rows = await prisma.productCompatibility.findMany({
+      where: { vehicleId, isActive: true, sectionId: { not: null } },
+      select: { sectionId: true },
+      distinct: ["sectionId"],
+    });
+    const sectionIds = rows.map((r) => r.sectionId).filter((id): id is string => Boolean(id));
+    if (sectionIds.length === 0) return [];
 
-  return prisma.vehiclePartSection.findMany({
-    where: { id: { in: sectionIds }, isActive: true },
-    orderBy: { sortOrder: "asc" },
-  });
-}
+    return prisma.vehiclePartSection.findMany({
+      where: { id: { in: sectionIds }, isActive: true },
+      orderBy: { sortOrder: "asc" },
+    });
+  },
+  ["vehicle-sections-v1"],
+  { revalidate: COMPATIBILITY_REVALIDATE, tags: ["vehicles"] }
+);

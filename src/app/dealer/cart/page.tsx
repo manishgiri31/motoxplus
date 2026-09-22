@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Truck, Info } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
@@ -37,7 +37,13 @@ export default function CartPage() {
   const [schemeId, setSchemeId] = useState<string | null>(null);
   const [schemeClearedReason, setSchemeClearedReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
+  // Network-in-flight marker only — the quantity/removal itself already
+  // updates `items` instantly (see updateQuantity/removeItem below). React
+  // 18 has no useOptimistic, so this is the manual equivalent: update local
+  // state first, sync to the server after, revert on failure.
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+  const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const fetchCart = async () => {
     const res = await fetch("/api/cart");
@@ -55,26 +61,55 @@ export default function CartPage() {
   const regularItems = items.filter((i) => !i.isSchemeItem);
   const schemeCartItems = items.filter((i) => i.isSchemeItem);
 
-  const updateQuantity = async (itemId: string, productId: string, quantity: number, variantId: string | null) => {
-    setUpdating(itemId);
-    await fetch("/api/cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, quantity, variantId }),
-    });
-    await fetchCart();
-    setUpdating(null);
+  // Debounced so a burst of +/- clicks (MOQ-stepped) collapses into one
+  // write instead of racing several — the visible quantity already moved
+  // (see updateQuantity), this just settles what actually gets persisted.
+  // Also reconciles scheme-item side effects (a quantity change can push
+  // the cart in/out of scheme eligibility), same as the original fetchCart().
+  const syncQuantity = (itemId: string, productId: string, quantity: number, variantId: string | null) => {
+    if (debounceRef.current[itemId]) clearTimeout(debounceRef.current[itemId]);
+    debounceRef.current[itemId] = setTimeout(async () => {
+      delete debounceRef.current[itemId];
+      setSyncingId(itemId);
+      try {
+        const res = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId, quantity, variantId }),
+        });
+        if (!res.ok) throw new Error("update failed");
+      } catch {
+        // fall through — reconcile below either way
+      } finally {
+        startTransition(() => { fetchCart(); });
+        setSyncingId(null);
+      }
+    }, 400);
+  };
+
+  const updateQuantity = (itemId: string, productId: string, quantity: number, variantId: string | null) => {
+    setItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, quantity } : item)));
+    syncQuantity(itemId, productId, quantity, variantId);
   };
 
   const removeItem = async (itemId: string) => {
-    setUpdating(itemId);
-    await fetch("/api/cart", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId }),
-    });
-    await fetchCart();
-    setUpdating(null);
+    if (debounceRef.current[itemId]) { clearTimeout(debounceRef.current[itemId]); delete debounceRef.current[itemId]; }
+    const snapshot = items;
+    setItems((prev) => prev.filter((item) => item.id !== itemId));
+    setSyncingId(itemId);
+    try {
+      const res = await fetch("/api/cart", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId }),
+      });
+      if (!res.ok) throw new Error("remove failed");
+      await fetchCart(); // scheme eligibility can shift on removal too
+    } catch {
+      setItems(snapshot);
+    } finally {
+      setSyncingId(null);
+    }
   };
 
   const FREE_DELIVERY_THRESHOLD = 25000;
@@ -141,9 +176,7 @@ export default function CartPage() {
             {regularItems.map((item) => (
               <div
                 key={item.id}
-                className={`glass border border-[var(--border-color)] rounded-sm p-4 flex items-center gap-4 transition-opacity ${
-                  updating === item.id ? "opacity-50" : ""
-                }`}
+                className="glass border border-[var(--border-color)] rounded-sm p-4 flex items-center gap-4"
               >
                 {/* Image */}
                 <div className="w-16 h-16 bg-gradient-to-br from-zinc-900 to-black rounded-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -183,7 +216,6 @@ export default function CartPage() {
                       <>
                         <button
                           onClick={() => updateQuantity(item.id, item.product.id, Math.max(moq, item.quantity - moq), item.variantId)}
-                          disabled={!!updating}
                           className="px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
                         >
                           <Minus size={12} />
@@ -193,7 +225,6 @@ export default function CartPage() {
                         </span>
                         <button
                           onClick={() => updateQuantity(item.id, item.product.id, item.quantity + moq, item.variantId)}
-                          disabled={!!updating}
                           className="px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
                         >
                           <Plus size={12} />
@@ -208,13 +239,15 @@ export default function CartPage() {
                   <div className="text-[var(--text-primary)] font-bold text-sm">
                     {formatCurrency(itemPrice(item) * item.quantity * (1 + item.product.gstRate / 100))}
                   </div>
-                  <div className="text-gray-600 text-[10px]">incl. {item.product.gstRate}% GST</div>
+                  <div className="text-gray-600 text-[10px] flex items-center justify-end gap-1">
+                    incl. {item.product.gstRate}% GST
+                    {syncingId === item.id && <span className="w-1.5 h-1.5 rounded-full bg-red-500/60 animate-pulse" />}
+                  </div>
                 </div>
 
                 {/* Remove */}
                 <button
                   onClick={() => removeItem(item.id)}
-                  disabled={!!updating}
                   className="text-gray-600 hover:text-red-500 transition-colors p-1"
                 >
                   <Trash2 size={16} />

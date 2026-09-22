@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { processImport } from "@/lib/product-import";
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     const buffer = await file.arrayBuffer();
     const report = await processImport(buffer);
 
+    revalidateTag("products");
     return NextResponse.json({ success: true, filename: file.name, ...report });
   } catch (err: unknown) {
     console.error("Bulk import error:", err);

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ProductDetailClient } from "@/components/products/product-detail-client";
+import { RelatedProducts, RelatedProductsSkeleton } from "@/components/products/related-products";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata, truncate, SITE_NAME_SHORT } from "@/lib/seo";
-import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
+import { type CompatibilityFilter } from "@/lib/vehicle/compatibility";
+import { getProductBySlugOrLegacyId, getReviewStats } from "@/lib/catalog/queries";
 
 type SearchParams = { vehicle?: string; variant?: string; section?: string };
 
@@ -21,24 +24,8 @@ function redirectQueryString(searchParams: SearchParams): string {
 // A single [slug] segment serves both the canonical `/products/<slug>` URL and
 // any legacy `/products/<cuid>` link still pointing at the old id-based route —
 // old links redirect (308) to the canonical slug URL instead of 404ing.
-async function resolveBySlugOrLegacyId(value: string) {
-  const bySlug = await (prisma.product as any).findUnique({
-    where: { slug: value, isActive: true },
-    include: {
-      category: true,
-      productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
-      variants: {
-        where: { isActive: true },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-        include: { images: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] } },
-      },
-    },
-  });
-  if (bySlug) return { product: bySlug, legacySlug: null as string | null };
-
-  const byId = await prisma.product.findUnique({ where: { id: value }, select: { slug: true } });
-  return { product: null, legacySlug: byId?.slug ?? null };
-}
+// resolveBySlugOrLegacyId itself lives in lib/catalog/queries.ts, cached.
+const resolveBySlugOrLegacyId = getProductBySlugOrLegacyId;
 
 export async function generateMetadata(
   props: { params: Promise<{ slug: string }> }
@@ -92,8 +79,11 @@ export default async function ProductDetailPage(
   // If the visitor arrived filtered by a vehicle (e.g. from /products?vehicle=super-splendor),
   // show other parts compatible with that same vehicle instead of just same-category products —
   // this is what "all products available for that vehicle" refers to on the detail page.
+  // Only the small vehicle/variant/section lookup happens here (cheap, needed for the
+  // "Fits X" badge above the fold); the actual related-products query is deferred into
+  // <RelatedProducts>, streamed in below so it never blocks the main content.
   let vehicleContext: { slug: string; name: string } | null = null;
-  let relatedProducts: any[] = [];
+  let vehicleFilter: CompatibilityFilter | null = null;
 
   if (searchParams.vehicle) {
     const vehicle = await prisma.vehicle.findUnique({ where: { slug: searchParams.vehicle } });
@@ -107,49 +97,21 @@ export default async function ProductDetailPage(
           ? prisma.vehiclePartSection.findFirst({ where: { slug: searchParams.section } })
           : Promise.resolve(null),
       ]);
-      const filter: CompatibilityFilter = {
+      vehicleFilter = {
         vehicleId: vehicle.id,
         variantId: selectedVariant?.id ?? null,
         generationId: selectedVariant?.generationId ?? null,
         sectionId: selectedSection?.id ?? null,
       };
-      const compatibleIds = (await getCompatibleProductIds(filter)).filter((id) => id !== product.id);
-      if (compatibleIds.length > 0) {
-        relatedProducts = await (prisma.product as any).findMany({
-          where: { id: { in: compatibleIds }, isActive: true },
-          include: {
-            category: true,
-            productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
-          },
-          take: 8,
-          orderBy: [{ stockStatus: "asc" }, { createdAt: "desc" }],
-        });
-      }
     }
-  }
-
-  if (relatedProducts.length === 0) {
-    relatedProducts = await (prisma.product as any).findMany({
-      where: {
-        categoryId: product.categoryId,
-        id: { not: product.id },
-        isActive: true,
-      },
-      take: 4,
-      include: {
-        category: true,
-        productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] },
-      },
-    });
   }
 
   const productUrl = absoluteUrl(`/products/${product.slug}`);
 
-  const reviewStats = await prisma.review.aggregate({
-    where: { productId: product.id, isApproved: true },
-    _avg: { rating: true },
-    _count: { rating: true },
-  });
+  // Only consumed by the JSON-LD below — cached alongside the rest of this
+  // page's product data (tag "reviews" invalidates it when a review is
+  // approved/removed in admin).
+  const reviewStats = await getReviewStats(product.id);
   const aggregateRating =
     reviewStats._count.rating > 0 && reviewStats._avg.rating
       ? {
@@ -240,9 +202,18 @@ export default async function ProductDetailPage(
 
       <ProductDetailClient
         product={JSON.parse(JSON.stringify(product))}
-        relatedProducts={JSON.parse(JSON.stringify(relatedProducts))}
         vehicleContext={vehicleContext}
-      />
+      >
+        <Suspense fallback={<RelatedProductsSkeleton />}>
+          <RelatedProducts
+            productId={product.id}
+            categoryId={product.categoryId}
+            categoryName={product.category.name}
+            vehicleContext={vehicleContext}
+            vehicleFilter={vehicleFilter}
+          />
+        </Suspense>
+      </ProductDetailClient>
     </div>
   );
 }

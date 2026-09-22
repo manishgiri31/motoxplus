@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
 
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
         priority: body.priority ? parseInt(body.priority) : 0,
       },
     });
+    revalidateTag("vehicles");
     return NextResponse.json(recommendation, { status: 201 });
   } catch {
     return NextResponse.json({ error: "This product is already recommended for this vehicle" }, { status: 409 });

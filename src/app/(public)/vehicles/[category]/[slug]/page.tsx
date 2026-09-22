@@ -2,12 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { categoryBySlug } from "@/lib/vehicle-categories";
-import {
-  getCompatibleProducts,
-  getCompatibilityCount,
-  getVehicleSections,
-  type CompatibilityFilter,
-} from "@/lib/vehicle/compatibility";
+import { getVehicleDetail } from "@/lib/catalog/queries";
 import { VehicleDetailClient } from "@/components/vehicles/vehicle-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
@@ -44,99 +39,28 @@ export default async function VehicleDetailPage(
   const cat = categoryBySlug(params.category);
   if (!cat) notFound();
 
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { slug: params.slug, isActive: true },
-    include: {
-      manufacturer: true,
-      colors: { orderBy: { sortOrder: "asc" }, include: { oemColor: true } },
-      gallery: { orderBy: { sortOrder: "asc" } },
-      generations: {
-        where: { isActive: true },
-        orderBy: { sortOrder: "asc" },
-        include: { variants: { where: { isActive: true }, orderBy: { sortOrder: "asc" } } },
-      },
-      variants: {
-        where: { isActive: true, generationId: null },
-        orderBy: { sortOrder: "asc" },
-      },
-      diagrams: {
-        where: { isActive: true },
-        orderBy: { sortOrder: "asc" },
-        include: { hotspots: { orderBy: { sortOrder: "asc" } } },
-      },
-      model3d: { orderBy: { sortOrder: "asc" } },
-      spins: { orderBy: { sortOrder: "asc" } },
-    },
+  const data = await getVehicleDetail({
+    categorySlug: params.category,
+    vehicleSlug: params.slug,
+    variantSlug: searchParams.variant ?? null,
+    generationId: searchParams.generation ?? null,
+    year: searchParams.year ? Number(searchParams.year) || null : null,
+    sectionSlug: searchParams.section ?? null,
   });
+  if (!data) notFound();
 
-  if (!vehicle || vehicle.category !== cat.value) notFound();
-
-  const allVariants = [...vehicle.generations.flatMap((g) => g.variants), ...vehicle.variants];
-  const selectedVariant = searchParams.variant
-    ? allVariants.find((v) => v.slug === searchParams.variant) ?? null
-    : null;
-  const selectedGeneration = searchParams.generation
-    ? vehicle.generations.find((g) => g.id === searchParams.generation) ?? null
-    : selectedVariant?.generationId
-      ? vehicle.generations.find((g) => g.id === selectedVariant.generationId) ?? null
-      : null;
-  const selectedYear = searchParams.year ? Number(searchParams.year) || null : null;
-
-  const sections = await getVehicleSections(vehicle.id);
-  const selectedSection = searchParams.section
-    ? sections.find((s) => s.slug === searchParams.section) ?? null
-    : null;
-
-  const filter: CompatibilityFilter = {
-    vehicleId: vehicle.id,
-    generationId: selectedGeneration?.id ?? null,
-    variantId: selectedVariant?.id ?? null,
-    year: selectedYear,
-    sectionId: selectedSection?.id ?? null,
-  };
-
-  const [compatibleProducts, compatibleCount, reviews, accessories, recommendations, faqs, relatedVehicles] =
-    await Promise.all([
-      getCompatibleProducts(filter, { take: 8 }),
-      getCompatibilityCount(filter),
-      prisma.review.findMany({
-        where: { vehicleId: vehicle.id, isApproved: true },
-        orderBy: { createdAt: "desc" },
-        include: { user: { select: { name: true } } },
-      }),
-      prisma.vehicleAccessory.findMany({
-        where: { vehicleId: vehicle.id },
-        orderBy: { sortOrder: "asc" },
-        include: {
-          product: {
-            include: { category: true, productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 } },
-          },
-        },
-      }),
-      prisma.vehicleProductRecommendation.findMany({
-        where: { vehicleId: vehicle.id },
-        orderBy: { priority: "asc" },
-        include: {
-          product: {
-            include: { category: true, productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 } },
-          },
-        },
-      }),
-      prisma.vehicleFAQ.findMany({
-        where: { vehicleId: vehicle.id, isActive: true },
-        orderBy: { sortOrder: "asc" },
-      }),
-      prisma.vehicle.findMany({
-        where: {
-          id: { not: vehicle.id },
-          isActive: true,
-          OR: [{ manufacturerId: vehicle.manufacturerId }, { category: vehicle.category }],
-        },
-        include: { manufacturer: { select: { name: true, logo: true } } },
-        orderBy: { sortOrder: "asc" },
-        take: 8,
-      }),
-    ]);
+  const {
+    vehicle,
+    sections,
+    compatibleProducts,
+    compatibleCount,
+    reviews,
+    accessories,
+    recommendations,
+    faqs,
+    relatedVehicles,
+    selection,
+  } = data;
 
   return (
     <>
@@ -168,12 +92,7 @@ export default async function VehicleDetailPage(
         recommendations={JSON.parse(JSON.stringify(recommendations))}
         faqs={JSON.parse(JSON.stringify(faqs))}
         relatedVehicles={JSON.parse(JSON.stringify(relatedVehicles))}
-        selection={{
-          generationId: selectedGeneration?.id ?? null,
-          variantSlug: selectedVariant?.slug ?? null,
-          year: selectedYear,
-          sectionSlug: selectedSection?.slug ?? null,
-        }}
+        selection={selection}
       />
     </>
   );

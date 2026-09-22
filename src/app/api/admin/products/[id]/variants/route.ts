@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -72,5 +73,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     include: variantInclude,
   });
 
+  revalidateTag("products");
   return NextResponse.json(variant, { status: 201 });
 }

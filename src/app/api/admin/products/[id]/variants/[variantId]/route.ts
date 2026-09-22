@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -50,6 +51,7 @@ export async function PATCH(
     include: variantInclude,
   });
 
+  revalidateTag("products");
   return NextResponse.json(updated);
 }
 
@@ -67,5 +69,6 @@ export async function DELETE(
 
   await prisma.productVariant.delete({ where: { id: params.variantId } });
 
+  revalidateTag("products");
   return NextResponse.json({ success: true });
 }

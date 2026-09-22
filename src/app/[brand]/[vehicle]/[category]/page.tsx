@@ -4,9 +4,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { getCompatibleProducts } from "@/lib/vehicle/compatibility";
-import { categoryBySlug } from "@/lib/vehicle-categories";
+import { getBrandVehicleCategoryData } from "@/lib/catalog/queries";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildMetadata } from "@/lib/seo";
 import { ChevronRight } from "lucide-react";
@@ -17,26 +15,11 @@ interface Params {
   category: string;
 }
 
-async function resolve(params: Params) {
-  const manufacturer = await prisma.vehicleManufacturer.findUnique({ where: { slug: params.brand } });
-  if (!manufacturer) return null;
-
-  const vehicle = await prisma.vehicle.findUnique({ where: { slug: params.vehicle } });
-  if (!vehicle || vehicle.manufacturerId !== manufacturer.id || !vehicle.isActive) return null;
-
-  const category = await prisma.category.findUnique({ where: { slug: params.category } });
-  if (!category || !category.isActive) return null;
-
-  const allCompatible = await getCompatibleProducts({ vehicleId: vehicle.id }, { take: 60 });
-  const products = allCompatible.filter((p) => p.categoryId === category.id);
-  if (products.length === 0) return null;
-
-  const vehicleCategory = categoryBySlug(
-    vehicle.category === "MOTORCYCLE" ? "motorcycle" : vehicle.category === "SCOOTER" ? "scooter" : vehicle.category === "ELECTRIC" ? "electric" : "commercial"
-  );
-
-  return { manufacturer, vehicle, category, products, vehicleCategory };
-}
+// Data fetch itself lives in lib/catalog/queries.ts, cached — it's a pure
+// DB read (price + mrp are the same for every viewer, see
+// lib/pricing/channel.ts). The isCustomer branch below runs after this
+// resolves, fresh on every request, never inside the cache.
+const resolve = getBrandVehicleCategoryData;
 
 export async function generateMetadata(props: { params: Promise<Params> }): Promise<Metadata> {
   const params = await props.params;

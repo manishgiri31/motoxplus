@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -49,5 +50,6 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
     data: { imageUrl: imageUrl || null },
   });
 
+  revalidateTag("products");
   return NextResponse.json({ updated: result.count });
 }

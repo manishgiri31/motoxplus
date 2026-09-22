@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Truck } from "lucide-react";
 import { formatCurrency, roundToPaise } from "@/lib/utils";
@@ -30,7 +30,13 @@ interface CartItem {
 export default function AccountCartPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
+  // Network-in-flight marker only — the quantity/removal itself already
+  // updates `items` instantly (see updateQuantity/removeItem below). React
+  // 18 has no useOptimistic, so this is the manual equivalent: update local
+  // state first, sync to the server after, revert on failure.
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+  const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const fetchCart = async () => {
     const res = await fetch("/api/cart");
@@ -43,27 +49,54 @@ export default function AccountCartPage() {
 
   useEffect(() => { fetchCart(); }, []);
 
-  const updateQuantity = async (itemId: string, productId: string, quantity: number, variantId: string | null) => {
+  // Debounced so a burst of +/- clicks collapses into one write instead of
+  // racing several — the visible quantity already moved (see updateQuantity),
+  // this just settles what actually gets persisted.
+  const syncQuantity = (itemId: string, productId: string, quantity: number, variantId: string | null) => {
+    if (debounceRef.current[itemId]) clearTimeout(debounceRef.current[itemId]);
+    debounceRef.current[itemId] = setTimeout(async () => {
+      delete debounceRef.current[itemId];
+      setSyncingId(itemId);
+      try {
+        const res = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId, quantity, variantId }),
+        });
+        if (!res.ok) throw new Error("update failed");
+      } catch {
+        // fall through — reconcile below either way, pulling the server's
+        // actual (clamped or unchanged) quantity back into view
+      } finally {
+        startTransition(() => { fetchCart(); });
+        setSyncingId(null);
+      }
+    }, 400);
+  };
+
+  const updateQuantity = (itemId: string, productId: string, quantity: number, variantId: string | null) => {
     if (quantity < 1) return;
-    setUpdating(itemId);
-    await fetch("/api/cart", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, quantity, variantId }),
-    });
-    await fetchCart();
-    setUpdating(null);
+    setItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, quantity } : item)));
+    syncQuantity(itemId, productId, quantity, variantId);
   };
 
   const removeItem = async (itemId: string) => {
-    setUpdating(itemId);
-    await fetch("/api/cart", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ itemId }),
-    });
-    await fetchCart();
-    setUpdating(null);
+    if (debounceRef.current[itemId]) { clearTimeout(debounceRef.current[itemId]); delete debounceRef.current[itemId]; }
+    const snapshot = items;
+    setItems((prev) => prev.filter((item) => item.id !== itemId));
+    setSyncingId(itemId);
+    try {
+      const res = await fetch("/api/cart", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId }),
+      });
+      if (!res.ok) throw new Error("remove failed");
+    } catch {
+      setItems(snapshot);
+    } finally {
+      setSyncingId(null);
+    }
   };
 
   const itemMrp = (item: CartItem) => item.variant?.mrp ?? item.product.mrp;
@@ -133,7 +166,7 @@ export default function AccountCartPage() {
               return (
                 <div
                   key={item.id}
-                  className={`glass border border-[var(--border-color)] rounded-sm p-4 flex items-center gap-4 transition-opacity ${updating === item.id ? "opacity-50" : ""}`}
+                  className="glass border border-[var(--border-color)] rounded-sm p-4 flex items-center gap-4"
                 >
                   <div className="w-16 h-16 bg-gradient-to-br from-zinc-900 to-black rounded-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {item.product.images[0] ? (
@@ -163,7 +196,7 @@ export default function AccountCartPage() {
                   <div className="flex items-center glass border border-[var(--border-color)] rounded-sm overflow-hidden">
                     <button
                       onClick={() => updateQuantity(item.id, item.productId, item.quantity - 1, item.variantId)}
-                      disabled={!!updating || item.quantity <= 1}
+                      disabled={item.quantity <= 1}
                       className="px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors disabled:opacity-30"
                     >
                       <Minus size={12} />
@@ -171,7 +204,6 @@ export default function AccountCartPage() {
                     <span className="px-3 text-[var(--text-primary)] text-sm font-bold min-w-[40px] text-center">{item.quantity}</span>
                     <button
                       onClick={() => updateQuantity(item.id, item.productId, item.quantity + 1, item.variantId)}
-                      disabled={!!updating}
                       className="px-3 py-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors"
                     >
                       <Plus size={12} />
@@ -180,10 +212,13 @@ export default function AccountCartPage() {
 
                   <div className="text-right flex-shrink-0 w-24">
                     <div className="text-[var(--text-primary)] font-bold text-sm">{mrp != null ? formatCurrency(mrp * item.quantity) : "—"}</div>
-                    <div className="text-gray-600 text-[10px]">incl. taxes</div>
+                    <div className="text-gray-600 text-[10px] flex items-center justify-end gap-1">
+                      incl. taxes
+                      {syncingId === item.id && <span className="w-1.5 h-1.5 rounded-full bg-red-500/60 animate-pulse" />}
+                    </div>
                   </div>
 
-                  <button onClick={() => removeItem(item.id)} disabled={!!updating} className="text-gray-600 hover:text-red-500 transition-colors p-1">
+                  <button onClick={() => removeItem(item.id)} className="text-gray-600 hover:text-red-500 transition-colors p-1">
                     <Trash2 size={16} />
                   </button>
                 </div>
