@@ -119,6 +119,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
   const { data: session } = useSession();
   const router = useRouter();
   const modelDropdownRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
 
   const allVariants: ProductVariant[] = product.variants ?? [];
@@ -244,6 +245,12 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [quantity, setQuantity] = useState(effectiveMoq);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Reset gallery index when variant changes
   useEffect(() => { setSelectedIdx(0); }, [resolvedVariant?.id]);
@@ -302,10 +309,12 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
   const handleAddToCart = async () => {
     if (!isDealer && !isCustomer) { router.push("/login"); return; }
     if (hasVariants && !resolvedVariant) return;
+    if (loading) return;
     // Instant feedback — button flips to "Added" the same frame as the
     // click; the network write + navigation follow in the background.
     // Reverts if the write actually fails.
     setAddedToCart(true);
+    setLoading(true);
     try {
       const res = await fetch("/api/cart", {
         method: "POST",
@@ -319,10 +328,12 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
       if (res.ok) {
         router.push(isCustomer ? "/account/cart" : "/dealer/cart");
       } else {
-        setAddedToCart(false);
+        if (mountedRef.current) setAddedToCart(false);
       }
     } catch {
-      setAddedToCart(false);
+      if (mountedRef.current) setAddedToCart(false);
+    } finally {
+      if (mountedRef.current) setLoading(false);
     }
   };
 
@@ -809,7 +820,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
               </div>
               <button
                 onClick={handleAddToCart}
-                disabled={addedToCart || (hasVariants && !resolvedVariant) || !!outOfStock}
+                disabled={loading || addedToCart || (hasVariants && !resolvedVariant) || !!outOfStock}
                 className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider ${
                   addedToCart
                     ? "bg-[var(--sig-ok-fg)] text-white"
@@ -820,9 +831,9 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
                     : "bg-[var(--red)] hover:bg-[var(--red-hover)] text-white"
                 }`}
               >
-                {addedToCart ? (
+                {loading ? "Adding..." : addedToCart ? (
                   <><CheckCircle size={16} /> Added to Cart</>
-                ) : loading ? "Adding..." : outOfStock ? "Out of Stock" : (
+                ) : outOfStock ? "Out of Stock" : (
                   <><ShoppingCart size={16} /> Add to Cart</>
                 )}
               </button>
