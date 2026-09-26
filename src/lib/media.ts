@@ -33,6 +33,11 @@ export interface MediaAsset {
 }
 
 export type MediaSlotId =
+  | "home.dealer-network"
+  | "home.brand-scale"
+  | "home.final-cta"
+  | "manufacturing.stage.final-inspection"
+  | "manufacturing.stage.cnc"
   | "home.hero.primary"
   | "home.hero.alt-1"
   | "home.hero.alt-2"
@@ -57,9 +62,44 @@ export type MediaSlotId =
   | "industries.commercial";
 
 export const MEDIA: Record<MediaSlotId, MediaAsset> = {
+  "home.dealer-network": {
+    kind: "video",
+    src: "/videos/INDIA DEALER NETWORK.mp4",
+    alt: "MOTOXPLUS Dealer Network Across India",
+    aspect: "16/9",
+    brief: "Dispatch and logistics connecting factory to dealers.",
+  },
+  "home.brand-scale": {
+    kind: "video",
+    src: "/videos/PRODUCT CATEGORY MONTAGE.mp4",
+    alt: "MOTOXPLUS Product Categories and Brand Scale",
+    aspect: "16/9",
+    brief: "Brand scale montage.",
+  },
+  "home.final-cta": {
+    kind: "video",
+    src: "/videos/galaxy-eyes.3840x2160.mp4",
+    alt: "MOTOXPLUS Final Cinematic Vision",
+    aspect: "16/9",
+    brief: "Final cinematic brand closing for CTA.",
+  },
+  "manufacturing.stage.final-inspection": {
+    kind: "video",
+    src: "/videos/PRODUCT MACRO HERO.mp4",
+    alt: "Final Inspection of MOTOXPLUS components",
+    aspect: "16/9",
+    brief: "Product macro hero shot representing final check before packaging.",
+  },
+  "manufacturing.stage.cnc": {
+    kind: "video",
+    src: "/videos/CNC PRECISION MACHINING.mp4",
+    alt: "CNC Component Manufacturing at MOTOXPLUS",
+    aspect: "16/9",
+    brief: "Component manufacturing and machining.",
+  },
   "home.hero.primary": {
     kind: "video",
-    src: "/motoxplus/videos/hero-factory-master-shot.mp4",
+    src: "/videos/HERO FACTORY MASTER SHOT.mp4",
     poster: null,
     alt: "MOTOXPLUS manufacturing floor — precision stamping and assembly of automotive spare parts",
     aspect: "16/9",
@@ -104,7 +144,7 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   },
   "home.factory.reel": {
     kind: "video",
-    src: "/motoxplus/videos/precision-manufacturing.mp4",
+    src: "/videos/PRECISION MANUFACTURING.mp4",
     poster: null,
     alt: "Controlled precision manufacturing at the MOTOXPLUS facility",
     aspect: "16/9",
@@ -128,7 +168,7 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   },
   "manufacturing.stage.raw-material": {
     kind: "video",
-    src: "/motoxplus/videos/raw-material.mp4",
+    src: "/videos/RAW MATERIAL.mp4",
     poster: null,
     alt: "Raw material selection and incoming inspection at MOTOXPLUS",
     aspect: "16/9",
@@ -137,7 +177,7 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   },
   "manufacturing.stage.precision": {
     kind: "video",
-    src: "/motoxplus/videos/cnc-precision-machining.mp4",
+    src: "/videos/PRECISION MANUFACTURING.mp4",
     poster: null,
     alt: "CNC precision machining at the MOTOXPLUS facility",
     aspect: "16/9",
@@ -146,7 +186,7 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   },
   "manufacturing.stage.quality-control": {
     kind: "video",
-    src: "/motoxplus/videos/quality-control.mp4",
+    src: "/videos/QUALITY CONTROL.mp4",
     poster: null,
     alt: "Multi-point dimensional and visual quality inspection at MOTOXPLUS",
     aspect: "16/9",
@@ -155,7 +195,7 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   },
   "manufacturing.stage.surface-treatment": {
     kind: "video",
-    src: "/motoxplus/videos/surface-treatment.mp4",
+    src: "/videos/SURFACE TREATMENT.mp4",
     poster: null,
     alt: "Surface treatment and coating stage at MOTOXPLUS",
     aspect: "16/9",
@@ -164,7 +204,7 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   },
   "manufacturing.stage.performance-testing": {
     kind: "video",
-    src: "/motoxplus/videos/performance-testing.mp4",
+    src: "/videos/PERFORMANCE TESTING.mp4",
     poster: null,
     alt: "Performance and functional validation testing at MOTOXPLUS",
     aspect: "16/9",
@@ -173,7 +213,7 @@ export const MEDIA: Record<MediaSlotId, MediaAsset> = {
   },
   "manufacturing.stage.packaging": {
     kind: "video",
-    src: "/motoxplus/videos/packaging.mp4",
+    src: "/videos/PACKAGING.mp4",
     poster: null,
     alt: "Final inspection and dealer-ready packaging at MOTOXPLUS",
     aspect: "16/9",
