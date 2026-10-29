@@ -1,5 +1,14 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// Store type scale (tailwind.config.ts fontSize "12".."80"); without this, twMerge reads text-12 as a colour and drops text-white.
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [{ text: ["12", "14", "17", "19", "21", "24", "28", "32", "40", "48", "56", "64", "80"] }],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

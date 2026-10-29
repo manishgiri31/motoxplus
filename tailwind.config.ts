@@ -74,6 +74,21 @@ const config: Config = {
         // Only families actually used in src/ get remapped (verified by grep);
         // teal/lime/pink/rose/sky/violet/fuchsia/stone/neutral/slate have zero
         // call sites and are left at Tailwind's stock palette.
+        // Store design system (apple-store-design-system.md §20). Nested under
+        // `store` because bare `ink`/`line`/`accent` already mean something else
+        // to the ~900 existing call sites (dealer/vendor/admin). Hex values are
+        // the spec's, verbatim.
+        store: {
+          bg: { DEFAULT: "#ffffff", alt: "#f5f5f7", inverse: "#000000", inverse2: "#161617" },
+          ink: { DEFAULT: "#1d1d1f", 2: "#6e6e73", 3: "#86868b", inverse: "#f5f5f7" },
+          line: { DEFAULT: "#d2d2d7", soft: "#e8e8ed" },
+          "gray-700": "#424245",
+          accent: { DEFAULT: "#0071e3", hover: "#0077ed", active: "#006edb" },
+          link: { DEFAULT: "#0066cc", dark: "#2997ff" },
+          success: "#008009",
+          warning: "#f56300",
+          danger: "#e30000",
+        },
         red: colorRamp("red"),
         gray: colorRamp("gray"),
         zinc: colorRamp("zinc"),
@@ -97,6 +112,8 @@ const config: Config = {
         display: ["var(--font-display)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
         body: ["var(--font-body)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        // Store design system: Inter (self-hosted as --font-body), system stack behind it.
+        store: ["var(--font-body)", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
@@ -149,6 +166,10 @@ const config: Config = {
         card: "var(--radius-card)",
         panel: "var(--radius-panel)",
         pill: "var(--radius-pill)",
+        // Store design system: card 18px, pill 999px (spec §6.1). `card`/`pill`
+        // above are taken by the v2 scale (14px), so these are `store-*`.
+        "store-card": "18px",
+        "store-pill": "999px",
       },
       borderWidth: {
         hairline: "1px",
@@ -162,7 +183,42 @@ const config: Config = {
       fontSize: {
         eyebrow: ["0.6875rem", { lineHeight: "1", letterSpacing: "0.18em", fontWeight: "600" }],
         micro: ["0.625rem", { lineHeight: "1.1", letterSpacing: "0.1em" }],
+        // Store type scale (spec §20). Numeric keys don't collide with anything.
+        "12": ["12px", { lineHeight: "1.33" }],
+        "14": ["14px", { lineHeight: "1.43" }],
+        "17": ["17px", { lineHeight: "1.47" }],
+        "19": ["19px", { lineHeight: "1.35" }],
+        "21": ["21px", { lineHeight: "1.19" }],
+        "24": ["24px", { lineHeight: "1.17" }],
+        "28": ["28px", { lineHeight: "1.14" }],
+        "32": ["32px", { lineHeight: "1.125" }],
+        "40": ["40px", { lineHeight: "1.1" }],
+        "48": ["48px", { lineHeight: "1.08" }],
+        "56": ["56px", { lineHeight: "1.07" }],
+        "64": ["64px", { lineHeight: "1.06" }],
+        "80": ["80px", { lineHeight: "1.05" }],
       },
+      boxShadow: {
+        s1: "2px 4px 12px rgba(0,0,0,.08)",
+        s2: "2px 4px 16px rgba(0,0,0,.16)",
+        s3: "2px 8px 24px 2px rgba(0,0,0,.08)",
+      },
+      transitionTimingFunction: {
+        apple: "cubic-bezier(.4,0,.6,1)",
+        "apple-out": "cubic-bezier(.165,.84,.44,1)",
+      },
+      transitionDuration: { fast: "160ms", base: "240ms", slow: "320ms" },
+      // Spec breakpoints (§20): 480 / 734 / 834 / 1068 / 1441. Prefixed `bp-`
+      // because overriding sm/md/lg/xl would re-flow every existing page
+      // (md 768→734, lg 1024→1068). Use `bp-md:` etc. in store components.
+      screens: {
+        "bp-sm": "480px",
+        "bp-md": "734px",
+        "bp-tab": "834px",
+        "bp-lg": "1068px",
+        "bp-xl": "1441px",
+      },
+      maxWidth: { page: "1260px", narrow: "980px" },
     },
   },
   plugins: [],

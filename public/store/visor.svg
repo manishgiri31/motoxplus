@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="visor placeholder"><defs><linearGradient id="gvisor" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d8edff"/><stop offset="1" stop-color="#7aa7d6"/></linearGradient></defs><ellipse cx="300" cy="480" rx="220" ry="22" fill="#000" fill-opacity=".07"/>
+<path d="M90 440C105 210 285 115 515 190C545 300 525 400 490 450C360 390 225 390 90 440Z" fill="url(#gvisor)"/>
+<path d="M150 330C215 230 330 185 460 215" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="14" stroke-linecap="round"/>
+<path d="M90 440C225 390 360 390 490 450" fill="none" stroke="#1d1d1f" stroke-width="10" stroke-linecap="round"/></svg>

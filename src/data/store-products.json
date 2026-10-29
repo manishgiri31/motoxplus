@@ -1,0 +1,73 @@
+[
+  {
+    "id": "mx-fm-001",
+    "slug": "front-mudguard",
+    "name": "Front Mudguard",
+    "tagline": "OEM-fit. Impact-tested ABS.",
+    "category": "Body parts",
+    "price": 89900,
+    "currency": "INR",
+    "badge": "New",
+    "images": ["/store/mudguard.svg"],
+    "featured": true,
+    "inStock": true
+  },
+  {
+    "id": "mx-vs-002",
+    "slug": "visor-glass",
+    "name": "Visor Glass",
+    "tagline": "Optical clarity. UV-stable.",
+    "category": "Body parts",
+    "price": 54900,
+    "currency": "INR",
+    "images": ["/store/visor.svg"],
+    "featured": true,
+    "inStock": true
+  },
+  {
+    "id": "mx-tp-003",
+    "slug": "tail-panel",
+    "name": "Tail Panel",
+    "tagline": "Clean lines. Exact mounting points.",
+    "category": "Body parts",
+    "price": 129900,
+    "currency": "INR",
+    "badge": "New",
+    "images": ["/store/panel.svg"],
+    "inStock": true
+  },
+  {
+    "id": "mx-tc-004",
+    "slug": "throttle-cable",
+    "name": "Throttle Cable",
+    "tagline": "Smooth pull. Long service life.",
+    "category": "Cables",
+    "price": 34900,
+    "currency": "INR",
+    "images": ["/store/cable.svg"],
+    "inStock": true
+  },
+  {
+    "id": "mx-bl-005",
+    "slug": "brake-lever",
+    "name": "Brake Lever",
+    "tagline": "Forged feel. Precise travel.",
+    "category": "Controls",
+    "price": 44900,
+    "currency": "INR",
+    "badge": "Limited",
+    "images": ["/store/lever.svg"],
+    "inStock": true
+  },
+  {
+    "id": "mx-rm-006",
+    "slug": "rear-view-mirror",
+    "name": "Rear View Mirror",
+    "tagline": "Vibration-free. Wide field of view.",
+    "category": "Accessories",
+    "price": 39900,
+    "currency": "INR",
+    "images": ["/store/mirror.svg"],
+    "inStock": true
+  }
+]

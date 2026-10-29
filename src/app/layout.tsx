@@ -38,7 +38,7 @@ const schibstedGrotesk = localFont({
 
 const inter = localFont({
   src: "./fonts/InterVF.woff2",
-  weight: "400 600",
+  weight: "400 700",
   variable: "--font-body",
   display: "swap",
 });

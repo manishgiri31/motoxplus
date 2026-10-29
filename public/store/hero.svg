@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 130 1400 460" role="img" aria-label="Product range placeholder"><defs><linearGradient id="gmudguard" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4aa3ff"/><stop offset="1" stop-color="#0a4fa8"/></linearGradient><linearGradient id="gvisor" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d8edff"/><stop offset="1" stop-color="#7aa7d6"/></linearGradient><linearGradient id="gpanel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a5a60"/><stop offset="1" stop-color="#161617"/></linearGradient></defs><g transform="translate(40 120) scale(.95)"><ellipse cx="300" cy="470" rx="220" ry="22" fill="#000" fill-opacity=".07"/>
+<path d="M70 400C90 200 300 120 530 300L503 332C335 215 175 255 122 408Z" fill="url(#gmudguard)"/>
+<path d="M122 408C175 255 335 215 503 332L497 340C335 235 190 270 134 414Z" fill="#fff" fill-opacity=".45"/>
+<path d="M120 330C190 230 330 200 440 262" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="10" stroke-linecap="round"/>
+<circle cx="170" cy="372" r="9" fill="#06306b"/><circle cx="262" cy="292" r="9" fill="#06306b"/></g><g transform="translate(400 20) scale(1.15)"><ellipse cx="300" cy="480" rx="220" ry="22" fill="#000" fill-opacity=".07"/>
+<path d="M90 440C105 210 285 115 515 190C545 300 525 400 490 450C360 390 225 390 90 440Z" fill="url(#gvisor)"/>
+<path d="M150 330C215 230 330 185 460 215" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="14" stroke-linecap="round"/>
+<path d="M90 440C225 390 360 390 490 450" fill="none" stroke="#1d1d1f" stroke-width="10" stroke-linecap="round"/></g><g transform="translate(850 120) scale(.95)"><ellipse cx="310" cy="470" rx="230" ry="22" fill="#000" fill-opacity=".07"/>
+<path d="M70 340C70 255 195 215 330 228L522 258C566 268 566 336 522 352L330 414C195 446 70 425 70 340Z" fill="url(#gpanel)"/>
+<path d="M120 318C170 280 260 262 360 270" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="12" stroke-linecap="round"/>
+<circle cx="470" cy="305" r="10" fill="#f56300"/></g></svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="mudguard placeholder"><defs><linearGradient id="gmudguard" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4aa3ff"/><stop offset="1" stop-color="#0a4fa8"/></linearGradient></defs><ellipse cx="300" cy="470" rx="220" ry="22" fill="#000" fill-opacity=".07"/>
+<path d="M70 400C90 200 300 120 530 300L503 332C335 215 175 255 122 408Z" fill="url(#gmudguard)"/>
+<path d="M122 408C175 255 335 215 503 332L497 340C335 235 190 270 134 414Z" fill="#fff" fill-opacity=".45"/>
+<path d="M120 330C190 230 330 200 440 262" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="10" stroke-linecap="round"/>
+<circle cx="170" cy="372" r="9" fill="#06306b"/><circle cx="262" cy="292" r="9" fill="#06306b"/></svg>

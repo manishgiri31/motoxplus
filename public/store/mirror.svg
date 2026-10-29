@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="mirror placeholder"><defs><linearGradient id="gmirror" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6e6e73"/><stop offset="1" stop-color="#272729"/></linearGradient></defs><ellipse cx="300" cy="490" rx="170" ry="18" fill="#000" fill-opacity=".07"/>
+<rect x="288" y="300" width="24" height="185" rx="12" fill="#424245"/>
+<path d="M300 90C400 90 470 150 470 220C470 290 400 330 300 330C200 330 130 290 130 220C130 150 200 90 300 90Z" fill="url(#gmirror)"/>
+<path d="M300 112C382 112 446 160 446 220C446 276 386 308 300 308C214 308 154 276 154 220C154 160 218 112 300 112Z" fill="#b9d9f5"/>
+<path d="M200 170C230 142 290 132 340 140" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="12" stroke-linecap="round"/></svg>

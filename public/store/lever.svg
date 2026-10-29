@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="lever placeholder"><defs><linearGradient id="glever" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8e8ed"/><stop offset="1" stop-color="#86868b"/></linearGradient></defs><ellipse cx="300" cy="480" rx="200" ry="20" fill="#000" fill-opacity=".07"/>
+<path d="M110 430C240 400 360 320 495 190L520 214C400 360 270 440 126 462Z" fill="url(#glever)"/>
+<circle cx="150" cy="446" r="38" fill="#1d1d1f"/><circle cx="150" cy="446" r="14" fill="#e30000"/>
+<circle cx="505" cy="202" r="14" fill="#424245"/></svg>
