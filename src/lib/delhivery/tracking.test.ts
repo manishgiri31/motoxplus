@@ -325,3 +325,18 @@ describe("syncTrackingToDb — F-17 Order.status write-guard", () => {
     );
   });
 });
+
+describe("syncTrackingToDb — B2B channel", () => {
+  it("throws the clear B2B error and never calls Delhivery with the B2C token", async () => {
+    vi.mocked(delhiveryFetch).mockClear();
+    shipmentFindUnique.mockResolvedValue({
+      id: "shp_b2b",
+      waybill: "LR-1",
+      order: { status: "PROCESSING", channel: "B2B" },
+    });
+
+    await expect(syncTrackingToDb("order_b2b")).rejects.toThrow(/not supported for B2B/);
+    expect(delhiveryFetch).not.toHaveBeenCalled();
+    expect(txShipmentUpdate).not.toHaveBeenCalled();
+  });
+});

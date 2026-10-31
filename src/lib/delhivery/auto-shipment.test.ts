@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const createDelhiveryShipmentMock = vi.fn();
-vi.mock("./shipment", () => ({
-  createDelhiveryShipment: (...a: unknown[]) => createDelhiveryShipmentMock(...a),
+const createShipmentForOrderMock = vi.fn();
+vi.mock("./provider", () => ({
+  createShipmentForOrder: (...a: unknown[]) => createShipmentForOrderMock(...a),
 }));
 
 const autoRequestPickupMock = vi.fn().mockResolvedValue(undefined);
@@ -50,15 +50,28 @@ describe("isAutoShipmentEnabled", () => {
 describe("autoCreateShipment", () => {
   it("creates the shipment and records SHIPMENT_CREATED when enabled", async () => {
     delete process.env.DELHIVERY_AUTO_SHIPMENT;
-    createDelhiveryShipmentMock.mockResolvedValue({ waybill: "AWB123", trackingUrl: "u" });
+    createShipmentForOrderMock.mockResolvedValue({ kind: "b2c-awb", waybill: "AWB123", trackingUrl: "u" });
 
     await autoCreateShipment("order_1");
 
-    expect(createDelhiveryShipmentMock).toHaveBeenCalledWith("order_1");
+    expect(createShipmentForOrderMock).toHaveBeenCalledWith("order_1");
     expect(autoRequestPickupMock).toHaveBeenCalledWith("order_1");
     expect(orderEventCreate).toHaveBeenCalledWith({
       data: { orderId: "order_1", type: "SHIPMENT_CREATED", reason: expect.stringContaining("AWB123") },
     });
+  });
+
+  it("B2B: submits via the provider, records no AWB event (the job_id event is written by the B2B module), still books the pickup", async () => {
+    delete process.env.DELHIVERY_AUTO_SHIPMENT;
+    createShipmentForOrderMock.mockResolvedValue({ kind: "b2b-manifest", jobId: "job-1", alreadySubmitted: false });
+
+    await autoCreateShipment("order_b2b");
+
+    expect(createShipmentForOrderMock).toHaveBeenCalledWith("order_b2b");
+    expect(orderEventCreate).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ type: "SHIPMENT_CREATED" }) })
+    );
+    expect(autoRequestPickupMock).toHaveBeenCalledWith("order_b2b");
   });
 
   it("skips the API call and records SHIPMENT_AUTO_SKIPPED when disabled", async () => {
@@ -66,7 +79,7 @@ describe("autoCreateShipment", () => {
 
     await autoCreateShipment("order_1");
 
-    expect(createDelhiveryShipmentMock).not.toHaveBeenCalled();
+    expect(createShipmentForOrderMock).not.toHaveBeenCalled();
     expect(autoRequestPickupMock).not.toHaveBeenCalled();
     expect(orderEventCreate).toHaveBeenCalledWith({
       data: { orderId: "order_1", type: "SHIPMENT_AUTO_SKIPPED", reason: expect.any(String) },
@@ -75,7 +88,7 @@ describe("autoCreateShipment", () => {
 
   it("never throws on a Delhivery failure — records SHIPMENT_FAILED instead", async () => {
     delete process.env.DELHIVERY_AUTO_SHIPMENT;
-    createDelhiveryShipmentMock.mockRejectedValue(new Error("Delhivery rejected shipment: bad pin"));
+    createShipmentForOrderMock.mockRejectedValue(new Error("Delhivery rejected shipment: bad pin"));
 
     await expect(autoCreateShipment("order_1")).resolves.toBeUndefined();
 
@@ -87,7 +100,7 @@ describe("autoCreateShipment", () => {
 
   it("never throws even if the OrderEvent write itself fails", async () => {
     delete process.env.DELHIVERY_AUTO_SHIPMENT;
-    createDelhiveryShipmentMock.mockResolvedValue({ waybill: "AWB123", trackingUrl: "u" });
+    createShipmentForOrderMock.mockResolvedValue({ kind: "b2c-awb", waybill: "AWB123", trackingUrl: "u" });
     orderEventCreate.mockRejectedValue(new Error("db down"));
 
     await expect(autoCreateShipment("order_1")).resolves.toBeUndefined();

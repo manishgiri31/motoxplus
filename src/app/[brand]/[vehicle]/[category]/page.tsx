@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getBrandVehicleCategoryData } from "@/lib/catalog/queries";
 import { JsonLd } from "@/components/seo/json-ld";
-import { absoluteUrl, buildMetadata } from "@/lib/seo";
+import { absoluteUrl, buildMetadata, productJsonLdImages } from "@/lib/seo";
 import { ChevronRight } from "lucide-react";
 
 interface Params {
@@ -77,6 +77,7 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
             "@type": "Product",
             name: p.name,
             sku: p.sku,
+            image: productJsonLdImages(p.productImages?.map((img) => img.imageUrl), p.images),
             url: absoluteUrl(`/products/${p.slug}`),
           })),
         }}

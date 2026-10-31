@@ -6,6 +6,7 @@ import { refundPayment } from "@/lib/razorpay";
 import { restockItems } from "@/lib/orders/stock";
 import { cancelDelhiveryShipment } from "@/lib/delhivery";
 import { classifyCarrierTier } from "@/lib/delhivery/carrier-cancellation";
+import { B2B_CARRIER_ACTION_UNSUPPORTED_MESSAGE } from "@/lib/delhivery/errors";
 import {
   evaluateCancellation,
   calculateCancellation,
@@ -131,6 +132,12 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   let defaultedStage: CancellationStage = eligibility.stage;
   let carrierStatusForLog = "";
   if (!isDealerActor && order.shipment) {
+    if (order.channel === "B2B") {
+      return NextResponse.json(
+        { error: B2B_CARRIER_ACTION_UNSUPPORTED_MESSAGE, code: "B2B_CARRIER_ACTION_UNSUPPORTED" },
+        { status: 422 }
+      );
+    }
     const classification = await classifyCarrierTier(order.shipment.waybill);
     defaultedStage = defaultAdminStageFromCarrier({
       hasShipment: true,
@@ -186,6 +193,14 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   // OrderCancellation, no refund. cancelDelhiveryShipment is idempotent and safe
   // to retry, so a later manual retry is fine.
   if (order.shipment) {
+    // cancelDelhiveryShipment uses the B2C token on track.delhivery.com — never
+    // call it for a B2B order (nothing is mutated; same shape as a carrier refusal).
+    if (order.channel === "B2B") {
+      return NextResponse.json(
+        { error: B2B_CARRIER_ACTION_UNSUPPORTED_MESSAGE, code: "B2B_CARRIER_ACTION_UNSUPPORTED" },
+        { status: 422 }
+      );
+    }
     let accepted = false;
     try {
       const res = await cancelDelhiveryShipment(order.shipment.waybill);

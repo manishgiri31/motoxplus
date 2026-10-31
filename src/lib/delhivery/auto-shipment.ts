@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { createDelhiveryShipment } from "./shipment";
+import { createShipmentForOrder } from "./provider";
 import { autoRequestPickup } from "./pickup";
 
 /**
@@ -52,8 +52,13 @@ export async function autoCreateShipment(orderId: string): Promise<void> {
   }
 
   try {
-    const { waybill } = await createDelhiveryShipment(orderId);
-    await recordShipmentEvent(orderId, "SHIPMENT_CREATED", `Delhivery AWB ${waybill}`);
+    // Order.channel picks the module (B2C create.json / B2B manifest).
+    const result = await createShipmentForOrder(orderId);
+    // B2B has no AWB yet — createB2bShipment already wrote its own
+    // B2B_MANIFEST_SUBMITTED event (with the job_id) in the same transaction.
+    if (result.kind === "b2c-awb") {
+      await recordShipmentEvent(orderId, "SHIPMENT_CREATED", `Delhivery AWB ${result.waybill}`);
+    }
     // An AWB alone doesn't get the parcel collected — book the pickup too.
     // Never throws; a pickup failure must not mark the (successful) shipment failed.
     await autoRequestPickup(orderId);

@@ -1,5 +1,6 @@
 import { delhiveryFetch } from "./client";
 import { getDelhiveryConfig, toDelhiveryChannel, type DelhiveryChannel } from "./config";
+import { requestB2bPickup } from "./b2b/pickup";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -127,7 +128,21 @@ export async function autoRequestPickup(orderId: string): Promise<void> {
     const order = await prisma.order.findUnique({ where: { id: orderId }, select: { channel: true } });
     if (!order) throw new Error(`Order ${orderId} not found`);
 
-    const r = await requestDelhiveryPickup(toDelhiveryChannel(order.channel));
+    const channel = toDelhiveryChannel(order.channel);
+
+    // B2B is a different API (ltl-clients-api, JWT) — never the B2C call below.
+    if (channel === "B2B") {
+      const slot = nextPickupSlot();
+      await requestB2bPickup({ pickupDate: slot.pickupDate, startTime: slot.pickupTime, expectedPackageCount: 1 });
+      await recordPickupEvent(
+        orderId,
+        "PICKUP_REQUESTED",
+        `[B2B] Pickup requested for ${slot.pickupDate} ${slot.pickupTime}, 1 package(s)`
+      );
+      return;
+    }
+
+    const r = await requestDelhiveryPickup(channel);
     const detail = r.alreadyScheduled
       ? `[${r.channel}] Pickup already scheduled for ${r.pickupDate} ${r.pickupTime}`
       : `[${r.channel}] Pickup ${r.pickupId ?? "(no id returned)"} requested for ${r.pickupDate} ${r.pickupTime}, ${r.packageCount} package(s)`;

@@ -4,6 +4,10 @@ const delhiveryFetchMock = vi.fn();
 vi.mock("./client", () => ({
   delhiveryFetch: (...a: unknown[]) => delhiveryFetchMock(...a),
 }));
+const requestB2bPickupMock = vi.fn();
+vi.mock("./b2b/pickup", () => ({
+  requestB2bPickup: (...a: unknown[]) => requestB2bPickupMock(...a),
+}));
 vi.mock("./config", () => ({
   toDelhiveryChannel: (v: unknown) => {
     if (v === "B2C" || v === "B2B") return v;
@@ -83,15 +87,8 @@ describe("requestDelhiveryPickup", () => {
   });
 
   it("scopes the waiting-package count to the channel", async () => {
-    await requestDelhiveryPickup("B2B", new Date("2026-11-01T04:00:00Z"));
-    expect(shipmentCount).toHaveBeenCalledWith({ where: { status: "MANIFESTED", order: { channel: "B2B" } } });
-  });
-
-  it("B2B: uses the B2B token and the B2B pickup location", async () => {
-    await requestDelhiveryPickup("B2B", new Date("2026-11-01T04:00:00Z"));
-    const [, opts] = delhiveryFetchMock.mock.calls[0];
-    expect(opts.channel).toBe("B2B");
-    expect(JSON.parse(opts.body).pickup_location).toBe("LOC-B2B");
+    await requestDelhiveryPickup("B2C", new Date("2026-11-01T04:00:00Z"));
+    expect(shipmentCount).toHaveBeenCalledWith({ where: { status: "MANIFESTED", order: { channel: "B2C" } } });
   });
 
   it("B2C: uses the B2C token and the B2C pickup location", async () => {
@@ -121,13 +118,37 @@ describe("autoRequestPickup", () => {
     });
   });
 
-  it("books the pickup on the channel of the order that was just shipped", async () => {
-    orderFindUnique.mockResolvedValue({ channel: "B2B" });
+  it("B2C order: books through the existing B2C pickup call (track.delhivery.com path)", async () => {
     await autoRequestPickup("order_1");
     expect(orderFindUnique).toHaveBeenCalledWith({ where: { id: "order_1" }, select: { channel: true } });
-    expect(delhiveryFetchMock.mock.calls[0][1].channel).toBe("B2B");
+    expect(delhiveryFetchMock).toHaveBeenCalledTimes(1);
+    expect(requestB2bPickupMock).not.toHaveBeenCalled();
+    expect(orderEventCreate).toHaveBeenCalledWith({
+      data: { orderId: "order_1", type: "PICKUP_REQUESTED", reason: expect.stringContaining("[B2C]") },
+    });
+  });
+
+  it("B2B order: goes to the B2B module and NEVER to the B2C client", async () => {
+    orderFindUnique.mockResolvedValue({ channel: "B2B" });
+    requestB2bPickupMock.mockResolvedValue({});
+    await autoRequestPickup("order_1");
+    expect(requestB2bPickupMock).toHaveBeenCalledWith({
+      pickupDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      startTime: "16:00:00",
+      expectedPackageCount: 1,
+    });
+    expect(delhiveryFetchMock).not.toHaveBeenCalled();
     expect(orderEventCreate).toHaveBeenCalledWith({
       data: { orderId: "order_1", type: "PICKUP_REQUESTED", reason: expect.stringContaining("[B2B]") },
+    });
+  });
+
+  it("B2B pickup failure is recorded as PICKUP_FAILED, not thrown", async () => {
+    orderFindUnique.mockResolvedValue({ channel: "B2B" });
+    requestB2bPickupMock.mockRejectedValue(new Error("Delhivery B2B API error 400"));
+    await expect(autoRequestPickup("order_1")).resolves.toBeUndefined();
+    expect(orderEventCreate).toHaveBeenCalledWith({
+      data: { orderId: "order_1", type: "PICKUP_FAILED", reason: expect.stringContaining("B2B API error") },
     });
   });
 

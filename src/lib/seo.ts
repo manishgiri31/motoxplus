@@ -12,6 +12,22 @@ export function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+export const DEFAULT_PRODUCT_IMAGE = "/motoxplus/logo.png";
+
+/**
+ * Image URLs for Product structured data. Google requires at least one valid,
+ * absolute `image`, so empty/blank entries are dropped, relative paths are made
+ * absolute, and the brand logo is used when a product has no photo yet.
+ */
+export function productJsonLdImages(...sources: Array<ReadonlyArray<string | null | undefined> | null | undefined>): string[] {
+  const urls = sources
+    .flatMap((s) => s ?? [])
+    .map((u) => u?.trim())
+    .filter((u): u is string => !!u)
+    .map((u) => (/^https?:\/\//i.test(u) ? u : absoluteUrl(u)));
+  return urls.length > 0 ? Array.from(new Set(urls)) : [absoluteUrl(DEFAULT_PRODUCT_IMAGE)];
+}
+
 /** Truncates at a word boundary and appends "…" — never cuts mid-word like a blind `.slice()`. */
 export function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;

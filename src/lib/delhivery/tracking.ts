@@ -8,6 +8,7 @@ import type {
 } from "./types";
 import { normalizeShipmentStatus } from "./types";
 import { isPreShipCarrierStatus } from "./carrier-status";
+import { assertB2cCarrierAction } from "./errors";
 import { notifyOrderEvent, type OrderNotificationEvent } from "@/lib/push/order-notifications";
 
 // Same subset as the webhook path: only ship / deliver are reachable here
@@ -95,9 +96,13 @@ export async function fetchLiveTracking(waybill: string): Promise<TrackingResult
 export async function syncTrackingToDb(orderId: string): Promise<void> {
   const shipment = await prisma.shipment.findUnique({
     where: { orderId },
-    include: { order: { select: { status: true } } },
+    include: { order: { select: { status: true, channel: true } } },
   });
   if (!shipment) return;
+
+  // Tracking is a B2C-token call (track.delhivery.com). A B2B order gets a clear
+  // error, never a call made with the wrong credentials.
+  assertB2cCarrierAction(shipment.order.channel, "tracking sync");
 
   const priorOrderStatus = shipment.order.status;
 

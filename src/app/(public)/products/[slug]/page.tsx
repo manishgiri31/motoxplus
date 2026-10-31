@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { ProductDetailClient } from "@/components/products/product-detail-client";
 import { RelatedProducts, RelatedProductsSkeleton } from "@/components/products/related-products";
 import { JsonLd } from "@/components/seo/json-ld";
-import { absoluteUrl, buildMetadata, truncate, SITE_NAME_SHORT } from "@/lib/seo";
+import { absoluteUrl, buildMetadata, productJsonLdImages, truncate, SITE_NAME_SHORT } from "@/lib/seo";
 import { type CompatibilityFilter } from "@/lib/vehicle/compatibility";
 import { getProductBySlugOrLegacyId, getReviewStats } from "@/lib/catalog/queries";
 
@@ -148,10 +148,10 @@ export default async function ProductDetailPage(
           description: product.description || undefined,
           sku: product.sku,
           mpn: product.partNumber,
-          image:
-            product.productImages && product.productImages.length > 0
-              ? product.productImages.map((img: { imageUrl: string }) => img.imageUrl)
-              : product.images,
+          image: productJsonLdImages(
+            product.productImages?.map((img: { imageUrl: string }) => img.imageUrl),
+            product.images
+          ),
           brand: { "@type": "Brand", name: product.brand },
           manufacturer: { "@type": "Organization", name: product.brand },
           countryOfOrigin: product.countryOfOrigin,

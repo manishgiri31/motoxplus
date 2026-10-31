@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { fetchLiveTracking, syncTrackingToDb } from "@/lib/delhivery";
+import { fetchLiveTracking, syncTrackingToDb, B2B_CARRIER_ACTION_UNSUPPORTED_MESSAGE } from "@/lib/delhivery";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { requireSectionAccess } from "@/lib/staff-access";
 
@@ -39,6 +39,14 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 
   if (!order.shipment) {
     return NextResponse.json({ error: "Shipment not created yet" }, { status: 404 });
+  }
+
+  // Tracking is a B2C-token call; B2B shipments live on a different API.
+  if (order.channel === "B2B") {
+    return NextResponse.json(
+      { error: B2B_CARRIER_ACTION_UNSUPPORTED_MESSAGE, code: "B2B_CARRIER_ACTION_UNSUPPORTED" },
+      { status: 422 }
+    );
   }
 
   // Refresh from Delhivery if last update was > 30 minutes ago

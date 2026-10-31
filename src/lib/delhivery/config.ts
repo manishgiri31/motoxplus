@@ -8,21 +8,17 @@ import { DelhiveryConfigError } from "./errors";
 export type DelhiveryChannel = "B2C" | "B2B";
 
 /**
- * Per-channel env var names, in priority order (first non-empty wins).
- * B2C keeps the pre-channel names as a fallback so the existing production
- * .env keeps working until the new vars are set. B2B deliberately has NO
- * fallback: silently using the Domestic (B2C) token for a B2B order would
- * book it on the wrong Delhivery client and wallet.
+ * Env var names for the B2C (track.delhivery.com, static token) client, in
+ * priority order (first non-empty wins). The pre-channel names are kept as a
+ * fallback so the existing production .env keeps working.
+ *
+ * B2B is NOT here on purpose: it is a different API (ltl-clients-api, JWT from
+ * /ums/login) with its own config in ./b2b/config.ts. Handing B2B this
+ * config would send B2B traffic to track.delhivery.com.
  */
-const CHANNEL_ENV: Record<DelhiveryChannel, { token: string[]; pickupLocation: string[] }> = {
-  B2C: {
-    token: ["DELHIVERY_TOKEN_B2C", "DELHIVERY_TOKEN"],
-    pickupLocation: ["DELHIVERY_PICKUP_LOCATION_B2C", "DELHIVERY_PICKUP_LOCATION_NAME"],
-  },
-  B2B: {
-    token: ["DELHIVERY_TOKEN_B2B"],
-    pickupLocation: ["DELHIVERY_PICKUP_LOCATION_B2B"],
-  },
+const B2C_ENV = {
+  token: ["DELHIVERY_TOKEN_B2C", "DELHIVERY_TOKEN"],
+  pickupLocation: ["DELHIVERY_PICKUP_LOCATION_B2C", "DELHIVERY_PICKUP_LOCATION_NAME"],
 };
 
 /** Narrows Order.channel to a DelhiveryChannel; anything else is a bug upstream. */
@@ -96,6 +92,12 @@ const cached = new Map<DelhiveryChannel, DelhiveryConfig>();
  * reading a module-level constant.
  */
 export function getDelhiveryConfig(channel: DelhiveryChannel = "B2C"): DelhiveryConfig {
+  if (channel === "B2B") {
+    throw new DelhiveryConfigError(
+      "[Delhivery config] B2B does not use track.delhivery.com — it goes through src/lib/delhivery/b2b (ltl-clients-api, JWT). " +
+        "A B2B request must never be built from the B2C config."
+    );
+  }
   const hit = cached.get(channel);
   if (hit) return hit;
 
@@ -115,7 +117,7 @@ export function getDelhiveryConfig(channel: DelhiveryChannel = "B2C"): Delhivery
     ? []
     : parsed.error.issues.map((issue) => `${issue.path.join(".") || "(env)"}: ${issue.message}`);
 
-  const wanted = CHANNEL_ENV[channel];
+  const wanted = B2C_ENV;
   const token = firstEnv(wanted.token);
   if (!token || token.value.length < 20) {
     issues.push(`${wanted.token[0]}: missing, empty, or under 20 characters (channel ${channel})`);

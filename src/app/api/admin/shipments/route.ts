@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createDelhiveryShipment, autoRequestPickup } from "@/lib/delhivery";
+import { createShipmentForOrder, autoRequestPickup } from "@/lib/delhivery";
 import { DelhiveryConfigError } from "@/lib/delhivery/errors";
 
 // Route reads the session (cookies) on every request, so it was never a
@@ -54,10 +54,15 @@ export async function POST(req: NextRequest) {
   if (!orderId) return NextResponse.json({ error: "orderId required" }, { status: 400 });
 
   try {
-    const result = await createDelhiveryShipment(orderId);
+    const result = await createShipmentForOrder(orderId);
     // Manual creation should also get a pickup; never throws, idempotent per slot.
     await autoRequestPickup(orderId);
-    return NextResponse.json(result);
+    // B2C keeps its original response shape; B2B has a manifest job_id, no AWB yet.
+    return NextResponse.json(
+      result.kind === "b2c-awb"
+        ? { waybill: result.waybill, trackingUrl: result.trackingUrl }
+        : { jobId: result.jobId, alreadySubmitted: result.alreadySubmitted }
+    );
   } catch (err) {
     if (err instanceof DelhiveryConfigError) {
       console.error("[Admin] Delhivery is not configured:", err.message);

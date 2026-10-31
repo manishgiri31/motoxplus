@@ -64,10 +64,10 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-[9998] h-12 bg-white/80 font-store backdrop-blur-xl backdrop-saturate-150 supports-[not(backdrop-filter:blur(1px))]:bg-white/95 bp-md:h-11">
+    <header className="sticky top-0 z-[9998] h-14 bg-white/80 font-store backdrop-blur-xl backdrop-saturate-150 supports-[not(backdrop-filter:blur(1px))]:bg-white/95">
       <nav aria-label="Main" className="mx-auto flex h-full max-w-[1024px] items-center justify-between px-[22px]">
         <Link href="/" className={cn("flex items-center gap-2 text-17 font-semibold text-store-ink", focus)}>
-          <Image src="/motoxplus/logo.png" alt="" width={400} height={300} className="h-8 w-auto object-contain" priority />
+          <Image src="/motoxplus/logo.png" alt="" width={400} height={300} className="h-10 w-auto object-contain" priority />
           MOTOXPLUS
         </Link>
 
@@ -122,7 +122,7 @@ export function Navbar() {
       </nav>
 
       {open && (
-        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-12 overflow-y-auto bg-white bp-md:hidden">
+        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-14 overflow-y-auto bg-white bp-md:hidden">
           <ul className="mx-auto max-w-[1024px] px-[22px] pt-4">
             {[{ label: "Home", href: "/" }, ...links].map((l) => (
               <li key={l.href} className="border-b border-store-line-soft">

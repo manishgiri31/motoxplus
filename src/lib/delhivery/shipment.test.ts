@@ -209,8 +209,8 @@ describe("createDelhiveryShipment — payment mode per payment type", () => {
   });
 });
 
-describe("createDelhiveryShipment — channel selection", () => {
-  it("B2C order: B2C token and B2C pickup location", async () => {
+describe("createDelhiveryShipment — channel handling", () => {
+  it("B2C order: B2C client and B2C pickup location", async () => {
     txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, channel: "B2C" });
     await createDelhiveryShipment("order_1");
     const call = delhiveryPost.mock.calls[0];
@@ -218,12 +218,10 @@ describe("createDelhiveryShipment — channel selection", () => {
     expect(requestOf(call).pickup_location.name).toBe("LOC-B2C");
   });
 
-  it("B2B order: B2B token and B2B pickup location", async () => {
+  it("B2B order: refused here — create.json (track.delhivery.com) is never used for B2B", async () => {
     txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, channel: "B2B" });
-    await createDelhiveryShipment("order_1");
-    const call = delhiveryPost.mock.calls[0];
-    expect(call[2]).toEqual({ retries: 1, channel: "B2B" });
-    expect(requestOf(call).pickup_location.name).toBe("LOC-B2B");
+    await expect(createDelhiveryShipment("order_1")).rejects.toThrow(/B2B module/);
+    expect(delhiveryPost).not.toHaveBeenCalled();
   });
 
   it("refuses an order with an unknown channel instead of guessing a client", async () => {

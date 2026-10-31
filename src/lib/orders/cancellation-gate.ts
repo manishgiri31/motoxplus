@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { classifyCarrierTier } from "@/lib/delhivery/carrier-cancellation";
+import { B2B_CARRIER_ACTION_UNSUPPORTED_MESSAGE } from "@/lib/delhivery/errors";
 import {
   evaluateCancellation,
   calculateCancellation,
@@ -18,6 +19,8 @@ import { computeFullCancelWithRefund } from "@/lib/schemes/adjustment";
 export interface GateOrder {
   id: string;
   status: string;
+  /** Order.channel. B2B shipments are not on the B2C carrier API, so carrier checks are refused for them. */
+  channel?: string;
   paymentType: string;
   grandTotal: number;
   amountPaid: number;
@@ -54,6 +57,10 @@ export async function resolveDealerGate(order: GateOrder): Promise<{ reason: str
 
   if (local === "ALLOW") return null;
   if (local === "BLOCK") return { reason: DEALER_POST_SHIP_BLOCK_MESSAGE };
+
+  // The carrier check is a B2C-token call; never make it for a B2B order. Fail
+  // closed with a clear reason (routes the dealer to an admin).
+  if (order.channel === "B2B") return { reason: B2B_CARRIER_ACTION_UNSUPPORTED_MESSAGE };
 
   const classification = await classifyCarrierTier(order.shipment!.waybill);
   return resolveDealerGateFromCarrier(classification.tier) === "ALLOW"
@@ -105,6 +112,9 @@ export async function buildCancellationQuote(
   let stage: CancellationStage = eligibility.stage;
   let carrierStatus: string | undefined;
   if (!isDealerActor && order.shipment) {
+    if (order.channel === "B2B") {
+      return { allowed: false, grandTotal: order.grandTotal, amountPaid: order.amountPaid, reason: B2B_CARRIER_ACTION_UNSUPPORTED_MESSAGE };
+    }
     const classification = await classifyCarrierTier(order.shipment.waybill);
     stage = defaultAdminStageFromCarrier({
       hasShipment: true,

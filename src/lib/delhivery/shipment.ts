@@ -199,6 +199,11 @@ async function createShipmentLocked(
   // the channel is resolved once from the order and threaded into the payload
   // builder (pickup_location) and the API call (token).
   const channel = toDelhiveryChannel(order.channel);
+  if (channel === "B2B") {
+    // Defence in depth: the provider routes B2B orders to the B2B module. This
+    // path posts to track.delhivery.com, which a B2B order must never reach.
+    throw new Error(`Order ${orderId} is B2B — it must be manifested through the B2B module, not create.json`);
+  }
   // order.dealer is null for a B2C order (Order.dealerId/.dealer are optional
   // — B2C-EXPANSION-PLAN.md Phase 2); its own delivery fields are always
   // populated at creation time for that channel, so the `?? order.dealer?.x`
