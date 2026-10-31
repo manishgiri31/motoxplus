@@ -30,7 +30,7 @@ export default async function VehicleCategoryPage(props: { params: Promise<{ cat
           <Link href="/vehicles" className="text-[var(--muted)] hover:text-[var(--red)] text-xs font-semibold">
             ← All Vehicles
           </Link>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight mt-4">
+          <h1 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold text-[var(--ink)] tracking-tight mt-4">
             {cat.label.slice(0, -1)}<span className="text-[var(--red)]">s.</span>
           </h1>
           <p className="text-[var(--muted)] mt-3 max-w-xl">

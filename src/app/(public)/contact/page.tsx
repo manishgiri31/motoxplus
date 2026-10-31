@@ -13,7 +13,7 @@ export default function ContactPage() {
       {/* Hero */}
       <section className="py-16 md:py-20 px-4 md:px-8 text-center">
         <Eyebrow className="justify-center mb-5">Contact</Eyebrow>
-        <h1 className="font-display text-4xl md:text-5xl font-bold text-[var(--ink)] tracking-tight">
+        <h1 className="font-display text-[clamp(36px,5.5vw,56px)] leading-[1.08] font-bold text-[var(--ink)] tracking-tight">
           We&apos;d love to hear from you.
         </h1>
       </section>

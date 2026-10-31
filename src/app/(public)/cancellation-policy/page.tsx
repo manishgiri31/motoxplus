@@ -26,7 +26,7 @@ export default async function CancellationPolicyPage() {
             <span>/</span>
             <span>Cancellation Policy</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-[var(--ink)] tracking-tight mb-4">
+          <h1 className="text-[clamp(36px,5.5vw,56px)] leading-[1.08] font-black text-[var(--ink)] tracking-tight mb-4">
             Cancellation Policy
           </h1>
           <p className="text-[var(--muted)] text-sm">

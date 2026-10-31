@@ -17,7 +17,7 @@ export function MadeInIndia() {
         <Eyebrow index="11" rule className="mb-6 justify-center">
           Made in India
         </Eyebrow>
-        <h2 className="font-display text-3xl font-bold leading-[1.05] tracking-tight text-white md:text-5xl">
+        <h2 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold leading-[1.05] tracking-tight text-white md:text-5xl">
           Made in India.
           <br />
           Engineered for India.

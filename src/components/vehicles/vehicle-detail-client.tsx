@@ -376,7 +376,7 @@ export function VehicleDetailClient({
               {vehicle.manufacturer.name}
             </span>
           </div>
-          <h1 className="font-display text-4xl md:text-6xl font-bold text-[var(--ink)] tracking-tight">
+          <h1 className="font-display text-[clamp(36px,5.5vw,56px)] leading-[1.08] font-bold text-[var(--ink)] tracking-tight">
             {vehicle.name}
           </h1>
         </div>
@@ -400,7 +400,7 @@ export function VehicleDetailClient({
       {/* Specs */}
       {specs.length > 0 && (
         <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
-          <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
+          <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
             {specs.map((s) => (
               <div key={s.label} className="bg-[var(--card)] p-4">
                 <div className="text-[var(--muted)] text-12 mb-1">{s.label}</div>
@@ -455,7 +455,7 @@ export function VehicleDetailClient({
           {vehicle.gallery.length === 0 ? (
             <p className="text-[var(--muted)] text-sm">Gallery images coming soon.</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {vehicle.gallery.map((g, i) => (
                 <button
                   key={g.id}
@@ -609,7 +609,7 @@ export function VehicleDetailClient({
           {compatibleProducts.length === 0 ? (
             <p className="text-[var(--muted)] text-sm">No compatible parts found yet for this model.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {compatibleProducts.map((p) => {
                 const thumb =
                   p.productImages && p.productImages.length > 0 ? p.productImages[0].imageUrl : p.images[0];
@@ -704,7 +704,7 @@ export function VehicleDetailClient({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {recommendations.map((r) => (
                 <LinkedProductCard key={r.id} product={r.product} isDealer={isDealer} isCustomer={isCustomer} />
               ))}
@@ -725,7 +725,7 @@ export function VehicleDetailClient({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {accessories.map((a) => (
                 <LinkedProductCard key={a.id} product={a.product} isDealer={isDealer} isCustomer={isCustomer} />
               ))}
@@ -745,7 +745,7 @@ export function VehicleDetailClient({
               <p className="text-[var(--muted)] text-sm">Be the first to share your experience.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[var(--line)] border border-[var(--line)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {reviews.map((r) => (
                 <div key={r.id} className="bg-[var(--card)] p-6">
                   <div className="flex items-center justify-between mb-3">
@@ -815,7 +815,7 @@ export function VehicleDetailClient({
         <section className="py-12 px-4 md:px-8 border-t border-[var(--line)]">
           <div className="max-w-7xl mx-auto">
             <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-6">Related Vehicles</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
               {relatedVehicles.map((v) => (
                 <Link
                   key={v.id}

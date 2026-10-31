@@ -68,7 +68,7 @@ export async function RelatedProducts({ productId, categoryId, categoryName, veh
           </Link>
         )}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {relatedProducts.map((p) => {
           const thumb = getRelatedThumb(p);
           return (
@@ -104,7 +104,7 @@ export function RelatedProductsSkeleton() {
   return (
     <div>
       <div className="skeleton h-7 w-56 rounded mb-8" />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-[var(--card)]">
             <div className="skeleton h-36 w-full rounded-none" />

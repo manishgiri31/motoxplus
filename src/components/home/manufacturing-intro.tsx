@@ -13,7 +13,7 @@ export function ManufacturingIntro() {
           <Eyebrow index="02" className="mb-6">
             Manufacturing
           </Eyebrow>
-          <h2 className="font-display text-3xl font-bold leading-[1.05] tracking-tight text-[var(--ink)] md:text-4xl lg:text-5xl">
+          <h2 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold leading-[1.05] tracking-tight text-[var(--ink)] md:text-4xl lg:text-5xl">
             Precision is not a feature.
             <br />
             <span className="text-[var(--red)]">It is the process.</span>

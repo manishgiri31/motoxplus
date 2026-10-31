@@ -42,7 +42,7 @@ export default async function ProductsPage(
       <section className="py-14 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
           <Eyebrow className="mb-4">Product Catalog</Eyebrow>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight">
+          <h1 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold text-[var(--ink)] tracking-tight">
             Premium spare parts.
           </h1>
           <p className="text-[var(--muted)] mt-3 max-w-xl">

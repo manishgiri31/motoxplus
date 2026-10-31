@@ -61,7 +61,7 @@ export default async function VehiclesPage() {
       <section className="py-14 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
           <Eyebrow className="mb-4">Vehicle Explorer</Eyebrow>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight">
+          <h1 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold text-[var(--ink)] tracking-tight">
             Select your vehicle.
           </h1>
           <p className="text-[var(--muted)] mt-3 max-w-xl">
@@ -121,7 +121,7 @@ export default async function VehiclesPage() {
                   </div>
 
                   <div>
-                    <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2 drop-shadow-sm">
+                    <h2 className="text-[clamp(28px,4vw,40px)] leading-[1.1] font-black text-white tracking-tight mb-2 drop-shadow-sm">
                       {cat.label}
                     </h2>
                     <p className="text-white/70 text-sm mb-4 max-w-xs">{cat.tagline}</p>

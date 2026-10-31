@@ -24,7 +24,7 @@ export default function BecomeDealerPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div className="lg:sticky lg:top-28">
               <Eyebrow className="mb-5">Dealer Program</Eyebrow>
-              <h1 className="font-display text-4xl md:text-5xl font-bold text-[var(--ink)] tracking-tight mb-6">
+              <h1 className="font-display text-[clamp(36px,5.5vw,56px)] leading-[1.08] font-bold text-[var(--ink)] tracking-tight mb-6">
                 Join our dealer network.
               </h1>
               <p className="text-[var(--muted)] text-lg leading-relaxed mb-10">
@@ -33,9 +33,9 @@ export default function BecomeDealerPage() {
                 Sign up, verify your email and mobile, and you&apos;re in — no approval wait.
               </p>
 
-              <div className="grid grid-cols-2 gap-px bg-[var(--line)] border border-[var(--line)]">
+              <div className="grid grid-cols-2 gap-4">
                 {benefits.map((b) => (
-                  <Card key={b.title} pad="md" className="rounded-none border-0">
+                  <Card key={b.title} pad="md" className="rounded-[18px] border-transparent bg-[var(--card)]">
                     <b.Icon size={20} className="text-[var(--red)] mb-3" />
                     <h3 className="text-[var(--ink)] font-bold text-sm mb-1">{b.title}</h3>
                     <p className="text-[var(--muted)] text-xs leading-relaxed">{b.desc}</p>

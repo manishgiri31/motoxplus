@@ -447,7 +447,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
             )}
           </div>
 
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight mb-4">
+          <h1 className="font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold text-[var(--ink)] tracking-tight mb-4">
             {product.name}
             {resolvedVariant && (
               <span className="block text-lg font-semibold text-[var(--red)] mt-1">{resolvedVariant.label}</span>
@@ -711,7 +711,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
               <div className="flex items-baseline gap-6 mb-3 flex-wrap">
                 <div>
                   <div className="text-[var(--muted)] text-xs mb-1">Dealer Price (excl. GST)</div>
-                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
+                  <div className="tnum font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
                 </div>
                 <div>
                   <div className="text-[var(--muted)] text-xs mb-1">Incl. {product.gstRate}% GST</div>
@@ -752,7 +752,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
               <div className="text-[var(--muted)] text-xs mb-1">Price (excl. GST)</div>
               {activeMrp && customerExGst !== null ? (
                 <>
-                  <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(customerExGst)}</div>
+                  <div className="tnum font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold text-[var(--red)]">{formatCurrency(customerExGst)}</div>
                   <div className="text-[var(--muted)] text-sm font-semibold mt-1">+ {product.gstRate}% GST</div>
                   <div className="text-[var(--muted)] text-xs mt-0.5">({formatCurrency(activeMrp)} incl. GST)</div>
                 </>
@@ -771,7 +771,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
           ) : (
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
               <div className="text-[var(--muted)] text-xs mb-1">Dealer Price (excl. GST)</div>
-              <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
+              <div className="tnum font-display text-[clamp(28px,4vw,40px)] leading-[1.1] font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
               <div className="text-[var(--muted)] text-sm font-semibold mt-1">+ {product.gstRate}% GST</div>
               <div className="text-[var(--muted)] text-xs mt-0.5">({formatCurrency(priceWithGST)} incl. GST)</div>
               <div className="flex items-center gap-2 mt-3 border border-[var(--red)]/25 rounded-sm px-3 py-2 w-fit">
