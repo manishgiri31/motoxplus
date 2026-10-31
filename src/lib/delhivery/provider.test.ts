@@ -12,11 +12,29 @@ const requestDelhiveryPickupMock = vi.fn();
 vi.mock("./pickup", () => ({
   requestDelhiveryPickup: (...a: unknown[]) => requestDelhiveryPickupMock(...a),
   nextPickupSlot: () => ({ pickupDate: "2026-11-02", pickupTime: "16:00:00" }),
+  previousSlotCutoff: () => new Date("2026-11-01T10:00:00Z"),
 }));
 
+// The booking wrapper is covered in pickup-day.test.ts / auto-pickup.test.ts;
+// here it just runs `send` so this file pins what each provider sends.
+vi.mock("./pickup-day", () => ({
+  bookPickupOncePerDay: async (p: { channel: string; warehouse: string; pickupDate: string; pickupTime: string; send: () => Promise<Record<string, unknown>> }) => {
+    const sent = await p.send();
+    return { channel: p.channel, warehouse: p.warehouse, pickupDate: p.pickupDate, pickupTime: p.pickupTime, alreadyOpen: false, ...sent };
+  },
+}));
+vi.mock("./config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./config")>();
+  return { ...actual, getDelhiveryConfig: () => ({ pickup: { locationName: "WH-B2C" } }) };
+});
+vi.mock("./b2b/config", () => ({ getB2bConfig: () => ({ pickupLocationName: "WH-B2B" }) }));
+
 const createB2bShipmentMock = vi.fn();
+
+const getB2bWaitingPackagesMock = vi.fn();
 vi.mock("./b2b/shipment", () => ({
   createB2bShipment: (...a: unknown[]) => createB2bShipmentMock(...a),
+  getB2bWaitingPackages: (...a: unknown[]) => getB2bWaitingPackagesMock(...a),
 }));
 
 const requestB2bPickupMock = vi.fn();
@@ -45,6 +63,7 @@ beforeEach(() => {
     alreadyScheduled: false,
   });
   requestB2bPickupMock.mockResolvedValue({});
+  getB2bWaitingPackagesMock.mockResolvedValue(2);
 });
 
 describe("createShipmentForOrder — Order.channel picks the module", () => {
@@ -81,26 +100,31 @@ describe("createShipmentForOrder — Order.channel picks the module", () => {
 describe("requestPickup", () => {
   it("B2C provider uses the existing B2C pickup", async () => {
     const r = await getProvider("B2C").requestPickup("o1");
-    expect(requestDelhiveryPickupMock).toHaveBeenCalledWith("B2C");
+    expect(requestDelhiveryPickupMock).toHaveBeenCalledWith("B2C", expect.any(Date));
     expect(requestB2bPickupMock).not.toHaveBeenCalled();
-    expect(r).toMatchObject({ channel: "B2C", pickupId: "9", packageCount: 2 });
+    expect(r).toMatchObject({ channel: "B2C", warehouse: "WH-B2C", pickupId: "9", packageCount: 2 });
   });
 
   it("B2B provider uses the B2B pickup with the slot split into pickup_date / start_time", async () => {
     const r = await getProvider("B2B").requestPickup("o1");
+    // expected_package_count = the warehouse's waiting packages since the previous cutoff
+    expect(getB2bWaitingPackagesMock).toHaveBeenCalledWith(new Date("2026-11-01T10:00:00Z"));
     expect(requestB2bPickupMock).toHaveBeenCalledWith({
       pickupDate: "2026-11-02",
       startTime: "16:00:00",
-      expectedPackageCount: 1,
+      expectedPackageCount: 2,
     });
     expect(requestDelhiveryPickupMock).not.toHaveBeenCalled();
-    expect(r.channel).toBe("B2B");
+    expect(r).toMatchObject({ channel: "B2B", warehouse: "WH-B2B" });
   });
 });
 
 describe("registerWarehouse", () => {
-  it("is unimplemented on both sides until each spec is provided (they are different payloads)", async () => {
+  it("B2C is unimplemented until its own spec (name / phone / pin / return_address) is provided", async () => {
     await expect(getProvider("B2C").registerWarehouse()).rejects.toBeInstanceOf(DelhiveryNotSpecifiedError);
-    await expect(getProvider("B2B").registerWarehouse()).rejects.toBeInstanceOf(DelhiveryNotSpecifiedError);
+  });
+
+  it("B2B requires its payload and never fires without one", async () => {
+    await expect(getProvider("B2B").registerWarehouse()).rejects.toThrow(/requires the warehouse payload/);
   });
 });

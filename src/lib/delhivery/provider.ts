@@ -2,18 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { toDelhiveryChannel, type DelhiveryChannel } from "./config";
 import { b2cProvider } from "./b2c/provider";
 import { b2bProvider } from "./b2b/provider";
+import type { PickupBooking } from "./pickup-day";
 
 export type ShipmentResult =
   | { kind: "b2c-awb"; waybill: string; trackingUrl: string }
   | { kind: "b2b-manifest"; jobId: string; alreadySubmitted: boolean };
 
-export interface PickupOutcome {
-  channel: DelhiveryChannel;
-  pickupDate: string;
-  pickupTime: string;
-  packageCount: number;
-  pickupId: string | null;
-}
+export type PickupOutcome = PickupBooking;
 
 /**
  * Common surface of the two Delhivery clients. Both take the order id (not a
@@ -24,8 +19,14 @@ export interface PickupOutcome {
 export interface DelhiveryProvider {
   readonly channel: DelhiveryChannel;
   createShipment(orderId: string): Promise<ShipmentResult>;
+  /** Books the warehouse's pickup for the day — ONE per warehouse per day, not per order. */
   requestPickup(orderId: string): Promise<PickupOutcome>;
-  registerWarehouse(): Promise<never>;
+  /**
+   * Registers a warehouse. Deliberately manual: nothing in the app calls it, and
+   * B2C is unimplemented until its spec (name / phone / pin / return_address)
+   * is provided. `input` is the module-specific payload.
+   */
+  registerWarehouse(input?: unknown): Promise<{ name: string; alreadyExisted: boolean }>;
 }
 
 /** Order.channel decides which module runs. */

@@ -1,12 +1,36 @@
 import { b2bRequest } from "./client";
-import { DelhiveryNotSpecifiedError } from "../errors";
+import { getB2bConfig } from "./config";
+import { DelhiveryB2bProdManifestBlockedError, DelhiveryNotSpecifiedError } from "../errors";
 
-/**
- * Transport-level input for POST /manifest. Only field NAMES and the
- * cod_amount rule come from the spec we hold; the inner structure of
- * dropoff_location / invoices / shipment_details is NOT specified, so those
- * are passed through as-is (JSON-stringified) and never interpreted here.
- */
+// Structures below are the exact shapes from the B2B docs' curl example.
+
+export interface B2bDropoffLocation {
+  consignee_name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone: string;
+  email: string;
+}
+
+export interface B2bInvoice {
+  ewaybill: string;
+  inv_num: string;
+  inv_amt: number;
+  inv_qr_code: string;
+}
+
+export interface B2bShipmentDetail {
+  order_id: string;
+  box_count: number;
+  description: string;
+  /** Grams. */
+  weight: number;
+  waybills: string[];
+  master: boolean;
+}
+
 export interface B2bManifestInput {
   pickupLocationName: string;
   paymentMode: "cod" | "prepaid";
@@ -14,19 +38,28 @@ export interface B2bManifestInput {
   codAmount?: number;
   /** Grams. */
   weightGrams: number;
-  dropoffLocation: unknown;
-  invoices: unknown[];
-  shipmentDetails: unknown[];
-  freightMode: string | number | boolean;
-  fmPickup: string | number | boolean;
-  rovInsurance: string | number | boolean;
+  dropoffLocation: B2bDropoffLocation;
+  invoices: B2bInvoice[];
+  shipmentDetails: B2bShipmentDetail[];
+  freightMode: string;
+  fmPickup: boolean;
+  /** Sent only when defined — i.e. only for retail / co-loader accounts. */
+  rovInsurance?: string;
 }
 
 /**
- * POST /manifest — multipart/form-data, Bearer JWT. Response carries `job_id`;
- * the manifest is processed asynchronously, so there is no LR number here.
+ * POST /manifest — multipart/form-data, Bearer JWT. Response carries `job_id`
+ * (its format is not verified, so number or string is accepted); the manifest
+ * is processed asynchronously, so there is no LR number here.
+ *
+ * On the PRODUCTION host this refuses to run until
+ * DELHIVERY_B2B_PROD_MANIFEST_VERIFIED=true, i.e. until someone has seen a
+ * job_id come back from the dev host. Dev hosts are never gated.
  */
 export async function submitB2bManifest(input: B2bManifestInput): Promise<{ jobId: string }> {
+  const { isProd, prodManifestVerified } = getB2bConfig();
+  if (isProd && !prodManifestVerified) throw new DelhiveryB2bProdManifestBlockedError();
+
   if (!(input.weightGrams > 0)) throw new Error("B2B manifest: weight (grams) must be > 0");
   if (input.paymentMode === "cod" && !(input.codAmount !== undefined && input.codAmount > 0)) {
     throw new Error("B2B manifest: cod_amount is required (> 0) when payment_mode is cod");
@@ -40,9 +73,9 @@ export async function submitB2bManifest(input: B2bManifestInput): Promise<{ jobI
   form.append("dropoff_location", JSON.stringify(input.dropoffLocation));
   form.append("invoices", JSON.stringify(input.invoices));
   form.append("shipment_details", JSON.stringify(input.shipmentDetails));
-  form.append("freight_mode", String(input.freightMode));
+  form.append("freight_mode", input.freightMode);
   form.append("fm_pickup", String(input.fmPickup));
-  form.append("rov_insurance", String(input.rovInsurance));
+  if (input.rovInsurance !== undefined) form.append("rov_insurance", input.rovInsurance);
 
   // No Content-Type header: fetch sets multipart/form-data with the boundary.
   const { json, text } = await b2bRequest("/manifest", { method: "POST", body: form });

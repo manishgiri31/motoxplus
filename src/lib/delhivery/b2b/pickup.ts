@@ -26,12 +26,12 @@ export async function requestB2bPickup(input: B2bPickupInput): Promise<unknown> 
     throw new Error("B2B pickup: expected_package_count must be a positive integer");
   }
 
-  const { clientWarehouse } = getB2bConfig();
+  const { pickupLocationName } = getB2bConfig();
   const { json, text } = await b2bRequest("/pickup_requests/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      client_warehouse: clientWarehouse,
+      client_warehouse: pickupLocationName, // = DELHIVERY_PICKUP_LOCATION_B2B
       pickup_date: input.pickupDate,
       start_time: input.startTime,
       expected_package_count: input.expectedPackageCount,

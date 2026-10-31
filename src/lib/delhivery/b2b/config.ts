@@ -7,16 +7,28 @@ export interface B2bConfig {
   baseUrl: string;
   username: string;
   password: string;
-  /**
-   * Name (dot path allowed, e.g. "data.jwt") of the JWT field in the
-   * POST /ums/login response. Deliberately an env var, not a constant: the
-   * field name is not in any spec we hold, so it is set from a real response.
-   */
-  tokenField: string | null;
-  /** Manifest `pickup_location_name`. */
+  /** Registered warehouse name: manifest `pickup_location_name` AND pickup `client_warehouse`. */
   pickupLocationName: string;
-  /** Pickup request `client_warehouse` (defaults to the same registered name). */
-  clientWarehouse: string;
+  /** True when baseUrl is the production LTL host (anything else is dev/test). */
+  isProd: boolean;
+  /**
+   * Operator confirmation that a manifest has been accepted on the DEV host
+   * (a job_id came back). Until true, manifests are refused on the prod host.
+   */
+  prodManifestVerified: boolean;
+  /**
+   * Retail / co-loader account. Only then is `rov_insurance` sent on the
+   * manifest; for everyone else the key is omitted entirely. Default false.
+   */
+  retailColoader: boolean;
+  /** Value for `rov_insurance` — required (and only used) when retailColoader is true. */
+  rovInsurance: string | null;
+}
+
+export const B2B_PROD_HOST = "ltl-clients-api.delhivery.com";
+
+function envFlag(name: string): boolean {
+  return env(name).toLowerCase() === "true";
 }
 
 function env(name: string): string {
@@ -48,12 +60,20 @@ export function getB2bConfig(): B2bConfig {
     issues.push("DELHIVERY_B2B_BASE_URL: must be a valid URL");
   }
 
-  const username = env("DELHIVERY_B2B_USERNAME");
-  const password = env("DELHIVERY_B2B_PASSWORD");
+  const username = env("DELHIVERY_USERNAME_B2B");
+  const password = env("DELHIVERY_PASSWORD_B2B");
   const pickupLocationName = env("DELHIVERY_PICKUP_LOCATION_B2B");
-  if (!username) issues.push("DELHIVERY_B2B_USERNAME: is required");
-  if (!password) issues.push("DELHIVERY_B2B_PASSWORD: is required");
+  if (!username) issues.push("DELHIVERY_USERNAME_B2B: is required");
+  if (!password) issues.push("DELHIVERY_PASSWORD_B2B: is required");
   if (!pickupLocationName) issues.push("DELHIVERY_PICKUP_LOCATION_B2B: is required");
+
+  const retailColoader = envFlag("DELHIVERY_B2B_RETAIL_COLOADER");
+  const rovInsurance = env("DELHIVERY_B2B_ROV_INSURANCE");
+  // The accepted values for rov_insurance are not in the spec we hold, so the
+  // value is supplied by the operator rather than hardcoded.
+  if (retailColoader && !rovInsurance) {
+    issues.push("DELHIVERY_B2B_ROV_INSURANCE: is required when DELHIVERY_B2B_RETAIL_COLOADER=true");
+  }
 
   if (issues.length > 0) {
     throw new DelhiveryConfigError(`[Delhivery B2B config] Invalid environment configuration:\n  ${issues.join("\n  ")}`);
@@ -63,8 +83,10 @@ export function getB2bConfig(): B2bConfig {
     baseUrl,
     username,
     password,
-    tokenField: env("DELHIVERY_B2B_TOKEN_FIELD") || null,
     pickupLocationName,
-    clientWarehouse: env("DELHIVERY_B2B_CLIENT_WAREHOUSE") || pickupLocationName,
+    isProd: new URL(baseUrl).hostname === B2B_PROD_HOST,
+    prodManifestVerified: envFlag("DELHIVERY_B2B_PROD_MANIFEST_VERIFIED"),
+    retailColoader,
+    rovInsurance: retailColoader ? rovInsurance : null,
   };
 }

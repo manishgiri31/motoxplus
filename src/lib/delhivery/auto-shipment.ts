@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { createShipmentForOrder } from "./provider";
-import { autoRequestPickup } from "./pickup";
+import { autoRequestPickup } from "./auto-pickup";
 
 /**
  * Master switch for AUTOMATIC Delhivery shipment creation — the order reaches

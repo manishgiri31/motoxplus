@@ -62,3 +62,18 @@ export class DelhiveryB2bAuthLockedError extends DelhiveryB2bAuthError {
     this.name = "DelhiveryB2bAuthLockedError";
   }
 }
+
+/**
+ * The B2B manifest was NOT sent because the target is the production LTL host
+ * and nobody has confirmed the manifest works on the dev host yet.
+ */
+export class DelhiveryB2bProdManifestBlockedError extends Error {
+  constructor() {
+    super(
+      "B2B manifest blocked on the production host: it has not been verified on the dev host yet. " +
+        "Run scripts/delhivery-b2b-dev-manifest.ts against DELHIVERY_B2B_BASE_URL=<dev host>, confirm a job_id comes back, " +
+        "then set DELHIVERY_B2B_PROD_MANIFEST_VERIFIED=true."
+    );
+    this.name = "DelhiveryB2bProdManifestBlockedError";
+  }
+}

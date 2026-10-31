@@ -1,47 +1,92 @@
 import { getB2bConfig } from "./config";
-import { DelhiveryNotSpecifiedError } from "../errors";
-import { roundToPaise } from "@/lib/utils";
-import type { B2bManifestInput } from "./manifest";
-
-export interface B2bOrderFacts {
-  orderNumber: string;
-  /** What is still owed at delivery (post-payment-finalize). */
-  amountDue: number;
-  /** Total package weight in kg (Product.packageWeight ?? weight, summed). */
-  totalWeightKg: number;
-}
+import type { B2bManifestInput, B2bShipmentDetail } from "./manifest";
 
 /**
- * The part of the manifest that follows directly from the spec AND our order
- * data: payment_mode / cod_amount (same rule as B2C — owed at delivery > 0 means
- * cod) and weight in grams.
+ * freight_mode value sent on every manifest.
+ * TODO(confirm): "fop" comes from the docs' curl example and has not been
+ * confirmed against a live response — verify it on the dev host.
  */
-export function b2bKnownManifestFields(
-  facts: B2bOrderFacts
-): Pick<B2bManifestInput, "pickupLocationName" | "paymentMode" | "codAmount" | "weightGrams"> {
-  const codAmount = roundToPaise(Math.max(0, facts.amountDue));
+export const B2B_FREIGHT_MODE = "fop";
+
+/** Everything the manifest needs from an order, already resolved (no DB types). */
+export interface B2bOrderFacts {
+  orderNumber: string;
+  grandTotal: number;
+  /** What is still owed at delivery (post-payment-finalize): > 0 means cod. */
+  amountDue: number;
+  consignee: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    pincode: string;
+    phone: string;
+    /** "" when the account has no real email (placeholder addresses are not sent). */
+    email: string;
+  };
+  items: Array<{ name: string; quantity: number; weightKg: number }>;
+}
+
+const toPaise = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Order -> POST /manifest input, following the docs' curl example:
+ *  - dropoff_location {consignee_name, address, city, state, zip, phone, email}
+ *  - invoices [{ewaybill:"", inv_num: order number, inv_amt: order total, inv_qr_code:""}]
+ *  - shipment_details [{order_id, box_count:1, description, weight(gm), waybills:[], master:false}]
+ *  - payment_mode cod|prepaid; cod_amount = amountDue (cod only)
+ *  - fm_pickup true, freight_mode "fop" (see B2B_FREIGHT_MODE)
+ *  - rov_insurance ONLY for a retail/co-loader account (config), otherwise the key is absent
+ *  - weight in grams, one box per order
+ */
+export function buildB2bManifestInput(facts: B2bOrderFacts): B2bManifestInput {
+  const cfg = getB2bConfig();
+
+  const codAmount = toPaise(Math.max(0, facts.amountDue));
   const isCod = codAmount > 0;
+
+  const totalKg = facts.items.reduce((sum, i) => sum + i.weightKg * i.quantity, 0);
+  const weightGrams = Math.max(1, Math.round(totalKg * 1000));
+
+  const description = facts.items
+    .map((i) => `${i.name} x${i.quantity}`)
+    .join(", ")
+    .slice(0, 100);
+
+  const c = facts.consignee;
+
   return {
-    pickupLocationName: getB2bConfig().pickupLocationName,
+    pickupLocationName: cfg.pickupLocationName,
     paymentMode: isCod ? "cod" : "prepaid",
     ...(isCod ? { codAmount } : {}),
-    weightGrams: Math.max(1, Math.round(facts.totalWeightKg * 1000)),
+    weightGrams,
+    dropoffLocation: {
+      consignee_name: c.name,
+      address: c.address,
+      city: c.city,
+      state: c.state,
+      zip: c.pincode,
+      phone: c.phone,
+      email: c.email,
+    },
+    invoices: [{ ewaybill: "", inv_num: facts.orderNumber, inv_amt: toPaise(facts.grandTotal), inv_qr_code: "" }],
+    shipmentDetails: [
+      {
+        order_id: facts.orderNumber,
+        box_count: 1,
+        description,
+        weight: weightGrams,
+        waybills: [],
+        master: false,
+      },
+    ],
+    freightMode: B2B_FREIGHT_MODE,
+    fmPickup: true,
+    ...(cfg.retailColoader && cfg.rovInsurance !== null ? { rovInsurance: cfg.rovInsurance } : {}),
   };
 }
 
-/**
- * TODO(spec): order -> dropoff_location / invoices / shipment_details /
- * freight_mode / fm_pickup / rov_insurance.
- *
- * The spec names these fields but not their inner structure or allowed values,
- * so building them would be guessing. Until it is provided, creating a B2B
- * shipment fails here with a clear message (recorded as SHIPMENT_FAILED on the
- * order timeline) instead of sending a malformed manifest to Delhivery.
- */
-export function buildB2bManifestInput(facts: B2bOrderFacts): B2bManifestInput {
-  void b2bKnownManifestFields(facts); // validates B2B config early
-  throw new DelhiveryNotSpecifiedError(
-    `B2B manifest for order ${facts.orderNumber} cannot be built: the structure of dropoff_location, invoices, ` +
-      `shipment_details and the values of freight_mode, fm_pickup, rov_insurance are not specified yet.`
-  );
+/** Pickup `expected_package_count` = sum of shipment_details.box_count. */
+export function b2bBoxCount(details: B2bShipmentDetail[]): number {
+  return details.reduce((sum, d) => sum + d.box_count, 0);
 }

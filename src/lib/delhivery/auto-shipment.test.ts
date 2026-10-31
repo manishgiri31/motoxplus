@@ -6,7 +6,7 @@ vi.mock("./provider", () => ({
 }));
 
 const autoRequestPickupMock = vi.fn().mockResolvedValue(undefined);
-vi.mock("./pickup", () => ({
+vi.mock("./auto-pickup", () => ({
   autoRequestPickup: (...a: unknown[]) => autoRequestPickupMock(...a),
 }));
 

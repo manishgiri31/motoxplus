@@ -4,10 +4,6 @@ const delhiveryFetchMock = vi.fn();
 vi.mock("./client", () => ({
   delhiveryFetch: (...a: unknown[]) => delhiveryFetchMock(...a),
 }));
-const requestB2bPickupMock = vi.fn();
-vi.mock("./b2b/pickup", () => ({
-  requestB2bPickup: (...a: unknown[]) => requestB2bPickupMock(...a),
-}));
 vi.mock("./config", () => ({
   toDelhiveryChannel: (v: unknown) => {
     if (v === "B2C" || v === "B2B") return v;
@@ -17,17 +13,13 @@ vi.mock("./config", () => ({
 }));
 
 const shipmentCount = vi.fn();
-const orderFindUnique = vi.fn();
-const orderEventCreate = vi.fn();
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     shipment: { count: (...a: unknown[]) => shipmentCount(...a) },
-    order: { findUnique: (...a: unknown[]) => orderFindUnique(...a) },
-    orderEvent: { create: (...a: unknown[]) => orderEventCreate(...a) },
   },
 }));
 
-const { nextPickupSlot, requestDelhiveryPickup, autoRequestPickup } = await import("./pickup");
+const { nextPickupSlot, previousSlotCutoff, requestDelhiveryPickup } = await import("./pickup");
 
 const ENV = { ...process.env };
 beforeEach(() => {
@@ -35,8 +27,6 @@ beforeEach(() => {
   delete process.env.DELHIVERY_AUTO_PICKUP;
   delete process.env.DELHIVERY_PICKUP_TIME;
   shipmentCount.mockResolvedValue(3);
-  orderEventCreate.mockResolvedValue({});
-  orderFindUnique.mockResolvedValue({ channel: "B2C" });
   delhiveryFetchMock.mockResolvedValue({ pickup_id: 987 });
 });
 afterEach(() => {
@@ -62,11 +52,40 @@ describe("nextPickupSlot", () => {
     expect(nextPickupSlot(new Date("2026-11-01T20:00:00Z")).pickupDate).toBe("2026-11-02");
   });
 
+  it("accepts the HH:MM form (DELHIVERY_PICKUP_TIME=16:00) and normalises it to HH:MM:SS", () => {
+    process.env.DELHIVERY_PICKUP_TIME = "15:00";
+    expect(nextPickupSlot(new Date("2026-11-01T04:00:00Z")).pickupTime).toBe("15:00:00");
+    process.env.DELHIVERY_PICKUP_TIME = "16:00";
+    expect(nextPickupSlot(new Date("2026-11-01T04:00:00Z")).pickupTime).toBe("16:00:00");
+  });
+
   it("honours DELHIVERY_PICKUP_TIME and ignores malformed values", () => {
     process.env.DELHIVERY_PICKUP_TIME = "15:00:00";
     expect(nextPickupSlot(new Date("2026-11-01T04:00:00Z")).pickupTime).toBe("15:00:00");
     process.env.DELHIVERY_PICKUP_TIME = "4pm";
     expect(nextPickupSlot(new Date("2026-11-01T04:00:00Z")).pickupTime).toBe("16:00:00");
+  });
+});
+
+describe("previousSlotCutoff - lower bound of the orders waiting for a slot", () => {
+  // Slot 16:00 IST, cutoff 30 min before => 15:30 IST = 10:00 UTC, on the PREVIOUS day.
+  it("is the previous day's slot cutoff", () => {
+    expect(previousSlotCutoff("2026-11-02", "16:00:00").toISOString()).toBe("2026-11-01T10:00:00.000Z");
+  });
+
+  it("agrees with nextPickupSlot: an order just before the cutoff is in today's slot, just after rolls to tomorrow's", () => {
+    const cutoffOf2nd = previousSlotCutoff("2026-11-02", "16:00:00").getTime(); // 1 Nov 10:00 UTC
+    const justBefore = new Date(cutoffOf2nd - 60_000);
+    const justAfter = new Date(cutoffOf2nd + 60_000);
+    expect(nextPickupSlot(justBefore).pickupDate).toBe("2026-11-01");
+    expect(nextPickupSlot(justAfter).pickupDate).toBe("2026-11-02");
+    // ...and a window starting at the cutoff of the 2nd contains justAfter but not justBefore.
+    expect(justAfter.getTime()).toBeGreaterThanOrEqual(cutoffOf2nd);
+    expect(justBefore.getTime()).toBeLessThan(cutoffOf2nd);
+  });
+
+  it("works across a month boundary", () => {
+    expect(previousSlotCutoff("2026-12-01", "16:00:00").toISOString()).toBe("2026-11-30T10:00:00.000Z");
   });
 });
 
@@ -107,74 +126,5 @@ describe("requestDelhiveryPickup", () => {
   it("rethrows any other failure", async () => {
     delhiveryFetchMock.mockRejectedValue(new Error("Delhivery API error 500: boom"));
     await expect(requestDelhiveryPickup("B2C")).rejects.toThrow("boom");
-  });
-});
-
-describe("autoRequestPickup", () => {
-  it("records PICKUP_REQUESTED on success", async () => {
-    await autoRequestPickup("order_1");
-    expect(orderEventCreate).toHaveBeenCalledWith({
-      data: { orderId: "order_1", type: "PICKUP_REQUESTED", reason: expect.stringContaining("987") },
-    });
-  });
-
-  it("B2C order: books through the existing B2C pickup call (track.delhivery.com path)", async () => {
-    await autoRequestPickup("order_1");
-    expect(orderFindUnique).toHaveBeenCalledWith({ where: { id: "order_1" }, select: { channel: true } });
-    expect(delhiveryFetchMock).toHaveBeenCalledTimes(1);
-    expect(requestB2bPickupMock).not.toHaveBeenCalled();
-    expect(orderEventCreate).toHaveBeenCalledWith({
-      data: { orderId: "order_1", type: "PICKUP_REQUESTED", reason: expect.stringContaining("[B2C]") },
-    });
-  });
-
-  it("B2B order: goes to the B2B module and NEVER to the B2C client", async () => {
-    orderFindUnique.mockResolvedValue({ channel: "B2B" });
-    requestB2bPickupMock.mockResolvedValue({});
-    await autoRequestPickup("order_1");
-    expect(requestB2bPickupMock).toHaveBeenCalledWith({
-      pickupDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-      startTime: "16:00:00",
-      expectedPackageCount: 1,
-    });
-    expect(delhiveryFetchMock).not.toHaveBeenCalled();
-    expect(orderEventCreate).toHaveBeenCalledWith({
-      data: { orderId: "order_1", type: "PICKUP_REQUESTED", reason: expect.stringContaining("[B2B]") },
-    });
-  });
-
-  it("B2B pickup failure is recorded as PICKUP_FAILED, not thrown", async () => {
-    orderFindUnique.mockResolvedValue({ channel: "B2B" });
-    requestB2bPickupMock.mockRejectedValue(new Error("Delhivery B2B API error 400"));
-    await expect(autoRequestPickup("order_1")).resolves.toBeUndefined();
-    expect(orderEventCreate).toHaveBeenCalledWith({
-      data: { orderId: "order_1", type: "PICKUP_FAILED", reason: expect.stringContaining("B2B API error") },
-    });
-  });
-
-  it("records PICKUP_FAILED (no API call) when the order is missing", async () => {
-    orderFindUnique.mockResolvedValue(null);
-    await autoRequestPickup("order_1");
-    expect(delhiveryFetchMock).not.toHaveBeenCalled();
-    expect(orderEventCreate).toHaveBeenCalledWith({
-      data: { orderId: "order_1", type: "PICKUP_FAILED", reason: expect.stringContaining("not found") },
-    });
-  });
-
-  it("never throws — records PICKUP_FAILED instead", async () => {
-    delhiveryFetchMock.mockRejectedValue(new Error("Delhivery API error 401: nope"));
-    await expect(autoRequestPickup("order_1")).resolves.toBeUndefined();
-    expect(orderEventCreate).toHaveBeenCalledWith({
-      data: { orderId: "order_1", type: "PICKUP_FAILED", reason: expect.stringContaining("nope") },
-    });
-  });
-
-  it("is skipped when DELHIVERY_AUTO_PICKUP=false", async () => {
-    process.env.DELHIVERY_AUTO_PICKUP = "false";
-    await autoRequestPickup("order_1");
-    expect(delhiveryFetchMock).not.toHaveBeenCalled();
-    expect(orderEventCreate).toHaveBeenCalledWith({
-      data: { orderId: "order_1", type: "PICKUP_AUTO_SKIPPED", reason: expect.any(String) },
-    });
   });
 });

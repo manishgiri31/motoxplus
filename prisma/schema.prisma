@@ -1792,3 +1792,29 @@ enum ProductSource {
   EAUTO_IMPORT
   VENDOR
 }
+
+/// One Delhivery pickup request per channel + warehouse + pickup day (not per
+/// order). The unique key is also the claim lock: the first order of the day
+/// inserts a PENDING row, sends the request, and marks it REQUESTED; every later
+/// order for that warehouse/day hits the unique constraint and sends nothing.
+/// `pickupDate` is the IST date (YYYY-MM-DD) as a string — it is a calendar key,
+/// not an instant. Added 2026-09-22, additive only.
+model PickupRequest {
+  id           String              @id @default(cuid())
+  channel      OrderChannel
+  warehouse    String
+  pickupDate   String
+  pickupTime   String
+  status       PickupRequestStatus @default(PENDING)
+  packageCount Int?
+  pickupId     String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([channel, warehouse, pickupDate])
+}
+
+enum PickupRequestStatus {
+  PENDING
+  REQUESTED
+}

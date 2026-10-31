@@ -1,6 +1,5 @@
 import { delhiveryFetch } from "./client";
-import { getDelhiveryConfig, toDelhiveryChannel, type DelhiveryChannel } from "./config";
-import { requestB2bPickup } from "./b2b/pickup";
+import { getDelhiveryConfig, type DelhiveryChannel } from "./config";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -16,15 +15,17 @@ export function isAutoPickupEnabled(): boolean {
 }
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-const PICKUP_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/;
+const PICKUP_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 // Pickup requests for a slot that is about to start are rejected — book for the
 // next day once we are within this many minutes of (or past) the slot.
 const SLOT_CUTOFF_MINUTES = 30;
 
-/** Slot time (IST, HH:MM:SS). Default sits inside Delhivery's 14:00–18:00 window. */
+/** Slot time (IST, HH:MM or HH:MM:SS in the env; HH:MM:SS out). Default sits inside Delhivery's 14:00–18:00 window. */
 function pickupTime(): string {
   const configured = process.env.DELHIVERY_PICKUP_TIME?.trim();
-  return configured && PICKUP_TIME_RE.test(configured) ? configured : "16:00:00";
+  if (!configured || !PICKUP_TIME_RE.test(configured)) return "16:00:00";
+  // HH:MM (e.g. DELHIVERY_PICKUP_TIME=16:00) -> HH:MM:SS, the format both pickup APIs take.
+  return configured.length === 5 ? `${configured}:00` : configured;
 }
 
 /**
@@ -40,6 +41,19 @@ export function nextPickupSlot(now: Date = new Date()): { pickupDate: string; pi
   const dayOffset = nowMinutes >= h * 60 + m - SLOT_CUTOFF_MINUTES ? 1 : 0;
   const target = new Date(ist.getTime() + dayOffset * 24 * 60 * 60 * 1000);
   return { pickupDate: target.toISOString().split("T")[0], pickupTime: time };
+}
+
+/**
+ * The instant after which an order belongs to the pickup slot on `pickupDate`:
+ * the PREVIOUS day's slot cutoff (slot time minus SLOT_CUTOFF_MINUTES, IST).
+ * Orders that arrive after a day's cutoff roll to the next day's slot (see
+ * nextPickupSlot), so this is the lower bound of "orders waiting for that slot".
+ */
+export function previousSlotCutoff(pickupDate: string, time: string): Date {
+  const [y, mo, d] = pickupDate.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const istMs = Date.UTC(y, mo - 1, d - 1, h, mi) - SLOT_CUTOFF_MINUTES * 60 * 1000;
+  return new Date(istMs - IST_OFFSET_MS);
 }
 
 export interface PickupResult {
@@ -66,7 +80,7 @@ interface DelhiveryPickupResponse {
  * location/slot, so each new order folds into the same request instead of
  * leaving the count at 1.
  *
- * Throws on failure; callers (autoRequestPickup) decide how to surface that.
+ * Throws on failure; callers (the channel provider / auto-pickup.ts) decide how to surface that.
  */
 export async function requestDelhiveryPickup(
   channel: DelhiveryChannel,
@@ -109,55 +123,5 @@ export async function requestDelhiveryPickup(
       return { pickupId: null, ...slot, channel, packageCount, alreadyScheduled: true };
     }
     throw err;
-  }
-}
-
-/**
- * Fire-and-forget wrapper: never throws, writes the outcome to OrderEvent so
- * the admin order timeline shows whether a pickup was booked.
- */
-export async function autoRequestPickup(orderId: string): Promise<void> {
-  if (!isAutoPickupEnabled()) {
-    await recordPickupEvent(orderId, "PICKUP_AUTO_SKIPPED", "DELHIVERY_AUTO_PICKUP=false — book the pickup in the Delhivery dashboard");
-    return;
-  }
-
-  try {
-    // The pickup must go to the same Delhivery client that issued the AWB, so
-    // the channel comes from the order, not from the caller.
-    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { channel: true } });
-    if (!order) throw new Error(`Order ${orderId} not found`);
-
-    const channel = toDelhiveryChannel(order.channel);
-
-    // B2B is a different API (ltl-clients-api, JWT) — never the B2C call below.
-    if (channel === "B2B") {
-      const slot = nextPickupSlot();
-      await requestB2bPickup({ pickupDate: slot.pickupDate, startTime: slot.pickupTime, expectedPackageCount: 1 });
-      await recordPickupEvent(
-        orderId,
-        "PICKUP_REQUESTED",
-        `[B2B] Pickup requested for ${slot.pickupDate} ${slot.pickupTime}, 1 package(s)`
-      );
-      return;
-    }
-
-    const r = await requestDelhiveryPickup(channel);
-    const detail = r.alreadyScheduled
-      ? `[${r.channel}] Pickup already scheduled for ${r.pickupDate} ${r.pickupTime}`
-      : `[${r.channel}] Pickup ${r.pickupId ?? "(no id returned)"} requested for ${r.pickupDate} ${r.pickupTime}, ${r.packageCount} package(s)`;
-    await recordPickupEvent(orderId, "PICKUP_REQUESTED", detail);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`[Delhivery] pickup request failed for order ${orderId}: ${message}`);
-    await recordPickupEvent(orderId, "PICKUP_FAILED", message.slice(0, 500));
-  }
-}
-
-async function recordPickupEvent(orderId: string, type: string, reason: string): Promise<void> {
-  try {
-    await prisma.orderEvent.create({ data: { orderId, type, reason } });
-  } catch (err) {
-    console.error(`[Delhivery] could not record ${type} OrderEvent for order ${orderId}:`, err);
   }
 }

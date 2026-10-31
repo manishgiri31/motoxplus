@@ -1,5 +1,7 @@
 import { createDelhiveryShipment } from "../shipment";
-import { requestDelhiveryPickup } from "../pickup";
+import { requestDelhiveryPickup, nextPickupSlot } from "../pickup";
+import { bookPickupOncePerDay } from "../pickup-day";
+import { getDelhiveryConfig } from "../config";
 import { DelhiveryNotSpecifiedError } from "../errors";
 import type { DelhiveryProvider } from "../provider";
 
@@ -15,17 +17,23 @@ export const b2cProvider: DelhiveryProvider = {
     return { kind: "b2c-awb", waybill, trackingUrl };
   },
 
-  // The B2C pickup request is per location/slot, not per order, so orderId is
-  // not needed to book it.
+  // One pickup per warehouse per day (not per order): the first order of the day
+  // sends it, later orders find it open. orderId is not needed — the pickup is
+  // keyed by the warehouse.
   async requestPickup() {
-    const r = await requestDelhiveryPickup("B2C");
-    return {
+    const now = new Date();
+    const slot = nextPickupSlot(now);
+    return bookPickupOncePerDay({
       channel: "B2C",
-      pickupDate: r.pickupDate,
-      pickupTime: r.pickupTime,
-      packageCount: r.packageCount,
-      pickupId: r.pickupId,
-    };
+      warehouse: getDelhiveryConfig("B2C").pickup.locationName,
+      ...slot,
+      send: async () => {
+        // Counts this channel's shipments still MANIFESTED (waiting for pickup)
+        // and sends that as expected_package_count.
+        const r = await requestDelhiveryPickup("B2C", now);
+        return { packageCount: r.packageCount, pickupId: r.pickupId, alreadyScheduled: r.alreadyScheduled };
+      },
+    });
   },
 
   /**
