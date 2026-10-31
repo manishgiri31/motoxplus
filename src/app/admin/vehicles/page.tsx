@@ -43,7 +43,7 @@ export default async function AdminVehiclesPage(
           <Link href="/admin/vehicles/detection-log" className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-4 py-2.5 rounded-xl transition-colors text-sm hover:border-red-900/40">
             <ScanSearch size={14} /> Detection Log
           </Link>
-          <Link href="/admin/vehicles/new" className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-sm uppercase tracking-wider">
+          <Link href="/admin/vehicles/new" className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-sm uppercase tracking-wider">
             <Plus size={16} /> Add Vehicle
           </Link>
         </div>
@@ -54,7 +54,7 @@ export default async function AdminVehiclesPage(
           name="search"
           defaultValue={search}
           placeholder="Search vehicle name…"
-          className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600 placeholder:text-[var(--text-muted)]"
+          className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] placeholder:text-[var(--text-muted)]"
         />
       </form>
 

@@ -161,7 +161,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
         {!showForm && (
           <button
             onClick={openAdd}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
           >
             <Plus size={14} />
             Add Variant
@@ -187,7 +187,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
                 value={form.label}
                 onChange={(e) => set("label", e.target.value)}
                 placeholder="e.g. Red / Matte Black / Hero Glamour"
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-red-600"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent)]"
               />
             </div>
             <div>
@@ -196,7 +196,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
                 value={form.sku}
                 onChange={(e) => set("sku", e.target.value)}
                 placeholder="Auto-generated if blank"
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm font-mono focus:outline-none focus:border-red-600"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm font-mono focus:outline-none focus:border-[var(--accent)]"
               />
             </div>
             <div>
@@ -205,7 +205,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
                 value={form.partNumber}
                 onChange={(e) => set("partNumber", e.target.value)}
                 placeholder="e.g. MX-291"
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm font-mono focus:outline-none focus:border-red-600"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm font-mono focus:outline-none focus:border-[var(--accent)]"
               />
             </div>
           </div>
@@ -220,7 +220,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
                   value={form[key as keyof FormState]}
                   onChange={(e) => set(key as keyof FormState, e.target.value)}
                   placeholder={key === "color" ? "Red" : key === "vehicleModel" ? "Hero Glamour" : key === "finish" ? "Matte" : key === "size" ? "Large" : ""}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-red-600"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent)]"
                 />
               </div>
             ))}
@@ -247,13 +247,13 @@ export function ProductVariantManager({ productId }: { productId: string }) {
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Stock</label>
               <input type="number" min="0" value={form.stock} onChange={(e) => set("stock", e.target.value)}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-red-600" />
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent)]" />
             </div>
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">MOQ <span className="text-[var(--text-muted)] font-normal">(blank = product default)</span></label>
               <input type="number" min="1" step="1" value={form.moq} onChange={(e) => set("moq", e.target.value)}
                 placeholder="Product default"
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-red-600" />
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent)]" />
             </div>
           </div>
 
@@ -264,13 +264,13 @@ export function ProductVariantManager({ productId }: { productId: string }) {
               value={form.imageUrl}
               onChange={(e) => set("imageUrl", e.target.value)}
               placeholder="https://..."
-              className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-red-600"
+              className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent)]"
             />
           </div>
 
           <div className="flex gap-3">
             <button onClick={handleSave} disabled={saving}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
+              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
               <Check size={14} />
               {saving ? "Saving..." : editId ? "Update" : "Add Variant"}
             </button>
@@ -371,7 +371,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
                     {v.images.length > 0 && (
                       <div className="flex gap-2 mt-3">
                         {v.images.map((img) => (
-                          <img key={img.id} src={img.imageUrl} alt="" className={`w-14 h-14 rounded-lg object-cover border ${img.isPrimary ? "border-red-600" : "border-[var(--border-color)]"}`} />
+                          <img key={img.id} src={img.imageUrl} alt="" className={`w-14 h-14 rounded-lg object-cover border ${img.isPrimary ? "border-[var(--accent)]" : "border-[var(--border-color)]"}`} />
                         ))}
                       </div>
                     )}

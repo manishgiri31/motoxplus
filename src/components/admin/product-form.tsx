@@ -147,7 +147,7 @@ export function ProductForm({ categories, product }: Props) {
       {/* ── Basic Information ── */}
       <div className={SECTION}>
         <div className={SECTION_TITLE}>
-          <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
+          <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
           Basic Information
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -215,7 +215,7 @@ export function ProductForm({ categories, product }: Props) {
       {/* ── Pricing & Tax ── */}
       <div className={SECTION}>
         <div className={SECTION_TITLE}>
-          <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
+          <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
           Pricing &amp; Tax
         </div>
 
@@ -338,7 +338,7 @@ export function ProductForm({ categories, product }: Props) {
       {/* ── Inventory ── */}
       <div className={SECTION}>
         <div className={SECTION_TITLE}>
-          <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
+          <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
           Inventory
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -358,7 +358,7 @@ export function ProductForm({ categories, product }: Props) {
       {/* ── Product Identity ── */}
       <div className={SECTION}>
         <div className={SECTION_TITLE}>
-          <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
+          <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
           Product Identity
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -382,7 +382,7 @@ export function ProductForm({ categories, product }: Props) {
       {/* ── Compatibility ── */}
       <div className={SECTION}>
         <div className={SECTION_TITLE}>
-          <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
+          <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
           Compatibility
         </div>
         <div>
@@ -399,7 +399,7 @@ export function ProductForm({ categories, product }: Props) {
       {/* ── Images ── */}
       <div className={SECTION}>
         <div className={SECTION_TITLE}>
-          <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
+          <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
           Product Images
         </div>
         <ProductImageUploader
@@ -432,7 +432,7 @@ export function ProductForm({ categories, product }: Props) {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+          className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
         >
           {status === "loading" ? "Saving..." : isEdit ? "Update Product" : "Create Product"}
         </button>

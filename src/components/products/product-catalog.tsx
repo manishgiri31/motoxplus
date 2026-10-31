@@ -482,7 +482,7 @@ export function ProductCatalog({
                       }}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                         i === activeSuggestion
-                          ? "bg-red-600/10 border-l-2 border-red-600"
+                          ? "bg-red-600/10 border-l-2 border-[var(--accent)]"
                           : "hover:bg-[var(--bg-card-hover)] border-l-2 border-transparent"
                       }`}
                     >

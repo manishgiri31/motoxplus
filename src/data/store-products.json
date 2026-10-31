@@ -1,73 +1,102 @@
 [
   {
-    "id": "mx-fm-001",
+    "id": "mx-headlight-visor",
+    "slug": "headlight-visor",
+    "name": "Headlight Visor",
+    "tagline": "Precision-fit. Scratch-resistant finish.",
+    "category": "Body parts",
+    "currency": "INR",
+    "badge": "New",
+    "images": [
+      "products/175e98d0-f5aa-4214-9c62-808eaa72ecc0.webp"
+    ],
+    "featured": true,
+    "inStock": true
+  },
+  {
+    "id": "mx-front-mudguard",
     "slug": "front-mudguard",
     "name": "Front Mudguard",
-    "tagline": "OEM-fit. Impact-tested ABS.",
+    "tagline": "OEM-fit. Impact-tested.",
     "category": "Body parts",
-    "price": 89900,
     "currency": "INR",
-    "badge": "New",
-    "images": ["/store/mudguard.svg"],
+    "images": [
+      "products/0d568f84-a432-48f9-9781-2d542cdf30c3.webp"
+    ],
     "featured": true,
     "inStock": true
   },
   {
-    "id": "mx-vs-002",
-    "slug": "visor-glass",
-    "name": "Visor Glass",
-    "tagline": "Optical clarity. UV-stable.",
-    "category": "Body parts",
-    "price": 54900,
+    "id": "mx-indicator-set",
+    "slug": "indicator-set",
+    "name": "Indicator Set",
+    "tagline": "Bright amber. Plug-and-play.",
+    "category": "Electrical parts",
     "currency": "INR",
-    "images": ["/store/visor.svg"],
-    "featured": true,
+    "images": [
+      "products/0a1dd5ba-b022-47bc-8238-75d8f903f673.webp"
+    ],
     "inStock": true
   },
   {
-    "id": "mx-tp-003",
-    "slug": "tail-panel",
-    "name": "Tail Panel",
-    "tagline": "Clean lines. Exact mounting points.",
-    "category": "Body parts",
-    "price": 129900,
-    "currency": "INR",
-    "badge": "New",
-    "images": ["/store/panel.svg"],
-    "inStock": true
-  },
-  {
-    "id": "mx-tc-004",
-    "slug": "throttle-cable",
-    "name": "Throttle Cable",
+    "id": "mx-control-cable",
+    "slug": "control-cable",
+    "name": "Control Cable",
     "tagline": "Smooth pull. Long service life.",
     "category": "Cables",
-    "price": 34900,
     "currency": "INR",
-    "images": ["/store/cable.svg"],
+    "badge": "New",
+    "images": [
+      "products/1f8cc6c9-d57e-46e7-8ec9-3970043ab344.webp"
+    ],
     "inStock": true
   },
   {
-    "id": "mx-bl-005",
-    "slug": "brake-lever",
-    "name": "Brake Lever",
-    "tagline": "Forged feel. Precise travel.",
-    "category": "Controls",
-    "price": 44900,
+    "id": "mx-headlight-cowl",
+    "slug": "headlight-cowl",
+    "name": "Headlight Cowl",
+    "tagline": "Factory shape. Ready to fit.",
+    "category": "Body parts",
     "currency": "INR",
-    "badge": "Limited",
-    "images": ["/store/lever.svg"],
+    "images": [
+      "products/191a365d-9625-4d39-9a07-6c02b2252bd2.webp"
+    ],
     "inStock": true
   },
   {
-    "id": "mx-rm-006",
-    "slug": "rear-view-mirror",
-    "name": "Rear View Mirror",
-    "tagline": "Vibration-free. Wide field of view.",
-    "category": "Accessories",
-    "price": 39900,
+    "id": "mx-clutch-plate-set",
+    "slug": "clutch-plate-set",
+    "name": "Clutch Plate Set",
+    "tagline": "Consistent bite. Built to last.",
+    "category": "Clutch parts",
     "currency": "INR",
-    "images": ["/store/mirror.svg"],
+    "images": [
+      "products/15eeaaa5-794f-4a70-b2ef-1e20d46df08b.webp"
+    ],
+    "inStock": true
+  },
+  {
+    "id": "mx-visor-fairing",
+    "slug": "visor-fairing",
+    "name": "Visor Fairing",
+    "tagline": "Clean lines. Exact mounting points.",
+    "category": "Body parts",
+    "currency": "INR",
+    "images": [
+      "products/1f3ea2a5-f56e-4336-8e36-c3f82f707578.webp"
+    ],
+    "inStock": true
+  },
+  {
+    "id": "mx-horn",
+    "slug": "horn",
+    "name": "Horn",
+    "tagline": "Loud and clear. Compact.",
+    "category": "Electrical parts",
+    "currency": "INR",
+    "images": [
+      "products/0b43b192-2b47-4a85-ad39-aab4e94a3818.webp"
+    ],
     "inStock": true
   }
 ]

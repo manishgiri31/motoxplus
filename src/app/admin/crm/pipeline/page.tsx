@@ -42,7 +42,7 @@ export default async function CRMPipelinePage() {
           <Link href="/admin/crm/leads" className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
             List View
           </Link>
-          <Link href="/admin/crm/leads/new" className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <Link href="/admin/crm/leads/new" className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
             <Plus size={16} /> Add Lead
           </Link>
         </div>

@@ -118,17 +118,17 @@ export function VehicleForm({
           <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">
             Name <span className="text-red-500">*</span>
           </label>
-          <input value={form.name} onChange={(e) => set("name", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+          <input value={form.name} onChange={(e) => set("name", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div>
           <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">
             Slug <span className="text-red-500">*</span>
           </label>
-          <input value={form.slug} onChange={(e) => set("slug", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+          <input value={form.slug} onChange={(e) => set("slug", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div>
           <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">Category</label>
-          <select value={form.category} onChange={(e) => set("category", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600">
+          <select value={form.category} onChange={(e) => set("category", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]">
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -136,7 +136,7 @@ export function VehicleForm({
         </div>
         <div>
           <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">Manufacturer</label>
-          <select value={form.manufacturerId} onChange={(e) => set("manufacturerId", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600">
+          <select value={form.manufacturerId} onChange={(e) => set("manufacturerId", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]">
             {manufacturers.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
@@ -154,7 +154,7 @@ export function VehicleForm({
         ] as const).map(([k, label]) => (
           <div key={k}>
             <label className="block text-[var(--text-muted)] text-xs mb-1.5">{label}</label>
-            <input type="number" value={form[k]} onChange={(e) => set(k, e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+            <input type="number" value={form[k]} onChange={(e) => set(k, e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
           </div>
         ))}
         {([
@@ -166,7 +166,7 @@ export function VehicleForm({
         ] as const).map(([k, label]) => (
           <div key={k}>
             <label className="block text-[var(--text-muted)] text-xs mb-1.5">{label}</label>
-            <input value={form[k]} onChange={(e) => set(k, e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+            <input value={form[k]} onChange={(e) => set(k, e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
           </div>
         ))}
       </div>
@@ -183,27 +183,27 @@ export function VehicleForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-[var(--text-muted)] text-xs mb-1.5">Default GLB Model URL</label>
-          <input value={form.modelUrl} onChange={(e) => set("modelUrl", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+          <input value={form.modelUrl} onChange={(e) => set("modelUrl", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div>
           <label className="block text-[var(--text-muted)] text-xs mb-1.5">Badge Text (OCR)</label>
-          <input value={form.badgeText} onChange={(e) => set("badgeText", e.target.value)} placeholder="SPLENDOR" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+          <input value={form.badgeText} onChange={(e) => set("badgeText", e.target.value)} placeholder="SPLENDOR" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div>
           <label className="block text-[var(--text-muted)] text-xs mb-1.5">Sort Order</label>
-          <input type="number" value={form.sortOrder} onChange={(e) => set("sortOrder", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+          <input type="number" value={form.sortOrder} onChange={(e) => set("sortOrder", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div className="sm:col-span-2">
           <label className="block text-[var(--text-muted)] text-xs mb-1.5">Search Aliases (comma-separated)</label>
-          <input value={form.searchAliases} onChange={(e) => set("searchAliases", e.target.value)} placeholder="Hero Splendor, Splendor NXG" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+          <input value={form.searchAliases} onChange={(e) => set("searchAliases", e.target.value)} placeholder="Hero Splendor, Splendor NXG" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div className="sm:col-span-2">
           <label className="block text-[var(--text-muted)] text-xs mb-1.5">OCR Keywords (comma-separated)</label>
-          <input value={form.ocrKeywords} onChange={(e) => set("ocrKeywords", e.target.value)} placeholder="SPLENDOR, HERO SPLENDOR" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+          <input value={form.ocrKeywords} onChange={(e) => set("ocrKeywords", e.target.value)} placeholder="SPLENDOR, HERO SPLENDOR" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div className="sm:col-span-2">
           <label className="block text-[var(--text-muted)] text-xs mb-1.5">AI Detection Labels (comma-separated)</label>
-          <input value={form.aiLabels} onChange={(e) => set("aiLabels", e.target.value)} placeholder="hero-splendor, commuter-motorcycle" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+          <input value={form.aiLabels} onChange={(e) => set("aiLabels", e.target.value)} placeholder="hero-splendor, commuter-motorcycle" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
       </div>
 
@@ -221,7 +221,7 @@ export function VehicleForm({
       <button
         onClick={handleSave}
         disabled={saving}
-        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
       >
         <Check size={14} />
         {saving ? "Saving…" : vehicle ? "Save Changes" : "Create Vehicle"}

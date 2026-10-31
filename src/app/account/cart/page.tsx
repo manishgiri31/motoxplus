@@ -148,7 +148,7 @@ export default function AccountCartPage() {
           <p className="text-[var(--text-muted)] mb-6">Browse our products and add items to your cart.</p>
           <Link
             href="/products"
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider inline-flex items-center gap-2"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider inline-flex items-center gap-2"
           >
             Browse Products <ArrowRight size={16} />
           </Link>
@@ -248,7 +248,7 @@ export default function AccountCartPage() {
                 href="/account/checkout"
                 aria-disabled={unpriced.length > 0}
                 className={`w-full flex items-center justify-center gap-2 font-bold py-3.5 rounded-sm transition-colors text-sm uppercase tracking-wider ${
-                  unpriced.length > 0 ? "bg-[var(--line)] text-[var(--muted)] pointer-events-none" : "bg-red-600 hover:bg-red-700 text-white"
+                  unpriced.length > 0 ? "bg-[var(--line)] text-[var(--muted)] pointer-events-none" : "bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white"
                 }`}
               >
                 Proceed to Checkout <ArrowRight size={15} />

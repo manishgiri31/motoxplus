@@ -140,7 +140,7 @@ export default async function PurchaseRequestDetailPage(props: { params: Promise
           {request.status === "APPROVED" && !request.purchaseOrder && (
             <Link
               href={`/admin/procurement/purchase-orders/new?prId=${request.id}`}
-              className="flex items-center justify-center gap-2 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-sm text-sm uppercase tracking-wider transition-colors"
+              className="flex items-center justify-center gap-2 w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm text-sm uppercase tracking-wider transition-colors"
             >
               <Package size={16} />
               Create Purchase Order

@@ -174,7 +174,7 @@ export default async function OrderDetailPage(
           {order.invoice && (
             <Link
               href={`/dealer/invoices/${order.invoice.id}`}
-              className="w-full block text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+              className="w-full block text-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
             >
               Download Invoice
             </Link>

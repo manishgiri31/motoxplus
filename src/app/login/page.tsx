@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthPageLayout, AuthCardSkeleton } from "@/components/auth/auth-page-layout";
 import { LoginModeSwitch } from "@/components/auth/login-mode-switch";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export default function LoginPage() {
   return (
     <AuthPageLayout>
       <Suspense
-        fallback={<div className="bg-[var(--card)] border border-[var(--line)] p-8 animate-pulse h-64" />}
+        fallback={<AuthCardSkeleton rows={1} />}
       >
         <LoginModeSwitch />
       </Suspense>

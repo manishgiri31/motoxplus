@@ -1,6 +1,6 @@
 export default function AccountOrdersLoading() {
   return (
-    <div className="animate-fade-in">
+    <div>
       <div className="mb-8 space-y-2">
         <div className="skeleton h-8 w-32 rounded-sm" />
         <div className="skeleton h-4 w-28 rounded-sm" />

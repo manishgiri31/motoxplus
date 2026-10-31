@@ -48,7 +48,7 @@ export function MarkupSettingsForm({ currentMarkup }: Props) {
   return (
     <div className="glass-dark border border-[var(--border-color)] rounded-xl p-6 space-y-6">
       <div className="flex items-center gap-2 text-[var(--text-secondary)] text-xs uppercase tracking-widest font-bold">
-        <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
+        <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
         Vendor Product Markup
       </div>
 
@@ -117,7 +117,7 @@ export function MarkupSettingsForm({ currentMarkup }: Props) {
       <button
         onClick={handleSave}
         disabled={status === "loading"}
-        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
       >
         <Save size={14} />
         {status === "loading" ? "Saving..." : "Save Settings"}

@@ -155,7 +155,7 @@ function HotspotEditor({
                 e.stopPropagation();
                 openEdit(h);
               }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white/80 hover:scale-110 transition-transform"
+              className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[var(--accent)] text-white text-[10px] font-bold flex items-center justify-center border-2 border-white/80 hover:scale-110 transition-transform"
               style={{ left: `${h.x}%`, top: `${h.y}%` }}
             >
               {h.calloutNumber ?? "•"}
@@ -180,7 +180,7 @@ function HotspotEditor({
                 value={form.label}
                 onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
                 placeholder="Label (e.g. Front Mudguard)"
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
               />
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -188,12 +188,12 @@ function HotspotEditor({
                   value={form.calloutNumber}
                   onChange={(e) => setForm((f) => ({ ...f, calloutNumber: e.target.value }))}
                   placeholder="Callout #"
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                 />
                 <select
                   value={form.sectionId}
                   onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value }))}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                 >
                   <option value="">No section</option>
                   {sections.map((s) => (
@@ -206,7 +206,7 @@ function HotspotEditor({
                   value={form.productId ? form.productQuery || "Product linked — type to change" : form.productQuery}
                   onChange={(e) => setForm((f) => ({ ...f, productQuery: e.target.value, productId: "" }))}
                   placeholder="Search product to link (optional)"
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                 />
                 {productHits.length > 0 && (
                   <div className="mt-1 border border-[var(--border-color)] rounded-lg overflow-hidden max-h-32 overflow-y-auto">
@@ -226,7 +226,7 @@ function HotspotEditor({
                 )}
               </div>
               <div className="flex gap-2">
-                <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+                <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg">
                   <Check size={13} /> {saving ? "Saving…" : editId ? "Update Hotspot" : "Add Hotspot"}
                 </button>
                 <button onClick={() => setPending(null)} className="flex items-center gap-1.5 border border-[var(--border-color)] text-[var(--text-muted)] text-xs font-semibold px-4 py-2 rounded-lg">
@@ -335,7 +335,7 @@ export function DiagramManager({ vehicleId, sections }: { vehicleId: string; sec
           <p className="text-[var(--text-muted)] text-xs mt-0.5">Upload an exploded-view or line-art image, then click on it to place clickable part hotspots.</p>
         </div>
         {!showForm && (
-          <button onClick={openAdd} className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
+          <button onClick={openAdd} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
             <Plus size={13} /> Add Diagram
           </button>
         )}
@@ -345,17 +345,17 @@ export function DiagramManager({ vehicleId, sections }: { vehicleId: string; sec
         <div className="border border-[var(--border-color)] rounded-xl p-4 mb-4 bg-[var(--bg-card)]/50">
           {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Diagram name (e.g. Front End Assembly)" className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600 sm:col-span-2" />
-            <select value={form.sectionId} onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value }))} className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600">
+            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Diagram name (e.g. Front End Assembly)" className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] sm:col-span-2" />
+            <select value={form.sectionId} onChange={(e) => setForm((f) => ({ ...f, sectionId: e.target.value }))} className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]">
               <option value="">No section</option>
               {sections.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
-            <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} placeholder="Diagram image URL" className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600 sm:col-span-3" />
+            <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} placeholder="Diagram image URL" className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] sm:col-span-3" />
           </div>
           <div className="flex gap-2">
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg">
               <Check size={13} /> {saving ? "Saving…" : editId ? "Update" : "Add"}
             </button>
             <button onClick={() => setShowForm(false)} className="flex items-center gap-1.5 border border-[var(--border-color)] text-[var(--text-muted)] text-xs font-semibold px-4 py-2 rounded-lg">
@@ -366,7 +366,11 @@ export function DiagramManager({ vehicleId, sections }: { vehicleId: string; sec
       )}
 
       {loading ? (
-        <p className="text-[var(--text-muted)] text-xs">Loading…</p>
+        <div className="space-y-2" role="status" aria-label="Loading">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton h-12 w-full" />
+          ))}
+        </div>
       ) : diagrams.length === 0 ? (
         <p className="text-[var(--text-muted)] text-xs py-4 text-center">No diagrams yet.</p>
       ) : (

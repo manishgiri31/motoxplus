@@ -115,7 +115,7 @@ export function TrackingTimeline({
                   </div>
                   {idx < STEPS.length - 1 && (
                     <div className={`h-0.5 flex-1 mx-1 transition-colors ${
-                      currentStepIndex > idx ? "bg-red-600" : "bg-[var(--border-color)]"
+                      currentStepIndex > idx ? "bg-[var(--accent)]" : "bg-[var(--border-color)]"
                     }`} />
                   )}
                 </div>
@@ -135,7 +135,7 @@ export function TrackingTimeline({
             {events.map((event, idx) => (
               <div key={idx} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1 ${idx === 0 ? "bg-red-600" : "bg-[var(--border-color)]"}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1 ${idx === 0 ? "bg-[var(--accent)]" : "bg-[var(--border-color)]"}`} />
                   {idx < events.length - 1 && <div className="w-px flex-1 bg-[var(--border-color)] my-1" />}
                 </div>
                 <div className="pb-4">

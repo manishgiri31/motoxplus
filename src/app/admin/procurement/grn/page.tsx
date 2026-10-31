@@ -99,7 +99,7 @@ export default async function GRNPage(
         <div className="flex items-center justify-center gap-2 mt-8">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <Link key={p} href={`/admin/procurement/grn?page=${p}`}
-              className={`w-10 h-10 flex items-center justify-center rounded-sm text-sm font-bold ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
+              className={`w-10 h-10 flex items-center justify-center rounded-sm text-sm font-bold ${p === page ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
             >
               {p}
             </Link>

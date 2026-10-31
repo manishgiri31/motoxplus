@@ -193,7 +193,7 @@ export default function AccountPayUpiPage() {
         </div>
         <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">Payment Verified</h2>
         <p className="text-[var(--text-muted)] text-sm mb-6">Order #{order.orderNumber} has been paid and confirmed.</p>
-        <Link href={`/account/orders/${id}`} className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl text-sm transition-colors">
+        <Link href={`/account/orders/${id}`} className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 px-6 rounded-xl text-sm transition-colors">
           View Order
         </Link>
       </div>
@@ -263,14 +263,14 @@ export default function AccountPayUpiPage() {
         {settings.upiEnabled && (
           <button
             onClick={() => setActiveTab("upi")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === "upi" ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === "upi" ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"}`}
           >
             <Smartphone size={16} /> Direct UPI
           </button>
         )}
         <button
           onClick={() => setActiveTab("bank")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === "bank" ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"}`}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === "bank" ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"}`}
         >
           <Building2 size={16} /> Bank Transfer
         </button>
@@ -478,7 +478,7 @@ export default function AccountPayUpiPage() {
         <button
           type="submit"
           disabled={submitting || uploading || !uploadedUrl}
-          className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-colors text-sm uppercase tracking-wider"
+          className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-colors text-sm uppercase tracking-wider"
         >
           {submitting ? <><Spinner size={16} /> Submitting...</> : "Submit for Verification"}
         </button>

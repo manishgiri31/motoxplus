@@ -1,6 +1,6 @@
 export default function VehicleDetailLoading() {
   return (
-    <div className="min-h-screen bg-[var(--paper)] animate-fade-in">
+    <div className="min-h-screen bg-[var(--paper)]">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-10">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-6">

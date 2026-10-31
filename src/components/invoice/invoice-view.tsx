@@ -210,7 +210,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
           </button>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-sm transition-colors text-sm"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm transition-colors text-sm"
           >
             <Download size={16} />
             Download PDF
@@ -221,7 +221,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
       {/* Invoice document */}
       <div ref={printRef} className="glass border border-[var(--border-color)] rounded-sm overflow-hidden print:border-0 print:rounded-none">
         {/* Header */}
-        <div className="bg-red-600 px-8 py-6 flex justify-between items-start">
+        <div className="bg-[var(--accent)] px-8 py-6 flex justify-between items-start">
           <div>
             <div className="text-[var(--text-primary)] font-black text-2xl tracking-wide">
               MOTOX<span className="text-red-200">PLUS</span>
@@ -339,7 +339,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
                   </div>
                 </>
               )}
-              <div className="flex justify-between bg-red-600 px-4 py-2 rounded-sm font-bold">
+              <div className="flex justify-between bg-[var(--accent)] px-4 py-2 rounded-sm font-bold">
                 <span className="text-[var(--text-primary)]">Grand Total</span>
                 <span className="text-[var(--text-primary)]">{formatCurrency(invoice.grandTotal)}</span>
               </div>

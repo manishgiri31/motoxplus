@@ -109,7 +109,7 @@ export function VendorRatingForm({ vendorId }: Props) {
                 <textarea className={`${inputClass} resize-none`} rows={3} value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Optional feedback..." />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+                <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
                   {loading && <Loader2 size={14} className="animate-spin" />}
                   Save Rating
                 </button>

@@ -135,7 +135,7 @@ export function VehicleHeroImageUploader({
             placeholder="Or paste an image URL…"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           />
           {value && (
             <button

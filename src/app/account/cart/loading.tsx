@@ -1,6 +1,6 @@
 export default function AccountCartLoading() {
   return (
-    <div className="animate-fade-in">
+    <div>
       <div className="mb-8 flex items-center justify-between">
         <div className="space-y-2">
           <div className="skeleton h-8 w-24 rounded-sm" />

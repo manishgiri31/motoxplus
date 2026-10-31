@@ -17,24 +17,24 @@ export function LoginModeSwitch() {
 
   return (
     <div>
-      <div className="grid grid-cols-2 mb-5 border border-[var(--line)] rounded-sm overflow-hidden">
+      <div className="grid grid-cols-2 gap-1 mb-5 p-1 rounded-pill bg-[var(--surface-3)]">
         <button
           type="button"
           onClick={() => setMode("dealer")}
-          className={`py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
-            mode === "dealer" ? "bg-[var(--red)] text-white" : "bg-[var(--card)] text-[var(--muted)] hover:text-[var(--ink)]"
+          className={`py-2.5 text-14 rounded-pill transition-colors duration-[var(--dur-2)] ${
+            mode === "dealer" ? "bg-white text-[var(--ink)] shadow-s1 font-semibold" : "text-[var(--muted)] hover:text-[var(--ink)]"
           }`}
         >
-          Dealer Login
+          Dealer
         </button>
         <button
           type="button"
           onClick={() => setMode("customer")}
-          className={`py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
-            mode === "customer" ? "bg-[var(--red)] text-white" : "bg-[var(--card)] text-[var(--muted)] hover:text-[var(--ink)]"
+          className={`py-2.5 text-14 rounded-pill transition-colors duration-[var(--dur-2)] ${
+            mode === "customer" ? "bg-white text-[var(--ink)] shadow-s1 font-semibold" : "text-[var(--muted)] hover:text-[var(--ink)]"
           }`}
         >
-          Customer Login
+          Customer
         </button>
       </div>
       {mode === "dealer" ? <LoginForm /> : <CustomerAuthForm />}

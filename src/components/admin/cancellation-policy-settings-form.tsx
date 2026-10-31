@@ -57,7 +57,7 @@ export function CancellationPolicySettingsForm({ currentPreShip, currentPostShip
     <div className="glass-dark border border-[var(--border-color)] rounded-xl p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[var(--text-secondary)] text-xs uppercase tracking-widest font-bold">
-          <span className="w-1 h-4 bg-red-600 rounded-full inline-block" />
+          <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
           Cancellation Policy
         </div>
         {updatedAt && (
@@ -121,7 +121,7 @@ export function CancellationPolicySettingsForm({ currentPreShip, currentPostShip
       <button
         onClick={() => (valid ? setConfirmOpen(true) : handleSave())}
         disabled={status === "loading"}
-        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
       >
         <Save size={14} />
         {status === "loading" ? "Saving..." : "Save Policy"}

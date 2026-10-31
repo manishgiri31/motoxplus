@@ -157,7 +157,7 @@ export default function CartPage() {
           <p className="text-[var(--text-muted)] mb-6">Browse our products and add items to your cart.</p>
           <Link
             href="/dealer/products"
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider inline-flex items-center gap-2"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider inline-flex items-center gap-2"
           >
             Browse Products
             <ArrowRight size={16} />
@@ -322,7 +322,7 @@ export default function CartPage() {
 
               <Link
                 href="/dealer/checkout"
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider text-center block"
+                className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider text-center block"
               >
                 Proceed to Checkout
               </Link>

@@ -326,10 +326,10 @@ export default function AccountCheckoutPage() {
           {upiEnabled && (
             <button
               onClick={() => setPaymentMethod("DIRECT_UPI")}
-              className={`w-full flex items-center gap-4 p-4 rounded-sm border text-left transition-all duration-200 ${paymentMethod === "DIRECT_UPI" ? "border-red-600 bg-red-600/5 ring-1 ring-red-600/20" : "border-[var(--border-color)] hover:border-red-600/40 glass"}`}
+              className={`w-full flex items-center gap-4 p-4 rounded-sm border text-left transition-all duration-200 ${paymentMethod === "DIRECT_UPI" ? "border-[var(--accent)] bg-red-600/5 ring-1 ring-red-600/20" : "border-[var(--border-color)] hover:border-red-600/40 glass"}`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "DIRECT_UPI" ? "border-red-600" : "border-[var(--text-muted)]"}`}>
-                {paymentMethod === "DIRECT_UPI" && <div className="w-2 h-2 bg-red-600 rounded-full" />}
+              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "DIRECT_UPI" ? "border-[var(--accent)]" : "border-[var(--text-muted)]"}`}>
+                {paymentMethod === "DIRECT_UPI" && <div className="w-2 h-2 bg-[var(--accent)] rounded-full" />}
               </div>
               <Smartphone size={18} className="text-purple-400 flex-shrink-0" />
               <div className="flex-1">
@@ -341,10 +341,10 @@ export default function AccountCheckoutPage() {
           {RAZORPAY_ENABLED && (
             <button
               onClick={() => setPaymentMethod("RAZORPAY")}
-              className={`w-full flex items-center gap-4 p-4 rounded-sm border text-left transition-all duration-200 ${paymentMethod === "RAZORPAY" ? "border-red-600 bg-red-600/5 ring-1 ring-red-600/20" : "border-[var(--border-color)] hover:border-red-600/40 glass"}`}
+              className={`w-full flex items-center gap-4 p-4 rounded-sm border text-left transition-all duration-200 ${paymentMethod === "RAZORPAY" ? "border-[var(--accent)] bg-red-600/5 ring-1 ring-red-600/20" : "border-[var(--border-color)] hover:border-red-600/40 glass"}`}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "RAZORPAY" ? "border-red-600" : "border-[var(--text-muted)]"}`}>
-                {paymentMethod === "RAZORPAY" && <div className="w-2 h-2 bg-red-600 rounded-full" />}
+              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "RAZORPAY" ? "border-[var(--accent)]" : "border-[var(--text-muted)]"}`}>
+                {paymentMethod === "RAZORPAY" && <div className="w-2 h-2 bg-[var(--accent)] rounded-full" />}
               </div>
               <CreditCard size={18} className="text-red-500 flex-shrink-0" />
               <div className="flex-1">
@@ -375,7 +375,7 @@ export default function AccountCheckoutPage() {
       <button
         onClick={handlePlaceOrder}
         disabled={loading || (!upiEnabled && !RAZORPAY_ENABLED)}
-        className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
+        className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
       >
         {loading ? <><Spinner size={16} /> Placing order...</> : <><ShieldCheck size={16} /> Place Order — {formatCurrency(grandTotal)}</>}
       </button>

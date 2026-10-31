@@ -64,7 +64,7 @@ export function PRActions({ requestId }: { requestId: string }) {
               <button
                 onClick={() => act("reject")}
                 disabled={!!loading}
-                className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors"
               >
                 {loading === "reject" && <Loader2 size={14} className="animate-spin" />}
                 Confirm Reject

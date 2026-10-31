@@ -110,7 +110,7 @@ export default async function AccountOrdersPage(props: { searchParams: Promise<{
                   key={p}
                   href={`/account/orders?page=${p}`}
                   className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${
-                    p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
+                    p === page ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
                   }`}
                 >
                   {p}

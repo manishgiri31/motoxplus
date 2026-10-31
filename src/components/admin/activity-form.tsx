@@ -129,7 +129,7 @@ export function ActivityForm({ leadId, currentStatus, onClose, onSaved }: Props)
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={loading} className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+            <button type="submit" disabled={loading} className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
               {loading ? "Saving..." : "Log Activity"}
             </button>
             <button type="button" onClick={onClose} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-5 py-2.5 rounded-sm text-sm uppercase tracking-wider hover:border-red-900/40 transition-colors">

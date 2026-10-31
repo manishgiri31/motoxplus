@@ -35,7 +35,7 @@ export function LeadDetailActions({ lead }: { lead: Lead }) {
         </button>
         <button
           onClick={() => setShowActivity(true)}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors"
+          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors"
         >
           <Plus size={14} /> Log Activity
         </button>

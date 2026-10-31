@@ -210,7 +210,7 @@ export default function NewPurchaseOrderPage() {
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" disabled={loading} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <button type="submit" disabled={loading} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-sm text-sm uppercase tracking-wider transition-colors">
             {loading && <Loader2 size={16} className="animate-spin" />}
             Send Purchase Order
           </button>

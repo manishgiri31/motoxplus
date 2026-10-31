@@ -147,7 +147,7 @@ export function EntityManager({
         {!showForm && (
           <button
             onClick={openAdd}
-            className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
           >
             <Plus size={13} />
             Add
@@ -168,7 +168,7 @@ export function EntityManager({
                   <select
                     value={form[f.key] ?? ""}
                     onChange={(e) => set(f.key, e.target.value)}
-                    className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2.5 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2.5 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                   >
                     <option value="">—</option>
                     {f.options?.map((o) => (
@@ -183,7 +183,7 @@ export function EntityManager({
                     onChange={(e) => set(f.key, e.target.value)}
                     placeholder={f.placeholder}
                     rows={3}
-                    className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2.5 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2.5 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                   />
                 ) : f.type === "checkbox" ? (
                   <button
@@ -201,7 +201,7 @@ export function EntityManager({
                     value={form[f.key] ?? ""}
                     onChange={(e) => set(f.key, e.target.value)}
                     placeholder={f.placeholder}
-                    className={`w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2.5 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-600 ${f.type === "color" ? "h-9 p-1" : ""}`}
+                    className={`w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-2.5 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] ${f.type === "color" ? "h-9 p-1" : ""}`}
                   />
                 )}
               </div>
@@ -211,7 +211,7 @@ export function EntityManager({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
             >
               <Check size={13} />
               {saving ? "Saving…" : editId ? "Update" : "Add"}
@@ -231,7 +231,11 @@ export function EntityManager({
       )}
 
       {loading ? (
-        <p className="text-[var(--text-muted)] text-xs">Loading…</p>
+        <div className="space-y-2" role="status" aria-label="Loading">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton h-12 w-full" />
+          ))}
+        </div>
       ) : rows.length === 0 ? (
         <p className="text-[var(--text-muted)] text-xs py-4 text-center">{emptyMessage}</p>
       ) : (

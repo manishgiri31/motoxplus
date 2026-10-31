@@ -66,7 +66,7 @@ export function OtpInput({ value, onChange, length = 6, disabled = false }: OtpI
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
           onFocus={(e) => e.target.select()}
-          className="w-12 h-14 text-center text-xl font-bold themed-input border-2 border-[var(--border-color)] focus:border-red-600 rounded-sm outline-none transition-colors disabled:opacity-40"
+          className="w-12 h-14 text-center text-xl font-bold themed-input border-2 border-[var(--border-color)] focus:border-[var(--accent)] rounded-lg outline-none transition-colors disabled:opacity-40"
           style={{ caretColor: "transparent" }}
         />
       ))}

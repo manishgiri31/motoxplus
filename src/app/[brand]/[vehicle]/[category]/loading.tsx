@@ -1,6 +1,6 @@
 export default function BrandVehicleCategoryLoading() {
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] animate-fade-in">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Breadcrumb + header */}
       <section className="py-16 px-4 md:px-8 border-b border-[var(--border-color)]">
         <div className="max-w-7xl mx-auto">

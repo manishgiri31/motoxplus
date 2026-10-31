@@ -63,7 +63,7 @@ function DeleteConfirmModal({
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-bold transition-colors disabled:opacity-50"
           >
             {loading ? <Spinner size={14} /> : <Trash2 size={14} />}
             Delete

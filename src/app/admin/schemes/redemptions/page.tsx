@@ -61,7 +61,7 @@ export default async function SchemeRedemptionsPage(
       <div className="flex flex-wrap gap-2 mb-4">
         <Link
           href="/admin/schemes/redemptions"
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${!schemeId ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${!schemeId ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
         >
           All
         </Link>
@@ -69,7 +69,7 @@ export default async function SchemeRedemptionsPage(
           <Link
             key={s.id}
             href={`/admin/schemes/redemptions?schemeId=${s.id}`}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${schemeId === s.id ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${schemeId === s.id ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
           >
             {s.code}
           </Link>
@@ -132,7 +132,7 @@ export default async function SchemeRedemptionsPage(
             <Link
               key={p}
               href={`/admin/schemes/redemptions?${new URLSearchParams({ page: String(p), ...(schemeId && { schemeId }) }).toString()}`}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-white"}`}
+              className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${p === page ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-white"}`}
             >
               {p}
             </Link>

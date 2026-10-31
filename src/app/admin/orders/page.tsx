@@ -52,7 +52,7 @@ export default async function AdminOrdersPage(
             href={`/admin/orders${s ? `?status=${s}` : ""}`}
             className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${
               searchParams.status === s || (!searchParams.status && !s)
-                ? "bg-red-600 text-white"
+                ? "bg-[var(--accent)] text-white"
                 : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
             }`}
           >

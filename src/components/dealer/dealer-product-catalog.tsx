@@ -123,7 +123,7 @@ export function DealerProductCatalog({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => handleCategoryFilter(null)}
-            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${!currentCategory ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${!currentCategory ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
           >
             All
           </button>
@@ -131,7 +131,7 @@ export function DealerProductCatalog({
             <button
               key={cat.id}
               onClick={() => handleCategoryFilter(cat.slug)}
-              className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${currentCategory === cat.slug ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+              className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${currentCategory === cat.slug ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
             >
               {cat.name}
             </button>
@@ -170,7 +170,7 @@ export function DealerProductCatalog({
                   </div>
                 )}
                 {hasVariants && (
-                  <div className="absolute top-2 right-2 bg-red-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                  <div className="absolute top-2 right-2 bg-[var(--accent)] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
                     {product._count!.variants} options
                   </div>
                 )}
@@ -217,7 +217,7 @@ export function DealerProductCatalog({
                 {hasVariants ? (
                   <Link
                     href={`/products/${product.id}`}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-sm text-xs font-bold uppercase tracking-wider bg-red-600 hover:bg-red-700 text-white transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-sm text-xs font-bold uppercase tracking-wider bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white transition-colors"
                   >
                     Select Model &amp; Color
                     <ChevronRight size={13} />
@@ -261,7 +261,7 @@ export function DealerProductCatalog({
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-sm text-[11px] font-bold uppercase tracking-wider transition-all ${
                       addedIds.includes(product.id)
                         ? "bg-green-700 text-white"
-                        : "bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                        : "bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white disabled:opacity-50"
                     }`}
                   >
                     {addedIds.includes(product.id) ? (
@@ -287,7 +287,7 @@ export function DealerProductCatalog({
             <Link
               key={p}
               href={`/dealer/products?page=${p}${currentCategory ? `&category=${currentCategory}` : ""}${currentSearch ? `&search=${currentSearch}` : ""}`}
-              className={`w-10 h-10 flex items-center justify-center rounded-sm text-sm font-bold ${p === currentPage ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+              className={`w-10 h-10 flex items-center justify-center rounded-sm text-sm font-bold ${p === currentPage ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
             >
               {p}
             </Link>

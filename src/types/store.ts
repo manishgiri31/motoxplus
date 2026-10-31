@@ -7,9 +7,11 @@ export interface StoreProduct {
   name: string;
   tagline: string;
   category: string;
-  price: Money;
+  /** Omitted until real pricing is wired in; cards then show a "Shop" link instead of a price. */
+  price?: Money;
   currency: "INR" | "USD" | "EUR" | "GBP";
   badge?: "New" | "Sale" | "Limited";
+  /** R2 object keys (e.g. "products/<uuid>.webp") or absolute URLs. */
   images: string[];
   featured?: boolean;
   inStock: boolean;

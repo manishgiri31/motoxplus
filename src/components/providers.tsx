@@ -14,6 +14,7 @@ export function Providers({ children }: { children: ReactNode }) {
         attribute="class"
         defaultTheme="light"
         enableSystem={false}
+        forcedTheme="light"
         storageKey="motoxplus-theme"
       >
         {/* reducedMotion="user" makes every framer-motion animation in the app
@@ -22,15 +23,15 @@ export function Providers({ children }: { children: ReactNode }) {
             level, so the CSS-only rule in globals.css doesn't reach it. */}
         <MotionConfig reducedMotion="user">
           <NextTopLoader
-            color="#dc2626"
+            color="#0071e3"
             initialPosition={0.08}
-            crawlSpeed={200}
-            height={3}
+            crawlSpeed={120}
+            height={2}
             crawl={true}
             showSpinner={false}
             easing="ease"
-            speed={200}
-            shadow="0 0 10px #dc2626,0 0 5px #ef4444"
+            speed={160}
+            shadow="0 0 8px #0071e3,0 0 4px #2997ff"
             zIndex={99999}
           />
           {children}

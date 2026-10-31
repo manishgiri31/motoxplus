@@ -64,7 +64,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
               href={invoice.pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-sm transition-colors"
             >
               <Download className="w-4 h-4" />
               Download PDF

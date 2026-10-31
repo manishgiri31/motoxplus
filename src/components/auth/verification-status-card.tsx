@@ -47,8 +47,8 @@ export function VerificationStatusCard({
   }
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6">
-      <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+    <div className="bg-[var(--card)] rounded-[18px] p-6">
+      <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
         Verification Status
       </h2>
 
@@ -62,7 +62,7 @@ export function VerificationStatusCard({
       {!editingEmail ? (
         <button
           onClick={() => { setEditingEmail(true); setNewEmail(email); }}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors uppercase tracking-wider"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
         >
           <Pencil size={12} /> Change Email
         </button>
@@ -73,13 +73,13 @@ export function VerificationStatusCard({
             required
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            className="flex-1 themed-input border focus:border-[var(--red)]/60 rounded-sm px-3 py-2 text-sm outline-none transition-colors"
+            className="flex-1 themed-input border focus:border-[var(--red)]/60 rounded-lg px-3 py-2 text-sm outline-none transition-colors"
             placeholder="new-email@company.com"
           />
           <button
             type="submit"
             disabled={status === "loading"}
-            className="bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-bold px-4 py-2 rounded-sm text-xs uppercase tracking-wider transition-colors"
+            className="bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-normal px-4 py-2 rounded-pill text-17 transition-colors"
           >
             {status === "loading" ? "Saving..." : "Save & Verify"}
           </button>
@@ -109,12 +109,12 @@ function StatusRow({
   neutralLabel?: string;
 }) {
   return (
-    <div className="flex items-center justify-between p-3 bg-[var(--card)] border border-[var(--line)] rounded-sm">
+    <div className="flex items-center justify-between p-3 bg-[var(--card)] border border-[var(--line)] rounded-lg">
       <div>
-        <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider">{label}</div>
+        <div className="text-[var(--text-muted)] text-xs">{label}</div>
         {detail && <div className="text-[var(--text-primary)] text-xs mt-0.5">{detail}</div>}
       </div>
-      <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider ${ok ? "text-green-400" : "text-yellow-400"}`}>
+      <span className={`inline-flex items-center gap-1 text-xs font-bold ${ok ? "text-green-400" : "text-yellow-400"}`}>
         {ok ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
         {neutralLabel ?? (ok ? "Yes" : "No")}
       </span>

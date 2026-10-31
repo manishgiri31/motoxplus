@@ -77,7 +77,7 @@ export function VariantSelector({
               onClick={() => selectGeneration(null)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                 !selectedGenerationId
-                  ? "bg-red-600 border-red-600 text-white"
+                  ? "bg-[var(--accent)] border-[var(--accent)] text-white"
                   : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
               }`}
             >
@@ -89,7 +89,7 @@ export function VariantSelector({
                 onClick={() => selectGeneration(g.id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                   selectedGenerationId === g.id
-                    ? "bg-red-600 border-red-600 text-white"
+                    ? "bg-[var(--accent)] border-[var(--accent)] text-white"
                     : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
                 }`}
               >
@@ -111,7 +111,7 @@ export function VariantSelector({
               onClick={() => selectVariant(null)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                 !selectedVariantSlug
-                  ? "bg-red-600 border-red-600 text-white"
+                  ? "bg-[var(--accent)] border-[var(--accent)] text-white"
                   : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
               }`}
             >
@@ -124,7 +124,7 @@ export function VariantSelector({
                   onClick={() => selectVariant(v)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                     selectedVariantSlug === v.slug
-                      ? "bg-red-600 border-red-600 text-white"
+                      ? "bg-[var(--accent)] border-[var(--accent)] text-white"
                       : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
                   }`}
                 >

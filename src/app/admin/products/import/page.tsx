@@ -196,7 +196,7 @@ export default function ProductImportPage() {
               },
             ].map((s) => (
               <div key={s.n} className="glass border border-[var(--border-color)] rounded-xl p-4">
-                <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-black mb-3">
+                <div className="w-6 h-6 bg-[var(--accent)] rounded-full flex items-center justify-center text-white text-xs font-black mb-3">
                   {s.n}
                 </div>
                 <div className="text-[var(--text-primary)] text-sm font-bold mb-1">{s.title}</div>
@@ -239,7 +239,7 @@ export default function ProductImportPage() {
             <button
               onClick={handleImport}
               disabled={!file || loading}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
             >
               {loading ? (
                 <>
@@ -386,7 +386,7 @@ export default function ProductImportPage() {
             </button>
             <Link
               href="/admin/products"
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
             >
               View Products
             </Link>

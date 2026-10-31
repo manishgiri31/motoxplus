@@ -37,7 +37,7 @@ export function PendingApprovalCard({ status }: PendingApprovalCardProps) {
   const copy = STATUS_COPY[status || "PENDING"] || STATUS_COPY.PENDING;
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] p-8 text-center">
+    <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10 text-center">
       <div className="w-16 h-16 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-full flex items-center justify-center mx-auto mb-6">
         {copy.icon}
       </div>
@@ -46,7 +46,7 @@ export function PendingApprovalCard({ status }: PendingApprovalCardProps) {
       <button
         onClick={async () => { setSigningOut(true); await fullLogout("/"); }}
         disabled={signingOut}
-        className="w-full bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-bold py-3 rounded-sm transition-colors uppercase tracking-wider text-sm"
+        className="w-full bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-normal py-3 rounded-pill transition-colors text-17"
       >
         {signingOut ? "Signing out..." : "Sign Out"}
       </button>

@@ -23,7 +23,7 @@ interface Diagram {
 function HotspotMarker({ hotspot }: { hotspot: Hotspot }) {
   const [hovered, setHovered] = useState(false);
   const marker = (
-    <span className="w-7 h-7 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center border-2 border-white/80 shadow-lg hover:scale-110 transition-transform cursor-pointer">
+    <span className="w-7 h-7 rounded-full bg-[var(--accent)] text-white text-xs font-bold flex items-center justify-center border-2 border-white/80 shadow-lg hover:scale-110 transition-transform cursor-pointer">
       {hotspot.calloutNumber ?? "•"}
     </span>
   );
@@ -60,7 +60,7 @@ export function PartsDiagram({ diagrams }: { diagrams: Diagram[] }) {
               onClick={() => setActiveId(d.id)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                 activeId === d.id
-                  ? "bg-red-600 border-red-600 text-white"
+                  ? "bg-[var(--accent)] border-[var(--accent)] text-white"
                   : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
               }`}
             >

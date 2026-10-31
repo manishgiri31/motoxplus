@@ -42,7 +42,7 @@ export default async function AdminSchemesPage(
           </Link>
           <Link
             href="/admin/schemes/new"
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-sm uppercase tracking-wider"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-sm uppercase tracking-wider"
           >
             <Plus size={16} />
             New Scheme
@@ -58,7 +58,7 @@ export default async function AdminSchemesPage(
             <Link
               key={p}
               href={`/admin/schemes?page=${p}`}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-white"}`}
+              className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${p === page ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50 hover:text-white"}`}
             >
               {p}
             </Link>

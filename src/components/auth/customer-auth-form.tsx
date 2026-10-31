@@ -10,7 +10,7 @@ import { normalizeIndianMobile } from "@/lib/phone";
 
 type Step = "details" | "otp";
 
-const inputCls = "w-full themed-input border rounded-sm pl-11 pr-4 py-3 text-sm";
+const inputCls = "w-full themed-input border rounded-lg pl-11 pr-4 py-3 text-sm";
 const RESEND_COOLDOWN_SECONDS = 45;
 
 // B2C customer signup + login, both in one form (B2C-EXPANSION-PLAN.md
@@ -101,7 +101,7 @@ export function CustomerAuthForm() {
   }, [otp]);
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] p-8">
+    <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10">
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--ink)] mb-1">
@@ -115,16 +115,16 @@ export function CustomerAuthForm() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 border border-[var(--sig-ok-bd)] bg-[var(--sig-ok-bg)] px-2.5 py-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 rounded-pill bg-[var(--sig-ok-bg)] px-2.5 py-1.5 flex-shrink-0">
           <ShieldCheck size={12} className="text-[var(--sig-ok-fg)]" />
-          <span className="text-[10px] text-[var(--sig-ok-fg)] font-semibold tracking-wide">Secure</span>
+          <span className="text-[10px] text-[var(--sig-ok-fg)] font-semibold">Secure</span>
         </div>
       </div>
 
       {step === "details" && (
         <form onSubmit={handleDetailsSubmit} className="space-y-4">
           <div>
-            <label className="text-[var(--muted)] text-xs uppercase tracking-wider block mb-2">Your Name</label>
+            <label className="text-[var(--muted)] text-xs block mb-2">Your Name</label>
             <div className="relative">
               <User size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input
@@ -139,7 +139,7 @@ export function CustomerAuthForm() {
             </div>
           </div>
           <div>
-            <label className="text-[var(--muted)] text-xs uppercase tracking-wider block mb-2">Mobile Number</label>
+            <label className="text-[var(--muted)] text-xs block mb-2">Mobile Number</label>
             <div className="relative">
               <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input
@@ -155,7 +155,7 @@ export function CustomerAuthForm() {
           </div>
           {showEmail ? (
             <div>
-              <label className="text-[var(--muted)] text-xs uppercase tracking-wider block mb-2">Email (optional)</label>
+              <label className="text-[var(--muted)] text-xs block mb-2">Email (optional)</label>
               <div className="relative">
                 <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
                 <input
@@ -177,7 +177,7 @@ export function CustomerAuthForm() {
           <button
             type="submit"
             disabled={status === "loading"}
-            className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm mt-2"
+            className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-normal py-3.5 rounded-pill transition-colors text-17 mt-2"
           >
             {status === "loading" ? <><Spinner size={15} /> Sending code...</> : <>Continue <ChevronRight size={15} /></>}
           </button>
@@ -209,7 +209,7 @@ export function CustomerAuthForm() {
 
 function ErrorBanner({ message, center = false }: { message: string; center?: boolean }) {
   return (
-    <div className={`bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-sm px-4 py-3 text-[var(--sig-danger-fg)] text-sm flex items-center gap-2 ${center ? "justify-center text-center" : ""}`} role="alert">
+    <div className={`bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm flex items-center gap-2 ${center ? "justify-center text-center" : ""}`} role="alert">
       <span className="w-1.5 h-1.5 rounded-full bg-[var(--sig-danger-fg)] flex-shrink-0" />
       {message}
     </div>

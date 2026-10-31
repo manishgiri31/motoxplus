@@ -16,11 +16,11 @@ function Loader() {
   const { active, progress } = useProgress();
   if (!active) return null;
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--bg-secondary)]/80 backdrop-blur-sm pointer-events-none z-10">
-      <div className="w-8 h-8 border-2 border-[var(--border-color)] border-t-red-600 rounded-full animate-spin" />
-      <span className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest">
-        Loading model — {Math.round(progress)}%
-      </span>
+    <div className="absolute inset-0 z-10 flex flex-col justify-end gap-3 bg-[var(--bg-secondary)] p-5 pointer-events-none" role="status" aria-label={`Loading model, ${Math.round(progress)}%`}>
+      <div className="skeleton absolute inset-5 bottom-14" />
+      <div className="relative h-1 w-full overflow-hidden rounded-pill bg-[var(--surface-3)]">
+        <div className="h-full rounded-pill bg-[var(--accent)] transition-[width] duration-[var(--dur-2)]" style={{ width: `${Math.round(progress)}%` }} />
+      </div>
     </div>
   );
 }
@@ -127,7 +127,7 @@ export function VehicleViewer({ modelUrl }: { modelUrl?: string | null }) {
           aria-label="Toggle auto-rotate"
           className={`w-9 h-9 rounded-full flex items-center justify-center border transition-colors ${
             autoRotate
-              ? "bg-red-600 border-red-600 text-white"
+              ? "bg-[var(--accent)] border-[var(--accent)] text-white"
               : "glass border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
           }`}
         >

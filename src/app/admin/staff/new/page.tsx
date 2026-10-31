@@ -95,7 +95,7 @@ export default function NewStaffPage() {
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" disabled={loading} className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <button type="submit" disabled={loading} className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-3 rounded-sm text-sm uppercase tracking-wider transition-colors">
             {loading ? "Creating..." : "Create Staff Account"}
           </button>
           <Link href="/admin/staff" className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm uppercase tracking-wider hover:border-red-900/40 transition-colors">

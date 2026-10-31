@@ -260,7 +260,7 @@ export function ModelImageManager({ productId }: { productId: string }) {
                         className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
                           isSaved
                             ? "bg-green-600 text-white"
-                            : "bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                            : "bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white disabled:opacity-50"
                         }`}
                         title="Save URL"
                       >

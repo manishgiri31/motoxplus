@@ -103,13 +103,13 @@ const config: Config = {
         indigo: colorRamp("indigo"),
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
+        sans: ["var(--font-body)", "var(--font-geist-sans)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
         // v2 — Schibsted Grotesk (headings) / Inter (body) / IBM Plex Mono (codes).
         // `mono` is repointed from Geist Mono to IBM Plex Mono: font-mono already has
         // 100 call sites across 46 files (SKUs/order IDs/HSN codes in dealer, vendor,
         // admin, products), so this is an immediate, sitewide font change on every one
         // of them, not something scoped to new/redesigned pages.
-        display: ["var(--font-display)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
+        display: ["var(--font-body)", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
         body: ["var(--font-body)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
         // Store design system: Inter (self-hosted as --font-body), system stack behind it.
@@ -171,6 +171,9 @@ const config: Config = {
         "store-card": "18px",
         "store-pill": "999px",
       },
+      // Spec §4: headlines are 600; 700+ is not used. Re-point the heavy weights so the
+      // ~thousand existing font-bold/extrabold/black call sites render semibold.
+      fontWeight: { bold: "600", extrabold: "600", black: "600" },
       borderWidth: {
         hairline: "1px",
         3: "3px",

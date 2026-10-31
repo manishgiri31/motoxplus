@@ -171,7 +171,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
         {!showForm && (
           <button
             onClick={openAdd}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
           >
             <Plus size={14} /> Add Fitment
           </button>
@@ -190,7 +190,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
               <select
                 value={form.vehicleId}
                 onChange={(e) => setForm((f) => ({ ...f, vehicleId: e.target.value, generationId: "", variantId: "" }))}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
               >
                 <option value="">Select vehicle…</option>
                 {vehicles.map((v) => (
@@ -205,7 +205,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
               <select
                 value={form.sectionId}
                 onChange={(e) => set("sectionId", e.target.value)}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
               >
                 <option value="">No section</option>
                 {sections.map((s) => (
@@ -219,7 +219,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
                 value={form.generationId}
                 onChange={(e) => setForm((f) => ({ ...f, generationId: e.target.value, variantId: "" }))}
                 disabled={!selectedVehicle}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600 disabled:opacity-50"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] disabled:opacity-50"
               >
                 <option value="">Any generation</option>
                 {selectedVehicle?.generations.map((g) => (
@@ -233,7 +233,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
                 value={form.variantId}
                 onChange={(e) => set("variantId", e.target.value)}
                 disabled={!selectedVehicle}
-                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600 disabled:opacity-50"
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] disabled:opacity-50"
               >
                 <option value="">Any variant</option>
                 {availableVariants.map((v) => (
@@ -246,15 +246,15 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Year From</label>
-              <input type="number" value={form.yearFrom} onChange={(e) => set("yearFrom", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+              <input type="number" value={form.yearFrom} onChange={(e) => set("yearFrom", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
             </div>
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Year To</label>
-              <input type="number" value={form.yearTo} onChange={(e) => set("yearTo", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+              <input type="number" value={form.yearTo} onChange={(e) => set("yearTo", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
             </div>
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Emission</label>
-              <select value={form.emissionStandard} onChange={(e) => set("emissionStandard", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-2 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600">
+              <select value={form.emissionStandard} onChange={(e) => set("emissionStandard", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-2 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]">
                 <option value="">Any</option>
                 {EMISSION_OPTIONS.map((o) => (
                   <option key={o} value={o}>{o.replace("_", " ")}</option>
@@ -263,14 +263,14 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
             </div>
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Position</label>
-              <input value={form.position} onChange={(e) => set("position", e.target.value)} placeholder="Front / Rear" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+              <input value={form.position} onChange={(e) => set("position", e.target.value)} placeholder="Front / Rear" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Confidence</label>
-              <select value={form.confidence} onChange={(e) => set("confidence", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-2 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600">
+              <select value={form.confidence} onChange={(e) => set("confidence", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-2 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]">
                 {CONFIDENCE_OPTIONS.map((o) => (
                   <option key={o} value={o}>{o}</option>
                 ))}
@@ -278,7 +278,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
             </div>
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Source</label>
-              <select value={form.source} onChange={(e) => set("source", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-2 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600">
+              <select value={form.source} onChange={(e) => set("source", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-2 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]">
                 {SOURCE_OPTIONS.map((o) => (
                   <option key={o} value={o}>{o.replace("_", " ")}</option>
                 ))}
@@ -288,11 +288,11 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
 
           <div className="mb-5">
             <label className="block text-[var(--text-muted)] text-xs mb-1.5">Fitment Note</label>
-            <textarea value={form.fitmentNote} onChange={(e) => set("fitmentNote", e.target.value)} rows={2} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600" />
+            <textarea value={form.fitmentNote} onChange={(e) => set("fitmentNote", e.target.value)} rows={2} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
           </div>
 
           <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
               <Check size={14} /> {saving ? "Saving..." : editId ? "Update" : "Add Fitment"}
             </button>
             <button onClick={() => { setShowForm(false); setEditId(null); }} className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">

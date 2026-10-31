@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { StoreButton } from "@/components/store/button";
 import { Reveal } from "@/components/store/reveal";
+import { HERO_IMAGE, imageUrl } from "@/lib/store/products";
 
 export function Hero() {
   return (
@@ -23,15 +24,16 @@ export function Hero() {
           </Link>
         </div>
       </Reveal>
-      <Image
-        src="/store/hero.svg"
-        alt="Placeholder artwork: a mudguard, visor and tail panel"
-        width={1400}
-        height={460}
-        priority
-        unoptimized
-        className="mx-auto mt-10 h-auto w-[min(100%,1000px)] bp-md:mt-12"
-      />
+      <div className="relative mx-auto mt-10 aspect-[1920/1528] w-[min(100%,760px)] bp-md:mt-12">
+        <Image
+          src={imageUrl(HERO_IMAGE)}
+          alt="MOTOXPLUS front mudguard and side panels in red"
+          fill
+          priority
+          sizes="(max-width:834px) 100vw, 760px"
+          className="object-contain mix-blend-multiply"
+        />
+      </div>
     </section>
   );
 }

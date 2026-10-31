@@ -106,31 +106,31 @@
   --c-indigo-900: 49 46 129;   --c-indigo-950: 30 27 75;
 
   /* ── Surfaces ── */
-  --bg-primary: #F4F4F6;      /* page canvas — mill finish */
+  --bg-primary: #F5F5F7;      /* page canvas — mill finish */
   --bg-secondary: #FFFFFF;
   --bg-card: #FFFFFF;
-  --bg-card-hover: #FAFAFB;
-  --surface-0: #F4F4F6;       /* canvas */
+  --bg-card-hover: #FBFBFD;
+  --surface-0: #F5F5F7;       /* canvas */
   --surface-1: #FFFFFF;       /* card / panel */
-  --surface-2: #FAFAFB;       /* raised / hover */
-  --surface-3: #EFEFF2;       /* well / thead / code */
+  --surface-2: #FBFBFD;       /* raised / hover */
+  --surface-3: #E8E8ED;       /* well / thead / code */
   --sidebar-bg: #FFFFFF;
-  --sidebar-border: #E2E2E7;
+  --sidebar-border: #D2D2D7;
 
   /* ── Borders. Opaque, not rgba — a drawn hairline is a spec-drawing device;
         an alpha border shifts with whatever sits behind it and reads soft. ── */
-  --border-color: #E2E2E7;
-  --border-subtle: #EDEDF1;
-  --border-strong: #C3C3CB;
-  --border-hover: rgba(220, 38, 38, 0.45);
-  --rule: #DCDCE1;            /* CAD hairline */
-  --rule-strong: #A0A0AC;
+  --border-color: #D2D2D7;
+  --border-subtle: #E8E8ED;
+  --border-strong: #86868B;
+  --border-hover: rgba(0, 113, 227, 0.45);
+  --rule: #D2D2D7;            /* CAD hairline */
+  --rule-strong: #86868B;
 
   /* ── Text. Contrast measured against --surface-1 #FFF / --surface-0 #F4F4F6. ── */
-  --text-primary: #0E0E11;    /* 19.5:1 / 18.1:1 */
-  --text-secondary: #3E3E45;  /* 10.5:1 /  9.7:1 */
-  --text-muted: #5A5A64;      /*  6.8:1 /  6.2:1 — was #676770 @5.4:1, 1257 call sites */
-  --text-faint: #8E8E9A;      /*  3.2:1 — NON-TEXT ONLY: dividers, disabled, watermark */
+  --text-primary: #1D1D1F;    /* 19.5:1 / 18.1:1 */
+  --text-secondary: #424245;  /* 10.5:1 /  9.7:1 */
+  --text-muted: #6E6E73;      /*  6.8:1 /  6.2:1 — was #676770 @5.4:1, 1257 call sites */
+  --text-faint: #86868B;      /*  3.2:1 — NON-TEXT ONLY: dividers, disabled, watermark */
   --text-inverse: #FFFFFF;
 
   /* ── Inputs. --input-border clears WCAG 1.4.11's 3:1 UI-boundary target. ── */
@@ -138,23 +138,23 @@
   --bg-input: var(--input-bg); /* alias — heals 52 call sites across 9 files that use
                                    the (incorrect) name var(--bg-input); keep indefinitely,
                                    don't "fix" the 52 call sites just to remove this. */
-  --input-border: #8E8E9A;     /* 3.24:1 on white */
-  --input-border-hover: #5A5A64;
+  --input-border: #86868B;     /* 3.24:1 on white */
+  --input-border-hover: #6E6E73;
 
   /* ── Accent. Fill is theme-stable; the TEXT variant flips per theme. ── */
-  --accent: #DC2626;
-  --accent-hover: #B91C1C;
-  --accent-active: #971818;
+  --accent: #0071E3;
+  --accent-hover: #0077ED;
+  --accent-active: #006EDB;
   --accent-fg: #FFFFFF;        /* 4.83:1 on #DC2626 */
-  --accent-text: #B91C1C;      /* red TEXT on light surfaces — 6.5:1 */
-  --accent-soft: #FFF1F1;
-  --accent-soft-border: #FBD5D5;
-  --accent-ring: rgba(220, 38, 38, 0.26);
+  --accent-text: #0066CC;      /* red TEXT on light surfaces — 6.5:1 */
+  --accent-soft: #EAF3FF;
+  --accent-soft-border: #C9E5FF;
+  --accent-ring: rgba(0, 125, 250, 0.35);
 
   /* ── Signal tones. Consumed via [data-tone] below — StatusBadge/Badge/Alert/Toast
         never emit a color utility directly, only a tone name. All pairs ≥4.5:1. ── */
   --sig-neutral-fg: #3E3E45;  --sig-neutral-bg: #F4F4F6;  --sig-neutral-bd: #DCDCE1;
-  --sig-info-fg: #1E40AF;     --sig-info-bg: #EFF6FF;     --sig-info-bd: #BFDBFE;
+  --sig-info-fg: #0066CC;     --sig-info-bg: #EAF3FF;     --sig-info-bd: #C9E5FF;
   --sig-progress-fg: #0F766E; --sig-progress-bg: #F0FDFA; --sig-progress-bd: #99F6E4;
   --sig-ok-fg: #166534;       --sig-ok-bg: #F0FDF4;       --sig-ok-bd: #BBF7D0;
   --sig-warn-fg: #92400E;     --sig-warn-bg: #FFFBEB;     --sig-warn-bd: #FDE68A;
@@ -164,16 +164,16 @@
         reserved for overlays only. Heavy shadow-everywhere is the generic-SaaS tell. ── */
   --elev-0: none;
   --elev-1: 0 1px 0 0 rgba(14, 14, 17, 0.04);
-  --elev-2: 0 1px 2px -1px rgba(14, 14, 17, 0.10), 0 2px 6px -2px rgba(14, 14, 17, 0.05);
-  --elev-3: 0 2px 4px -2px rgba(14, 14, 17, 0.09), 0 10px 24px -8px rgba(14, 14, 17, 0.13);
-  --elev-4: 0 4px 8px -4px rgba(14, 14, 17, 0.11), 0 24px 48px -16px rgba(14, 14, 17, 0.18);
+  --elev-2: 2px 4px 12px rgba(0, 0, 0, 0.08);
+  --elev-3: 2px 4px 16px rgba(0, 0, 0, 0.16);
+  --elev-4: 2px 8px 24px 2px rgba(0, 0, 0, 0.08);
   --elev-inset: inset 0 1px 2px rgba(14, 14, 17, 0.05);
   --shadow-3d: var(--elev-3);   /* back-compat alias, previously unused */
   --glow-red: 0 0 0 1px var(--accent-ring), var(--elev-2);  /* back-compat alias */
 
   /* ── Focus. Ink, not red: guarantees ≥3:1 on every surface including red
         buttons, and keeps red exclusively for action, never for chrome. ── */
-  --focus-ring: #0E0E11;
+  --focus-ring: #0071E3;
   --focus-offset: 2px;
 
   /* ── Blueprint / technical ── */
@@ -184,36 +184,36 @@
   --hatch: rgba(14, 14, 17, 0.07);
 
   /* ── Geometry. Tight = engineered — see tailwind.config.ts borderRadius. ── */
-  --r-0: 0px; --r-1: 2px; --r-2: 3px; --r-3: 4px; --r-4: 6px;
+  --r-0: 0px; --r-1: 6px; --r-2: 12px; --r-3: 18px; --r-4: 18px;
   --radius: var(--r-2); /* back-compat alias, only ever read by tailwind.config.ts */
 
   /* ── Motion ── */
-  --dur-1: 120ms; --dur-2: 180ms; --dur-3: 280ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-1: 160ms; --dur-2: 240ms; --dur-3: 320ms;
+  --ease-out: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-std: cubic-bezier(0.4, 0, 0.6, 1);
 
   /* ── Layout ── */
   --nav-h: 80px; --nav-h-lg: 108px; --sidebar-w: 256px; --container-max: 1440px;
 
-  --scrollbar-track: #EFEFF2;
-  --scrollbar-thumb: #C3C3CB;   /* was #DC2626 — red is action only; a red scrollbar
+  --scrollbar-track: #F5F5F7;
+  --scrollbar-thumb: #D2D2D7;   /* was #DC2626 — red is action only; a red scrollbar
                                    dilutes the one signal color in the whole system */
 
   /* ── MotoXplus v2 — brand redesign foundation. Additive: existing surfaces keep
         reading --bg-primary/--text-primary/--accent/etc. until each is migrated
         in a later phase. New work should use these directly. ── */
-  --paper: #FBFAF8;   /* page canvas — warm white, never pure white */
-  --card: #FFFFFF;
-  --ink: #17181A;
-  --muted: #6B6E73;
-  --line: #E7E5E1;
-  --red: #D01F25;
-  --red-hover: #B5181E;
-  --red-soft: #FCEFEF;
+  --paper: #FFFFFF;   /* page canvas — warm white, never pure white */
+  --card: #F5F5F7;
+  --ink: #1D1D1F;
+  --muted: #6E6E73;
+  --line: #D2D2D7;
+  --red: #0071E3;
+  --red-hover: #0077ED;
+  --red-soft: #EAF3FF;
 
-  --radius-input: 10px;
-  --radius-card: 14px;
-  --radius-panel: 20px;
+  --radius-input: 12px;
+  --radius-card: 18px;
+  --radius-panel: 28px;
   --radius-pill: 999px;
 }
 
@@ -226,7 +226,7 @@
   --sidebar-bg: #0E0E11; --sidebar-border: #26262C;
 
   --border-color: #26262C; --border-subtle: #1E1E23; --border-strong: #3A3A43;
-  --border-hover: rgba(220, 38, 38, 0.55);
+  --border-hover: rgba(41, 151, 255, 0.55);
   --rule: #2A2A31; --rule-strong: #4A4A55;
 
   --text-primary: #F2F2F4;    /* 16.9:1 on --surface-1 */
@@ -239,11 +239,11 @@
   --input-border: #6A6A77;    /* 3.39:1 on --surface-1 */
   --input-border-hover: #8E8E9A;
 
-  --accent: #DC2626; --accent-hover: #EF4444; --accent-active: #B91C1C;
+  --accent: #0A84FF; --accent-hover: #2997FF; --accent-active: #0071E3;
   --accent-fg: #FFFFFF;
-  --accent-text: #F87171;     /* 6.5:1 on --surface-1 */
-  --accent-soft: #2A0E0E; --accent-soft-border: #5A1A1A;
-  --accent-ring: rgba(248, 113, 113, 0.30);
+  --accent-text: #2997FF;     /* 6.5:1 on --surface-1 */
+  --accent-soft: #0B2540; --accent-soft-border: #134A80;
+  --accent-ring: rgba(41, 151, 255, 0.35);
 
   --sig-neutral-fg: #C4C4CC;  --sig-neutral-bg: #1C1C21;  --sig-neutral-bd: #3A3A43;
   --sig-info-fg: #60A5FA;     --sig-info-bg: #0C1A2E;     --sig-info-bd: #1E3A8A;
@@ -293,7 +293,7 @@
   --bg-card: #16161A; --bg-card-hover: #1C1C21;
   --text-primary: #F2F2F4; --text-secondary: #C4C4CC; --text-muted: #9A9AA5;
   --border-color: #26262C; --border-strong: #3A3A43; --rule: #2A2A31;
-  --accent-text: #F87171; --focus-ring: #FFFFFF;
+  --accent-text: #2997FF; --focus-ring: #FFFFFF;
   --grid-line: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
 }
@@ -325,8 +325,18 @@ body {
   font-family: var(--font-body), var(--font-geist-sans), system-ui, "Segoe UI", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.016em;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Apple-style headings: semibold, tight leading and tracking. */
+h1, h2, h3, h4 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+h1 { line-height: 1.08; }
+h2 { line-height: 1.1; }
+h3 { line-height: 1.17; }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 5px; }
@@ -646,16 +656,15 @@ aside {
 }
 
 /* ─── SKELETON ─── */
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--border-color) 25%,
-    var(--surface-2) 50%,
-    var(--border-color) 75%
-  );
-  background-size: 800px 100%;
-  animation: shimmer 1.4s infinite linear;
-  border-radius: var(--r-1);
+/* Apple-style placeholder: soft grey plate with a light sweep. In the components layer so
+   explicit rounded-* utilities (circles, pills) still win over the default 12px. */
+@layer components {
+  .skeleton {
+    background: linear-gradient(90deg, #E8E8ED 25%, #F5F5F7 50%, #E8E8ED 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.2s infinite linear;
+    border-radius: var(--r-2);
+  }
 }
 
 /* ─── BUTTON PRESS — a 4% squash on every button including 12px table-row icon

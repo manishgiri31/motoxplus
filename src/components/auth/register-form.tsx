@@ -46,7 +46,7 @@ export function RegisterForm() {
 
   if (status === "success") {
     return (
-      <div className="bg-[var(--card)] border border-[var(--line)] p-8 text-center">
+      <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10 text-center">
         <div className="w-16 h-16 bg-green-900/30 border border-green-700/40 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -56,21 +56,21 @@ export function RegisterForm() {
         <p className="text-[var(--text-muted)] text-sm mb-6">
           A verification email has been sent to <span className="text-white">{s1.email}</span>. Please verify your email to complete registration.
         </p>
-        <Link href={`/verify-email?userId=${userId}`} className="inline-block bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 px-8 rounded-sm transition-colors uppercase tracking-wider text-sm">
+        <Link href={`/verify-email?userId=${userId}`} className="inline-block bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-normal py-3 px-8 rounded-pill transition-colors text-17">
           Verify Email Now
         </Link>
       </div>
     );
   }
 
-  const inputCls = "w-full themed-input border focus:border-[var(--red)]/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors";
+  const inputCls = "w-full themed-input border focus:border-[var(--red)]/60 rounded-lg px-4 py-3 text-sm outline-none transition-colors";
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] p-8">
+    <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10">
       <div className="flex items-center mb-8">
         {[1, 2].map((s, i) => (
           <div key={s} className="flex items-center flex-1">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${s === step ? "bg-red-600 text-white" : s < step ? "bg-green-700 text-white" : "bg-[var(--border-color)] text-[var(--text-muted)]"}`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${s === step ? "bg-[var(--accent)] text-white" : s < step ? "bg-green-700 text-white" : "bg-[var(--border-color)] text-[var(--text-muted)]"}`}>
               {s < step ? "✓" : s}
             </div>
             <span className={`ml-2 text-xs ${s === step ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
@@ -86,15 +86,15 @@ export function RegisterForm() {
           <h1 className="text-xl font-black text-[var(--text-primary)] mb-1">Create Account</h1>
           <p className="text-[var(--text-muted)] text-sm mb-6">Apply for a dealer account with MOTOXPLUS India.</p>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Full Name</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Full Name</label>
             <input type="text" required value={s1.name} onChange={(e) => setS1({ ...s1, name: e.target.value })} className={inputCls} placeholder="Your full name" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Email Address</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Email Address</label>
             <input type="email" required value={s1.email} onChange={(e) => setS1({ ...s1, email: e.target.value })} className={inputCls} placeholder="you@company.com" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Password</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Password</label>
             <div className="relative">
               <input type={showPw ? "text" : "password"} required minLength={8} value={s1.password} onChange={(e) => setS1({ ...s1, password: e.target.value })} className={inputCls + " pr-12"} placeholder="Min. 8 characters" />
               <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
@@ -103,11 +103,11 @@ export function RegisterForm() {
             </div>
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Confirm Password</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Confirm Password</label>
             <input type="password" required value={s1.confirmPassword} onChange={(e) => setS1({ ...s1, confirmPassword: e.target.value })} className={inputCls} placeholder="Repeat password" />
           </div>
-          {error && <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-sm px-4 py-3 text-[var(--sig-danger-fg)] text-sm">{error}</div>}
-          <button type="submit" className="w-full bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
+          {error && <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm">{error}</div>}
+          <button type="submit" className="w-full bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-normal py-3.5 rounded-pill transition-colors text-17">
             Continue to Business Details
           </button>
         </form>
@@ -118,43 +118,43 @@ export function RegisterForm() {
           <h1 className="text-xl font-black text-[var(--text-primary)] mb-1">Business Details</h1>
           <p className="text-[var(--text-muted)] text-sm mb-6">Tell us about your business.</p>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Company Name</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Company Name</label>
             <input type="text" required value={s2.companyName} onChange={(e) => setS2({ ...s2, companyName: e.target.value })} className={inputCls} placeholder="Your company name" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">GST Number</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">GST Number</label>
               <input type="text" pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$" value={s2.gstNumber} onChange={(e) => setS2({ ...s2, gstNumber: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="22AAAAA0000A1Z5" maxLength={15} />
               <div className="text-[var(--text-muted)] text-xs mt-1">Optional — or provide PAN / Aadhaar below</div>
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Mobile</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">Mobile</label>
               <input type="tel" required value={s2.phone} onChange={(e) => setS2({ ...s2, phone: e.target.value })} className={inputCls} placeholder="10-digit number" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">PAN Number</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">PAN Number</label>
               <input type="text" pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$" value={s2.panNumber} onChange={(e) => setS2({ ...s2, panNumber: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="AAAAA0000A" maxLength={10} />
               <div className="text-[var(--text-muted)] text-xs mt-1">Optional</div>
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Aadhaar Number</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">Aadhaar Number</label>
               <input type="text" pattern="[0-9]{12}" maxLength={12} value={s2.aadhaarNumber} onChange={(e) => setS2({ ...s2, aadhaarNumber: e.target.value.replace(/\D/g, "") })} className={inputCls + " font-mono"} placeholder="000000000000" />
               <div className="text-[var(--text-muted)] text-xs mt-1">Optional — stored securely</div>
             </div>
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Owner Name</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Owner Name</label>
             <input type="text" required value={s2.ownerName} onChange={(e) => setS2({ ...s2, ownerName: e.target.value })} className={inputCls} placeholder="Proprietor / Director name" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Address</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Address</label>
             <input type="text" required value={s2.address} onChange={(e) => setS2({ ...s2, address: e.target.value })} className={inputCls} placeholder="Shop / Office address" />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">State</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">State</label>
               <div className="relative">
                 <select required value={s2.state} onChange={(e) => setS2({ ...s2, state: e.target.value })} className={inputCls + " appearance-none pr-8"}>
                   <option value="">Select</option>
@@ -164,20 +164,20 @@ export function RegisterForm() {
               </div>
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">City</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">City</label>
               <input type="text" required value={s2.city} onChange={(e) => setS2({ ...s2, city: e.target.value })} className={inputCls} placeholder="City" />
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Pincode</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">Pincode</label>
               <input type="text" required value={s2.pincode} onChange={(e) => setS2({ ...s2, pincode: e.target.value })} className={inputCls + " font-mono"} placeholder="6 digits" maxLength={6} />
             </div>
           </div>
-          {error && <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-sm px-4 py-3 text-[var(--sig-danger-fg)] text-sm">{error}</div>}
+          {error && <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm">{error}</div>}
           <div className="flex gap-3 mt-2">
             <button type="button" onClick={() => setStep(1)} className="flex-1 border border-[var(--border-color)] text-[var(--text-muted)] font-bold py-4 rounded-xl transition-colors text-sm">
               Back
             </button>
-            <button type="submit" disabled={status === "loading"} className="flex-[2] inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
+            <button type="submit" disabled={status === "loading"} className="flex-[2] inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-normal py-3.5 rounded-pill transition-colors text-17">
               {status === "loading" ? <><Spinner size={15} /> Submitting...</> : "Submit Application"}
             </button>
           </div>

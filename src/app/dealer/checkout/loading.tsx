@@ -1,6 +1,6 @@
 export default function DealerCheckoutLoading() {
   return (
-    <div className="flex-1 p-6 md:p-8 animate-fade-in">
+    <div className="flex-1 p-6 md:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="skeleton h-8 w-40 rounded-sm" />
 

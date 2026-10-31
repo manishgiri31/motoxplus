@@ -54,7 +54,7 @@ export default async function AdminDealersPage(
             href={`/admin/dealers${s ? `?status=${s}` : ""}`}
             className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${
               searchParams.status === s || (!searchParams.status && !s)
-                ? "bg-red-600 text-white"
+                ? "bg-[var(--accent)] text-white"
                 : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
             }`}
           >
@@ -128,7 +128,7 @@ export default async function AdminDealersPage(
             <Link
               key={p}
               href={`/admin/dealers?page=${p}${searchParams.status ? `&status=${searchParams.status}` : ""}`}
-              className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
+              className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold ${p === page ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
             >
               {p}
             </Link>

@@ -1,6 +1,6 @@
 ﻿export default function ProductsLoading() {
   return (
-    <div className="flex-1 p-6 md:p-8 animate-fade-in">
+    <div className="flex-1 p-6 md:p-8">
       <div className="flex gap-4 mb-6">
         <div className="skeleton h-10 flex-1 rounded-sm" />
         <div className="flex gap-2">

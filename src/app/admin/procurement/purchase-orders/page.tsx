@@ -53,7 +53,7 @@ export default async function PurchaseOrdersPage(
         </div>
         <Link
           href="/admin/procurement/purchase-orders/new"
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-sm text-sm transition-colors uppercase tracking-wider"
+          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm text-sm transition-colors uppercase tracking-wider"
         >
           <Plus size={16} />
           New PO
@@ -63,7 +63,7 @@ export default async function PurchaseOrdersPage(
       <div className="flex flex-wrap gap-2 mb-6">
         <Link
           href="/admin/procurement/purchase-orders"
-          className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${!searchParams.status ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+          className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${!searchParams.status ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
         >
           All
         </Link>
@@ -71,7 +71,7 @@ export default async function PurchaseOrdersPage(
           <Link
             key={s}
             href={`/admin/procurement/purchase-orders?status=${s}`}
-            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${searchParams.status === s ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${searchParams.status === s ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
           >
             {s.replace("_", " ")}
           </Link>
@@ -143,7 +143,7 @@ export default async function PurchaseOrdersPage(
         <div className="flex items-center justify-center gap-2 mt-8">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <Link key={p} href={`/admin/procurement/purchase-orders?page=${p}${searchParams.status ? `&status=${searchParams.status}` : ""}`}
-              className={`w-10 h-10 flex items-center justify-center rounded-sm text-sm font-bold ${p === page ? "bg-red-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
+              className={`w-10 h-10 flex items-center justify-center rounded-sm text-sm font-bold ${p === page ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
             >
               {p}
             </Link>

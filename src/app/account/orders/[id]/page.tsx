@@ -58,7 +58,7 @@ export default async function AccountOrderDetailPage(
       {awaitingPayment && (
         <Link
           href={`/account/orders/${order.id}/pay-upi`}
-          className="block mb-6 bg-red-600 hover:bg-red-700 text-white font-bold text-center py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+          className="block mb-6 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-center py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
         >
           Complete Payment — {formatCurrency(order.amountDue)}
         </Link>
@@ -134,7 +134,7 @@ export default async function AccountOrderDetailPage(
           {order.invoice && (
             <Link
               href={`/account/invoices/${order.invoice.id}`}
-              className="w-full block text-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+              className="w-full block text-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
             >
               Download Invoice
             </Link>

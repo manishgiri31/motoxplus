@@ -1,6 +1,6 @@
 ﻿export default function OrdersLoading() {
   return (
-    <div className="flex-1 p-6 md:p-8 animate-fade-in">
+    <div className="flex-1 p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div className="skeleton h-7 w-28 rounded-sm" />
       </div>

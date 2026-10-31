@@ -1,6 +1,6 @@
 export default function VehicleCategoryLoading() {
   return (
-    <div className="min-h-screen bg-[var(--paper)] animate-fade-in">
+    <div className="min-h-screen bg-[var(--paper)]">
       <section className="py-14 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
           <div className="skeleton h-3 w-24 rounded-full mb-4" />

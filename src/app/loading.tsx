@@ -1,21 +1,16 @@
+/** Root skeleton — mirrors the Apple-style home (hero, two tiles, card row) so the swap to real content doesn't shift. */
 export default function HomeLoading() {
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 md:px-8 gap-8">
-        <div className="skeleton h-6 w-64 rounded-full" />
-        <div className="flex flex-col items-center gap-4">
-          <div className="skeleton h-16 md:h-24 w-[280px] md:w-[520px] rounded-2xl" />
-          <div className="skeleton h-16 md:h-24 w-[240px] md:w-[440px] rounded-2xl" />
-        </div>
-        <div className="skeleton h-5 w-[90%] max-w-xl rounded-full" />
-        <div className="flex gap-4">
-          <div className="skeleton h-14 w-44 rounded-xl" />
-          <div className="skeleton h-14 w-44 rounded-xl" />
-        </div>
-        <div className="flex gap-4 w-full max-w-lg mt-8">
-          <div className="skeleton h-24 flex-1 rounded-xl" />
-          <div className="skeleton h-24 flex-1 rounded-xl" />
-          <div className="skeleton h-24 flex-1 rounded-xl" />
+    <div className="min-h-screen bg-white" role="status" aria-label="Loading">
+      <div className="h-11 bg-white" />
+      <div className="mx-auto flex w-[calc(100%-32px)] max-w-page flex-col items-center pt-14 md:pt-20">
+        <div className="skeleton h-12 w-[min(90%,640px)] md:h-20" />
+        <div className="skeleton mt-4 h-6 w-[min(80%,460px)]" />
+        <div className="skeleton mt-6 h-11 w-40 !rounded-pill" />
+        <div className="skeleton mt-12 aspect-[1920/1528] w-[min(100%,560px)]" />
+        <div className="mt-16 grid w-full gap-5 md:grid-cols-2">
+          <div className="skeleton h-[420px] !rounded-[18px] md:h-[560px]" />
+          <div className="skeleton hidden h-[560px] !rounded-[18px] md:block" />
         </div>
       </div>
     </div>

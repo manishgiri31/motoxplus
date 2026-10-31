@@ -63,7 +63,7 @@ export function DeleteAccountDialog() {
             </p>
             <button
               onClick={() => setOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-red-900/20 hover:bg-red-900/40 border border-red-700/50 hover:border-red-600 text-red-400 hover:text-red-300 rounded-sm text-sm font-semibold transition-all duration-200"
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-900/20 hover:bg-red-900/40 border border-red-700/50 hover:border-[var(--accent)] text-red-400 hover:text-red-300 rounded-sm text-sm font-semibold transition-all duration-200"
             >
               <Trash2 size={15} />
               Delete My Account
@@ -135,7 +135,7 @@ export function DeleteAccountDialog() {
                 onChange={(e) => setConfirm(e.target.value.toUpperCase())}
                 disabled={loading}
                 placeholder={CONFIRM_WORD}
-                className="w-full themed-input border focus:border-red-600 rounded-sm px-4 py-3 text-sm outline-none transition-colors font-mono tracking-widest disabled:opacity-50"
+                className="w-full themed-input border focus:border-[var(--accent)] rounded-sm px-4 py-3 text-sm outline-none transition-colors font-mono tracking-widest disabled:opacity-50"
                 autoComplete="off"
               />
             </div>
@@ -152,7 +152,7 @@ export function DeleteAccountDialog() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 placeholder="Password"
-                className="w-full themed-input border focus:border-red-600 rounded-sm px-4 py-3 text-sm outline-none transition-colors disabled:opacity-50"
+                className="w-full themed-input border focus:border-[var(--accent)] rounded-sm px-4 py-3 text-sm outline-none transition-colors disabled:opacity-50"
                 autoComplete="current-password"
               />
             </div>
@@ -175,7 +175,7 @@ export function DeleteAccountDialog() {
               <button
                 onClick={handleDelete}
                 disabled={!isReady || loading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-700 hover:bg-red-600 disabled:bg-red-900/40 disabled:text-red-700 text-white rounded-sm text-sm font-bold transition-all duration-200"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[var(--accent-hover)] hover:bg-[var(--accent)] disabled:bg-red-900/40 disabled:text-red-700 text-white rounded-sm text-sm font-bold transition-all duration-200"
               >
                 {loading ? (
                   <span className="animate-pulse">Deleting...</span>

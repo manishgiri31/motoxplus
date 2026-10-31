@@ -1,6 +1,6 @@
 export default function AccountCheckoutLoading() {
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="skeleton h-8 w-40 rounded-sm" />
 
       {/* Delivery address card */}

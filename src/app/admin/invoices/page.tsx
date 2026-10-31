@@ -66,7 +66,7 @@ export default async function AdminInvoicesPage(
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-sm transition-colors"
+            className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-sm transition-colors"
           >
             Search
           </button>
@@ -171,7 +171,7 @@ export default async function AdminInvoicesPage(
               href={`/admin/invoices?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
               className={`w-10 h-10 flex items-center justify-center rounded-sm text-sm font-bold transition-colors ${
                 p === page
-                  ? "bg-red-600 text-white"
+                  ? "bg-[var(--accent)] text-white"
                   : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
               }`}
             >

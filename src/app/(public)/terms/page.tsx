@@ -402,7 +402,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section>
       <h2 className="text-xl font-bold text-[var(--ink)] mb-4 flex items-center gap-3">
-        <span className="w-1 h-5 bg-red-600 rounded-full block flex-shrink-0" />
+        <span className="w-1 h-5 bg-[var(--accent)] rounded-full block flex-shrink-0" />
         {title}
       </h2>
       <div className="space-y-3 pl-4 border-l border-[var(--line)]">{children}</div>

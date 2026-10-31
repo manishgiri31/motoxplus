@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthPageLayout, AuthCardSkeleton } from "@/components/auth/auth-page-layout";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function ResetPasswordPage() {
   return (
     <AuthPageLayout>
-      <Suspense fallback={<div className="glass border border-[var(--border-color)] rounded-sm p-8 animate-pulse h-64" />}>
+      <Suspense fallback={<AuthCardSkeleton rows={2} />}>
         <ResetPasswordForm />
       </Suspense>
     </AuthPageLayout>

@@ -7,16 +7,15 @@ import { Spinner } from "./spinner";
 import { cn } from "@/lib/utils";
 
 /**
- * Brand red vs. destructive red is resolved by FORM, not hue: primary is a
- * solid square fill with white uppercase text; danger is a hairline-bordered
- * outline that only fills on hover. They must never look alike at a glance,
- * even though both ultimately read "red" — that's what keeps "Add Lead" and
- * "Delete Dealer" from being visually interchangeable.
+ * Store design system buttons (spec §10.2): pill, normal case, regular weight,
+ * one blue accent. Danger stays a hairline outline that only fills on hover, so
+ * "Add Lead" and "Delete Dealer" can never look interchangeable.
  */
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold uppercase " +
-    "tracking-tech border transition-[background-color,border-color,color,box-shadow] " +
-    "duration-[var(--dur-1)] disabled:pointer-events-none disabled:opacity-45 " +
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-pill font-normal " +
+    "border transition-[background-color,border-color,color,box-shadow,transform] " +
+    "duration-[var(--dur-2)] ease-[var(--ease-std)] active:scale-[.98] " +
+    "disabled:pointer-events-none disabled:opacity-40 " +
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] " +
     "[&_svg]:shrink-0 select-none",
   {
@@ -26,55 +25,39 @@ export const buttonVariants = cva(
           "bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)] " +
           "hover:bg-[var(--accent-hover)] hover:border-[var(--accent-hover)] active:bg-[var(--accent-active)]",
         secondary:
-          "bg-[var(--surface-1)] border-[var(--border-strong)] text-[var(--text-primary)] " +
-          "hover:bg-[var(--surface-2)] hover:border-[var(--input-border-hover)]",
+          "bg-[var(--surface-1)] border-[var(--border-color)] text-[var(--text-primary)] " +
+          "hover:bg-[var(--surface-3)]",
         outline:
-          "bg-transparent border-[var(--accent)] text-[var(--accent-text)] hover:bg-[var(--accent-soft)]",
+          "bg-transparent border-[var(--accent-text)] text-[var(--accent-text)] " +
+          "hover:bg-[var(--accent-text)] hover:text-white",
         danger:
           "bg-transparent border-[var(--sig-danger-bd)] text-[var(--sig-danger-fg)] " +
           "hover:bg-[var(--sig-danger-fg)] hover:border-[var(--sig-danger-fg)] hover:text-white",
         link:
-          "border-transparent bg-transparent h-auto p-0 normal-case tracking-normal " +
+          "border-transparent bg-transparent h-auto p-0 " +
           "text-[var(--accent-text)] underline-offset-4 hover:underline",
-        // ── v2 design system (paper/ink/muted/line/red). Redefines "ghost": the one
-        // existing call site (dialog.tsx's Cancel button) picks up the new pill/
-        // normal-case geometry via compoundVariants below — a deliberate, contained
-        // visual change, not a name collision worked around. Geometry (pill shape,
-        // font-weight 600, 14.5px, 10px/20px padding, 180ms ease) lives in the
-        // compoundVariants below, shared by all three so it can't drift between them.
         solid:
-          "bg-[var(--ink)] border-[var(--ink)] text-white " +
-          "hover:bg-[var(--ink)]/90 hover:-translate-y-px",
+          "bg-[var(--ink)] border-[var(--ink)] text-white hover:bg-[#333336] hover:border-[#333336]",
         brand:
           "bg-[var(--red)] border-[var(--red)] text-white " +
           "hover:bg-[var(--red-hover)] hover:border-[var(--red-hover)]",
         ghost:
-          "bg-transparent border-[var(--line)] text-[var(--ink)] hover:border-[var(--ink)]",
+          "bg-transparent border-[var(--line)] text-[var(--ink)] hover:bg-black/[.04]",
       },
       size: {
-        xs: "h-7 px-2.5 text-[10px] rounded-sm [&_svg]:size-3",
-        sm: "h-9 px-3.5 text-[11px] rounded-sm [&_svg]:size-3.5",
-        md: "h-10 px-4 text-xs rounded-sm [&_svg]:size-4",
-        lg: "h-12 px-6 text-sm rounded-sm [&_svg]:size-[18px]",
-        icon: "h-9 w-9 p-0 rounded-sm [&_svg]:size-4",
+        xs: "h-7 px-3 text-12 [&_svg]:size-3",
+        sm: "h-9 px-4 text-14 [&_svg]:size-3.5",
+        md: "h-10 px-[22px] text-14 [&_svg]:size-4",
+        lg: "h-12 px-[26px] text-17 [&_svg]:size-[18px]",
+        icon: "h-9 w-9 p-0 text-14 [&_svg]:size-4",
       },
       block: { true: "w-full" },
     },
     // `link` must win over whatever `size` resolves to (default "md" applies even
     // when size is omitted). cva appends compoundVariants classes last, and Button
-    // pipes the whole result through cn()'s twMerge, which resolves same-property
-    // conflicts by keeping whichever class appears last — so this, not variant
-    // ordering, is what makes `<Button variant="link">` actually stay text-sized
-    // instead of getting silently re-heightened by the default size="md".
+    // pipes the whole result through cn()'s twMerge, which keeps the last class.
     compoundVariants: [
-      { variant: "link", class: "h-auto p-0 [&_svg]:size-[1em]" },
-      {
-        variant: ["solid", "brand", "ghost"],
-        class:
-          "h-auto rounded-pill normal-case tracking-normal font-semibold text-[14.5px] " +
-          "px-5 py-2.5 transition-[background-color,border-color,color,box-shadow,transform] " +
-          "duration-[180ms] ease-[ease]",
-      },
+      { variant: "link", class: "h-auto p-0 rounded-none [&_svg]:size-[1em]" },
     ],
     defaultVariants: { variant: "primary", size: "md" },
   }

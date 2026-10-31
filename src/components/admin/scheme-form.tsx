@@ -103,7 +103,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           />
         </div>
         <div>
@@ -112,7 +112,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             required
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600 font-mono"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] font-mono"
           />
         </div>
       </div>
@@ -128,7 +128,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
             value={benefitPercent}
             onChange={(e) => setBenefitPercent(Number(e.target.value))}
             required
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           />
         </div>
         <div>
@@ -140,7 +140,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
             value={minOrderValue}
             onChange={(e) => setMinOrderValue(Number(e.target.value))}
             required
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           />
         </div>
         <div>
@@ -152,7 +152,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
             value={maxBenefitValue}
             onChange={(e) => setMaxBenefitValue(e.target.value)}
             placeholder="No cap"
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           />
         </div>
       </div>
@@ -165,7 +165,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
             value={startsAt}
             onChange={(e) => setStartsAt(e.target.value)}
             required
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           />
         </div>
         <div>
@@ -175,7 +175,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
             value={endsAt}
             onChange={(e) => setEndsAt(e.target.value)}
             required
-            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           />
         </div>
       </div>
@@ -192,7 +192,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
               onClick={() => toggleCategory(cat.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 categoryIds.has(cat.id)
-                  ? "bg-red-600 text-white"
+                  ? "bg-[var(--accent)] text-white"
                   : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
               }`}
             >
@@ -210,7 +210,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
       <button
         type="submit"
         disabled={saving}
-        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider disabled:opacity-60"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider disabled:opacity-60"
       >
         {saving && <Spinner size={15} className="text-white" />}
         {isEdit ? "Save Changes" : "Create Scheme"}

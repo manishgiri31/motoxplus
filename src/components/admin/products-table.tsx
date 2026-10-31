@@ -70,7 +70,7 @@ export function ProductsTable({ products, search }: { products: AdminProductRow[
           <select
             value={bulkStatus}
             onChange={(e) => setBulkStatus(e.target.value as StockStatus)}
-            className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-600"
+            className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
           >
             {PRODUCT_STOCK_STATUS_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -79,7 +79,7 @@ export function ProductsTable({ products, search }: { products: AdminProductRow[
           <button
             onClick={applyBulkStatus}
             disabled={applying}
-            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider transition-colors"
+            className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider transition-colors"
           >
             {applying ? <Spinner size={12} /> : null}
             Apply to {selectedCount}

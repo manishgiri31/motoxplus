@@ -38,7 +38,7 @@ export default async function DealerProfilePage() {
       <div className="glass border border-[var(--border-color)] rounded-xl p-8">
         {/* Avatar */}
         <div className="flex items-center gap-6 mb-8 pb-8 border-b border-[var(--border-color)]">
-          <div className="w-16 h-16 bg-red-600 rounded-xl flex items-center justify-center">
+          <div className="w-16 h-16 bg-[var(--accent)] rounded-xl flex items-center justify-center">
             <span className="text-[var(--text-primary)] font-black text-2xl">
               {dealer.companyName.charAt(0).toUpperCase()}
             </span>

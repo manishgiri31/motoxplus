@@ -35,7 +35,7 @@ export function SectionNav({
         onClick={() => selectSection(null)}
         className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border transition-colors ${
           !selectedSectionSlug
-            ? "bg-red-600 border-red-600 text-white"
+            ? "bg-[var(--accent)] border-[var(--accent)] text-white"
             : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
         }`}
       >
@@ -47,7 +47,7 @@ export function SectionNav({
           onClick={() => selectSection(s.slug)}
           className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border transition-colors ${
             selectedSectionSlug === s.slug
-              ? "bg-red-600 border-red-600 text-white"
+              ? "bg-[var(--accent)] border-[var(--accent)] text-white"
               : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
           }`}
         >

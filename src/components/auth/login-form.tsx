@@ -22,7 +22,7 @@ function maskMobile(mobile: string) {
   return `+91 ••••• ••${mobile.slice(-2)}`;
 }
 
-const inputCls = "w-full themed-input border rounded-sm pl-11 pr-4 py-3 text-sm";
+const inputCls = "w-full themed-input border rounded-lg pl-11 pr-4 py-3 text-sm";
 
 // How long "Resend code" stays disabled after a send. Deliberately much
 // shorter than OTP_EXPIRY_MINUTES (5 min, server-side) — the resend cooldown
@@ -205,7 +205,7 @@ export function LoginForm() {
   }, [otp]);
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] p-8">
+    <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10">
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--ink)] mb-1">
@@ -223,9 +223,9 @@ export function LoginForm() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 border border-[var(--sig-ok-bd)] bg-[var(--sig-ok-bg)] px-2.5 py-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 rounded-pill bg-[var(--sig-ok-bg)] px-2.5 py-1.5 flex-shrink-0">
           <ShieldCheck size={12} className="text-[var(--sig-ok-fg)]" />
-          <span className="text-[10px] text-[var(--sig-ok-fg)] font-semibold tracking-wide">Secure</span>
+          <span className="text-[10px] text-[var(--sig-ok-fg)] font-semibold">Secure</span>
         </div>
       </div>
 
@@ -233,7 +233,7 @@ export function LoginForm() {
       {step === "identifier" && (
         <form onSubmit={handleIdentifierSubmit} className="space-y-4">
           <div>
-            <label className="text-[var(--muted)] text-xs uppercase tracking-wider block mb-2">Email or Mobile Number</label>
+            <label className="text-[var(--muted)] text-xs block mb-2">Email or Mobile Number</label>
             <div className="relative">
               <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
               <input
@@ -249,7 +249,7 @@ export function LoginForm() {
             </div>
           </div>
           {error && <ErrorBanner message={error} />}
-          <button type="submit" className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm mt-2">
+          <button type="submit" className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-normal py-3.5 rounded-pill transition-colors text-17 mt-2">
             Continue <ChevronRight size={15} />
           </button>
         </form>
@@ -262,9 +262,9 @@ export function LoginForm() {
             type="button"
             onClick={handleSendOtp}
             disabled={status === "loading"}
-            className="w-full flex items-center gap-3 themed-input border rounded-sm px-4 py-3.5 text-left hover:border-[var(--red)]/50 transition-colors disabled:opacity-50"
+            className="w-full flex items-center gap-3 themed-input border rounded-lg px-4 py-3.5 text-left hover:border-[var(--red)]/50 transition-colors disabled:opacity-50"
           >
-            <div className="w-9 h-9 border border-[var(--line)] flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center flex-shrink-0">
               {kind === "mobile" ? <MessageCircle size={16} className="text-[var(--red)]" /> : <Mail size={16} className="text-[var(--red)]" />}
             </div>
             <div className="flex-1">
@@ -280,9 +280,9 @@ export function LoginForm() {
             type="button"
             onClick={() => resetTo("password")}
             disabled={status === "loading"}
-            className="w-full flex items-center gap-3 themed-input border rounded-sm px-4 py-3.5 text-left hover:border-[var(--red)]/50 transition-colors disabled:opacity-50"
+            className="w-full flex items-center gap-3 themed-input border rounded-lg px-4 py-3.5 text-left hover:border-[var(--red)]/50 transition-colors disabled:opacity-50"
           >
-            <div className="w-9 h-9 border border-[var(--line)] flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center flex-shrink-0">
               <Lock size={16} className="text-[var(--muted)]" />
             </div>
             <div className="flex-1">
@@ -304,7 +304,7 @@ export function LoginForm() {
         <form onSubmit={handlePasswordLogin} className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-[var(--muted)] text-xs uppercase tracking-wider">Password</label>
+              <label className="text-[var(--muted)] text-xs">Password</label>
               <Link href="/forgot-password" className="text-xs text-[var(--red)] hover:text-[var(--red-hover)] transition-colors">Forgot password?</Link>
             </div>
             <div className="relative">
@@ -329,7 +329,7 @@ export function LoginForm() {
           ) : (
             error && <ErrorBanner message={error} />
           )}
-          <button type="submit" disabled={status === "loading" || !!lockout} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm mt-2">
+          <button type="submit" disabled={status === "loading" || !!lockout} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-normal py-3.5 rounded-pill transition-colors text-17 mt-2">
             {status === "loading" ? <><Spinner size={15} /> Signing in...</> : <>Sign In <ChevronRight size={15} /></>}
           </button>
           <button type="button" onClick={() => resetTo("method")} className="w-full flex items-center justify-center gap-1.5 text-[var(--muted)] hover:text-[var(--ink)] transition-colors text-xs">
@@ -376,7 +376,7 @@ export function LoginForm() {
             { role: "Vendors", desc: "Purchase Orders" },
             { role: "Admins", desc: "Full Management" },
           ].map((item) => (
-            <div key={item.role} className="border border-[var(--line)] p-3 text-center">
+            <div key={item.role} className="bg-white rounded-lg p-3 text-center">
               <div className="text-[var(--muted)] text-[10px] font-semibold mb-0.5">{item.role}</div>
               <div className="text-[9px] text-[var(--muted)] opacity-70 leading-tight">{item.desc}</div>
             </div>
@@ -389,7 +389,7 @@ export function LoginForm() {
 
 function ErrorBanner({ message, center = false }: { message: string; center?: boolean }) {
   return (
-    <div className={`bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-sm px-4 py-3 text-[var(--sig-danger-fg)] text-sm flex items-center gap-2 ${center ? "justify-center text-center" : ""}`} role="alert">
+    <div className={`bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm flex items-center gap-2 ${center ? "justify-center text-center" : ""}`} role="alert">
       <span className="w-1.5 h-1.5 rounded-full bg-[var(--sig-danger-fg)] flex-shrink-0" />
       {message}
     </div>
@@ -403,7 +403,7 @@ function ErrorBanner({ message, center = false }: { message: string; center?: bo
 // user staring at a dead end with no sense of when (or how) to try again.
 function LockoutBanner({ message, retryAfterSeconds, onExpire }: { message: string; retryAfterSeconds: number; onExpire: () => void }) {
   return (
-    <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-sm px-4 py-3 text-[var(--sig-danger-fg)] text-sm space-y-2" role="alert">
+    <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm space-y-2" role="alert">
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--sig-danger-fg)] flex-shrink-0" />
         {message}

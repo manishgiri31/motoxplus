@@ -57,7 +57,7 @@ export function UpiSettingsForm({ initial }: Props) {
             onChange={(e) => setForm({ ...form, upiEnabled: e.target.checked })}
             className="sr-only peer"
           />
-          <div className="w-10 h-5 bg-[var(--border-color)] peer-focus:outline-none rounded-full peer peer-checked:bg-red-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5" />
+          <div className="w-10 h-5 bg-[var(--border-color)] peer-focus:outline-none rounded-full peer peer-checked:bg-[var(--accent)] transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5" />
           <span className="ml-2 text-xs text-[var(--text-muted)]">Enable UPI</span>
         </label>
       </div>
@@ -115,7 +115,7 @@ export function UpiSettingsForm({ initial }: Props) {
       <button
         type="submit"
         disabled={saving}
-        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl text-sm transition-colors uppercase tracking-wider"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl text-sm transition-colors uppercase tracking-wider"
       >
         {saving ? <><Spinner size={14} /> Saving...</> : saved ? <><CheckCircle2 size={14} /> Saved!</> : "Save Settings"}
       </button>

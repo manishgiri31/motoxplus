@@ -1,6 +1,6 @@
 export default function DealerCartLoading() {
   return (
-    <div className="flex-1 p-6 md:p-8 animate-fade-in">
+    <div className="flex-1 p-6 md:p-8">
       <div className="mb-8 flex items-center justify-between">
         <div className="space-y-2">
           <div className="skeleton h-8 w-24 rounded-sm" />

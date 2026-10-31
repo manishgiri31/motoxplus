@@ -722,7 +722,7 @@ function ManualMode() {
             <span className="text-[var(--text-primary)] font-semibold">&quot;{result.newProductName}&quot;</span> now has {result.variantsCreated} variants.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <Link href={`/admin/products/${result.parentProductId}/edit`} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-3 rounded-xl transition-colors text-sm">
+            <Link href={`/admin/products/${result.parentProductId}/edit`} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-5 py-3 rounded-xl transition-colors text-sm">
               Edit Product
             </Link>
             <button onClick={() => { setStep("search"); setSelected(new Set()); setParentId(null); setSearchQuery(""); setSearchResults([]); setResult(null); }}

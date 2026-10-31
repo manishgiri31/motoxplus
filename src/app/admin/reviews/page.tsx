@@ -61,7 +61,11 @@ export default function AdminReviewsPage() {
       </div>
 
       {loading ? (
-        <p className="text-[var(--text-muted)] text-sm">Loading…</p>
+        <div className="space-y-3" role="status" aria-label="Loading reviews">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton h-24 w-full" />
+          ))}
+        </div>
       ) : reviews.length === 0 ? (
         <div className="glass border border-[var(--border-color)] rounded-2xl p-10 text-center">
           <p className="text-[var(--text-muted)] text-sm">No reviews have been submitted yet.</p>

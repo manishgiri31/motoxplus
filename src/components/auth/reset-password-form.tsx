@@ -13,7 +13,7 @@ type Step = "enter-code" | "new-password" | "success";
 const RESEND_COOLDOWN_SECONDS = 60;
 
 const inputCls =
-  "w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors";
+  "w-full themed-input border focus:border-red-600/60 rounded-lg px-4 py-3 text-sm outline-none transition-colors";
 
 export function ResetPasswordForm() {
   const params = useSearchParams();
@@ -36,7 +36,7 @@ export function ResetPasswordForm() {
 
   if (!userId) {
     return (
-      <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
+      <div className="bg-[var(--card)] rounded-[18px] p-8 text-center">
         <p className="text-red-400 mb-4">This reset link is invalid or has expired.</p>
         <Link href="/forgot-password" className="text-red-400 hover:text-red-300 font-semibold">
           Request a new code
@@ -93,7 +93,7 @@ export function ResetPasswordForm() {
 
   const requirements = [
     { label: "At least 8 characters", met: newPassword.length >= 8 },
-    { label: "One uppercase letter", met: /[A-Z]/.test(newPassword) },
+    { label: "One letter", met: /[A-Z]/.test(newPassword) },
     { label: "One lowercase letter", met: /[a-z]/.test(newPassword) },
     { label: "One number", met: /\d/.test(newPassword) },
   ];
@@ -129,7 +129,7 @@ export function ResetPasswordForm() {
 
   if (step === "success") {
     return (
-      <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
+      <div className="bg-[var(--card)] rounded-[18px] p-8 text-center">
         <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
         <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Password reset successful</h1>
         <p className="text-[var(--text-muted)] text-sm mb-6">
@@ -137,7 +137,7 @@ export function ResetPasswordForm() {
         </p>
         <Link
           href="/login"
-          className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-sm transition-colors uppercase tracking-wider text-sm"
+          className="inline-block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 px-8 rounded-lg transition-colors text-sm"
         >
           Back to login
         </Link>
@@ -146,7 +146,7 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8">
+    <div className="bg-[var(--card)] rounded-[18px] p-8">
       {step === "enter-code" && (
         <form onSubmit={handleVerify} className="space-y-6">
           <div>
@@ -165,7 +165,7 @@ export function ResetPasswordForm() {
 
           <div aria-live="polite">
             {error && (
-              <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm text-center" role="alert">
+              <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm text-center" role="alert">
                 {error}
               </div>
             )}
@@ -174,7 +174,7 @@ export function ResetPasswordForm() {
           <button
             type="submit"
             disabled={status === "loading" || otp.length !== 6}
-            className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm"
+            className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm"
           >
             {status === "loading" ? (
               <>
@@ -197,7 +197,7 @@ export function ResetPasswordForm() {
           <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Create a new password</h1>
 
           <div>
-            <label htmlFor="new-password" className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label htmlFor="new-password" className="text-[var(--text-muted)] text-xs block mb-2">
               New password
             </label>
             <div className="relative">
@@ -232,7 +232,7 @@ export function ResetPasswordForm() {
           </ul>
 
           <div>
-            <label htmlFor="confirm-password" className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label htmlFor="confirm-password" className="text-[var(--text-muted)] text-xs block mb-2">
               Confirm new password
             </label>
             <div className="relative">
@@ -265,7 +265,7 @@ export function ResetPasswordForm() {
           </div>
 
           {error && (
-            <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm" role="alert">
+            <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm" role="alert">
               {error}
             </div>
           )}
@@ -273,7 +273,7 @@ export function ResetPasswordForm() {
           <button
             type="submit"
             disabled={status === "loading" || !allRequirementsMet || !confirmPassword || confirmMismatch}
-            className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm"
+            className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm"
           >
             {status === "loading" ? (
               <>

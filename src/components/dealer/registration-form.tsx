@@ -99,7 +99,7 @@ export function DealerRegistrationForm() {
         </div>
         <button
           onClick={() => router.push(`/verify-email?userId=${userId}`)}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
         >
           Verify Email Now
         </button>
@@ -324,7 +324,7 @@ export function DealerRegistrationForm() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors uppercase tracking-wider text-sm mt-2"
+          className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors uppercase tracking-wider text-sm mt-2"
         >
           {status === "loading" ? "Creating Account..." : "Create Account"}
         </button>

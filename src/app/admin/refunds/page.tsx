@@ -78,13 +78,13 @@ export default async function AdminRefundsPage(props: { searchParams: Promise<{ 
             href={`/admin/refunds${tab.key ? `?status=${tab.key}` : ""}`}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${
               (filterStatus ?? "") === tab.key
-                ? "bg-red-600 text-white"
+                ? "bg-[var(--accent)] text-white"
                 : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
             }`}
           >
             {tab.label}
             {tab.count > 0 && (
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${(filterStatus ?? "") === tab.key ? "bg-red-700" : "bg-[var(--bg-card)]"}`}>
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${(filterStatus ?? "") === tab.key ? "bg-[var(--accent-hover)]" : "bg-[var(--bg-card)]"}`}>
                 {tab.count}
               </span>
             )}

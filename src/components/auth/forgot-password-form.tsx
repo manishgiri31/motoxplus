@@ -11,7 +11,7 @@ type Method = "email" | "mobile";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const inputCls =
-  "w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors";
+  "w-full themed-input border focus:border-red-600/60 rounded-lg px-4 py-3 text-sm outline-none transition-colors";
 
 export function ForgotPasswordForm() {
   const router = useRouter();
@@ -82,7 +82,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8">
+    <div className="bg-[var(--card)] rounded-[18px] p-8">
       <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Forgot your password?</h1>
       <p className="text-[var(--text-muted)] text-sm mb-6">
         {method === "email"
@@ -96,7 +96,7 @@ export function ForgotPasswordForm() {
           role="tab"
           aria-selected={method === "email"}
           onClick={() => switchMethod("email")}
-          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
             method === "email"
               ? "border-red-600/60 bg-red-900/20 text-red-400"
               : "border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"
@@ -109,7 +109,7 @@ export function ForgotPasswordForm() {
           role="tab"
           aria-selected={method === "mobile"}
           onClick={() => switchMethod("mobile")}
-          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-sm border px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
             method === "mobile"
               ? "border-red-600/60 bg-red-900/20 text-red-400"
               : "border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"
@@ -121,7 +121,7 @@ export function ForgotPasswordForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div>
-          <label htmlFor={fieldId} className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label htmlFor={fieldId} className="text-[var(--text-muted)] text-xs block mb-2">
             {method === "email" ? "Email address" : "Mobile number"}
           </label>
           {method === "email" ? (
@@ -142,7 +142,7 @@ export function ForgotPasswordForm() {
             />
           ) : (
             <div className="flex gap-2">
-              <span className="themed-input border rounded-sm px-3 py-3 text-sm text-[var(--text-muted)] whitespace-nowrap">
+              <span className="themed-input border rounded-lg px-3 py-3 text-sm text-[var(--text-muted)] whitespace-nowrap">
                 +91
               </span>
               <input
@@ -172,7 +172,7 @@ export function ForgotPasswordForm() {
         </div>
 
         {apiError && (
-          <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm" role="alert">
+          <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm" role="alert">
             {apiError}
           </div>
         )}
@@ -180,7 +180,7 @@ export function ForgotPasswordForm() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm"
+          className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm"
         >
           {status === "loading" ? (
             <>

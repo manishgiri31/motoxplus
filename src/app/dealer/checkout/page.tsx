@@ -601,12 +601,12 @@ export default function CheckoutPage() {
                 onClick={() => setPaymentType(option.id)}
                 className={`w-full flex items-center gap-4 p-4 rounded-sm border text-left transition-all duration-200 ${
                   isSelected
-                    ? "border-red-600 bg-red-600/5 ring-1 ring-red-600/20"
+                    ? "border-[var(--accent)] bg-red-600/5 ring-1 ring-red-600/20"
                     : "border-[var(--border-color)] hover:border-red-600/40 glass"
                 }`}
               >
-                <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? "border-red-600" : "border-[var(--text-muted)]"}`}>
-                  {isSelected && <div className="w-2 h-2 bg-red-600 rounded-full" />}
+                <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? "border-[var(--accent)]" : "border-[var(--text-muted)]"}`}>
+                  {isSelected && <div className="w-2 h-2 bg-[var(--accent)] rounded-full" />}
                 </div>
                 <div className={`w-9 h-9 rounded-sm flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-red-600/10" : "bg-[var(--bg-card)]"}`}>
                   {option.icon}
@@ -755,7 +755,7 @@ export default function CheckoutPage() {
         <button
           onClick={handlePlaceOrder}
           disabled={loading || !isDeliveryComplete || !termsAccepted}
-          className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
+          className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
         >
           {loading ? (
             <><Spinner size={16} />Processing...</>

@@ -50,7 +50,7 @@ export function VerifyEmailForm() {
 
   if (status === "success") {
     return (
-      <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
+      <div className="bg-[var(--card)] rounded-[18px] p-8 text-center">
         <div className="w-16 h-16 bg-green-900/30 border border-green-700/40 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -58,7 +58,7 @@ export function VerifyEmailForm() {
         </div>
         <h2 className="text-xl font-black text-[var(--text-primary)] mb-2">Email Verified!</h2>
         <p className="text-[var(--text-muted)] text-sm mb-6">Your email has been verified. Your dealer application is now under review.</p>
-        <Link href="/login" className="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-sm transition-colors uppercase tracking-wider text-sm">
+        <Link href="/login" className="inline-block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 px-8 rounded-lg transition-colors text-sm">
           Go to Login
         </Link>
       </div>
@@ -66,7 +66,7 @@ export function VerifyEmailForm() {
   }
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8">
+    <div className="bg-[var(--card)] rounded-[18px] p-8">
       <div className="text-center mb-8">
         <div className="w-14 h-14 bg-red-900/20 border border-red-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-7 h-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -80,9 +80,9 @@ export function VerifyEmailForm() {
       <form onSubmit={handleVerify} className="space-y-6">
         <OtpInput value={otp} onChange={setOtp} disabled={status === "loading"} />
 
-        {error && <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm text-center">{error}</div>}
+        {error && <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm text-center">{error}</div>}
 
-        <button type="submit" disabled={status === "loading" || otp.length !== 6} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
+        <button type="submit" disabled={status === "loading" || otp.length !== 6} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm">
           {status === "loading" ? <><Spinner size={15} /> Verifying...</> : "Verify Email"}
         </button>
 

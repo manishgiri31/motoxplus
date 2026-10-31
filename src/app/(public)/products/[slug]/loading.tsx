@@ -1,6 +1,6 @@
 export default function ProductDetailLoading() {
   return (
-    <div className="min-h-screen bg-[var(--paper)] animate-fade-in">
+    <div className="min-h-screen bg-[var(--paper)]">
       {/* Breadcrumb */}
       <div className="border-b border-[var(--line)] px-4 md:px-8 py-4">
         <div className="max-w-7xl mx-auto flex items-center gap-2">

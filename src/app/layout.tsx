@@ -13,7 +13,7 @@ const geistSans = localFont({
   variable: "--font-geist-sans",
   weight: "100 900",
   display: "swap",
-  preload: true,
+  preload: false,
   fallback: ["system-ui", "Segoe UI", "Arial", "sans-serif"],
 });
 
@@ -26,15 +26,10 @@ const geistMono = localFont({
   fallback: ["ui-monospace", "SFMono-Regular", "monospace"],
 });
 
-// v2 design system — headings / body / technical-label (SKU, HSN, order ID) fonts.
-// Self-hosted (latin subset, extracted from Google Fonts) so `next build` never
-// depends on reaching fonts.gstatic.com — see SchibstedGroteskVF.woff2 etc.
-const schibstedGrotesk = localFont({
-  src: "./fonts/SchibstedGroteskVF.woff2",
-  weight: "500 800",
-  variable: "--font-display",
-  display: "swap",
-});
+// Store design system — Inter for headings and body (spec §4), IBM Plex Mono for
+// technical labels (SKU, HSN, order ID). Self-hosted (latin subset, extracted from
+// Google Fonts) so `next build` never depends on reaching fonts.gstatic.com.
+// (SchibstedGroteskVF.woff2 is no longer loaded; `font-display` now resolves to Inter.)
 
 const inter = localFont({
   src: "./fonts/InterVF.woff2",
@@ -68,7 +63,7 @@ export const viewport: Viewport = {
   // with enableSystem={false} and defaultTheme="light" (src/components/providers.tsx),
   // so the app's actual chrome color never follows the OS theme — a media-query list
   // here previously gave OS-dark users dark mobile browser chrome around a light site.
-  themeColor: "#F4F4F6",
+  themeColor: "#FFFFFF",
 };
 
 export const metadata: Metadata = {
@@ -144,7 +139,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${schibstedGrotesk.variable} ${inter.variable} ${ibmPlexMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${ibmPlexMono.variable} antialiased`}
       >
         <JsonLd
           data={{

@@ -81,11 +81,11 @@ export function VerifyMobileForm() {
     setTimerKey((k) => k + 1);
   }
 
-  const inputCls = "w-full themed-input border focus:border-red-600/60 rounded-sm px-4 py-3 text-sm outline-none transition-colors";
+  const inputCls = "w-full themed-input border focus:border-red-600/60 rounded-lg px-4 py-3 text-sm outline-none transition-colors";
 
   if (step === "success") {
     return (
-      <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8 text-center">
+      <div className="bg-[var(--card)] rounded-[18px] p-8 text-center">
         <div className="w-16 h-16 bg-green-900/30 border border-green-700/40 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -100,7 +100,7 @@ export function VerifyMobileForm() {
             router.push(dest);
             router.refresh();
           }}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-sm transition-colors uppercase tracking-wider text-sm"
+          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 px-8 rounded-lg transition-colors text-sm"
         >
           Continue
         </button>
@@ -109,7 +109,7 @@ export function VerifyMobileForm() {
   }
 
   return (
-    <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-8">
+    <div className="bg-[var(--card)] rounded-[18px] p-8">
       <div className="text-center mb-8">
         <h1 className="text-xl font-black text-[var(--text-primary)] mb-2">Verify Mobile Number</h1>
         <p className="text-[var(--text-muted)] text-sm">
@@ -120,14 +120,14 @@ export function VerifyMobileForm() {
       {step === "enter-mobile" && (
         <form onSubmit={handleSendOTP} className="space-y-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Mobile Number</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Mobile Number</label>
             <div className="flex gap-2">
-              <span className="themed-input border rounded-sm px-3 py-3 text-sm text-[var(--text-muted)] whitespace-nowrap">+91</span>
+              <span className="themed-input border rounded-lg px-3 py-3 text-sm text-[var(--text-muted)] whitespace-nowrap">+91</span>
               <input type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} className={inputCls} placeholder="10-digit mobile number" maxLength={10} />
             </div>
           </div>
-          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm">{error}</div>}
-          <button type="submit" disabled={status === "loading" || mobile.length !== 10} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
+          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm">{error}</div>}
+          <button type="submit" disabled={status === "loading" || mobile.length !== 10} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm">
             {status === "loading" ? <><Spinner size={15} /> Sending OTP...</> : "Send OTP"}
           </button>
         </form>
@@ -136,8 +136,8 @@ export function VerifyMobileForm() {
       {step === "enter-otp" && (
         <form onSubmit={handleVerify} className="space-y-6">
           <OtpInput value={otp} onChange={setOtp} disabled={status === "loading"} />
-          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-sm px-4 py-3 text-red-400 text-sm text-center">{error}</div>}
-          <button type="submit" disabled={status === "loading" || otp.length !== 6} className="w-full inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm">
+          {error && <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm text-center">{error}</div>}
+          <button type="submit" disabled={status === "loading" || otp.length !== 6} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm">
             {status === "loading" ? <><Spinner size={15} /> Verifying...</> : "Verify OTP"}
           </button>
           <CountdownTimer key={timerKey} seconds={RESEND_COOLDOWN_SECONDS} compact onResend={handleResend} label="Resend OTP" />
