@@ -111,7 +111,7 @@ export function VendorRegistrationForm() {
           we&apos;ve sent a code to {form.email}.
         </p>
         <div className="glass border border-[var(--border-color)] rounded-sm p-4 text-left mb-6">
-          <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-2">What happens next?</div>
+          <div className="text-[var(--text-muted)] text-xs mb-2">What happens next?</div>
           {[
             "Verify your email address",
             "Verify your mobile number",
@@ -126,7 +126,7 @@ export function VendorRegistrationForm() {
         </div>
         <button
           onClick={() => router.push(`/verify-email?userId=${userId}`)}
-          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-8 py-3 rounded-pill transition-colors text-sm"
         >
           Verify Email
         </button>
@@ -144,17 +144,17 @@ export function VendorRegistrationForm() {
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Company */}
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Company Name <span className="text-red-500">*</span></label>
+          <label className="text-[var(--text-muted)] text-xs block mb-2">Company Name <span className="text-red-500">*</span></label>
           <input required className={inputClass} value={form.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder="Your Business / Company Name" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Owner / Contact Name <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Owner / Contact Name <span className="text-red-500">*</span></label>
             <input required className={inputClass} value={form.ownerName} onChange={(e) => set("ownerName", e.target.value)} placeholder="Full name" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Supply Category <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Supply Category <span className="text-red-500">*</span></label>
             <select required className={inputClass} value={form.category} onChange={(e) => set("category", e.target.value)}>
               <option value="">Select category</option>
               {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
@@ -164,41 +164,41 @@ export function VendorRegistrationForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Email <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Email <span className="text-red-500">*</span></label>
             <input required type="email" className={inputClass} value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="business@company.com" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Phone <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Phone <span className="text-red-500">*</span></label>
             <input required type="tel" className={inputClass} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+91 98765 43210" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Password <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Password <span className="text-red-500">*</span></label>
             <input required type="password" minLength={8} className={inputClass} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="Min. 8 characters" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Confirm Password <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Confirm Password <span className="text-red-500">*</span></label>
             <input required type="password" minLength={8} className={inputClass} value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} placeholder="Repeat password" />
           </div>
         </div>
 
         <div className="border-t border-[var(--border-color)] pt-4">
-          <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-4 font-bold">Business Details (Optional)</p>
+          <p className="text-[var(--text-muted)] text-xs mb-4 font-bold">Business Details (Optional)</p>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">GST Number</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">GST Number</label>
               <input className={`${inputClass} font-mono`} value={form.gstNumber} onChange={(e) => set("gstNumber", e.target.value.toUpperCase())} placeholder="22AAAAA0000A1Z5" maxLength={15} />
               <p className="text-gray-600 text-xs mt-1">Optional — provide if registered</p>
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">PAN Number</label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">PAN Number</label>
               <input className={`${inputClass} font-mono`} value={form.panNumber} onChange={(e) => set("panNumber", e.target.value.toUpperCase())} placeholder="AAAAA0000A" maxLength={10} />
             </div>
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Aadhaar Number</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Aadhaar Number</label>
             <input className={`${inputClass} font-mono`} value={form.aadhaarNumber} onChange={(e) => set("aadhaarNumber", e.target.value.replace(/\D/g, ""))} placeholder="000000000000" maxLength={12} />
             <p className="text-gray-600 text-xs mt-1">Optional — stored securely, never verified externally</p>
           </div>
@@ -206,42 +206,42 @@ export function VendorRegistrationForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">State <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">State <span className="text-red-500">*</span></label>
             <select required className={inputClass} value={form.state} onChange={(e) => set("state", e.target.value)}>
               <option value="">Select State</option>
               {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">City <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">City <span className="text-red-500">*</span></label>
             <input required className={inputClass} value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="City" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Company Address</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Company Address</label>
             <input className={inputClass} value={form.companyAddress} onChange={(e) => set("companyAddress", e.target.value)} placeholder="Registered / company address (optional)" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Shop Address</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Shop Address</label>
             <input className={inputClass} value={form.shopAddress} onChange={(e) => set("shopAddress", e.target.value)} placeholder="Shop / warehouse address (optional)" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Pincode</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Pincode</label>
             <input pattern="[0-9]{6}" maxLength={6} className={inputClass} value={form.pincode} onChange={(e) => set("pincode", e.target.value)} placeholder="000000 (optional)" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Website</label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Website</label>
             <input type="url" className={inputClass} value={form.website} onChange={(e) => set("website", e.target.value)} placeholder="https://yoursite.com" />
           </div>
         </div>
 
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">What do you supply? (Brief description)</label>
+          <label className="text-[var(--text-muted)] text-xs block mb-2">What do you supply? (Brief description)</label>
           <textarea rows={3} className={inputClass} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Describe your products or services, capacity, years in business..." />
         </div>
 
@@ -252,7 +252,7 @@ export function VendorRegistrationForm() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors uppercase tracking-wider text-sm mt-2"
+          className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors text-sm mt-2"
         >
           {status === "loading" ? "Submitting Application..." : "Submit Vendor Application"}
         </button>

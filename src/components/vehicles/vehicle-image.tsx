@@ -33,7 +33,7 @@ export function VehicleImage({ src, alt, sizes, className, logId, priority }: Pr
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[var(--bg-secondary)] to-[var(--bg-primary)]">
         <ImageOff size={28} className="text-[var(--text-muted)]/40" />
-        <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">
+        <span className="text-[var(--text-muted)] text-12 font-semibold">
           Image Coming Soon
         </span>
       </div>

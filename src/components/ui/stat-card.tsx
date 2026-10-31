@@ -30,14 +30,9 @@ export interface StatCardProps {
 export function StatCard({ label, value, sub, unit, icon: Icon, href, tone = "neutral", trend, loading, className }: StatCardProps) {
   const content = (
     <>
-      <span
-        aria-hidden
-        data-tone={tone}
-        className="absolute inset-y-0 left-0 w-[3px] rounded-l-lg bg-[var(--tone-fg)]"
-      />
       <div className="flex items-center justify-between mb-4">
         {Icon && (
-          <div data-tone={tone} className="w-9 h-9 rounded-sm flex items-center justify-center bg-[var(--tone-bg)]">
+          <div data-tone={tone} className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--tone-bg)]">
             <Icon size={17} className="text-[var(--tone-fg)]" />
           </div>
         )}
@@ -47,17 +42,17 @@ export function StatCard({ label, value, sub, unit, icon: Icon, href, tone = "ne
       {loading ? (
         <SkeletonText className="h-7 w-20 mb-2" />
       ) : (
-        <div className="text-2xl font-black text-[var(--text-primary)] mb-0.5">
+        <div className="text-[32px] font-semibold leading-[1.1] tracking-[-0.015em] text-[var(--text-primary)] mb-1">
           <Numeral value={value} unit={unit} />
         </div>
       )}
 
       <div className="flex items-center gap-2">
-        <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-eyebrow font-semibold">{label}</div>
+        <div className="text-[var(--text-muted)] text-14">{label}</div>
         {trend && (
           <span
             className={cn(
-              "inline-flex items-center gap-0.5 text-[10px] font-bold tnum",
+              "inline-flex items-center gap-0.5 text-12 font-bold tnum",
               (trend.goodWhen ?? "up") === trend.direction ? "text-[var(--sig-ok-fg)]" : "text-[var(--sig-danger-fg)]"
             )}
           >
@@ -66,14 +61,14 @@ export function StatCard({ label, value, sub, unit, icon: Icon, href, tone = "ne
           </span>
         )}
       </div>
-      {sub && <div className="mt-1 text-[11px] text-[var(--text-muted)]">{sub}</div>}
+      {sub && <div className="mt-1 text-12 text-[var(--text-muted)]">{sub}</div>}
     </>
   );
 
   const className_ = cn(
-    "group relative bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg p-5",
+    "group relative bg-[var(--bg-card)] rounded-[18px] p-6",
     "transition-colors duration-[var(--dur-2)]",
-    href && "hover:border-[var(--border-strong)] hover:bg-[var(--bg-card-hover)]",
+    href && "hover:shadow-s2",
     className
   );
 

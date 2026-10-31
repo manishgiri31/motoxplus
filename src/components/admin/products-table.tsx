@@ -64,7 +64,7 @@ export function ProductsTable({ products, search }: { products: AdminProductRow[
     <div className="glass border border-[var(--border-color)] rounded-xl overflow-hidden">
       {selectedCount > 0 && (
         <div className="flex items-center gap-3 flex-wrap px-4 py-3 border-b border-[var(--border-color)] bg-red-900/10">
-          <span className="text-[var(--text-primary)] text-xs font-bold uppercase tracking-wider">
+          <span className="text-[var(--text-primary)] text-xs font-bold">
             {selectedCount} selected
           </span>
           <select
@@ -79,14 +79,14 @@ export function ProductsTable({ products, search }: { products: AdminProductRow[
           <button
             onClick={applyBulkStatus}
             disabled={applying}
-            className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider transition-colors"
+            className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-normal px-3 py-1.5 rounded-pill text-xs uppercase transition-colors"
           >
             {applying ? <Spinner size={12} /> : null}
             Apply to {selectedCount}
           </button>
           <button
             onClick={() => setSelected(new Set())}
-            className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] uppercase tracking-wider"
+            className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
             Clear
           </button>
@@ -105,13 +105,13 @@ export function ProductsTable({ products, search }: { products: AdminProductRow[
                 className="w-4 h-4 accent-red-600"
               />
             </th>
-            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Product</th>
-            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Category</th>
-            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Part No.</th>
-            <th className="px-4 py-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-widest">Price</th>
-            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden sm:table-cell">Stock</th>
-            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
-            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Actions</th>
+            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Product</th>
+            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Category</th>
+            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Part No.</th>
+            <th className="px-4 py-3 text-right text-xs text-[var(--text-muted)]">Price</th>
+            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden sm:table-cell">Stock</th>
+            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Status</th>
+            <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
@@ -150,7 +150,7 @@ export function ProductsTable({ products, search }: { products: AdminProductRow[
                     <div className="flex items-center gap-2">
                       <div className="text-[var(--text-primary)] font-bold text-sm">{product.name}</div>
                       {product.vendor && (
-                        <span className="bg-amber-900/30 text-amber-400 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border border-amber-900/40">
+                        <span className="bg-amber-900/30 text-amber-400 text-12 font-bold px-1.5 py-0.5 rounded-full border border-amber-900/40">
                           {product.vendor.companyName}
                         </span>
                       )}
@@ -169,12 +169,12 @@ export function ProductsTable({ products, search }: { products: AdminProductRow[
                 <span className="text-[var(--text-primary)] font-bold text-sm">{formatCurrency(product.price)}</span>
               </td>
               <td className="px-4 py-4 hidden sm:table-cell">
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${productStockBadgeClass(product.stockStatus)}`}>
+                <span className={`text-12 font-bold uppercase px-2 py-1 rounded-full ${productStockBadgeClass(product.stockStatus)}`}>
                   {productStockLabel(product.stockStatus)}
                 </span>
               </td>
               <td className="px-4 py-4">
-                <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-xl ${product.isActive ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
+                <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-xl ${product.isActive ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
                   {product.isActive ? "Active" : "Inactive"}
                 </span>
               </td>

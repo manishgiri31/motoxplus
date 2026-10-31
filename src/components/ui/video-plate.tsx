@@ -91,7 +91,7 @@ export function VideoPlate({ id, autoplay = true, loop = true, controls = "none"
         style={{ aspectRatio: asset.aspect }}
       >
         <CornerFrame size={12} className="absolute inset-3" />
-        <span className="text-[10px] font-semibold uppercase tracking-eyebrow text-[var(--text-muted)]">
+        <span className="text-12 font-semibold text-[var(--text-muted)]">
           Footage pending — {asset.aspect}
         </span>
       </div>
@@ -121,7 +121,7 @@ export function VideoPlate({ id, autoplay = true, loop = true, controls = "none"
 
       {controls === "full" && (
         <div className="absolute inset-x-0 bottom-0 flex items-center justify-end p-4">
-          <span className="tnum text-[10px] text-white/70">
+          <span className="tnum text-12 text-white/70">
             <Numeral value={formatTime(current)} /> / <Numeral value={formatTime(duration)} />
           </span>
         </div>
@@ -129,7 +129,7 @@ export function VideoPlate({ id, autoplay = true, loop = true, controls = "none"
 
       <CornerFrame size={14} className="absolute inset-0 pointer-events-none" />
       {caption && (
-        <p className="absolute left-4 top-4 text-[10px] font-semibold uppercase tracking-eyebrow text-white/70">{caption}</p>
+        <p className="absolute left-4 top-4 text-12 font-semibold text-white/70">{caption}</p>
       )}
     </div>
   );

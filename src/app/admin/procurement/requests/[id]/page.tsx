@@ -43,10 +43,10 @@ export default async function PurchaseRequestDetailPage(props: { params: Promise
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">{request.title}</h1>
-            <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${STATUS_COLORS[request.status]}`}>
+            <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-sm ${STATUS_COLORS[request.status]}`}>
               {request.status}
             </span>
-            <span className={`text-xs font-semibold uppercase tracking-wider ${URGENCY_COLORS[request.urgency]}`}>
+            <span className={`text-xs font-semibold ${URGENCY_COLORS[request.urgency]}`}>
               {request.urgency}
             </span>
           </div>
@@ -61,7 +61,7 @@ export default async function PurchaseRequestDetailPage(props: { params: Promise
         <div className="lg:col-span-2 space-y-6">
           {/* Items */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
               Requested Items
             </h2>
             <div className="space-y-3">
@@ -86,7 +86,7 @@ export default async function PurchaseRequestDetailPage(props: { params: Promise
           {/* Linked PO */}
           {request.purchaseOrder && (
             <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-              <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">
+              <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">
                 Purchase Order Created
               </h2>
               <Link
@@ -106,7 +106,7 @@ export default async function PurchaseRequestDetailPage(props: { params: Promise
 
           {request.notes && (
             <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-              <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-3">Notes</h2>
+              <h2 className="text-[var(--text-primary)] font-bold text-sm mb-3">Notes</h2>
               <p className="text-[var(--text-secondary)] text-sm whitespace-pre-wrap">{request.notes}</p>
             </div>
           )}
@@ -114,7 +114,7 @@ export default async function PurchaseRequestDetailPage(props: { params: Promise
 
         <div className="space-y-6">
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">Details</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">Details</h2>
             <div className="space-y-3">
               {[
                 { label: "Request No.", value: request.requestNumber },
@@ -140,7 +140,7 @@ export default async function PurchaseRequestDetailPage(props: { params: Promise
           {request.status === "APPROVED" && !request.purchaseOrder && (
             <Link
               href={`/admin/procurement/purchase-orders/new?prId=${request.id}`}
-              className="flex items-center justify-center gap-2 w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm text-sm uppercase tracking-wider transition-colors"
+              className="flex items-center justify-center gap-2 w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm text-sm transition-colors"
             >
               <Package size={16} />
               Create Purchase Order

@@ -46,7 +46,7 @@ export default async function VendorProfilePage() {
 
         {/* Company Info */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-          <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+          <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
             Company Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -62,7 +62,7 @@ export default async function VendorProfilePage() {
               <div className="flex items-start gap-3">
                 <Globe size={14} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
                 <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-0.5">Website</div>
+                  <div className="text-[var(--text-muted)] text-xs mb-0.5">Website</div>
                   <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-sm text-red-400 hover:text-red-300">
                     {vendor.website}
                   </a>
@@ -74,7 +74,7 @@ export default async function VendorProfilePage() {
 
         {/* Address */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-          <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+          <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
             Address
           </h2>
           <div className="flex items-start gap-3">
@@ -90,7 +90,7 @@ export default async function VendorProfilePage() {
         {/* Bank Details */}
         {(vendor.bankName || vendor.accountNumber || vendor.ifscCode) && (
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
               Bank Details
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -111,7 +111,7 @@ export default async function VendorProfilePage() {
         {/* Contacts */}
         {vendor.contacts.length > 0 && (
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
               Contact Persons
             </h2>
             <div className="space-y-3">
@@ -124,7 +124,7 @@ export default async function VendorProfilePage() {
                     <div className="flex items-center gap-2">
                       <span className="text-[var(--text-primary)] text-sm font-bold">{c.name}</span>
                       {c.isPrimary && (
-                        <span className="text-[10px] text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
+                        <span className="text-12 text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded-sm uppercase">
                           Primary
                         </span>
                       )}
@@ -168,7 +168,7 @@ function Row({
     <div className="flex items-start gap-3">
       <Icon size={14} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
       <div>
-        <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-0.5">{label}</div>
+        <div className="text-[var(--text-muted)] text-xs mb-0.5">{label}</div>
         <div className={`text-[var(--text-primary)] text-sm font-medium ${mono ? "font-mono" : ""}`}>
           {value}
         </div>

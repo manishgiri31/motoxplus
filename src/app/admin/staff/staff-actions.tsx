@@ -24,10 +24,10 @@ export function StaffActions({ id, name }: { id: string; name: string }) {
     return (
       <div className="flex items-center gap-2 justify-end">
         <span className="text-xs text-[var(--text-muted)]">Remove {name}?</span>
-        <button onClick={handleDelete} disabled={loading} className="text-xs bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded-sm uppercase tracking-wider transition-colors">
+        <button onClick={handleDelete} disabled={loading} className="text-xs bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-3 py-1.5 rounded-sm uppercase transition-colors">
           {loading ? "..." : "Yes"}
         </button>
-        <button onClick={() => setConfirming(false)} className="text-xs glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-3 py-1.5 rounded-sm uppercase tracking-wider transition-colors">
+        <button onClick={() => setConfirming(false)} className="text-xs glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-3 py-1.5 rounded-sm transition-colors">
           No
         </button>
       </div>

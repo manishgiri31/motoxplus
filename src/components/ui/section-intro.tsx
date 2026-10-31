@@ -33,15 +33,15 @@ export function SectionIntro({
     <Reveal className={cn(centered && "mx-auto text-center", className)}>
       <div className={cn(centered && "flex flex-col items-center")}>
         {eyebrow && (
-          <Eyebrow index={index} className={cn("mb-5", centered && "justify-center")}>
+          <Eyebrow index={index} className={cn("mb-3", centered && "justify-center")}>
             {eyebrow}
           </Eyebrow>
         )}
-        <h2 className="font-display text-3xl font-bold leading-[1.05] tracking-tight text-[var(--ink)] md:text-4xl lg:text-5xl">
+        <h2 className="font-display text-[clamp(28px,4vw,40px)] font-semibold leading-[1.1] tracking-[-0.01em] text-[var(--ink)]">
           {headline}
         </h2>
         {description && (
-          <p className={cn("mt-5 max-w-xl text-base leading-relaxed text-[var(--muted)]", centered && "mx-auto")}>
+          <p className={cn("mt-3 max-w-2xl text-[19px] leading-[1.35] text-[var(--muted)]", centered && "mx-auto")}>
             {description}
           </p>
         )}

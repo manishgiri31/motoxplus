@@ -210,7 +210,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
           </button>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm transition-colors text-sm"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill transition-colors text-sm"
           >
             <Download size={16} />
             Download PDF
@@ -223,7 +223,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
         {/* Header */}
         <div className="bg-[var(--accent)] px-8 py-6 flex justify-between items-start">
           <div>
-            <div className="text-[var(--text-primary)] font-black text-2xl tracking-wide">
+            <div className="text-[var(--text-primary)] font-black text-2xl">
               MOTOX<span className="text-red-200">PLUS</span>
             </div>
             <div className="text-red-200 text-xs mt-1">India Pvt. Ltd.</div>
@@ -233,7 +233,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
             <div className="text-red-100 text-xs">GST: {process.env.NEXT_PUBLIC_COMPANY_GST}</div>
           </div>
           <div className="text-right">
-            <div className="text-[var(--text-primary)]/60 text-xs uppercase tracking-widest mb-1">Tax Invoice</div>
+            <div className="text-[var(--text-primary)]/60 text-xs mb-1">Tax Invoice</div>
             <div className="text-[var(--text-primary)] font-black text-xl font-mono">{invoice.invoiceNumber}</div>
             <div className="text-red-200 text-xs mt-2">Date: {formatDate(invoice.issuedAt)}</div>
             <div className="text-red-200 text-xs">Order: {invoice.order.orderNumber}</div>
@@ -244,14 +244,14 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
           {/* Addresses */}
           <div className="grid grid-cols-2 gap-8 mb-8 pb-8 border-b border-[var(--border-color)]">
             <div>
-              <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">From</div>
+              <div className="text-[var(--text-muted)] text-xs mb-3">From</div>
               <div className="text-[var(--text-primary)] font-bold">MotoXPlus India Pvt. Ltd.</div>
               <div className="text-[var(--text-muted)] text-sm mt-1">{process.env.NEXT_PUBLIC_COMPANY_ADDRESS}</div>
               <div className="text-[var(--text-muted)] text-sm">Phone: {process.env.NEXT_PUBLIC_COMPANY_PHONE}</div>
               <div className="text-[var(--text-muted)] text-sm">GST: {process.env.NEXT_PUBLIC_COMPANY_GST}</div>
             </div>
             <div>
-              <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Bill To</div>
+              <div className="text-[var(--text-muted)] text-xs mb-3">Bill To</div>
               <div className="text-[var(--text-primary)] font-bold">{invoice.billTo.name}</div>
               {invoice.billTo.subName && <div className="text-[var(--text-muted)] text-sm">{invoice.billTo.subName}</div>}
               <div className="text-[var(--text-muted)] text-sm">{invoice.billTo.address}, {invoice.billTo.city}</div>
@@ -268,14 +268,14 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
           <table className="w-full mb-8">
             <thead>
               <tr className="border-b border-[var(--border-color)]">
-                <th className="pb-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">#</th>
-                <th className="pb-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Part No.</th>
-                <th className="pb-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">HSN</th>
-                <th className="pb-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Product</th>
-                <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-widest">Qty</th>
-                <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-widest">Unit Price</th>
-                <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-widest">GST</th>
-                <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-widest">Total</th>
+                <th className="pb-3 text-left text-xs text-[var(--text-muted)]">#</th>
+                <th className="pb-3 text-left text-xs text-[var(--text-muted)]">Part No.</th>
+                <th className="pb-3 text-left text-xs text-[var(--text-muted)]">HSN</th>
+                <th className="pb-3 text-left text-xs text-[var(--text-muted)]">Product</th>
+                <th className="pb-3 text-right text-xs text-[var(--text-muted)]">Qty</th>
+                <th className="pb-3 text-right text-xs text-[var(--text-muted)]">Unit Price</th>
+                <th className="pb-3 text-right text-xs text-[var(--text-muted)]">GST</th>
+                <th className="pb-3 text-right text-xs text-[var(--text-muted)]">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-color)]">
@@ -288,7 +288,7 @@ export function InvoiceView({ invoice }: { invoice: InvoiceData }) {
                     <td className="py-3 text-[var(--text-primary)] text-sm">
                       {item.product.name}
                       {item.product.countryOfOrigin && (
-                        <div className="text-[var(--text-muted)] text-[10px]">Origin: {item.product.countryOfOrigin}</div>
+                        <div className="text-[var(--text-muted)] text-12">Origin: {item.product.countryOfOrigin}</div>
                       )}
                     </td>
                     <td className="py-3 text-right text-[var(--text-secondary)] text-sm">{item.quantity}</td>

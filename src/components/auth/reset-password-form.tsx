@@ -137,7 +137,7 @@ export function ResetPasswordForm() {
         </p>
         <Link
           href="/login"
-          className="inline-block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 px-8 rounded-lg transition-colors text-sm"
+          className="inline-block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal py-3 px-8 rounded-pill transition-colors text-sm"
         >
           Back to login
         </Link>

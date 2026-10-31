@@ -27,12 +27,12 @@ export function RetryRefundAction({ cancellationId }: { cancellationId: string }
       <button
         onClick={retry}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors"
       >
         <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
         {loading ? "Retrying…" : "Retry refund"}
       </button>
-      {error && <p className="text-red-400 text-[10px] max-w-[160px] text-right">{error}</p>}
+      {error && <p className="text-red-400 text-12 max-w-[160px] text-right">{error}</p>}
     </div>
   );
 }

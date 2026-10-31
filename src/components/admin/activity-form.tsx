@@ -63,7 +63,7 @@ export function ActivityForm({ leadId, currentStatus, onClose, onSaved }: Props)
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="glass border border-[var(--border-color)] rounded-sm w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)]">
-          <h2 className="text-lg font-black text-[var(--text-primary)] uppercase tracking-tight">Log Activity</h2>
+          <h2 className="text-lg font-black text-[var(--text-primary)] tracking-tight">Log Activity</h2>
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white transition-colors"><X size={18} /></button>
         </div>
 
@@ -72,13 +72,13 @@ export function ActivityForm({ leadId, currentStatus, onClose, onSaved }: Props)
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Activity Type *</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Activity Type *</label>
               <select required className="themed-select w-full" value={form.type} onChange={(e) => set("type", e.target.value)}>
                 {ACTIVITY_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Outcome</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Outcome</label>
               <select className="themed-select w-full" value={form.outcome} onChange={(e) => set("outcome", e.target.value)}>
                 <option value="">Select outcome</option>
                 {OUTCOMES.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -87,7 +87,7 @@ export function ActivityForm({ leadId, currentStatus, onClose, onSaved }: Props)
           </div>
 
           <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Description *</label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Description *</label>
             <textarea
               required
               rows={3}
@@ -99,12 +99,12 @@ export function ActivityForm({ leadId, currentStatus, onClose, onSaved }: Props)
           </div>
 
           <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Next Action</label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Next Action</label>
             <input className="themed-input w-full" value={form.nextAction} onChange={(e) => set("nextAction", e.target.value)} placeholder="What needs to happen next" />
           </div>
 
           <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Next Follow-up Date</label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Next Follow-up Date</label>
             <input type="date" className="themed-input w-full" value={form.nextFollowUp} onChange={(e) => set("nextFollowUp", e.target.value)} />
           </div>
 
@@ -120,7 +120,7 @@ export function ActivityForm({ leadId, currentStatus, onClose, onSaved }: Props)
             </label>
             {form.updateStatus && (
               <div>
-                <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">New Status</label>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">New Status</label>
                 <select className="themed-select w-full" value={form.newStatus} onChange={(e) => set("newStatus", e.target.value)}>
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -129,10 +129,10 @@ export function ActivityForm({ leadId, currentStatus, onClose, onSaved }: Props)
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={loading} className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+            <button type="submit" disabled={loading} className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm transition-colors">
               {loading ? "Saving..." : "Log Activity"}
             </button>
-            <button type="button" onClick={onClose} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-5 py-2.5 rounded-sm text-sm uppercase tracking-wider hover:border-red-900/40 transition-colors">
+            <button type="button" onClick={onClose} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-5 py-2.5 rounded-sm text-sm hover:border-red-900/40 transition-colors">
               Cancel
             </button>
           </div>

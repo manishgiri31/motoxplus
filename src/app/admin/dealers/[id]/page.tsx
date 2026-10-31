@@ -43,7 +43,7 @@ function InfoRow({
     <div className="flex items-start gap-3">
       <Icon size={14} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
       <div>
-        <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-0.5">{label}</div>
+        <div className="text-[var(--text-muted)] text-xs mb-0.5">{label}</div>
         <div className={`text-[var(--text-primary)] text-sm font-medium ${mono ? "font-mono" : ""}`}>{value}</div>
       </div>
     </div>
@@ -76,7 +76,7 @@ export default async function DealerDetailPage(props: { params: Promise<{ id: st
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">{dealer.companyName}</h1>
-            <span className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-sm border ${STATUS_COLORS[dealer.status] || "bg-gray-900/20 text-[var(--text-muted)] border-[var(--border-color)]"}`}>
+            <span className={`text-xs font-semibold uppercase px-2.5 py-1 rounded-sm border ${STATUS_COLORS[dealer.status] || "bg-gray-900/20 text-[var(--text-muted)] border-[var(--border-color)]"}`}>
               {dealer.status}
             </span>
           </div>
@@ -90,7 +90,7 @@ export default async function DealerDetailPage(props: { params: Promise<{ id: st
         <div className="lg:col-span-2 space-y-6">
           {/* Company Details */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">Company Details</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">Company Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InfoRow icon={Building2} label="Company Name" value={dealer.companyName} />
               <InfoRow icon={Building2} label="Owner Name" value={dealer.ownerName} />
@@ -99,7 +99,7 @@ export default async function DealerDetailPage(props: { params: Promise<{ id: st
               <div className="flex items-start gap-3">
                 <Building2 size={14} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
                 <div>
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-0.5">GST</div>
+                  <div className="text-[var(--text-muted)] text-xs mb-0.5">GST</div>
                   <div className="flex items-center gap-2">
                     <span className="text-[var(--text-primary)] text-sm font-medium font-mono">{dealer.gstNumber || "Not provided"}</span>
                     <GstVerifyButton entity="dealers" id={dealer.id} gstNumber={dealer.gstNumber} gstVerified={dealer.gstVerified} />
@@ -116,7 +116,7 @@ export default async function DealerDetailPage(props: { params: Promise<{ id: st
 
           {/* Uploaded Documents */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">Uploaded Documents</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">Uploaded Documents</h2>
             {dealer.documents.length === 0 ? (
               <p className="text-[var(--text-muted)] text-sm">No documents uploaded yet.</p>
             ) : (
@@ -144,7 +144,7 @@ export default async function DealerDetailPage(props: { params: Promise<{ id: st
         <div className="space-y-6">
           {/* Verification Status */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">Verification Status</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">Verification Status</h2>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[var(--text-muted)] text-xs">Email</span>
@@ -172,7 +172,7 @@ export default async function DealerDetailPage(props: { params: Promise<{ id: st
 
           {/* Quick Stats */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">Quick Stats</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">Quick Stats</h2>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[var(--text-muted)] text-xs flex items-center gap-1.5"><ShoppingBag size={12} /> Orders</span>

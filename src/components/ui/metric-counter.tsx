@@ -102,7 +102,7 @@ export function MetricCounter({
       {label && (
         <div
           aria-hidden="true"
-          className={cn("mt-2 text-[10px] font-semibold uppercase tracking-eyebrow text-[var(--muted)]", labelClassName)}
+          className={cn("mt-2 text-12 font-semibold text-[var(--muted)]", labelClassName)}
         >
           {label}
         </div>

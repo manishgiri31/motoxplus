@@ -225,7 +225,7 @@ export function LoginForm() {
         </div>
         <div className="flex items-center gap-1.5 rounded-pill bg-[var(--sig-ok-bg)] px-2.5 py-1.5 flex-shrink-0">
           <ShieldCheck size={12} className="text-[var(--sig-ok-fg)]" />
-          <span className="text-[10px] text-[var(--sig-ok-fg)] font-semibold">Secure</span>
+          <span className="text-12 text-[var(--sig-ok-fg)] font-semibold">Secure</span>
         </div>
       </div>
 
@@ -377,8 +377,8 @@ export function LoginForm() {
             { role: "Admins", desc: "Full Management" },
           ].map((item) => (
             <div key={item.role} className="bg-white rounded-lg p-3 text-center">
-              <div className="text-[var(--muted)] text-[10px] font-semibold mb-0.5">{item.role}</div>
-              <div className="text-[9px] text-[var(--muted)] opacity-70 leading-tight">{item.desc}</div>
+              <div className="text-[var(--muted)] text-12 font-semibold mb-0.5">{item.role}</div>
+              <div className="text-12 text-[var(--muted)] opacity-70 leading-tight">{item.desc}</div>
             </div>
           ))}
         </div>

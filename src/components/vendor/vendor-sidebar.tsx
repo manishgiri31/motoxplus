@@ -46,11 +46,11 @@ export function VendorSidebar({ user }: Props) {
         <Link href="/" className="flex flex-col items-center gap-2.5 text-center">
           <Image src="/motoxplus/logo.png" alt="MOTOXPLUS" width={60} height={60} className="object-contain" />
           <div>
-            <div className="text-[var(--text-primary)] font-black text-sm tracking-wide leading-tight">
-              MOTOX<span className="text-red-500">PLUS</span>
+            <div className="text-[var(--text-primary)] font-black text-sm leading-tight">
+              MOTOX<span className="text-[var(--accent)]">PLUS</span>
             </div>
-            <div className="text-[var(--text-muted)] text-[9px] leading-tight">India Private Limited</div>
-            <div className="text-amber-500 text-[9px] uppercase tracking-widest mt-1 font-bold flex items-center justify-center gap-1">
+            <div className="text-[var(--text-muted)] text-12 leading-tight">India Private Limited</div>
+            <div className="text-[var(--accent-text)] text-12 mt-1 font-semibold flex items-center justify-center gap-1">
               <Truck size={8} />
               Vendor Portal
             </div>
@@ -61,18 +61,18 @@ export function VendorSidebar({ user }: Props) {
       <div className="px-4 pt-4 pb-2">
         <div className="glass border border-[var(--border-color)] rounded-xl p-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-900/20 border border-amber-900/30 flex items-center justify-center flex-shrink-0">
-              <span className="text-amber-400 font-black text-xs">
+            <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center flex-shrink-0">
+              <span className="text-[var(--accent-text)] font-semibold text-xs">
                 {(user.name || "V").charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[var(--text-primary)] font-semibold text-xs truncate">{user.name}</div>
-              <div className="text-[var(--text-muted)] text-[10px] truncate">{user.email}</div>
+              <div className="text-[var(--text-muted)] text-12 truncate">{user.email}</div>
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full text-amber-400 bg-amber-500/10">
+            <span className="text-12 uppercase font-bold px-2 py-0.5 rounded-full text-[var(--accent-text)] bg-[var(--accent-soft)]">
               Vendor
             </span>
           </div>
@@ -88,16 +88,15 @@ export function VendorSidebar({ user }: Props) {
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 mb-0.5",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-14 font-medium transition-colors duration-[var(--dur-2)] mb-0.5",
                 isActive
-                  ? "bg-amber-600/10 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.2)]"
+                  ? "bg-[var(--accent-soft)] text-[var(--accent-text)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
               )}
             >
-              <item.icon size={17} className={cn("flex-shrink-0", isActive ? "text-amber-400" : "text-[var(--text-muted)]")} />
+              <item.icon size={17} className={cn("flex-shrink-0", isActive ? "text-[var(--accent)]" : "text-[var(--text-muted)]")} />
               <span>{item.label}</span>
-              {isActive && <div className="ml-auto w-1.5 h-1.5 bg-amber-500 rounded-full" />}
-            </Link>
+              </Link>
           );
         })}
       </nav>
@@ -116,7 +115,7 @@ export function VendorSidebar({ user }: Props) {
 
   return (
     <>
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex-col z-40">
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] flex-col z-40">
         <SidebarContent />
       </aside>
 
@@ -130,7 +129,7 @@ export function VendorSidebar({ user }: Props) {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setMobileOpen(false)} />
-          <aside className="relative w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col z-10 animate-slide-in-left">
+          <aside className="relative w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] flex flex-col z-10 animate-slide-in-left">
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1"

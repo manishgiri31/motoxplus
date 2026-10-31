@@ -364,7 +364,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
                       className="w-24 h-24 rounded-full border-4 border-white/25 shadow-2xl"
                       style={{ background: activeColorBg, filter: "brightness(1.2) saturate(1.3)" }}
                     />
-                    <span className="text-white/70 text-xs font-bold uppercase tracking-widest drop-shadow">
+                    <span className="text-white/70 text-xs font-bold drop-shadow">
                       {resolvedVariant?.extra}
                     </span>
                   </>
@@ -425,22 +425,22 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
             {vehicleContext && (
               <Link
                 href={`/products?vehicle=${vehicleContext.slug}`}
-                className="border border-[var(--sig-ok-bd)] text-[var(--sig-ok-fg)] text-xs font-semibold uppercase tracking-wider px-3 py-1 hover:bg-[var(--sig-ok-bg)] transition-colors flex items-center gap-1.5"
+                className="border border-[var(--sig-ok-bd)] text-[var(--sig-ok-fg)] text-xs font-semibold px-3 py-1 hover:bg-[var(--sig-ok-bg)] transition-colors flex items-center gap-1.5"
               >
                 <CheckCircle className="w-3 h-3" />
                 Fits {vehicleContext.name}
               </Link>
             )}
-            <span className="border border-[var(--red)]/30 text-[var(--red)] text-xs font-semibold uppercase tracking-wider px-3 py-1">
+            <span className="border border-[var(--red)]/30 text-[var(--red)] text-xs font-semibold px-3 py-1">
               {product.category.name}
             </span>
             {product.brand && (
-              <span className="border border-[var(--line)] text-[var(--muted)] text-xs font-semibold uppercase tracking-wider px-3 py-1">
+              <span className="border border-[var(--line)] text-[var(--muted)] text-xs font-semibold px-3 py-1">
                 {product.brand}
               </span>
             )}
             {product.warranty && product.warranty !== "No Warranty" && (
-              <span className="border border-[var(--sig-ok-bd)] text-[var(--sig-ok-fg)] text-xs font-semibold uppercase tracking-wider px-3 py-1 flex items-center gap-1">
+              <span className="border border-[var(--sig-ok-bd)] text-[var(--sig-ok-fg)] text-xs font-semibold px-3 py-1 flex items-center gap-1">
                 <Shield className="w-3 h-3" />
                 {product.warranty}
               </span>
@@ -469,7 +469,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
               ...(product.countryOfOrigin ? [{ label: "Country of Origin", value: product.countryOfOrigin }] : []),
             ].map((item) => (
               <div key={item.label}>
-                <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">{item.label}</div>
+                <div className="text-[var(--muted)] text-xs mb-1">{item.label}</div>
                 <div className={`tnum text-[var(--ink)] text-sm font-semibold ${"mono" in item && item.mono ? "font-mono" : ""}`}>
                   {item.value}
                 </div>
@@ -480,7 +480,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
           {/* Stock availability */}
           {stockBadge && (
             <div
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-3 py-1 mb-6 border rounded-sm w-fit ${
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 mb-6 border rounded-sm w-fit ${
                 stockBadge.tone === "ok"
                   ? "bg-[var(--sig-ok-bg)] text-[var(--sig-ok-fg)] border-[var(--sig-ok-bd)]"
                   : stockBadge.tone === "warn"
@@ -497,7 +497,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-4 mb-6 flex items-start gap-3">
               <PackageOpen className="w-4 h-4 text-[var(--muted)] mt-0.5 flex-shrink-0" />
               <div>
-                <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Package Dimensions</div>
+                <div className="text-[var(--muted)] text-xs mb-1">Package Dimensions</div>
                 <div className="text-[var(--ink)]/80 text-sm">
                   {product.packageWeight && <span>{product.packageWeight} kg</span>}
                   {product.packageLength && (
@@ -516,7 +516,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
 
           {product.compatibility.length > 0 && (
             <div className="mb-6">
-              <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-3">Compatible With</div>
+              <div className="text-[var(--muted)] text-xs mb-3">Compatible With</div>
               <div className="flex flex-wrap gap-2">
                 {product.compatibility.map((model) => (
                   <span key={model} className="border border-[var(--line)] text-[var(--ink)]/80 text-xs px-3 py-1">
@@ -560,7 +560,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
                 return (
                   <div key={dim}>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[var(--muted)] text-xs uppercase tracking-widest">{DIM_LABELS[dim]}</span>
+                      <span className="text-[var(--muted)] text-xs">{DIM_LABELS[dim]}</span>
                       {selectedVal && !useDropdown && (
                         <span className="text-[var(--ink)] text-xs font-semibold">— {selectedVal}</span>
                       )}
@@ -578,7 +578,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
                               <>
                                 <span className="text-[var(--ink)] truncate">{selectedVal}</span>
                                 {getModelBadge(selectedVal) && (
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${getModelBadge(selectedVal)!.cls}`}>
+                                  <span className={`text-12 font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${getModelBadge(selectedVal)!.cls}`}>
                                     {getModelBadge(selectedVal)!.label}
                                   </span>
                                 )}
@@ -611,7 +611,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
                                   >
                                     <span className="truncate">{val}</span>
                                     {badge && (
-                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${badge.cls}`}>
+                                      <span className={`text-12 font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${badge.cls}`}>
                                         {badge.label}
                                       </span>
                                     )}
@@ -710,16 +710,16 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
               <div className="flex items-baseline gap-6 mb-3 flex-wrap">
                 <div>
-                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Dealer Price (excl. GST)</div>
+                  <div className="text-[var(--muted)] text-xs mb-1">Dealer Price (excl. GST)</div>
                   <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
                 </div>
                 <div>
-                  <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Incl. {product.gstRate}% GST</div>
+                  <div className="text-[var(--muted)] text-xs mb-1">Incl. {product.gstRate}% GST</div>
                   <div className="tnum text-xl font-bold text-[var(--ink)]">{formatCurrency(priceWithGST)}</div>
                 </div>
                 {activeMrp && activeMrp > activePrice && (
                   <div>
-                    <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">MRP</div>
+                    <div className="text-[var(--muted)] text-xs mb-1">MRP</div>
                     <div className="tnum text-lg font-bold text-[var(--muted)] line-through">{formatCurrency(activeMrp)}</div>
                   </div>
                 )}
@@ -749,7 +749,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
             </div>
           ) : isCustomer ? (
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
-              <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Price (excl. GST)</div>
+              <div className="text-[var(--muted)] text-xs mb-1">Price (excl. GST)</div>
               {activeMrp && customerExGst !== null ? (
                 <>
                   <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(customerExGst)}</div>
@@ -770,7 +770,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
             </div>
           ) : (
             <div className="bg-[var(--card)] border border-[var(--line)] rounded-sm p-6 mb-6">
-              <div className="text-[var(--muted)] text-xs uppercase tracking-widest mb-1">Dealer Price (excl. GST)</div>
+              <div className="text-[var(--muted)] text-xs mb-1">Dealer Price (excl. GST)</div>
               <div className="tnum font-display text-3xl font-bold text-[var(--red)]">{formatCurrency(activePrice)}</div>
               <div className="text-[var(--muted)] text-sm font-semibold mt-1">+ {product.gstRate}% GST</div>
               <div className="text-[var(--muted)] text-xs mt-0.5">({formatCurrency(priceWithGST)} incl. GST)</div>
@@ -821,7 +821,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
               <button
                 onClick={handleAddToCart}
                 disabled={loading || addedToCart || (hasVariants && !resolvedVariant) || !!outOfStock}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider ${
+                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-sm transition-colors text-sm ${
                   addedToCart
                     ? "bg-[var(--sig-ok-fg)] text-white"
                     : outOfStock
@@ -843,7 +843,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
           {!isDealer && !isCustomer && (
             <Link
               href="/login"
-              className="block w-full text-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+              className="block w-full text-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm"
             >
               Login to Order
             </Link>

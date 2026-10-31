@@ -30,7 +30,7 @@ export function AdminDealerActions({ dealerId, currentStatus }: Props) {
         <button
           onClick={() => updateStatus("ACTIVE")}
           disabled={!!loadingStatus}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300 transition-colors disabled:opacity-50"
         >
           {loadingStatus === "ACTIVE" ? <Spinner size={12} /> : null}
           Activate
@@ -40,7 +40,7 @@ export function AdminDealerActions({ dealerId, currentStatus }: Props) {
         <button
           onClick={() => updateStatus("SUSPENDED")}
           disabled={!!loadingStatus}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors disabled:opacity-50"
         >
           {loadingStatus === "SUSPENDED" ? <Spinner size={12} /> : null}
           Suspend

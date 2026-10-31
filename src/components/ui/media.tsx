@@ -33,11 +33,11 @@ function PlaceholderPlate({ aspect, brief, className }: { aspect: string; brief:
       <CornerFrame size={12} className="absolute inset-3" />
       <div className="relative z-[1] flex flex-col items-center gap-2 px-6 text-center">
         <ImageIcon size={20} className="text-[var(--text-faint)]" aria-hidden />
-        <span className="text-[10px] font-semibold uppercase tracking-eyebrow text-[var(--text-muted)]">
+        <span className="text-12 font-semibold text-[var(--text-muted)]">
           Plate — {aspect}
         </span>
         {process.env.NODE_ENV !== "production" && (
-          <span className="max-w-[220px] text-[10px] leading-relaxed text-[var(--text-faint)]">{brief}</span>
+          <span className="max-w-[220px] text-12 leading-relaxed text-[var(--text-faint)]">{brief}</span>
         )}
       </div>
     </div>

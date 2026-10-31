@@ -78,7 +78,7 @@ export default function NewVendorPage() {
 
   const inputClass =
     "w-full themed-input px-3 py-2.5 rounded-sm text-sm focus:ring-0 transition-colors";
-  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5";
+  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] mb-1.5";
 
   return (
     <div className="max-w-4xl">
@@ -104,7 +104,7 @@ export default function NewVendorPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm uppercase tracking-widest">
+          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm">
             Basic Information
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -202,7 +202,7 @@ export default function NewVendorPage() {
 
         {/* Address */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm uppercase tracking-widest">
+          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm">
             Address
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -268,7 +268,7 @@ export default function NewVendorPage() {
 
         {/* Bank Details */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm uppercase tracking-widest">
+          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm">
             Bank Details
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -305,7 +305,7 @@ export default function NewVendorPage() {
 
         {/* Notes */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm uppercase tracking-widest">
+          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm">
             Internal Notes
           </h2>
           <textarea
@@ -354,14 +354,14 @@ export default function NewVendorPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-sm text-sm transition-colors uppercase tracking-wider"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-normal px-6 py-3 rounded-pill text-sm transition-colors"
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
             {loading ? "Creating..." : "Create Vendor"}
           </button>
           <Link
             href="/admin/vendors"
-            className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm transition-colors uppercase tracking-wider"
+            className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm transition-colors"
           >
             Cancel
           </Link>

@@ -50,7 +50,7 @@ export default async function AdminOrdersPage(
           <Link
             key={s || "all"}
             href={`/admin/orders${s ? `?status=${s}` : ""}`}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${
+            className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
               searchParams.status === s || (!searchParams.status && !s)
                 ? "bg-[var(--accent)] text-white"
                 : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
@@ -65,12 +65,12 @@ export default async function AdminOrdersPage(
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border-color)]">
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Order</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Dealer / Customer</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Date</th>
-              <th className="px-4 py-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-widest">Amount</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Update</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Order</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Dealer / Customer</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Date</th>
+              <th className="px-4 py-3 text-right text-xs text-[var(--text-muted)]">Amount</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Status</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Update</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -81,7 +81,7 @@ export default async function AdminOrdersPage(
                     {order.orderNumber}
                   </Link>
                   {order.invoice && (
-                    <div className="text-[10px] text-green-500 mt-0.5">Invoice generated</div>
+                    <div className="text-12 text-green-500 mt-0.5">Invoice generated</div>
                   )}
                 </td>
                 <td className="px-4 py-4 hidden md:table-cell">
@@ -104,12 +104,12 @@ export default async function AdminOrdersPage(
                 </td>
                 <td className="px-4 py-4 text-right">
                   <div className="text-[var(--text-primary)] font-bold text-sm">{formatCurrency(order.grandTotal)}</div>
-                  <div className={`text-[10px] ${order.paymentStatus === "PAID" ? "text-green-400" : order.paymentStatus === "PARTIAL" ? "text-yellow-400" : "text-[var(--text-muted)]"}`}>
+                  <div className={`text-12 ${order.paymentStatus === "PAID" ? "text-green-400" : order.paymentStatus === "PARTIAL" ? "text-yellow-400" : "text-[var(--text-muted)]"}`}>
                     {order.paymentStatus}
                   </div>
                 </td>
                 <td className="px-4 py-4">
-                  <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-xl ${statusColors[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                  <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-xl ${statusColors[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                     {order.status}
                   </span>
                 </td>

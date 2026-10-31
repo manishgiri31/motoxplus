@@ -38,7 +38,7 @@ export function AndroidAppButton() {
         <span className="font-display text-[13px] font-bold tracking-tight text-white sm:text-sm">
           Get the Android App
         </span>
-        <span className="mt-0.5 text-[10px] text-white/60 sm:text-[11px]">
+        <span className="mt-0.5 text-12 text-white/60 sm:text-12">
           Download APK for Android
         </span>
       </span>

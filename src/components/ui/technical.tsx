@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * `background-attachment: fixed`, which forces a full repaint on scroll.
  */
 
-/** Bosch/Porsche section-label device: a small rule + uppercase tracked label. */
+/** Bosch/Porsche section-label device: a small rule + tracked label. */
 export function Eyebrow({
   children,
   index,
@@ -24,9 +24,8 @@ export function Eyebrow({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-2.5 text-eyebrow text-[var(--text-muted)]", className)}>
-      {rule && <span className="h-px w-6 bg-[var(--accent)]" aria-hidden />}
-      {index && <span className="tnum text-[var(--accent-text)]">{index}</span>}
+    <div className={cn("flex items-center gap-2 text-14 font-semibold text-[var(--accent-text)]", className)}>
+      {index && <span className="tnum">{index}</span>}
       <span>{children}</span>
     </div>
   );
@@ -88,38 +87,9 @@ export function CornerFrame({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const base = "absolute border-[var(--rule-strong)]";
-  const s = `${size}px`;
-  const w = `${weight}px`;
-  return (
-    <div className={cn("relative", className)}>
-      <span
-        aria-hidden
-        className={cn(base, "top-0 left-0")}
-        style={{ width: s, height: s, borderTopWidth: w, borderLeftWidth: w }}
-      />
-      <span
-        aria-hidden
-        className={cn(base, "bottom-0 right-0")}
-        style={{ width: s, height: s, borderBottomWidth: w, borderRightWidth: w }}
-      />
-      {corners === "all" && (
-        <>
-          <span
-            aria-hidden
-            className={cn(base, "top-0 right-0")}
-            style={{ width: s, height: s, borderTopWidth: w, borderRightWidth: w }}
-          />
-          <span
-            aria-hidden
-            className={cn(base, "bottom-0 left-0")}
-            style={{ width: s, height: s, borderBottomWidth: w, borderLeftWidth: w }}
-          />
-        </>
-      )}
-      {children}
-    </div>
-  );
+  // Corner brackets were a drafting-sheet device; the store look is plain, so just render children.
+  void size; void weight; void corners;
+  return <div className={cn("relative", className)}>{children}</div>;
 }
 
 /** A CAD dimension line with arrowheads — inline SVG, ~380B, honest tool for the job. */
@@ -138,7 +108,7 @@ export function DimensionLine({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 text-[10px] tnum text-[var(--text-muted)]",
+        "inline-flex items-center gap-2 text-12 tnum text-[var(--text-muted)]",
         !isH && "flex-col",
         className
       )}
@@ -189,7 +159,7 @@ export function SpecTable({ rows, dense, className }: { rows: SpecRow[]; dense?:
             {row.value}
             {row.unit && <span className="ml-0.5 font-normal text-[var(--text-muted)]">{row.unit}</span>}
           </dd>
-          {row.note && <span className="basis-full text-[10px] text-[var(--text-faint)]">{row.note}</span>}
+          {row.note && <span className="basis-full text-12 text-[var(--text-faint)]">{row.note}</span>}
         </div>
       ))}
     </dl>
@@ -214,7 +184,7 @@ export function Callout({
         // --carbon-950 is theme-independent (declared once in :root, never
         // redeclared in .dark), unlike --text-primary which does flip.
         "inline-flex items-center gap-1.5 rounded-full bg-[rgb(var(--carbon-950))] px-1.5 py-0.5",
-        "text-[10px] font-bold text-white shadow-[var(--elev-2)]",
+        "text-12 font-bold text-white shadow-[var(--elev-2)]",
         className
       )}
     >
@@ -263,24 +233,15 @@ export function BlueprintGrid({
   fade?: "bottom" | "radial" | "none";
   className?: string;
 }) {
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "pointer-events-none absolute inset-0",
-        major ? "bp-grid-major" : "bp-grid",
-        fade === "bottom" && "[mask-image:linear-gradient(to_bottom,black,transparent)]",
-        fade === "radial" && "[mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]",
-        className
-      )}
-    />
-  );
+  void major; void fade; void className;
+  return null;
 }
 
 /** "Unavailable / out of stock / pending" texture — pattern, not colour, so it reads
  *  correctly for colour-blind users. See .hatch-45 in globals.css. */
 export function Hatch({ className }: { className?: string }) {
-  return <div aria-hidden className={cn("pointer-events-none absolute inset-0 hatch-45", className)} />;
+  void className;
+  return null;
 }
 
 /** Compact monospace metadata tag — "SKU / MX-BRK-001", "ISO 9001:2015", "PROCESS / 04".
@@ -299,7 +260,7 @@ export function TechnicalLabel({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap px-2 py-1 font-mono text-[10px] font-medium uppercase tracking-tech",
+        "inline-flex items-center gap-1.5 whitespace-nowrap px-2 py-1 font-mono text-12 font-medium",
         invert
           ? "bg-black/45 text-white backdrop-blur-sm"
           : "border border-[var(--line)] bg-[var(--card)] text-[var(--muted)]",

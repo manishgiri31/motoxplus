@@ -43,11 +43,11 @@ export default async function VendorPaymentsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border-color)]">
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Date</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Amount</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Mode</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Reference</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Date</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Amount</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Mode</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Reference</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -68,7 +68,7 @@ export default async function VendorPaymentsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-sm ${
                       p.status === "PAID" ? "bg-green-900/20 text-green-400" : "bg-yellow-900/20 text-yellow-400"
                     }`}>
                       {p.status}

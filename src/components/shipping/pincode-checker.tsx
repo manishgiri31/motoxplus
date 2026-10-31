@@ -61,7 +61,7 @@ export function PincodeChecker({ value, onChange, onResult }: PincodeCheckerProp
 
   return (
     <div className="space-y-2">
-      <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block">
+      <label className="text-[var(--text-muted)] text-xs block">
         Delivery Pincode <span className="text-red-500">*</span>
       </label>
       <div className="relative">

@@ -60,7 +60,7 @@ export function StatusBadge({ domain, value, iconless, className }: StatusBadgeP
       data-tone={meta.tone}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-sm border px-2 py-[3px]",
-        "text-[10px] font-semibold uppercase tracking-tech whitespace-nowrap",
+        "text-12 font-semibold whitespace-nowrap",
         "text-[var(--tone-fg)] bg-[var(--tone-bg)] border-[var(--tone-bd)]",
         className
       )}

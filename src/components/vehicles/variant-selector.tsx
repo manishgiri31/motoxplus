@@ -69,7 +69,7 @@ export function VariantSelector({
     <div className="glass border border-[var(--border-color)] rounded-2xl p-5 space-y-4">
       {generations.length > 0 && (
         <div>
-          <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold mb-2">
+          <div className="text-[var(--text-muted)] text-12 font-semibold mb-2">
             Generation
           </div>
           <div className="flex flex-wrap gap-2">
@@ -103,7 +103,7 @@ export function VariantSelector({
       {(ungroupedVariants.length > 0 ||
         generations.find((g) => g.id === selectedGenerationId)?.variants.length) && (
         <div>
-          <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold mb-2">
+          <div className="text-[var(--text-muted)] text-12 font-semibold mb-2">
             Variant
           </div>
           <div className="flex flex-wrap gap-2">
@@ -139,17 +139,17 @@ export function VariantSelector({
       {selectedVariant && (
         <div className="flex flex-wrap gap-2 pt-1">
           {selectedVariant.emissionStandard && (
-            <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+            <span className="text-12 font-bold uppercase px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
               {selectedVariant.emissionStandard.replace("_", " ")}
             </span>
           )}
           {selectedVariant.brakeType && (
-            <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-muted)]">
+            <span className="text-12 font-bold uppercase px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-muted)]">
               {selectedVariant.brakeType}
             </span>
           )}
           {selectedVariant.startType && (
-            <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-muted)]">
+            <span className="text-12 font-bold uppercase px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-muted)]">
               {selectedVariant.startType}
             </span>
           )}
@@ -158,7 +158,7 @@ export function VariantSelector({
 
       {selectedVariant && (selectedVariant.yearFrom || selectedVariant.yearTo) && (
         <div>
-          <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold mb-2">
+          <div className="text-[var(--text-muted)] text-12 font-semibold mb-2">
             Model Year
           </div>
           <select

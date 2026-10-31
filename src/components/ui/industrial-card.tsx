@@ -43,7 +43,7 @@ export function IndustrialCard({
       tone={tone}
       interactive={!!href}
       pad="lg"
-      className={cn("group h-full rounded-none", className)}
+      className={cn("group h-full overflow-hidden border-transparent bg-[var(--card)]", className)}
     >
       {media && <div className="-mx-6 -mt-6 mb-6">{media}</div>}
       {eyebrow && (
@@ -51,11 +51,11 @@ export function IndustrialCard({
           {eyebrow}
         </Eyebrow>
       )}
-      <h3 className="mb-2 font-display text-xl font-bold tracking-tight text-[var(--ink)]">{title}</h3>
-      {description && <p className="mb-4 text-sm leading-relaxed text-[var(--muted)]">{description}</p>}
+      <h3 className="mb-2 font-display text-[21px] font-semibold leading-[1.19] tracking-[-0.005em] text-[var(--ink)]">{title}</h3>
+      {description && <p className="mb-4 text-17 leading-[1.47] text-[var(--muted)]">{description}</p>}
       {metadata}
       {href && (
-        <span className="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--red)]">
+        <span className="mt-4 inline-flex items-center gap-1 text-17 text-[var(--accent-text)]">
           {ctaLabel}
           <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
         </span>

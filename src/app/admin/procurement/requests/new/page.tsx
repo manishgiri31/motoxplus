@@ -65,7 +65,7 @@ export default function NewPurchaseRequestPage() {
   };
 
   const inputClass = "w-full themed-input px-3 py-2.5 rounded-sm text-sm";
-  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5";
+  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] mb-1.5";
 
   return (
     <div className="max-w-4xl">
@@ -85,7 +85,7 @@ export default function NewPurchaseRequestPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm uppercase tracking-widest">Request Details</h2>
+          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm">Request Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className={labelClass}>Title *</label>
@@ -133,11 +133,11 @@ export default function NewPurchaseRequestPage() {
         {/* Line Items */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest">Items Required</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm">Items Required</h2>
             <button
               type="button"
               onClick={addItem}
-              className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors"
+              className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
             >
               <Plus size={14} />
               Add Item
@@ -148,7 +148,7 @@ export default function NewPurchaseRequestPage() {
             {items.map((item, i) => (
               <div key={i} className="p-4 glass border border-[var(--border-color)] rounded-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-wider">Item {i + 1}</span>
+                  <span className="text-[var(--text-muted)] text-xs font-semibold">Item {i + 1}</span>
                   {items.length > 1 && (
                     <button type="button" onClick={() => removeItem(i)}>
                       <Trash2 size={14} className="text-red-500 hover:text-red-400" />
@@ -220,12 +220,12 @@ export default function NewPurchaseRequestPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-sm text-sm uppercase tracking-wider transition-colors"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-normal px-6 py-3 rounded-pill text-sm transition-colors"
           >
             {loading && <Loader2 size={16} className="animate-spin" />}
             Submit Request
           </button>
-          <Link href="/admin/procurement/requests" className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <Link href="/admin/procurement/requests" className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm transition-colors">
             Cancel
           </Link>
         </div>

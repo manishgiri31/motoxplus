@@ -148,7 +148,7 @@ export default function AccountCartPage() {
           <p className="text-[var(--text-muted)] mb-6">Browse our products and add items to your cart.</p>
           <Link
             href="/products"
-            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider inline-flex items-center gap-2"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-8 py-3 rounded-pill transition-colors text-sm inline-flex items-center gap-2"
           >
             Browse Products <ArrowRight size={16} />
           </Link>
@@ -177,7 +177,7 @@ export default function AccountCartPage() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="text-[var(--text-muted)] text-[10px] font-mono">{item.product.partNumber}</div>
+                    <div className="text-[var(--text-muted)] text-12 font-mono">{item.product.partNumber}</div>
                     <h3 className="text-[var(--text-primary)] font-bold text-sm truncate">{item.product.name}</h3>
                     <div className="text-[var(--text-muted)] text-xs">{item.product.category.name}</div>
                     {item.variant && (
@@ -185,7 +185,7 @@ export default function AccountCartPage() {
                         {item.variant.color && (
                           <span className="w-2.5 h-2.5 rounded-full border border-white/20 flex-shrink-0" style={{ backgroundColor: item.variant.color.toLowerCase() }} />
                         )}
-                        <span className="text-red-400 text-[10px] font-semibold">{item.variant.label}</span>
+                        <span className="text-red-400 text-12 font-semibold">{item.variant.label}</span>
                       </div>
                     )}
                     <div className="text-red-500 font-bold text-sm mt-1">
@@ -212,7 +212,7 @@ export default function AccountCartPage() {
 
                   <div className="text-right flex-shrink-0 w-24">
                     <div className="text-[var(--text-primary)] font-bold text-sm">{mrp != null ? formatCurrency(mrp * item.quantity) : "—"}</div>
-                    <div className="text-gray-600 text-[10px] flex items-center justify-end gap-1">
+                    <div className="text-gray-600 text-12 flex items-center justify-end gap-1">
                       incl. taxes
                       {syncingId === item.id && <span className="w-1.5 h-1.5 rounded-full bg-red-500/60 animate-pulse" />}
                     </div>
@@ -242,12 +242,12 @@ export default function AccountCartPage() {
                   <span className="text-[var(--text-primary)]">Grand Total</span>
                   <span className="text-red-500 text-lg">{formatCurrency(grandTotal)}</span>
                 </div>
-                <p className="text-[var(--text-muted)] text-[10px]">Inclusive of all taxes.</p>
+                <p className="text-[var(--text-muted)] text-12">Inclusive of all taxes.</p>
               </div>
               <Link
                 href="/account/checkout"
                 aria-disabled={unpriced.length > 0}
-                className={`w-full flex items-center justify-center gap-2 font-bold py-3.5 rounded-sm transition-colors text-sm uppercase tracking-wider ${
+                className={`w-full flex items-center justify-center gap-2 font-bold py-3.5 rounded-sm transition-colors text-sm ${
                   unpriced.length > 0 ? "bg-[var(--line)] text-[var(--muted)] pointer-events-none" : "bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white"
                 }`}
               >

@@ -147,7 +147,7 @@ export function EntityManager({
         {!showForm && (
           <button
             onClick={openAdd}
-            className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-pill transition-colors"
           >
             <Plus size={13} />
             Add
@@ -161,7 +161,7 @@ export function EntityManager({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             {fields.map((f) => (
               <div key={f.key} className={f.span === 2 ? "col-span-2" : f.span === 4 ? "col-span-2 sm:col-span-4" : f.span === 3 ? "col-span-2 sm:col-span-3" : ""}>
-                <label className="block text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold mb-1">
+                <label className="block text-[var(--text-muted)] text-12 font-semibold mb-1">
                   {f.label} {f.required && <span className="text-red-500">*</span>}
                 </label>
                 {f.type === "select" ? (
@@ -211,7 +211,7 @@ export function EntityManager({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-pill transition-colors"
             >
               <Check size={13} />
               {saving ? "Saving…" : editId ? "Update" : "Add"}
@@ -244,11 +244,11 @@ export function EntityManager({
             <thead>
               <tr className="border-b border-[var(--border-color)]">
                 {columns.map((c) => (
-                  <th key={c.key} className="px-2 py-2 text-left text-[var(--text-muted)] uppercase tracking-widest font-semibold">
+                  <th key={c.key} className="px-2 py-2 text-left text-[var(--text-muted)] font-semibold">
                     {c.label}
                   </th>
                 ))}
-                <th className="px-2 py-2 text-right text-[var(--text-muted)] uppercase tracking-widest font-semibold">Actions</th>
+                <th className="px-2 py-2 text-right text-[var(--text-muted)] font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">

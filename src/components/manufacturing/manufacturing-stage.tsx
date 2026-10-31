@@ -47,7 +47,7 @@ export function ManufacturingStage({ stage, active, onSelect, className }: Manuf
           {stage.number}
         </span>
         {stage.eyebrow && (
-          <span className="text-[10px] uppercase tracking-eyebrow text-[var(--muted)]">{stage.eyebrow}</span>
+          <span className="text-12 text-[var(--muted)]">{stage.eyebrow}</span>
         )}
       </div>
       <h3

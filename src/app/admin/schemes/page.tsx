@@ -42,7 +42,7 @@ export default async function AdminSchemesPage(
           </Link>
           <Link
             href="/admin/schemes/new"
-            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-sm uppercase tracking-wider"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill transition-colors text-sm"
           >
             <Plus size={16} />
             New Scheme

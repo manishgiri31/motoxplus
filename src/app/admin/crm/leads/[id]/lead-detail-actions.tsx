@@ -29,13 +29,13 @@ export function LeadDetailActions({ lead }: { lead: Lead }) {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setShowConvert(true)}
-          className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors"
+          className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-bold px-4 py-2.5 rounded-sm text-sm transition-colors"
         >
           <UserCheck size={14} /> Convert to Dealer
         </button>
         <button
           onClick={() => setShowActivity(true)}
-          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors"
+          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill text-sm transition-colors"
         >
           <Plus size={14} /> Log Activity
         </button>

@@ -48,7 +48,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-black text-[var(--text-primary)] font-mono tracking-tight">{po.poNumber}</h1>
-            <span className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-sm border ${STATUS_COLORS[po.status]}`}>
+            <span className={`text-xs font-semibold uppercase px-2.5 py-1 rounded-sm border ${STATUS_COLORS[po.status]}`}>
               {po.status.replace("_", " ")}
             </span>
           </div>
@@ -63,17 +63,17 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
         <div className="lg:col-span-2 space-y-6">
           {/* Line Items */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">Order Items</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">Order Items</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border-color)]">
-                    <th className="pb-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-wider">Description</th>
-                    <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-wider">Qty</th>
-                    <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-wider hidden md:table-cell">Price</th>
-                    <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-wider hidden md:table-cell">GST</th>
-                    <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-wider">Total</th>
-                    <th className="pb-3 text-right text-xs text-[var(--text-muted)] uppercase tracking-wider">Received</th>
+                    <th className="pb-3 text-left text-xs text-[var(--text-muted)]">Description</th>
+                    <th className="pb-3 text-right text-xs text-[var(--text-muted)]">Qty</th>
+                    <th className="pb-3 text-right text-xs text-[var(--text-muted)] hidden md:table-cell">Price</th>
+                    <th className="pb-3 text-right text-xs text-[var(--text-muted)] hidden md:table-cell">GST</th>
+                    <th className="pb-3 text-right text-xs text-[var(--text-muted)]">Total</th>
+                    <th className="pb-3 text-right text-xs text-[var(--text-muted)]">Received</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -94,7 +94,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-[var(--border-color)]">
-                    <td colSpan={4} className="pt-4 text-right text-[var(--text-muted)] text-xs uppercase tracking-wider">Grand Total</td>
+                    <td colSpan={4} className="pt-4 text-right text-[var(--text-muted)] text-xs">Grand Total</td>
                     <td className="pt-4 text-right text-[var(--text-primary)] font-black text-lg" colSpan={2}>{formatCurrency(po.grandTotal)}</td>
                   </tr>
                 </tfoot>
@@ -103,7 +103,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
 
             {po.termsAndConditions && (
               <div className="mt-5 pt-5 border-t border-[var(--border-color)]">
-                <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-2">Terms & Conditions</div>
+                <div className="text-[var(--text-muted)] text-xs mb-2">Terms & Conditions</div>
                 <p className="text-[var(--text-muted)] text-sm">{po.termsAndConditions}</p>
               </div>
             )}
@@ -112,7 +112,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
           {/* GRNs */}
           {po.goodsReceivedNotes.length > 0 && (
             <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-              <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">
+              <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">
                 Goods Received Notes
               </h2>
               <div className="space-y-3">
@@ -139,7 +139,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
           {/* Vendor Notes */}
           {po.vendorNotes && (
             <div className="glass border border-yellow-900/20 rounded-sm p-5">
-              <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-2">Vendor Notes</div>
+              <div className="text-[var(--text-muted)] text-xs mb-2">Vendor Notes</div>
               <p className="text-[var(--text-secondary)] text-sm">{po.vendorNotes}</p>
             </div>
           )}
@@ -148,7 +148,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
         {/* Right Sidebar */}
         <div className="space-y-6">
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">Vendor</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">Vendor</h2>
             <Link href={`/admin/vendors/${po.vendor.id}`}>
               <div className="text-[var(--text-primary)] font-bold hover:text-red-400 transition-colors">{po.vendor.companyName}</div>
             </Link>
@@ -161,7 +161,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
           </div>
 
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">Timeline</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">Timeline</h2>
             <div className="space-y-3">
               {[
                 { label: "Created", date: po.createdAt },
@@ -182,7 +182,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
           </div>
 
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">Receipt Progress</h2>
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">Receipt Progress</h2>
             <div className="mb-3">
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-[var(--text-muted)]">Items Received</span>
@@ -206,7 +206,7 @@ export default async function PurchaseOrderDetailPage(props: { params: Promise<{
               className="flex items-center justify-between p-4 glass border border-[var(--border-color)] hover:border-red-900/30 rounded-sm transition-all group"
             >
               <div>
-                <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider mb-1">Source PR</div>
+                <div className="text-[var(--text-muted)] text-12 mb-1">Source PR</div>
                 <div className="text-[var(--text-primary)] text-sm font-mono">{po.purchaseRequest.requestNumber}</div>
                 <div className="text-[var(--text-muted)] text-xs truncate">{po.purchaseRequest.title}</div>
               </div>

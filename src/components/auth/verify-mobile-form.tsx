@@ -100,7 +100,7 @@ export function VerifyMobileForm() {
             router.push(dest);
             router.refresh();
           }}
-          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 px-8 rounded-lg transition-colors text-sm"
+          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal py-3 px-8 rounded-pill transition-colors text-sm"
         >
           Continue
         </button>

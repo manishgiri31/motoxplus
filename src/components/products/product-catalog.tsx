@@ -460,7 +460,7 @@ export function ProductCatalog({
               {/* Suggestions (kept visible, stale-while-revalidate, during background refetch) */}
               {suggestions.length > 0 && (
                 <div>
-                  <div className="px-4 pt-3 pb-1.5 flex items-center gap-2 text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">
+                  <div className="px-4 pt-3 pb-1.5 flex items-center gap-2 text-[var(--text-muted)] text-12 font-semibold">
                     Products
                     {suggestionsLoading && (
                       <div className="w-2.5 h-2.5 border border-[var(--text-muted)] border-t-red-400 rounded-full animate-spin" />
@@ -499,17 +499,17 @@ export function ProductCatalog({
                           {highlight(s.name, search)}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[var(--text-muted)] text-[10px] font-mono">
+                          <span className="text-[var(--text-muted)] text-12 font-mono">
                             {highlight(s.partNumber, search)}
                           </span>
                           {MATCH_LABELS[s.matchType] && (
-                            <span className="text-red-400/70 text-[9px] font-semibold uppercase tracking-wider">
+                            <span className="text-red-400/70 text-12 font-semibold">
                               via {MATCH_LABELS[s.matchType]}
                             </span>
                           )}
                         </div>
                       </div>
-                      <span className="text-[var(--text-muted)] text-[10px] flex-shrink-0">{s.categoryName}</span>
+                      <span className="text-[var(--text-muted)] text-12 flex-shrink-0">{s.categoryName}</span>
                     </button>
                   ))}
                   <div className="border-t border-[var(--border-color)] px-4 py-2">
@@ -539,10 +539,10 @@ export function ProductCatalog({
               {search.length === 0 && recentSearches.length > 0 && (
                 <div>
                   <div className="px-4 pt-3 pb-1.5 flex items-center justify-between">
-                    <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">Recent</span>
+                    <span className="text-[var(--text-muted)] text-12 font-semibold">Recent</span>
                     <button
                       onClick={() => { localStorage.removeItem(RECENT_KEY); setRecentSearches([]); }}
-                      className="text-[var(--text-muted)] text-[10px] hover:text-red-400 transition-colors"
+                      className="text-[var(--text-muted)] text-12 hover:text-red-400 transition-colors"
                     >
                       Clear all
                     </button>
@@ -578,7 +578,7 @@ export function ProductCatalog({
               {showingPopular && (
                 <div>
                   <div className="px-4 pt-3 pb-1.5">
-                    <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">Popular Searches</span>
+                    <span className="text-[var(--text-muted)] text-12 font-semibold">Popular Searches</span>
                   </div>
                   {POPULAR_SEARCHES.map((term, i) => (
                     <button
@@ -608,7 +608,7 @@ export function ProductCatalog({
       <div className="flex flex-wrap gap-2 mb-8">
           <button
             onClick={() => handleCategory(null)}
-            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors duration-200 ${
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-colors duration-200 ${
               !currentCategory
                 ? "bg-[var(--red)] text-white"
                 : "border border-[var(--line)] text-[var(--muted)] hover:border-[var(--red)]/50 hover:text-[var(--ink)]"
@@ -620,7 +620,7 @@ export function ProductCatalog({
             <button
               key={cat.id}
               onClick={() => handleCategory(cat.slug)}
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-colors duration-200 ${
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-colors duration-200 ${
                 currentCategory === cat.slug
                   ? "bg-[var(--red)] text-white"
                   : "border border-[var(--line)] text-[var(--muted)] hover:border-[var(--red)]/50 hover:text-[var(--ink)]"
@@ -717,21 +717,21 @@ export function ProductCatalog({
 
                   {/* Top-left badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
-                    <span className="bg-[var(--red)] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                    <span className="bg-[var(--red)] text-white text-12 font-bold uppercase px-2.5 py-1 rounded-full">
                       {product.category.name}
                     </span>
                     {discountPct && discountPct > 0 && (
-                      <span className="bg-[var(--sig-ok-fg)] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                      <span className="bg-[var(--sig-ok-fg)] text-white text-12 font-bold uppercase px-2.5 py-1 rounded-full">
                         {discountPct}% OFF
                       </span>
                     )}
                     {outOfStock && (
-                      <span className="bg-[rgb(var(--carbon-950))] text-white/80 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                      <span className="bg-[rgb(var(--carbon-950))] text-white/80 text-12 font-bold uppercase px-2.5 py-1 rounded-full">
                         Out of Stock
                       </span>
                     )}
                     {fewLeft && (
-                      <span className="bg-[var(--sig-warn-fg)] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                      <span className="bg-[var(--sig-warn-fg)] text-white text-12 font-bold uppercase px-2.5 py-1 rounded-full">
                         Few Left
                       </span>
                     )}
@@ -773,7 +773,7 @@ export function ProductCatalog({
 
                 {/* Content */}
                 <div className="p-4">
-                  <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">
+                  <div className="text-[var(--text-muted)] text-12 mb-1 font-mono opacity-70">
                     {currentSearch ? highlight(product.partNumber, currentSearch) : product.partNumber}
                   </div>
                   <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
@@ -793,14 +793,14 @@ export function ProductCatalog({
                   <div className="pt-3 border-t border-[var(--border-color)]">
                     {isCustomer ? (
                       <div>
-                        <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Price (excl. GST)</div>
+                        <div className="text-[var(--text-muted)] text-12 font-bold mb-0.5">Price (excl. GST)</div>
                         {product.mrp ? (
                           <>
                             <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
                               ₹{getExGstFromInclusive(product.mrp, product.gstRate).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                             </div>
-                            <div className="text-[var(--text-muted)] text-[10px] font-semibold mt-0.5">+ {product.gstRate}% GST</div>
-                            <div className="text-[var(--text-muted)] text-[10px] mt-0.5">(₹{product.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)</div>
+                            <div className="text-[var(--text-muted)] text-12 font-semibold mt-0.5">+ {product.gstRate}% GST</div>
+                            <div className="text-[var(--text-muted)] text-12 mt-0.5">(₹{product.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)</div>
                           </>
                         ) : (
                           <div className="text-[var(--text-muted)] text-sm font-semibold">Not available for retail</div>
@@ -809,44 +809,44 @@ export function ProductCatalog({
                     ) : isDealer ? (
                       <div className="flex items-end justify-between gap-2">
                         <div>
-                          <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
+                          <div className="text-[var(--text-muted)] text-12 font-bold mb-0.5">Dealer Price</div>
                           <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
                             ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </div>
                           {product.mrp && product.mrp > product.price && (
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
+                              <span className="text-[var(--text-muted)] text-12 line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
                             </div>
                           )}
                         </div>
-                        <span className="text-[var(--text-muted)] text-[9px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
+                        <span className="text-[var(--text-muted)] text-12 font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
                           MOQ {product.moq}
                         </span>
                       </div>
                     ) : (
                       <div className="flex items-end justify-between gap-2">
                         <div>
-                          <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price (excl. GST)</div>
+                          <div className="text-[var(--text-muted)] text-12 font-bold mb-0.5">Dealer Price (excl. GST)</div>
                           <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
                             ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </div>
-                          <div className="text-[var(--text-muted)] text-[10px] font-semibold mt-0.5">+ {product.gstRate}% GST</div>
-                          <div className="text-[var(--text-muted)] text-[10px] mt-0.5">
+                          <div className="text-[var(--text-muted)] text-12 font-semibold mt-0.5">+ {product.gstRate}% GST</div>
+                          <div className="text-[var(--text-muted)] text-12 mt-0.5">
                             (₹{(product.price * (1 + product.gstRate / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)
                           </div>
                           {product.mrp && product.mrp > product.price && (
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
+                              <span className="text-[var(--text-muted)] text-12 line-through">MRP ₹{product.mrp.toLocaleString("en-IN")}</span>
                             </div>
                           )}
                         </div>
-                        <span className="text-[var(--text-muted)] text-[9px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
+                        <span className="text-[var(--text-muted)] text-12 font-bold border border-[var(--border-color)] rounded-full px-2 py-1 flex-shrink-0">
                           MOQ {product.moq}
                         </span>
                       </div>
                     )}
                     {colors > 0 && (
-                      <div className="mt-2 flex items-center gap-1.5 text-[var(--text-muted)] text-[10px] font-semibold">
+                      <div className="mt-2 flex items-center gap-1.5 text-[var(--text-muted)] text-12 font-semibold">
                         <Palette size={11} className="text-[var(--red)]/80" />
                         {colors} colour{colors === 1 ? "" : "s"} available
                       </div>
@@ -854,7 +854,7 @@ export function ProductCatalog({
                     {!isDealer && !isCustomer && (
                       <div className="mt-2 flex items-center gap-1.5 border border-[var(--red)]/25 bg-[var(--red-soft)] rounded-full px-2.5 py-1 w-fit">
                         <Lock size={9} className="text-[var(--red)]" />
-                        <span className="text-[var(--red)] text-[9px] font-bold">Login to Order</span>
+                        <span className="text-[var(--red)] text-12 font-bold">Login to Order</span>
                       </div>
                     )}
                   </div>
@@ -884,7 +884,7 @@ export function ProductCatalog({
             <button
               onClick={() => setShowCompare(true)}
               disabled={compareIds.length < 2}
-              className="bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm transition-colors"
+              className="bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-normal uppercase px-4 py-2 rounded-pill transition-colors"
             >
               Compare
             </button>
@@ -938,7 +938,7 @@ export function ProductCatalog({
                   >
                     <X size={16} />
                   </button>
-                  <span className="bg-[var(--red)] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
+                  <span className="bg-[var(--red)] text-white text-12 font-bold uppercase px-2.5 py-1 rounded-full">
                     {quickView.category.name}
                   </span>
                   <h3 className="text-[var(--text-primary)] font-black text-xl mt-3 mb-1">{quickView.name}</h3>
@@ -950,14 +950,14 @@ export function ProductCatalog({
                   )}
                   {isCustomer ? (
                     <div className="mb-4">
-                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Price (excl. GST)</div>
+                      <div className="text-[var(--text-muted)] text-12 font-bold mb-1">Price (excl. GST)</div>
                       {quickView.mrp ? (
                         <>
                           <span className="text-[var(--red)] font-black text-2xl">
                             ₹{getExGstFromInclusive(quickView.mrp, quickView.gstRate).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </span>
-                          <div className="text-[var(--text-muted)] text-[10px] font-semibold mt-0.5">+ {quickView.gstRate}% GST</div>
-                          <div className="text-[var(--text-muted)] text-[10px] mt-0.5">(₹{quickView.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)</div>
+                          <div className="text-[var(--text-muted)] text-12 font-semibold mt-0.5">+ {quickView.gstRate}% GST</div>
+                          <div className="text-[var(--text-muted)] text-12 mt-0.5">(₹{quickView.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)</div>
                         </>
                       ) : (
                         <span className="text-[var(--text-muted)] text-sm font-semibold">Not available for retail</span>
@@ -965,7 +965,7 @@ export function ProductCatalog({
                     </div>
                   ) : isDealer ? (
                     <div className="mb-4">
-                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Dealer Price</div>
+                      <div className="text-[var(--text-muted)] text-12 font-bold mb-1">Dealer Price</div>
                       <span className="text-[var(--red)] font-black text-2xl">
                         ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                       </span>
@@ -977,12 +977,12 @@ export function ProductCatalog({
                     </div>
                   ) : (
                     <div className="mb-4">
-                      <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-1">Dealer Price (excl. GST)</div>
+                      <div className="text-[var(--text-muted)] text-12 font-bold mb-1">Dealer Price (excl. GST)</div>
                       <span className="text-[var(--red)] font-black text-2xl">
                         ₹{quickView.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                       </span>
-                      <div className="text-[var(--text-muted)] text-[10px] font-semibold mt-0.5">+ {quickView.gstRate}% GST</div>
-                      <div className="text-[var(--text-muted)] text-[10px] mt-0.5">
+                      <div className="text-[var(--text-muted)] text-12 font-semibold mt-0.5">+ {quickView.gstRate}% GST</div>
+                      <div className="text-[var(--text-muted)] text-12 mt-0.5">
                         (₹{(quickView.price * (1 + quickView.gstRate / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })} incl. GST)
                       </div>
                       {quickView.mrp && quickView.mrp > quickView.price && (
@@ -994,17 +994,17 @@ export function ProductCatalog({
                   )}
                   <div className="flex items-center gap-2 mb-6">
                     {!isCustomer && (
-                      <span className="text-[var(--text-muted)] text-[10px] uppercase tracking-wide font-bold border border-[var(--border-color)] rounded-full px-2.5 py-1">
+                      <span className="text-[var(--text-muted)] text-12 font-bold border border-[var(--border-color)] rounded-full px-2.5 py-1">
                         MOQ {quickView.moq}
                       </span>
                     )}
-                    <span className={`text-[10px] uppercase tracking-wide font-bold rounded-full px-2.5 py-1 ${quickView.stockStatus !== "OUT_OF_STOCK" ? "text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)]" : "text-[var(--text-muted)] bg-[var(--bg-secondary)]"}`}>
+                    <span className={`text-12 uppercase font-bold rounded-full px-2.5 py-1 ${quickView.stockStatus !== "OUT_OF_STOCK" ? "text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)]" : "text-[var(--text-muted)] bg-[var(--bg-secondary)]"}`}>
                       {productStockLabel(quickView.stockStatus)}
                     </span>
                   </div>
                   <Link
                     href={detailHref(quickView.slug)}
-                    className="flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 rounded-sm transition-colors uppercase tracking-wider text-sm"
+                    className="flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm"
                   >
                     View Full Details
                   </Link>
@@ -1047,7 +1047,7 @@ export function ProductCatalog({
                   <table className="w-full text-sm min-w-[500px]">
                     <tbody>
                       <tr>
-                        <td className="py-2 pr-4 text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold align-top w-28">Image</td>
+                        <td className="py-2 pr-4 text-[var(--text-muted)] text-xs font-semibold align-top w-28">Image</td>
                         {compareProducts.map((p) => (
                           <td key={p.id} className="py-2 px-3">
                             <div className="relative h-24 w-24 overflow-hidden bg-[var(--bg-secondary)] border border-[var(--border-color)]">
@@ -1077,7 +1077,7 @@ export function ProductCatalog({
                         { label: "Stock", render: (p: Product) => productStockLabel(p.stockStatus) },
                       ].map((row) => (
                         <tr key={row.label} className="border-t border-[var(--border-color)]">
-                          <td className="py-3 pr-4 text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold align-top">
+                          <td className="py-3 pr-4 text-[var(--text-muted)] text-xs font-semibold align-top">
                             {row.label}
                           </td>
                           {compareProducts.map((p) => (
@@ -1093,7 +1093,7 @@ export function ProductCatalog({
                           <td key={p.id} className="py-3 px-3">
                             <Link
                               href={detailHref(p.slug)}
-                              className="inline-flex items-center justify-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white text-xs font-bold px-3 py-2 rounded-sm transition-colors uppercase tracking-wider"
+                              className="inline-flex items-center justify-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white text-xs font-normal px-3 py-2 rounded-pill transition-colors uppercase"
                             >
                               View
                             </Link>

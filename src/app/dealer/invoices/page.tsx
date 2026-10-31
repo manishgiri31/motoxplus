@@ -35,11 +35,11 @@ export default async function InvoicesPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border-color)]">
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Invoice #</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Order</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Date</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Amount</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Actions</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Invoice #</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Order</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Date</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Amount</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -62,7 +62,7 @@ export default async function InvoicesPage() {
                   <td className="px-4 py-4">
                     <Link
                       href={`/dealer/invoices/${invoice.id}`}
-                      className="text-red-400 hover:text-red-300 text-xs font-semibold transition-colors uppercase tracking-wider"
+                      className="text-red-400 hover:text-red-300 text-xs font-semibold transition-colors"
                     >
                       Download PDF
                     </Link>

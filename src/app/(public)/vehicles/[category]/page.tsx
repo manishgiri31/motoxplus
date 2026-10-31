@@ -27,7 +27,7 @@ export default async function VehicleCategoryPage(props: { params: Promise<{ cat
     <div className="min-h-screen bg-[var(--paper)]">
       <section className="py-14 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
-          <Link href="/vehicles" className="text-[var(--muted)] hover:text-[var(--red)] text-xs uppercase tracking-widest font-semibold">
+          <Link href="/vehicles" className="text-[var(--muted)] hover:text-[var(--red)] text-xs font-semibold">
             ← All Vehicles
           </Link>
           <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight mt-4">

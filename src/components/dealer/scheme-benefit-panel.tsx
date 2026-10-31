@@ -191,7 +191,7 @@ export function SchemeBenefitPanel({
         {!pickerOpen && (
           <button
             onClick={() => setPickerOpen(true)}
-            className="text-amber-400 hover:text-amber-300 text-xs font-bold uppercase tracking-wider"
+            className="text-amber-400 hover:text-amber-300 text-xs font-bold"
           >
             Select Items
           </button>
@@ -260,7 +260,7 @@ export function SchemeBenefitPanel({
             <button
               onClick={applySelection}
               disabled={applying || selections.length === 0 || selectedTotal > activeScheme.benefit}
-              className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-2 rounded-sm text-xs uppercase tracking-wider"
+              className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-2 rounded-sm text-xs"
             >
               {applying ? "Applying..." : "Apply Free Items"}
             </button>

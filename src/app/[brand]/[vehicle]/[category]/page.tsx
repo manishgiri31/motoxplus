@@ -85,7 +85,7 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
       {/* Breadcrumb + header */}
       <section className="py-16 px-4 md:px-8 border-b border-[var(--border-color)]">
         <div className="max-w-7xl mx-auto">
-          <nav aria-label="Breadcrumb" className="flex items-center flex-wrap gap-1.5 text-xs uppercase tracking-widest font-semibold mb-6">
+          <nav aria-label="Breadcrumb" className="flex items-center flex-wrap gap-1.5 text-xs font-semibold mb-6">
             <Link href="/" className="text-[var(--text-muted)] hover:text-red-500 transition-colors">Home</Link>
             <ChevronRight size={12} className="text-[var(--text-muted)]/50" />
             {vehicleCategory && (
@@ -129,12 +129,12 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
                     )}
                   </div>
                   <div className="p-4">
-                    <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">{p.partNumber}</div>
+                    <div className="text-[var(--text-muted)] text-12 mb-1 font-mono opacity-70">{p.partNumber}</div>
                     <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">{p.name}</h3>
                     <div className="pt-3 border-t border-[var(--border-color)]">
                       {isCustomer ? (
                         <>
-                          <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">MRP</div>
+                          <div className="text-[var(--text-muted)] text-12 font-bold mb-0.5">MRP</div>
                           {p.mrp ? (
                             <span className="text-red-500 font-black text-base">₹{p.mrp.toLocaleString("en-IN")}</span>
                           ) : (
@@ -143,11 +143,11 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
                         </>
                       ) : (
                         <>
-                          <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
+                          <div className="text-[var(--text-muted)] text-12 font-bold mb-0.5">Dealer Price</div>
                           <div className="flex items-end justify-between gap-2">
                             <span className="text-red-500 font-black text-base">₹{p.price.toLocaleString("en-IN")}</span>
                             {p.mrp && p.mrp > p.price && (
-                              <span className="text-[var(--text-muted)] text-[10px] line-through">MRP ₹{p.mrp.toLocaleString("en-IN")}</span>
+                              <span className="text-[var(--text-muted)] text-12 line-through">MRP ₹{p.mrp.toLocaleString("en-IN")}</span>
                             )}
                           </div>
                         </>
@@ -163,7 +163,7 @@ export default async function BrandVehicleCategoryPage(props: { params: Promise<
             <div className="mt-10 text-center">
               <Link
                 href={`/vehicles/${vehicleCategory.slug}/${vehicle.slug}`}
-                className="text-red-500 hover:text-red-600 font-semibold text-sm uppercase tracking-wider transition-colors"
+                className="text-red-500 hover:text-red-600 font-semibold text-sm transition-colors"
               >
                 View full {vehicle.name} specs & compatible parts →
               </Link>

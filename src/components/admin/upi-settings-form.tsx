@@ -64,7 +64,7 @@ export function UpiSettingsForm({ initial }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">UPI ID *</label>
+          <label className="text-[var(--text-muted)] text-xs block mb-2">UPI ID *</label>
           <input
             type="text"
             required
@@ -76,7 +76,7 @@ export function UpiSettingsForm({ initial }: Props) {
           <p className="text-[var(--text-muted)] text-xs mt-1">This UPI ID will appear in the QR code and payment page.</p>
         </div>
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">UPI Payee Name *</label>
+          <label className="text-[var(--text-muted)] text-xs block mb-2">UPI Payee Name *</label>
           <input
             type="text"
             required
@@ -89,7 +89,7 @@ export function UpiSettingsForm({ initial }: Props) {
       </div>
 
       <div className="border-t border-[var(--border-color)] pt-4 mb-4">
-        <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-3">Bank Account Details</div>
+        <div className="text-[var(--text-muted)] text-xs mb-3">Bank Account Details</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-[var(--text-muted)] text-xs block mb-2">Account Name</label>
@@ -115,7 +115,7 @@ export function UpiSettingsForm({ initial }: Props) {
       <button
         type="submit"
         disabled={saving}
-        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl text-sm transition-colors uppercase tracking-wider"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-normal py-3 px-6 rounded-pill text-sm transition-colors"
       >
         {saving ? <><Spinner size={14} /> Saving...</> : saved ? <><CheckCircle2 size={14} /> Saved!</> : "Save Settings"}
       </button>

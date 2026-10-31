@@ -43,7 +43,7 @@ export default async function AdminVehiclesPage(
           <Link href="/admin/vehicles/detection-log" className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-secondary)] font-bold px-4 py-2.5 rounded-xl transition-colors text-sm hover:border-red-900/40">
             <ScanSearch size={14} /> Detection Log
           </Link>
-          <Link href="/admin/vehicles/new" className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-sm uppercase tracking-wider">
+          <Link href="/admin/vehicles/new" className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill transition-colors text-sm">
             <Plus size={16} /> Add Vehicle
           </Link>
         </div>
@@ -62,12 +62,12 @@ export default async function AdminVehiclesPage(
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border-color)]">
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Vehicle</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Category</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Generations</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Variants</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden sm:table-cell">Fitments</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Vehicle</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Category</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Generations</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Variants</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden sm:table-cell">Fitments</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -108,7 +108,7 @@ export default async function AdminVehiclesPage(
                     <span className="text-[var(--text-muted)] text-xs">{v._count.compatibilities}</span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-xl ${v.isActive ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
+                    <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-xl ${v.isActive ? "bg-green-900/20 text-green-400" : "bg-red-900/20 text-red-400"}`}>
                       {v.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>

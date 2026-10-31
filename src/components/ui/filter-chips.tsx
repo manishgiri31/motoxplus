@@ -4,16 +4,16 @@ import { cn } from "@/lib/utils";
 
 const chipClass = (active: boolean | undefined, className?: string) =>
   cn(
-    "inline-flex items-center gap-1.5 rounded-sm border px-3 py-1.5 text-xs font-semibold transition-colors",
+    "inline-flex items-center gap-1.5 rounded-pill border px-3.5 py-1.5 text-14 transition-colors duration-[var(--dur-2)]",
     active
-      ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)]"
-      : "bg-[var(--surface-1)] border-[var(--border-color)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]",
+      ? "bg-[var(--ink)] border-[var(--ink)] text-white"
+      : "bg-[var(--surface-1)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-black/[.04] hover:text-[var(--text-primary)]",
     className
   );
 
 function ChipCount({ count, active }: { count?: number; active?: boolean }) {
   if (count == null) return null;
-  return <span className={cn("tnum text-[10px]", active ? "text-[var(--accent-fg)]/80" : "text-[var(--text-muted)]")}>{count}</span>;
+  return <span className={cn("tnum text-12", active ? "text-white/70" : "text-[var(--text-muted)]")}>{count}</span>;
 }
 
 function ChipRemove({ onRemove }: { onRemove: () => void }) {

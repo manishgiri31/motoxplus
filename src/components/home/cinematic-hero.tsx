@@ -13,7 +13,7 @@ export function CinematicHero({ skuCount }: CinematicHeroProps) {
   return (
     <MediaHero
       media="home.hero.primary"
-      eyebrow={<span className="text-[10px] font-semibold uppercase tracking-eyebrow">MotoXPlus India Private Limited</span>}
+      eyebrow={<span className="text-12 font-semibold">MotoXPlus India Private Limited</span>}
       headline={
         <>
           <span className="block">Engineered in India.</span>

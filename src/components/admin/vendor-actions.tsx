@@ -29,7 +29,7 @@ export function VendorStatusActions({ vendorId, currentStatus }: Props) {
         <button
           onClick={() => updateStatus("APPROVED")}
           disabled={loading}
-          className="text-xs font-semibold text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          className="text-xs font-semibold text-green-400 hover:text-green-300 transition-colors disabled:opacity-50"
         >
           Approve
         </button>
@@ -38,7 +38,7 @@ export function VendorStatusActions({ vendorId, currentStatus }: Props) {
         <button
           onClick={() => updateStatus("SUSPENDED")}
           disabled={loading}
-          className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors disabled:opacity-50"
         >
           Suspend
         </button>
@@ -47,7 +47,7 @@ export function VendorStatusActions({ vendorId, currentStatus }: Props) {
         <button
           onClick={() => updateStatus("REJECTED")}
           disabled={loading}
-          className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
         >
           Reject
         </button>
@@ -56,7 +56,7 @@ export function VendorStatusActions({ vendorId, currentStatus }: Props) {
         <button
           onClick={() => updateStatus("BLACKLISTED")}
           disabled={loading}
-          className="text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+          className="text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
         >
           Blacklist
         </button>

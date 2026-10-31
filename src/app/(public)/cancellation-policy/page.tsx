@@ -21,7 +21,7 @@ export default async function CancellationPolicyPage() {
     <div className="min-h-screen bg-[var(--paper)] pt-24 pb-20">
       <div className="max-w-3xl mx-auto px-4 md:px-8">
         <div className="mb-12">
-          <div className="flex items-center gap-2 text-[var(--muted)] text-xs uppercase tracking-widest mb-4">
+          <div className="flex items-center gap-2 text-[var(--muted)] text-xs mb-4">
             <Link href="/" className="hover:text-red-500 transition-colors">Home</Link>
             <span>/</span>
             <span>Cancellation Policy</span>

@@ -96,7 +96,7 @@ export default function AboutPage() {
               {stats.map((stat) => (
                 <Card key={stat.label} pad="lg" className="rounded-none border-0 text-center">
                   <div className="tnum font-display text-3xl font-bold text-[var(--red)] mb-1.5">{stat.value}</div>
-                  <div className="text-[var(--muted)] text-xs uppercase tracking-wider font-semibold">{stat.label}</div>
+                  <div className="text-[var(--muted)] text-xs font-semibold">{stat.label}</div>
                 </Card>
               ))}
             </div>
@@ -177,7 +177,7 @@ export default function AboutPage() {
           <div className="flex items-stretch justify-center max-w-md mx-auto">
             {roadmap.map((item, i) => (
               <div key={item.label} className={`flex-1 px-4 ${i > 0 ? "border-l border-[var(--line)]" : ""}`}>
-                <div className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${item.active ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>
+                <div className={`text-12 font-bold mb-1.5 ${item.active ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>
                   {item.status}
                 </div>
                 <div className="text-[var(--ink)] text-sm font-semibold">{item.label}</div>

@@ -123,7 +123,7 @@ export default async function AdminDashboardPage() {
                   </div>
                   <div>
                     <PartNo className="text-[var(--text-primary)] text-xs font-bold">{order.orderNumber}</PartNo>
-                    <div className="text-[var(--text-muted)] text-[10px] mt-0.5">
+                    <div className="text-[var(--text-muted)] text-12 mt-0.5">
                       {order.dealer?.companyName ?? `Retail · ${order.deliveryName ?? order.customer?.user.name ?? "Customer"}`}
                     </div>
                   </div>
@@ -164,8 +164,8 @@ export default async function AdminDashboardPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-[var(--text-primary)] text-xs font-bold truncate">{dealer.companyName}</div>
-                    <div className="text-[var(--text-muted)] text-[10px]">{dealer.city}, {dealer.state}</div>
-                    <div className="text-[var(--text-muted)] text-[10px] opacity-60">{formatDate(dealer.createdAt)}</div>
+                    <div className="text-[var(--text-muted)] text-12">{dealer.city}, {dealer.state}</div>
+                    <div className="text-[var(--text-muted)] text-12 opacity-60">{formatDate(dealer.createdAt)}</div>
                   </div>
                 </Link>
               ))}

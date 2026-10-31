@@ -115,19 +115,19 @@ export function VehicleForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">
+          <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">
             Name <span className="text-red-500">*</span>
           </label>
           <input value={form.name} onChange={(e) => set("name", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div>
-          <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">
+          <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">
             Slug <span className="text-red-500">*</span>
           </label>
           <input value={form.slug} onChange={(e) => set("slug", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
         </div>
         <div>
-          <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">Category</label>
+          <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">Category</label>
           <select value={form.category} onChange={(e) => set("category", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]">
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -135,7 +135,7 @@ export function VehicleForm({
           </select>
         </div>
         <div>
-          <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">Manufacturer</label>
+          <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">Manufacturer</label>
           <select value={form.manufacturerId} onChange={(e) => set("manufacturerId", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]">
             {manufacturers.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
@@ -144,7 +144,7 @@ export function VehicleForm({
         </div>
       </div>
 
-      <p className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest">Specs</p>
+      <p className="text-[var(--text-muted)] text-xs font-semibold">Specs</p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {([
           ["engineCc", "Engine (cc)"],
@@ -171,7 +171,7 @@ export function VehicleForm({
         ))}
       </div>
 
-      <p className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest">Media & AI</p>
+      <p className="text-[var(--text-muted)] text-xs font-semibold">Media & AI</p>
       <div>
         <label className="block text-[var(--text-muted)] text-xs mb-1.5">Hero Image</label>
         <VehicleHeroImageUploader
@@ -215,13 +215,13 @@ export function VehicleForm({
         >
           <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${form.isActive ? "left-4" : "left-0.5"}`} />
         </button>
-        <span className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest">Active</span>
+        <span className="text-[var(--text-muted)] text-xs font-semibold">Active</span>
       </div>
 
       <button
         onClick={handleSave}
         disabled={saving}
-        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-normal px-5 py-2.5 rounded-pill transition-colors"
       >
         <Check size={14} />
         {saving ? "Saving…" : vehicle ? "Save Changes" : "Create Vehicle"}

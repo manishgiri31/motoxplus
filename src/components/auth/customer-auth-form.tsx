@@ -117,7 +117,7 @@ export function CustomerAuthForm() {
         </div>
         <div className="flex items-center gap-1.5 rounded-pill bg-[var(--sig-ok-bg)] px-2.5 py-1.5 flex-shrink-0">
           <ShieldCheck size={12} className="text-[var(--sig-ok-fg)]" />
-          <span className="text-[10px] text-[var(--sig-ok-fg)] font-semibold">Secure</span>
+          <span className="text-12 text-[var(--sig-ok-fg)] font-semibold">Secure</span>
         </div>
       </div>
 

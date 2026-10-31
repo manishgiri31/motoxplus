@@ -45,7 +45,7 @@ export default async function VendorDashboardPage() {
         </h1>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-[var(--text-muted)] text-sm">{vendor.vendorCode}</span>
-          <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-sm ${STATUS_COLORS[vendor.status]}`}>
+          <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded-sm ${STATUS_COLORS[vendor.status]}`}>
             {vendor.status}
           </span>
         </div>
@@ -93,7 +93,7 @@ export default async function VendorDashboardPage() {
               </div>
             </div>
             <div className="text-xl font-black text-[var(--text-primary)] mb-0.5">{stat.value}</div>
-            <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest">{stat.label}</div>
+            <div className="text-[var(--text-muted)] text-xs">{stat.label}</div>
             <div className="text-gray-600 text-xs mt-0.5">{stat.sub}</div>
           </div>
         ))}
@@ -123,7 +123,7 @@ export default async function VendorDashboardPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-[var(--text-muted)] text-xs">{formatDate(p.paymentDate)}</div>
-                    <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-sm ${
+                    <span className={`text-12 font-semibold px-1.5 py-0.5 rounded-sm ${
                       p.status === "PAID" ? "bg-green-900/20 text-green-400" : "bg-yellow-900/20 text-yellow-400"
                     }`}>
                       {p.status}
@@ -171,7 +171,7 @@ export default async function VendorDashboardPage() {
               </div>
               {latestRating.notes && (
                 <div className="pt-4 border-t border-[var(--border-color)]">
-                  <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-2">Notes</div>
+                  <div className="text-[var(--text-muted)] text-xs mb-2">Notes</div>
                   <p className="text-[var(--text-secondary)] text-sm">{latestRating.notes}</p>
                 </div>
               )}

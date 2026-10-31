@@ -63,7 +63,7 @@ function DeleteConfirmModal({
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-bold transition-colors disabled:opacity-50"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-pill bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-normal transition-colors disabled:opacity-50"
           >
             {loading ? <Spinner size={14} /> : <Trash2 size={14} />}
             Delete
@@ -119,21 +119,21 @@ export function AdminProductActions({
       <div className="flex gap-3 items-center">
         <Link
           href={`/admin/products/${productId}/edit`}
-          className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider"
+          className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
         >
           Edit
         </Link>
         <button
           onClick={toggleActive}
           disabled={toggleLoading}
-          className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors disabled:opacity-50 uppercase tracking-wider ${isActive ? "text-yellow-400 hover:text-yellow-300" : "text-green-400 hover:text-green-300"}`}
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${isActive ? "text-yellow-400 hover:text-yellow-300" : "text-green-400 hover:text-green-300"}`}
         >
           {toggleLoading ? <Spinner size={12} /> : null}
           {isActive ? "Deactivate" : "Activate"}
         </button>
         <button
           onClick={() => { setDeleteError(null); setShowDeleteModal(true); }}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors uppercase tracking-wider"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
         >
           <Trash2 size={11} />
           Delete

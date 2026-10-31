@@ -52,7 +52,7 @@ export default async function AdminDealersPage(
           <Link
             key={s || "all"}
             href={`/admin/dealers${s ? `?status=${s}` : ""}`}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${
+            className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
               searchParams.status === s || (!searchParams.status && !s)
                 ? "bg-[var(--accent)] text-white"
                 : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
@@ -67,13 +67,13 @@ export default async function AdminDealersPage(
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border-color)]">
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Company</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Verified</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">GST</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Location</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Orders</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Actions</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Company</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Verified</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">GST</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Location</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Orders</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Status</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -88,10 +88,10 @@ export default async function AdminDealersPage(
                 </td>
                 <td className="px-4 py-4 hidden lg:table-cell">
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 text-[10px] ${dealer.user.emailVerified ? "text-green-400" : "text-gray-600"}`} title="Email verified">
+                    <span className={`inline-flex items-center gap-1 text-12 ${dealer.user.emailVerified ? "text-green-400" : "text-gray-600"}`} title="Email verified">
                       {dealer.user.emailVerified ? <CheckCircle2 size={12} /> : <XCircle size={12} />} Email
                     </span>
-                    <span className={`inline-flex items-center gap-1 text-[10px] ${dealer.user.mobileVerified ? "text-green-400" : "text-gray-600"}`} title="Mobile verified">
+                    <span className={`inline-flex items-center gap-1 text-12 ${dealer.user.mobileVerified ? "text-green-400" : "text-gray-600"}`} title="Mobile verified">
                       {dealer.user.mobileVerified ? <CheckCircle2 size={12} /> : <XCircle size={12} />} Mobile
                     </span>
                   </div>
@@ -109,7 +109,7 @@ export default async function AdminDealersPage(
                   <span className="text-[var(--text-primary)] font-bold text-sm">{dealer._count.orders}</span>
                 </td>
                 <td className="px-4 py-4">
-                  <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-xl ${statusColors[dealer.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                  <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-xl ${statusColors[dealer.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                     {dealer.status}
                   </span>
                 </td>

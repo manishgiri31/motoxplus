@@ -86,7 +86,7 @@ export default function NewPurchaseOrderPage() {
   };
 
   const inputClass = "w-full themed-input px-3 py-2.5 rounded-sm text-sm";
-  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5";
+  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] mb-1.5";
 
   return (
     <div className="max-w-5xl">
@@ -107,7 +107,7 @@ export default function NewPurchaseOrderPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm uppercase tracking-widest">Order Details</h2>
+          <h2 className="text-[var(--text-primary)] font-bold mb-5 text-sm">Order Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Vendor *</label>
@@ -147,8 +147,8 @@ export default function NewPurchaseOrderPage() {
         {/* Line Items */}
         <div className="glass border border-[var(--border-color)] rounded-sm p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest">Line Items</h2>
-            <button type="button" onClick={addItem} className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
+            <h2 className="text-[var(--text-primary)] font-bold text-sm">Line Items</h2>
+            <button type="button" onClick={addItem} className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors">
               <Plus size={14} />Add Item
             </button>
           </div>
@@ -157,7 +157,7 @@ export default function NewPurchaseOrderPage() {
             {items.map((item, i) => (
               <div key={i} className="p-4 glass border border-[var(--border-color)] rounded-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-wider">Item {i + 1}</span>
+                  <span className="text-[var(--text-muted)] text-xs font-semibold">Item {i + 1}</span>
                   <div className="flex items-center gap-3">
                     <span className="text-[var(--text-primary)] font-bold text-sm">
                       ₹{getLineTotal(item).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -201,7 +201,7 @@ export default function NewPurchaseOrderPage() {
 
           <div className="mt-5 pt-5 border-t border-[var(--border-color)] flex justify-end">
             <div className="text-right">
-              <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">Grand Total</div>
+              <div className="text-[var(--text-muted)] text-xs mb-1">Grand Total</div>
               <div className="text-2xl font-black text-[var(--text-primary)]">
                 ₹{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </div>
@@ -210,11 +210,11 @@ export default function NewPurchaseOrderPage() {
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" disabled={loading} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <button type="submit" disabled={loading} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-normal px-6 py-3 rounded-pill text-sm transition-colors">
             {loading && <Loader2 size={16} className="animate-spin" />}
             Send Purchase Order
           </button>
-          <Link href="/admin/procurement/purchase-orders" className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <Link href="/admin/procurement/purchase-orders" className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm transition-colors">
             Cancel
           </Link>
         </div>

@@ -48,7 +48,7 @@ export default async function OrderDetailPage(
           <p className="text-[var(--text-muted)] mt-1">Placed on {formatDate(order.createdAt)}</p>
         </div>
         <div className="text-right flex flex-col items-end gap-2">
-          <span className={`text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-sm ${
+          <span className={`text-xs font-semibold px-3 py-1.5 rounded-sm ${
             order.status === "DELIVERED" ? "bg-green-900/20 text-green-400" :
             order.status === "PENDING" ? "bg-yellow-900/20 text-yellow-400" :
             order.status === "CONFIRMED" ? "bg-blue-900/20 text-blue-400" :
@@ -85,7 +85,7 @@ export default async function OrderDetailPage(
                 <div className="text-right">
                   <div className="text-[var(--text-muted)] text-xs mb-1">× {item.quantity}</div>
                   <div className="text-[var(--text-primary)] font-bold text-sm">{formatCurrency(item.total)}</div>
-                  <div className="text-gray-600 text-[10px]">incl. GST</div>
+                  <div className="text-gray-600 text-12">incl. GST</div>
                 </div>
               </div>
             ))}
@@ -174,7 +174,7 @@ export default async function OrderDetailPage(
           {order.invoice && (
             <Link
               href={`/dealer/invoices/${order.invoice.id}`}
-              className="w-full block text-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+              className="w-full block text-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm"
             >
               Download Invoice
             </Link>

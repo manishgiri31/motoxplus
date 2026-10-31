@@ -161,7 +161,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
         {!showForm && (
           <button
             onClick={openAdd}
-            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold px-4 py-2 rounded-pill transition-colors"
           >
             <Plus size={14} />
             Add Variant
@@ -180,7 +180,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
           {/* Identity */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">
+              <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">
                 Variant Label <span className="text-red-500">*</span>
               </label>
               <input
@@ -191,7 +191,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
               />
             </div>
             <div>
-              <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">SKU</label>
+              <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">SKU</label>
               <input
                 value={form.sku}
                 onChange={(e) => set("sku", e.target.value)}
@@ -200,7 +200,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
               />
             </div>
             <div>
-              <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">Part Number</label>
+              <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">Part Number</label>
               <input
                 value={form.partNumber}
                 onChange={(e) => set("partNumber", e.target.value)}
@@ -211,7 +211,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
           </div>
 
           {/* Attributes */}
-          <p className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-2">Variant Attributes</p>
+          <p className="text-[var(--text-muted)] text-xs font-semibold mb-2">Variant Attributes</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
             {ATTR_GROUPS.map(({ key, label }) => (
               <div key={key}>
@@ -227,7 +227,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
           </div>
 
           {/* Pricing + Inventory */}
-          <p className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-2">Pricing & Inventory</p>
+          <p className="text-[var(--text-muted)] text-xs font-semibold mb-2">Pricing & Inventory</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">MRP (₹) <span className="text-red-500">*</span></label>
@@ -242,7 +242,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Wholesale Price — 70% off MRP</label>
               <input type="number" min="0" step="1" value={form.price} onChange={(e) => set("price", e.target.value)}
                 className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-green-400 text-sm font-bold focus:outline-none focus:border-green-600" />
-              {form.mrp && <p className="text-green-600 text-[10px] mt-0.5">= 30% of ₹{form.mrp}</p>}
+              {form.mrp && <p className="text-green-600 text-12 mt-0.5">= 30% of ₹{form.mrp}</p>}
             </div>
             <div>
               <label className="block text-[var(--text-muted)] text-xs mb-1.5">Stock</label>
@@ -259,7 +259,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
 
           {/* Image */}
           <div className="mb-5">
-            <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">Primary Image URL</label>
+            <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">Primary Image URL</label>
             <input
               value={form.imageUrl}
               onChange={(e) => set("imageUrl", e.target.value)}
@@ -270,7 +270,7 @@ export function ProductVariantManager({ productId }: { productId: string }) {
 
           <div className="flex gap-3">
             <button onClick={handleSave} disabled={saving}
-              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
+              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-pill transition-colors">
               <Check size={14} />
               {saving ? "Saving..." : editId ? "Update" : "Add Variant"}
             </button>
@@ -323,9 +323,9 @@ export function ProductVariantManager({ productId }: { productId: string }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[var(--text-primary)] font-bold text-sm">{v.label}</span>
-                      {v.partNumber && <span className="text-[var(--text-muted)] text-[10px] font-mono">{v.partNumber}</span>}
+                      {v.partNumber && <span className="text-[var(--text-muted)] text-12 font-mono">{v.partNumber}</span>}
                       {attrs.slice(0, 3).map((a, i) => (
-                        <span key={i} className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-[10px] px-1.5 py-0.5 rounded-full">{a}</span>
+                        <span key={i} className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-12 px-1.5 py-0.5 rounded-full">{a}</span>
                       ))}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-xs">
@@ -359,14 +359,14 @@ export function ProductVariantManager({ productId }: { productId: string }) {
                 {isExpanded && (
                   <div className="border-t border-[var(--border-color)] px-4 py-3 bg-[var(--bg-card)]/50">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                      {v.sku && <div><span className="text-[var(--text-muted)] uppercase tracking-wider">SKU</span><div className="font-mono text-[var(--text-primary)] mt-0.5">{v.sku}</div></div>}
-                      {v.partNumber && <div><span className="text-[var(--text-muted)] uppercase tracking-wider">Part No.</span><div className="font-mono text-[var(--text-primary)] mt-0.5">{v.partNumber}</div></div>}
-                      {v.moq && <div><span className="text-[var(--text-muted)] uppercase tracking-wider">MOQ</span><div className="text-[var(--text-primary)] mt-0.5">{v.moq} pcs</div></div>}
-                      {v.color && <div><span className="text-[var(--text-muted)] uppercase tracking-wider">Color</span><div className="text-[var(--text-primary)] mt-0.5 flex items-center gap-1.5"><span className="w-3 h-3 rounded-full border border-white/20" style={{ background: v.color.toLowerCase() }} />{v.color}</div></div>}
-                      {v.vehicleModel && <div><span className="text-[var(--text-muted)] uppercase tracking-wider">Model</span><div className="text-[var(--text-primary)] mt-0.5">{v.vehicleModel}</div></div>}
-                      {v.finish && <div><span className="text-[var(--text-muted)] uppercase tracking-wider">Finish</span><div className="text-[var(--text-primary)] mt-0.5">{v.finish}</div></div>}
-                      {v.size && <div><span className="text-[var(--text-muted)] uppercase tracking-wider">Size</span><div className="text-[var(--text-primary)] mt-0.5">{v.size}</div></div>}
-                      {v.extra && <div><span className="text-[var(--text-muted)] uppercase tracking-wider">Extra</span><div className="text-[var(--text-primary)] mt-0.5">{v.extra}</div></div>}
+                      {v.sku && <div><span className="text-[var(--text-muted)]">SKU</span><div className="font-mono text-[var(--text-primary)] mt-0.5">{v.sku}</div></div>}
+                      {v.partNumber && <div><span className="text-[var(--text-muted)]">Part No.</span><div className="font-mono text-[var(--text-primary)] mt-0.5">{v.partNumber}</div></div>}
+                      {v.moq && <div><span className="text-[var(--text-muted)]">MOQ</span><div className="text-[var(--text-primary)] mt-0.5">{v.moq} pcs</div></div>}
+                      {v.color && <div><span className="text-[var(--text-muted)]">Color</span><div className="text-[var(--text-primary)] mt-0.5 flex items-center gap-1.5"><span className="w-3 h-3 rounded-full border border-white/20" style={{ background: v.color.toLowerCase() }} />{v.color}</div></div>}
+                      {v.vehicleModel && <div><span className="text-[var(--text-muted)]">Model</span><div className="text-[var(--text-primary)] mt-0.5">{v.vehicleModel}</div></div>}
+                      {v.finish && <div><span className="text-[var(--text-muted)]">Finish</span><div className="text-[var(--text-primary)] mt-0.5">{v.finish}</div></div>}
+                      {v.size && <div><span className="text-[var(--text-muted)]">Size</span><div className="text-[var(--text-primary)] mt-0.5">{v.size}</div></div>}
+                      {v.extra && <div><span className="text-[var(--text-muted)]">Extra</span><div className="text-[var(--text-primary)] mt-0.5">{v.extra}</div></div>}
                     </div>
                     {v.images.length > 0 && (
                       <div className="flex gap-2 mt-3">

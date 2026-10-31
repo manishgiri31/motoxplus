@@ -91,7 +91,7 @@ export function DeleteAccountDialog() {
                 </div>
                 <div>
                   <h2 className="text-[var(--text-primary)] font-black text-lg">Delete Account</h2>
-                  <p className="text-red-400 text-xs font-semibold uppercase tracking-wider">Permanent Action</p>
+                  <p className="text-red-400 text-xs font-semibold">Permanent Action</p>
                 </div>
               </div>
               <button
@@ -126,7 +126,7 @@ export function DeleteAccountDialog() {
 
             {/* Confirm input */}
             <div className="mb-4">
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              <label className="text-[var(--text-muted)] text-xs block mb-2">
                 Type <strong className="text-red-400 font-mono">{CONFIRM_WORD}</strong> to confirm
               </label>
               <input
@@ -135,7 +135,7 @@ export function DeleteAccountDialog() {
                 onChange={(e) => setConfirm(e.target.value.toUpperCase())}
                 disabled={loading}
                 placeholder={CONFIRM_WORD}
-                className="w-full themed-input border focus:border-[var(--accent)] rounded-sm px-4 py-3 text-sm outline-none transition-colors font-mono tracking-widest disabled:opacity-50"
+                className="w-full themed-input border focus:border-[var(--accent)] rounded-sm px-4 py-3 text-sm outline-none transition-colors font-mono disabled:opacity-50"
                 autoComplete="off"
               />
             </div>
@@ -143,7 +143,7 @@ export function DeleteAccountDialog() {
             {/* Password re-entry — proves this is really you, right now, not
                 just whoever holds an already-open session */}
             <div className="mb-5">
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              <label className="text-[var(--text-muted)] text-xs block mb-2">
                 Enter your password to confirm
               </label>
               <input
@@ -175,7 +175,7 @@ export function DeleteAccountDialog() {
               <button
                 onClick={handleDelete}
                 disabled={!isReady || loading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[var(--accent-hover)] hover:bg-[var(--accent)] disabled:bg-red-900/40 disabled:text-red-700 text-white rounded-sm text-sm font-bold transition-all duration-200"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[var(--accent-hover)] hover:bg-[var(--accent)] disabled:bg-red-900/40 disabled:text-red-700 text-white rounded-pill text-sm font-normal transition-all duration-200"
               >
                 {loading ? (
                   <span className="animate-pulse">Deleting...</span>

@@ -76,13 +76,13 @@ export function GRNForm({ purchaseOrderId, poItems }: Props) {
   };
 
   const inputClass = "w-full themed-input px-3 py-2 rounded-sm text-sm";
-  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1";
+  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] mb-1";
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors"
+        className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-bold px-4 py-2.5 rounded-sm text-sm transition-colors"
       >
         <PackageCheck size={16} />
         Record GRN
@@ -93,7 +93,7 @@ export function GRNForm({ purchaseOrderId, poItems }: Props) {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="relative glass border border-[var(--border-color)] rounded-sm p-6 w-full max-w-2xl z-10 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[var(--text-primary)] font-bold uppercase tracking-widest text-sm">Record Goods Receipt</h3>
+              <h3 className="text-[var(--text-primary)] font-bold text-sm">Record Goods Receipt</h3>
               <button onClick={() => setOpen(false)}>
                 <X size={18} className="text-[var(--text-muted)]" />
               </button>
@@ -120,7 +120,7 @@ export function GRNForm({ purchaseOrderId, poItems }: Props) {
               </div>
 
               <div>
-                <div className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-widest mb-3">Items Received</div>
+                <div className="text-[var(--text-primary)] font-bold text-xs mb-3">Items Received</div>
                 <div className="space-y-3">
                   {grnItems.map((item, i) => (
                     <div key={i} className="p-4 glass border border-[var(--border-color)] rounded-sm">
@@ -179,11 +179,11 @@ export function GRNForm({ purchaseOrderId, poItems }: Props) {
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center gap-2 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+                <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center gap-2 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm transition-colors">
                   {loading && <Loader2 size={14} className="animate-spin" />}
                   Save GRN
                 </button>
-                <button type="button" onClick={() => setOpen(false)} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider">
+                <button type="button" onClick={() => setOpen(false)} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm">
                   Cancel
                 </button>
               </div>

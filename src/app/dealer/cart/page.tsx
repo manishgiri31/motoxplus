@@ -157,7 +157,7 @@ export default function CartPage() {
           <p className="text-[var(--text-muted)] mb-6">Browse our products and add items to your cart.</p>
           <Link
             href="/dealer/products"
-            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-8 py-3 rounded-sm transition-colors text-sm uppercase tracking-wider inline-flex items-center gap-2"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-8 py-3 rounded-pill transition-colors text-sm inline-flex items-center gap-2"
           >
             Browse Products
             <ArrowRight size={16} />
@@ -189,7 +189,7 @@ export default function CartPage() {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="text-[var(--text-muted)] text-[10px] font-mono">{item.product.partNumber}</div>
+                  <div className="text-[var(--text-muted)] text-12 font-mono">{item.product.partNumber}</div>
                   <h3 className="text-[var(--text-primary)] font-bold text-sm truncate">{item.product.name}</h3>
                   <div className="text-[var(--text-muted)] text-xs">{item.product.category.name}</div>
                   {item.variant && (
@@ -200,7 +200,7 @@ export default function CartPage() {
                           style={{ backgroundColor: item.variant.color.toLowerCase() }}
                         />
                       )}
-                      <span className="text-red-400 text-[10px] font-semibold">{item.variant.label}</span>
+                      <span className="text-red-400 text-12 font-semibold">{item.variant.label}</span>
                     </div>
                   )}
                   <div className="text-red-500 font-bold text-sm mt-1">
@@ -239,7 +239,7 @@ export default function CartPage() {
                   <div className="text-[var(--text-primary)] font-bold text-sm">
                     {formatCurrency(itemPrice(item) * item.quantity * (1 + item.product.gstRate / 100))}
                   </div>
-                  <div className="text-gray-600 text-[10px] flex items-center justify-end gap-1">
+                  <div className="text-gray-600 text-12 flex items-center justify-end gap-1">
                     incl. {item.product.gstRate}% GST
                     {syncingId === item.id && <span className="w-1.5 h-1.5 rounded-full bg-red-500/60 animate-pulse" />}
                   </div>
@@ -283,7 +283,7 @@ export default function CartPage() {
                       style={{ width: `${freeDeliveryProgress}%` }}
                     />
                   </div>
-                  <p className="text-[var(--text-muted)] text-[10px] mt-1.5">
+                  <p className="text-[var(--text-muted)] text-12 mt-1.5">
                     Shipping: {formatCurrency(shippingCost)} (5% of order)
                   </p>
                 </div>
@@ -322,7 +322,7 @@ export default function CartPage() {
 
               <Link
                 href="/dealer/checkout"
-                className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider text-center block"
+                className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-4 rounded-sm transition-colors text-sm text-center block"
               >
                 Proceed to Checkout
               </Link>

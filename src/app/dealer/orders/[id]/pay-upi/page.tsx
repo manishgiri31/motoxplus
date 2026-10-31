@@ -194,7 +194,7 @@ export default function PayUpiPage() {
         </div>
         <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">Payment Verified</h2>
         <p className="text-[var(--text-muted)] text-sm mb-6">Order #{order.orderNumber} has been paid and confirmed.</p>
-        <Link href={`/dealer/orders/${id}`} className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 px-6 rounded-xl text-sm transition-colors">
+        <Link href={`/dealer/orders/${id}`} className="inline-flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal py-3 px-6 rounded-pill text-sm transition-colors">
           View Order
         </Link>
       </div>
@@ -240,7 +240,7 @@ export default function PayUpiPage() {
 
       {/* Bill Breakdown */}
       <div className="glass border border-[var(--border-color)] rounded-2xl p-5 mb-5">
-        <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-4">Order Bill Summary</div>
+        <div className="text-[var(--text-muted)] text-xs font-bold mb-4">Order Bill Summary</div>
         <div className="space-y-2 text-sm mb-4">
           <div className="flex justify-between">
             <span className="text-[var(--text-muted)]">Subtotal (excl. GST)</span>
@@ -264,7 +264,7 @@ export default function PayUpiPage() {
           </div>
         </div>
         <div className="bg-red-950/30 border border-red-900/30 rounded-xl px-4 py-3 flex items-center justify-between">
-          <span className="text-[var(--text-muted)] text-xs uppercase tracking-wider">Amount Payable Now</span>
+          <span className="text-[var(--text-muted)] text-xs">Amount Payable Now</span>
           <span className="text-red-500 text-2xl font-black">{formatCurrency(order.amountDue)}</span>
         </div>
       </div>
@@ -319,7 +319,7 @@ export default function PayUpiPage() {
 
           {/* UPI ID */}
           <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-4 mb-4">
-            <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-2">UPI ID</div>
+            <div className="text-[var(--text-muted)] text-xs mb-2">UPI ID</div>
             <div className="flex items-center justify-between gap-3">
               <div className="font-mono text-[var(--text-primary)] font-semibold text-sm break-all">{settings.upiId}</div>
               <button
@@ -334,7 +334,7 @@ export default function PayUpiPage() {
           {/* Open in UPI App */}
           <a
             href={upiLink}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 rounded-xl transition-all text-sm uppercase tracking-wider"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 rounded-xl transition-all text-sm"
           >
             <Smartphone size={16} /> Open UPI App & Pay {formatCurrency(order.amountDue)}
           </a>
@@ -392,7 +392,7 @@ export default function PayUpiPage() {
 
         {/* Screenshot Upload */}
         <div className="mb-4">
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Payment Screenshot <span className="text-red-500">*</span>
           </label>
           {screenshotPreview ? (
@@ -436,7 +436,7 @@ export default function PayUpiPage() {
 
         {/* UTR Number */}
         <div className="mb-4">
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             UTR / Reference Number <span className="text-red-500">*</span>
           </label>
           <input
@@ -453,7 +453,7 @@ export default function PayUpiPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Full Name <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Full Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               required
@@ -464,7 +464,7 @@ export default function PayUpiPage() {
             />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Email <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Email <span className="text-red-500">*</span></label>
             <input
               type="email"
               required
@@ -475,7 +475,7 @@ export default function PayUpiPage() {
             />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Phone <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Phone <span className="text-red-500">*</span></label>
             <input
               type="tel"
               required
@@ -497,7 +497,7 @@ export default function PayUpiPage() {
         <button
           type="submit"
           disabled={submitting || uploading || !uploadedUrl}
-          className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-colors text-sm uppercase tracking-wider"
+          className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-colors text-sm"
         >
           {submitting ? <><Spinner size={16} /> Submitting...</> : "Submit for Verification"}
         </button>

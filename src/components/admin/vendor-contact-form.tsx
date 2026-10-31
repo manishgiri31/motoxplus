@@ -40,13 +40,13 @@ export function VendorContactForm({ vendorId }: { vendorId: string }) {
   };
 
   const inputClass = "w-full themed-input px-3 py-2 rounded-sm text-sm";
-  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1";
+  const labelClass = "block text-xs font-semibold text-[var(--text-muted)] mb-1";
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider"
+        className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
       >
         <UserPlus size={13} />
         Add Contact
@@ -57,7 +57,7 @@ export function VendorContactForm({ vendorId }: { vendorId: string }) {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="relative glass border border-[var(--border-color)] rounded-sm p-6 w-full max-w-md z-10">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-[var(--text-primary)] font-bold uppercase tracking-widest text-sm">
+              <h3 className="text-[var(--text-primary)] font-bold text-sm">
                 Add Contact
               </h3>
               <button onClick={() => setOpen(false)}>
@@ -95,11 +95,11 @@ export function VendorContactForm({ vendorId }: { vendorId: string }) {
                 </label>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+                <button type="submit" disabled={loading} className="flex-1 flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm transition-colors">
                   {loading && <Loader2 size={14} className="animate-spin" />}
                   Add Contact
                 </button>
-                <button type="button" onClick={() => setOpen(false)} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider">
+                <button type="button" onClick={() => setOpen(false)} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm">
                   Cancel
                 </button>
               </div>

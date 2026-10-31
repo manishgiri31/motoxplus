@@ -66,7 +66,7 @@ export default async function AdminInvoicesPage(
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-sm transition-colors"
+            className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-pill transition-colors"
           >
             Search
           </button>
@@ -96,13 +96,13 @@ export default async function AdminInvoicesPage(
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border-color)]">
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Invoice #</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Dealer</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Order</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Date</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Amount</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Payment</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Actions</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Invoice #</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Dealer</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Order</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Date</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Amount</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Payment</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -144,14 +144,14 @@ export default async function AdminInvoicesPage(
                     )}
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-sm ${paymentStatusColors[invoice.order.paymentStatus] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                    <span className={`text-12 font-bold uppercase px-2 py-1 rounded-sm ${paymentStatusColors[invoice.order.paymentStatus] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                       {invoice.order.paymentStatus}
                     </span>
                   </td>
                   <td className="px-4 py-4">
                     <Link
                       href={`/admin/invoices/${invoice.id}`}
-                      className="text-red-400 hover:text-red-300 text-xs font-semibold transition-colors uppercase tracking-wider"
+                      className="text-red-400 hover:text-red-300 text-xs font-semibold transition-colors"
                     >
                       View PDF
                     </Link>

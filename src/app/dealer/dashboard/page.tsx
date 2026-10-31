@@ -112,7 +112,7 @@ export default async function DealerDashboardPage() {
               <ChevronRight size={14} className="text-[var(--text-muted)] group-hover:text-red-500 transition-colors" />
             </div>
             <div className="text-2xl font-black text-[var(--text-primary)] mb-0.5">{stat.value}</div>
-            <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">{stat.label}</div>
+            <div className="text-[var(--text-muted)] text-12 font-semibold">{stat.label}</div>
           </Link>
         ))}
       </div>
@@ -122,7 +122,7 @@ export default async function DealerDashboardPage() {
         <div className="lg:col-span-2 glass border border-[var(--border-color)] rounded-2xl p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-[var(--text-primary)] font-bold text-base">Recent Orders</h2>
-            <Link href="/dealer/orders" className="flex items-center gap-1 text-red-400 text-xs font-semibold hover:text-red-300 transition-colors uppercase tracking-wider">
+            <Link href="/dealer/orders" className="flex items-center gap-1 text-red-400 text-xs font-semibold hover:text-red-300 transition-colors">
               View All <ArrowRight size={12} />
             </Link>
           </div>
@@ -147,11 +147,11 @@ export default async function DealerDashboardPage() {
                 >
                   <div>
                     <div className="text-[var(--text-primary)] font-mono text-sm font-bold">{order.orderNumber}</div>
-                    <div className="text-[var(--text-muted)] text-[10px] mt-0.5">{formatDate(order.createdAt)}</div>
+                    <div className="text-[var(--text-muted)] text-12 mt-0.5">{formatDate(order.createdAt)}</div>
                   </div>
                   <div className="text-right flex items-center gap-3">
                     <div className="text-[var(--text-primary)] font-bold text-sm">{formatCurrency(order.grandTotal)}</div>
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${statusStyle[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                    <span className={`text-12 font-bold uppercase px-2 py-0.5 rounded-full ${statusStyle[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                       {order.status}
                     </span>
                   </div>
@@ -207,7 +207,7 @@ export default async function DealerDashboardPage() {
               ))}
               <div className="flex justify-between items-center pt-1 border-t border-[var(--border-color)]">
                 <span className="text-[var(--text-muted)] text-xs">Status</span>
-                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full text-green-400 bg-green-500/10 border border-green-500/20">
+                <span className="text-12 font-bold uppercase px-2 py-0.5 rounded-full text-green-400 bg-green-500/10 border border-green-500/20">
                   ACTIVE
                 </span>
               </div>

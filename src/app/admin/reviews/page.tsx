@@ -83,14 +83,14 @@ export default function AdminReviewsPage() {
                       ))}
                     </div>
                     <span
-                      className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                      className={`text-12 font-bold px-2 py-0.5 rounded-full ${
                         r.isApproved ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
                       }`}
                     >
                       {r.isApproved ? "Approved" : "Pending"}
                     </span>
                     {r.verifiedPurchase && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500">
+                      <span className="text-12 font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500">
                         Verified
                       </span>
                     )}

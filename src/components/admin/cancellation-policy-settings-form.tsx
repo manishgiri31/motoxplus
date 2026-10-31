@@ -56,12 +56,12 @@ export function CancellationPolicySettingsForm({ currentPreShip, currentPostShip
   return (
     <div className="glass-dark border border-[var(--border-color)] rounded-xl p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[var(--text-secondary)] text-xs uppercase tracking-widest font-bold">
+        <div className="flex items-center gap-2 text-[var(--text-secondary)] text-xs font-bold">
           <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
           Cancellation Policy
         </div>
         {updatedAt && (
-          <p className="text-[var(--text-muted)] text-[10px]">
+          <p className="text-[var(--text-muted)] text-12">
             Last changed {updatedAt}{updatedByName ? ` by ${updatedByName}` : ""}
           </p>
         )}
@@ -69,7 +69,7 @@ export function CancellationPolicySettingsForm({ currentPreShip, currentPostShip
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Pre-Ship Charge (%)
           </label>
           <div className="relative">
@@ -84,11 +84,11 @@ export function CancellationPolicySettingsForm({ currentPreShip, currentPostShip
               className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors pr-10"
             />
           </div>
-          <p className="text-[var(--text-muted)] text-[10px] mt-1">Pending / Confirmed / Processing orders</p>
+          <p className="text-[var(--text-muted)] text-12 mt-1">Pending / Confirmed / Processing orders</p>
         </div>
 
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Post-Ship Charge (%)
           </label>
           <div className="relative">
@@ -103,7 +103,7 @@ export function CancellationPolicySettingsForm({ currentPreShip, currentPostShip
               className="w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors pr-10"
             />
           </div>
-          <p className="text-[var(--text-muted)] text-[10px] mt-1">Shipped orders (not yet delivered)</p>
+          <p className="text-[var(--text-muted)] text-12 mt-1">Shipped orders (not yet delivered)</p>
         </div>
       </div>
 
@@ -121,7 +121,7 @@ export function CancellationPolicySettingsForm({ currentPreShip, currentPostShip
       <button
         onClick={() => (valid ? setConfirmOpen(true) : handleSave())}
         disabled={status === "loading"}
-        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-normal px-6 py-3 rounded-pill transition-colors text-sm"
       >
         <Save size={14} />
         {status === "loading" ? "Saving..." : "Save Policy"}

@@ -49,20 +49,20 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
   return (
     <div>
       <div className="mb-6">
-        <Link href="/admin/crm/leads" className="flex items-center gap-2 text-[var(--text-muted)] hover:text-red-400 text-sm font-semibold uppercase tracking-wider mb-4 transition-colors">
+        <Link href="/admin/crm/leads" className="flex items-center gap-2 text-[var(--text-muted)] hover:text-red-400 text-sm font-semibold mb-4 transition-colors">
           <ArrowLeft size={14} /> Back to Leads
         </Link>
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">{lead.companyName}</h1>
-              <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${STATUS_COLORS[lead.status]}`}>{lead.status}</span>
+              <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-sm ${STATUS_COLORS[lead.status]}`}>{lead.status}</span>
             </div>
             <p className="text-[var(--text-muted)] text-sm">{lead.leadNumber} · Added {formatRelativeTime(lead.createdAt)}</p>
           </div>
           {!isConverted && <LeadDetailActions lead={lead} />}
           {isConverted && lead.dealerId && (
-            <Link href={`/admin/dealers/${lead.dealerId}`} className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+            <Link href={`/admin/dealers/${lead.dealerId}`} className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-bold px-4 py-2.5 rounded-sm text-sm transition-colors">
               <CheckCircle size={14} /> View Dealer Account
             </Link>
           )}
@@ -78,7 +78,7 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
         {/* Left: Info cards */}
         <div className="lg:col-span-1 space-y-6">
           <div className="glass border border-[var(--border-color)] rounded-sm p-5 space-y-3">
-            <h2 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">Contact</h2>
+            <h2 className="text-xs font-bold text-[var(--text-muted)]">Contact</h2>
             <div>
               <p className="text-[var(--text-primary)] font-bold">{lead.ownerName}</p>
               {lead.designation && <p className="text-[var(--text-muted)] text-sm">{lead.designation}</p>}
@@ -107,7 +107,7 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
           </div>
 
           <div className="glass border border-[var(--border-color)] rounded-sm p-5 space-y-3">
-            <h2 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">Lead Details</h2>
+            <h2 className="text-xs font-bold text-[var(--text-muted)]">Lead Details</h2>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-[var(--text-muted)]">Source</span>
@@ -146,7 +146,7 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
 
           {/* Notes */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-5 space-y-3">
-            <h2 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">Notes ({lead.notes.length})</h2>
+            <h2 className="text-xs font-bold text-[var(--text-muted)]">Notes ({lead.notes.length})</h2>
             {lead.notes.length === 0 ? (
               <p className="text-[var(--text-muted)] text-sm">No notes yet</p>
             ) : (
@@ -165,7 +165,7 @@ export default async function LeadDetailPage(props: { params: Promise<{ id: stri
         {/* Right: Activity timeline */}
         <div className="lg:col-span-2">
           <div className="glass border border-[var(--border-color)] rounded-sm p-5">
-            <h2 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-5">Activity Timeline ({lead.activities.length})</h2>
+            <h2 className="text-xs font-bold text-[var(--text-muted)] mb-5">Activity Timeline ({lead.activities.length})</h2>
             {lead.activities.length === 0 ? (
               <p className="text-[var(--text-muted)] text-sm">No activities logged yet. Add one above.</p>
             ) : (

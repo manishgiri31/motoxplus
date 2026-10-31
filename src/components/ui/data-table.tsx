@@ -106,7 +106,7 @@ export function DataTable({
 
   if (rows.length === 0) {
     return (
-      <div className={cn("bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg", className)}>
+      <div className={cn("bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-[18px]", className)}>
         {empty ?? <div className="py-16 text-center text-sm text-[var(--text-muted)]">No records found.</div>}
       </div>
     );
@@ -128,11 +128,11 @@ export function DataTable({
   const padY = density === "compact" ? "py-2" : "py-3.5";
 
   return (
-    <div className={cn("bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg overflow-hidden", className)}>
+    <div className={cn("bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-[18px] overflow-hidden", className)}>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           {caption && <caption className="sr-only">{caption}</caption>}
-          <thead className={cn(stickyHeader && "sticky top-0 z-10", "bg-[var(--surface-3)]")}>
+          <thead className={cn(stickyHeader && "sticky top-0 z-10", "bg-[var(--surface-2)]")}>
             <tr>
               {selectable && (
                 <th scope="col" className="w-10 px-4 py-3">
@@ -148,7 +148,7 @@ export function DataTable({
                     scope="col"
                     aria-sort={isSorted ? (sort!.dir === "asc" ? "ascending" : "descending") : onSortChange ? "none" : undefined}
                     className={cn(
-                      "px-4 py-3 text-[10px] font-bold uppercase tracking-tech text-[var(--text-muted)]",
+                      "px-4 py-3 text-12 font-bold text-[var(--text-muted)]",
                       alignClass[col.align ?? (col.numeric ? "right" : "left")],
                       col.hideBelow && HIDE_BELOW_CLASS[col.hideBelow],
                       col.className
@@ -223,7 +223,7 @@ export function DataTable({
 /** Building blocks for hand-composed tables that don't fit the row-based DataTable shape. */
 export function TableRoot({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg overflow-hidden", className)}>
+    <div className={cn("bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-[18px] overflow-hidden", className)}>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">{children}</table>
       </div>
@@ -231,7 +231,7 @@ export function TableRoot({ className, children }: { className?: string; childre
   );
 }
 export function THead({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <thead className={cn("bg-[var(--surface-3)]", className)}>{children}</thead>;
+  return <thead className={cn("bg-[var(--surface-2)]", className)}>{children}</thead>;
 }
 export function TR({ className, children, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
   return (
@@ -242,7 +242,7 @@ export function TR({ className, children, ...props }: React.HTMLAttributes<HTMLT
 }
 export function TH({ className, children, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <th scope="col" className={cn("px-4 py-3 text-left text-[10px] font-bold uppercase tracking-tech text-[var(--text-muted)]", className)} {...props}>
+    <th scope="col" className={cn("px-4 py-3 text-left text-12 font-bold text-[var(--text-muted)]", className)} {...props}>
       {children}
     </th>
   );

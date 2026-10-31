@@ -104,7 +104,7 @@ export function Label({ className, required, children, ...props }: React.LabelHT
 
 export function FieldHint({ children, className, id }: { children: React.ReactNode; className?: string; id?: string }) {
   return (
-    <p id={id} className={cn("mt-1.5 text-[11px] text-[var(--text-muted)]", className)}>
+    <p id={id} className={cn("mt-1.5 text-12 text-[var(--text-muted)]", className)}>
       {children}
     </p>
   );
@@ -113,7 +113,7 @@ export function FieldHint({ children, className, id }: { children: React.ReactNo
 export function FieldError({ children, className, id }: { children?: React.ReactNode; className?: string; id?: string }) {
   if (!children) return null;
   return (
-    <p id={id} className={cn("mt-1.5 text-[11px] font-medium text-[var(--sig-danger-fg)]", className)}>
+    <p id={id} className={cn("mt-1.5 text-12 font-medium text-[var(--sig-danger-fg)]", className)}>
       {children}
     </p>
   );

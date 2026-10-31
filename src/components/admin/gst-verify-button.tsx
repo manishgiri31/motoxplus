@@ -35,7 +35,7 @@ export function GstVerifyButton({ entity, id, gstNumber, gstVerified }: Props) {
       onClick={toggle}
       disabled={loading}
       title={gstVerified ? "Click to clear GST verification" : "Mark GST as verified (internal check only)"}
-      className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg transition-colors disabled:opacity-50 ${
+      className={`inline-flex items-center gap-1 text-12 font-bold px-2 py-1 rounded-lg transition-colors disabled:opacity-50 ${
         gstVerified ? "bg-green-900/20 text-green-400 hover:bg-green-900/30" : "bg-gray-900/20 text-[var(--text-muted)] hover:bg-gray-900/30"
       }`}
     >

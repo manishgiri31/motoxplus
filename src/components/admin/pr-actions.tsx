@@ -28,7 +28,7 @@ export function PRActions({ requestId }: { requestId: string }) {
         <button
           onClick={() => act("approve")}
           disabled={!!loading}
-          className="flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300 disabled:opacity-50 uppercase tracking-wider transition-colors"
+          className="flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
         >
           {loading === "approve" ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
           Approve
@@ -36,7 +36,7 @@ export function PRActions({ requestId }: { requestId: string }) {
         <button
           onClick={() => setShowReject(true)}
           disabled={!!loading}
-          className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 disabled:opacity-50 uppercase tracking-wider transition-colors"
+          className="flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors"
         >
           <XCircle size={12} />
           Reject
@@ -48,7 +48,7 @@ export function PRActions({ requestId }: { requestId: string }) {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowReject(false)} />
           <div className="relative glass border border-[var(--border-color)] rounded-sm p-6 w-full max-w-sm z-10">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest">Reject Request</h3>
+              <h3 className="text-[var(--text-primary)] font-bold text-sm">Reject Request</h3>
               <button onClick={() => setShowReject(false)}>
                 <X size={18} className="text-[var(--text-muted)]" />
               </button>
@@ -64,12 +64,12 @@ export function PRActions({ requestId }: { requestId: string }) {
               <button
                 onClick={() => act("reject")}
                 disabled={!!loading}
-                className="flex-1 flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm transition-colors"
               >
                 {loading === "reject" && <Loader2 size={14} className="animate-spin" />}
                 Confirm Reject
               </button>
-              <button onClick={() => setShowReject(false)} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider">
+              <button onClick={() => setShowReject(false)} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm">
                 Cancel
               </button>
             </div>

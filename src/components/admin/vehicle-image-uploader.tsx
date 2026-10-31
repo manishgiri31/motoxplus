@@ -124,7 +124,7 @@ export function VehicleHeroImageUploader({
           ) : (
             <div className="flex flex-col items-center gap-1">
               <ImageOff size={18} className="text-[var(--text-muted)] opacity-50" />
-              <span className="text-[9px] text-[var(--text-muted)] opacity-50 font-medium">Upload</span>
+              <span className="text-12 text-[var(--text-muted)] opacity-50 font-medium">Upload</span>
             </div>
           )}
         </div>
@@ -313,7 +313,7 @@ export function VehicleGalleryManager({ vehicleId }: { vehicleId: string }) {
             className="aspect-square border-2 border-dashed border-[var(--border-color)] rounded-lg flex flex-col items-center justify-center gap-1.5 hover:border-red-600/60 hover:bg-[var(--bg-card-hover)] transition-colors"
           >
             <ImagePlus className="w-5 h-5 text-[var(--text-muted)]" />
-            <span className="text-[var(--text-muted)] text-[10px]">Add more</span>
+            <span className="text-[var(--text-muted)] text-12">Add more</span>
           </button>
         </div>
       )}

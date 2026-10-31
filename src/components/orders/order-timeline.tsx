@@ -87,7 +87,7 @@ export function OrderTimeline({ steps, orientation = "vertical", className }: Or
               <div className={cn("flex flex-wrap items-center gap-2", isHorizontal ? "justify-center" : "justify-start")}>
                 <span
                   className={cn(
-                    "text-xs font-bold uppercase tracking-tech",
+                    "text-xs font-bold",
                     step.state === "pending" ? "text-[var(--muted)]" : "text-[var(--ink)]"
                   )}
                 >
@@ -98,7 +98,7 @@ export function OrderTimeline({ steps, orientation = "vertical", className }: Or
               {step.description && (
                 <p className={cn("mt-1 text-xs text-[var(--muted)]", isHorizontal && "max-w-[18ch]")}>{step.description}</p>
               )}
-              {step.date && <time className="tnum mt-1 block text-[10px] text-[var(--text-faint)]">{formatDate(step.date)}</time>}
+              {step.date && <time className="tnum mt-1 block text-12 text-[var(--text-faint)]">{formatDate(step.date)}</time>}
             </div>
           </li>
         );

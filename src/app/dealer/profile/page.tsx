@@ -48,7 +48,7 @@ export default async function DealerProfilePage() {
             <div className="text-[var(--text-muted)] text-sm">{dealer.ownerName}</div>
             <div className="mt-2 inline-flex items-center gap-2">
               <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-              <span className="text-green-400 text-xs font-semibold uppercase tracking-widest">
+              <span className="text-green-400 text-xs font-semibold">
                 {dealer.status} Dealer
               </span>
             </div>
@@ -59,7 +59,7 @@ export default async function DealerProfilePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {fields.map((field) => (
             <div key={field.label}>
-              <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-1">{field.label}</div>
+              <div className="text-[var(--text-muted)] text-xs mb-1">{field.label}</div>
               <div className={`text-sm font-semibold ${
                 field.label === "Account Status"
                   ? field.value === "ACTIVE" ? "text-green-400" : "text-yellow-400"

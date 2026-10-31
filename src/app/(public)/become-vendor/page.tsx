@@ -46,7 +46,7 @@ export default function BecomeVendorPage() {
               </div>
 
               <Card pad="lg">
-                <p className="text-[var(--muted)] text-xs uppercase tracking-widest mb-3 font-bold">Categories we source</p>
+                <p className="text-[var(--muted)] text-xs mb-3 font-bold">Categories we source</p>
                 <div className="flex flex-wrap gap-2">
                   {categories.map((cat) => (
                     <span key={cat} className="text-xs border border-[var(--line)] px-3 py-1.5 text-[var(--muted)]">{cat}</span>

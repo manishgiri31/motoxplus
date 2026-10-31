@@ -62,7 +62,7 @@ export default async function PurchaseRequestsPage(
         </div>
         <Link
           href="/admin/procurement/requests/new"
-          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm text-sm transition-colors uppercase tracking-wider"
+          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill text-sm transition-colors"
         >
           <Plus size={16} />
           New Request
@@ -72,7 +72,7 @@ export default async function PurchaseRequestsPage(
       <div className="flex flex-wrap gap-2 mb-6">
         <Link
           href="/admin/procurement/requests"
-          className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${!searchParams.status ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+          className={`px-3 py-2 rounded-pill text-xs font-semibold uppercase transition-colors ${!searchParams.status ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
         >
           All
         </Link>
@@ -80,7 +80,7 @@ export default async function PurchaseRequestsPage(
           <Link
             key={s}
             href={`/admin/procurement/requests?status=${s}`}
-            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${searchParams.status === s ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+            className={`px-3 py-2 rounded-pill text-xs font-semibold uppercase transition-colors ${searchParams.status === s ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
           >
             {s}
           </Link>
@@ -102,10 +102,10 @@ export default async function PurchaseRequestsPage(
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap mb-2">
                     <span className="text-[var(--text-muted)] text-xs font-mono">{req.requestNumber}</span>
-                    <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-sm ${STATUS_COLORS[req.status]}`}>
+                    <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded-sm ${STATUS_COLORS[req.status]}`}>
                       {req.status}
                     </span>
-                    <span className={`text-xs font-semibold uppercase tracking-wider ${URGENCY_COLORS[req.urgency]}`}>
+                    <span className={`text-xs font-semibold ${URGENCY_COLORS[req.urgency]}`}>
                       {req.urgency === "CRITICAL" && <AlertTriangle size={12} className="inline mr-1" />}
                       {req.urgency}
                     </span>
@@ -127,7 +127,7 @@ export default async function PurchaseRequestsPage(
                   {req.status === "SUBMITTED" && <PRActions requestId={req.id} />}
                   <Link
                     href={`/admin/procurement/requests/${req.id}`}
-                    className="text-xs font-semibold text-[var(--text-muted)] hover:text-red-400 uppercase tracking-wider transition-colors"
+                    className="text-xs font-semibold text-[var(--text-muted)] hover:text-red-400 transition-colors"
                   >
                     View
                   </Link>

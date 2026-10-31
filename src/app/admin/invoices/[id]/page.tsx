@@ -53,7 +53,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
             <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight font-mono">
               {invoice.invoiceNumber}
             </h1>
-            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-sm ${paymentStatusColors[order.paymentStatus] ?? "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+            <span className={`text-12 font-bold uppercase px-2 py-1 rounded-sm ${paymentStatusColors[order.paymentStatus] ?? "bg-gray-900/20 text-[var(--text-muted)]"}`}>
               {order.paymentStatus}
             </span>
           </div>
@@ -64,7 +64,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
               href={invoice.pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-sm transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-pill transition-colors"
             >
               <Download className="w-4 h-4" />
               Download PDF
@@ -84,7 +84,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
         {/* Invoice meta */}
         <div className="grid grid-cols-2 gap-6 px-6 py-5 border-b border-[var(--border-color)]">
           <div>
-            <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Bill To</p>
+            <p className="text-[var(--text-muted)] text-xs mb-3">Bill To</p>
             {dealer ? (
               <>
                 <p className="text-[var(--text-primary)] font-bold text-sm">{dealer.companyName}</p>
@@ -109,7 +109,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
             )}
           </div>
           <div className="text-right">
-            <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Invoice Details</p>
+            <p className="text-[var(--text-muted)] text-xs mb-3">Invoice Details</p>
             <div className="space-y-1">
               <div>
                 <span className="text-[var(--text-muted)] text-xs">Invoice No: </span>
@@ -138,12 +138,12 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border-color)] bg-white/2">
-                <th className="px-6 py-3 text-left text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Item</th>
-                <th className="px-4 py-3 text-left text-[10px] text-[var(--text-muted)] uppercase tracking-widest hidden sm:table-cell">Part No.</th>
-                <th className="px-4 py-3 text-right text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Qty</th>
-                <th className="px-4 py-3 text-right text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Unit Price</th>
-                <th className="px-4 py-3 text-right text-[10px] text-[var(--text-muted)] uppercase tracking-widest hidden sm:table-cell">GST</th>
-                <th className="px-6 py-3 text-right text-[10px] text-[var(--text-muted)] uppercase tracking-widest">Total</th>
+                <th className="px-6 py-3 text-left text-12 text-[var(--text-muted)]">Item</th>
+                <th className="px-4 py-3 text-left text-12 text-[var(--text-muted)] hidden sm:table-cell">Part No.</th>
+                <th className="px-4 py-3 text-right text-12 text-[var(--text-muted)]">Qty</th>
+                <th className="px-4 py-3 text-right text-12 text-[var(--text-muted)]">Unit Price</th>
+                <th className="px-4 py-3 text-right text-12 text-[var(--text-muted)] hidden sm:table-cell">GST</th>
+                <th className="px-6 py-3 text-right text-12 text-[var(--text-muted)]">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -208,7 +208,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
             {/* Payment history */}
             {order.payments.length > 0 && (
               <div className="flex-1">
-                <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Payment History</p>
+                <p className="text-[var(--text-muted)] text-xs mb-3">Payment History</p>
                 <div className="space-y-2">
                   {order.payments.map((payment) => (
                     <div key={payment.id} className="flex items-center justify-between text-sm">
@@ -216,7 +216,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
                         <span className="text-[var(--text-secondary)]">{formatCurrency(payment.amount)}</span>
                         <span className="text-[var(--text-muted)] text-xs ml-2">{payment.paymentType} · {formatDate(payment.createdAt)}</span>
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm ${paymentStatusColors[payment.status] ?? "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                      <span className={`text-12 font-bold uppercase px-2 py-0.5 rounded-sm ${paymentStatusColors[payment.status] ?? "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                         {payment.status}
                       </span>
                     </div>
@@ -227,7 +227,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
 
             {/* Balance */}
             <div className="sm:text-right">
-              <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Balance</p>
+              <p className="text-[var(--text-muted)] text-xs mb-3">Balance</p>
               <div className="space-y-1">
                 <div className="flex sm:justify-end gap-6 text-sm">
                   <span className="text-[var(--text-muted)]">Paid</span>

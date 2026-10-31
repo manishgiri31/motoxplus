@@ -12,9 +12,9 @@ interface Props {
 }
 
 const INPUT = "w-full themed-input border focus:border-amber-500/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors";
-const LABEL = "text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2";
+const LABEL = "text-[var(--text-muted)] text-xs block mb-2";
 const SECTION = "glass-dark border border-[var(--border-color)] rounded-xl p-6 space-y-4";
-const SECTION_TITLE = "text-[var(--text-secondary)] text-xs uppercase tracking-widest font-bold mb-4 flex items-center gap-2";
+const SECTION_TITLE = "text-[var(--text-secondary)] text-xs font-bold mb-4 flex items-center gap-2";
 
 const WARRANTY_OPTIONS = ["No Warranty", "3 Months", "6 Months", "12 Months"];
 const GST_OPTIONS = [0, 5, 12, 18, 28];
@@ -162,14 +162,14 @@ export function VendorProductForm({ categories, defaultMarkup }: Props) {
             <div className="themed-input border rounded-xl px-4 py-3 text-sm text-amber-400 font-bold bg-amber-900/10">
               +{defaultMarkup}%
             </div>
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">Set by MotoXPlus</p>
+            <p className="text-[var(--text-muted)] text-12 mt-1">Set by MotoXPlus</p>
           </div>
           <div>
             <label className={LABEL}>Base Dealer Price (excl. GST)</label>
             <div className="themed-input border rounded-xl px-4 py-3 text-sm text-[var(--text-primary)] font-black">
               {computedPrice ? `₹${parseFloat(computedPrice).toLocaleString("en-IN")}` : "—"}
             </div>
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">Before GST is added</p>
+            <p className="text-[var(--text-muted)] text-12 mt-1">Before GST is added</p>
           </div>
           <div>
             <label className={LABEL}>Dealer Pays (incl. GST)</label>
@@ -178,7 +178,7 @@ export function VendorProductForm({ categories, defaultMarkup }: Props) {
                 ? `₹${(parseFloat(computedPrice) * (1 + parseFloat(form.gstRate) / 100)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`
                 : "—"}
             </div>
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">What dealer actually pays</p>
+            <p className="text-[var(--text-muted)] text-12 mt-1">What dealer actually pays</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -278,7 +278,7 @@ export function VendorProductForm({ categories, defaultMarkup }: Props) {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+          className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm"
         >
           {status === "loading" ? "Submitting..." : "Submit Product for Review"}
         </button>

@@ -82,7 +82,7 @@ export function TrackingTimeline({
             )}
           </div>
           <div className="text-right flex-shrink-0">
-            <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider">Waybill</div>
+            <div className="text-[var(--text-muted)] text-xs">Waybill</div>
             <div className="text-[var(--text-primary)] font-mono font-bold text-sm">{waybill}</div>
             {trackingUrl && (
               <a
@@ -111,7 +111,7 @@ export function TrackingTimeline({
                     }`}>
                       {cfg.icon}
                     </div>
-                    <span className="text-[10px] text-center leading-tight max-w-[60px] hidden sm:block">{cfg.label}</span>
+                    <span className="text-12 text-center leading-tight max-w-[60px] hidden sm:block">{cfg.label}</span>
                   </div>
                   {idx < STEPS.length - 1 && (
                     <div className={`h-0.5 flex-1 mx-1 transition-colors ${
@@ -128,7 +128,7 @@ export function TrackingTimeline({
       {/* Event timeline */}
       {events.length > 0 && (
         <div className="glass border border-[var(--border-color)] rounded-sm p-5">
-          <h3 className="text-[var(--text-primary)] font-bold mb-4 text-sm uppercase tracking-wider">
+          <h3 className="text-[var(--text-primary)] font-bold mb-4 text-sm">
             Tracking History
           </h3>
           <div className="space-y-0">

@@ -346,7 +346,7 @@ export function VehicleDetailClient({
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--paper)] via-transparent to-transparent" />
         </div>
         <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-16 relative z-10 pb-8">
-          <nav aria-label="Breadcrumb" className="flex items-center flex-wrap gap-1.5 text-xs uppercase tracking-widest font-semibold mb-4">
+          <nav aria-label="Breadcrumb" className="flex items-center flex-wrap gap-1.5 text-xs font-semibold mb-4">
             <Link href="/" className="text-[var(--muted)] hover:text-[var(--red)] transition-colors">
               Home
             </Link>
@@ -372,7 +372,7 @@ export function VehicleDetailClient({
                 unoptimized
               />
             )}
-            <span className="text-[var(--muted)] text-xs uppercase tracking-widest font-semibold">
+            <span className="text-[var(--muted)] text-xs font-semibold">
               {vehicle.manufacturer.name}
             </span>
           </div>
@@ -403,7 +403,7 @@ export function VehicleDetailClient({
           <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-px bg-[var(--line)] border border-[var(--line)]">
             {specs.map((s) => (
               <div key={s.label} className="bg-[var(--card)] p-4">
-                <div className="text-[var(--muted)] text-[10px] uppercase tracking-widest mb-1">{s.label}</div>
+                <div className="text-[var(--muted)] text-12 mb-1">{s.label}</div>
                 <div className="tnum text-[var(--ink)] font-bold text-lg">{s.value}</div>
               </div>
             ))}
@@ -439,7 +439,7 @@ export function VehicleDetailClient({
                     {c.name}
                   </span>
                   {c.oemColor?.paintCode && (
-                    <span className="text-[9px] text-[var(--muted)] font-mono">{c.oemColor.paintCode}</span>
+                    <span className="text-12 text-[var(--muted)] font-mono">{c.oemColor.paintCode}</span>
                   )}
                 </button>
               ))}
@@ -595,7 +595,7 @@ export function VehicleDetailClient({
               {compatibleCount > 0 && (
                 <Link
                   href={`/products?vehicle=${vehicle.slug}${selection.variantSlug ? `&variant=${selection.variantSlug}` : ""}${selection.sectionSlug ? `&section=${selection.sectionSlug}` : ""}`}
-                  className="group flex items-center gap-2 text-[var(--red)] hover:text-[var(--red-hover)] font-semibold text-sm uppercase tracking-wider transition-colors"
+                  className="group flex items-center gap-2 text-[var(--red)] hover:text-[var(--red-hover)] font-semibold text-sm transition-colors"
                 >
                   View all {compatibleCount} compatible parts
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -634,7 +634,7 @@ export function VehicleDetailClient({
                         <div className="text-5xl text-[var(--line)] font-black">◈</div>
                       )}
                       <div className="absolute top-3 left-3">
-                        <span className="bg-[var(--card)]/95 border border-[var(--line)] text-[var(--ink)] text-[10px] font-bold uppercase tracking-widest px-2 py-1">
+                        <span className="bg-[var(--card)]/95 border border-[var(--line)] text-[var(--ink)] text-12 font-bold px-2 py-1">
                           {p.category.name}
                         </span>
                       </div>
@@ -645,7 +645,7 @@ export function VehicleDetailClient({
                       </h3>
                       {badge && (
                         <div
-                          className={`inline-flex items-center gap-1 mb-2 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider ${badge.className}`}
+                          className={`inline-flex items-center gap-1 mb-2 px-2 py-0.5 rounded-full border text-12 font-bold uppercase ${badge.className}`}
                         >
                           <badge.Icon size={10} />
                           {badge.label}
@@ -654,7 +654,7 @@ export function VehicleDetailClient({
                       <div className="pt-3 border-t border-[var(--line)] flex items-end justify-between">
                         {isCustomer ? (
                           <div>
-                            <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">MRP</div>
+                            <div className="text-[var(--muted)] text-12 font-bold mb-0.5">MRP</div>
                             {p.mrp ? (
                               <div className="tnum text-[var(--red)] font-black text-base leading-tight">
                                 ₹{p.mrp.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
@@ -665,12 +665,12 @@ export function VehicleDetailClient({
                           </div>
                         ) : (
                           <div>
-                            <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">Dealer Price</div>
+                            <div className="text-[var(--muted)] text-12 font-bold mb-0.5">Dealer Price</div>
                             <div className="tnum text-[var(--red)] font-black text-base leading-tight">
                               ₹{p.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                             </div>
                             {p.mrp && p.mrp > p.price && (
-                              <span className="tnum text-[var(--muted)] text-[10px] line-through">
+                              <span className="tnum text-[var(--muted)] text-12 line-through">
                                 MRP ₹{p.mrp.toLocaleString("en-IN")}
                               </span>
                             )}
@@ -679,7 +679,7 @@ export function VehicleDetailClient({
                         {!isDealer && !isCustomer && (
                           <div className="flex items-center gap-1.5 border border-[var(--red)]/20 rounded-sm px-2 py-1">
                             <Lock size={9} className="text-[var(--red)]" />
-                            <span className="text-[var(--red)] text-[9px] font-bold">Login</span>
+                            <span className="text-[var(--red)] text-12 font-bold">Login</span>
                           </div>
                         )}
                       </div>
@@ -755,7 +755,7 @@ export function VehicleDetailClient({
                       ))}
                     </div>
                     {r.verifiedPurchase && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-full px-2 py-0.5">
+                      <span className="flex items-center gap-1 text-12 font-bold uppercase text-[var(--sig-ok-fg)] bg-[var(--sig-ok-bg)] border border-[var(--sig-ok-bd)] rounded-full px-2 py-0.5">
                         <CheckCircle2 size={10} /> Verified
                       </span>
                     )}
@@ -826,7 +826,7 @@ export function VehicleDetailClient({
                     <VehicleImage src={v.heroImage} alt={v.name} logId={v.slug} />
                   </div>
                   <div className="p-3">
-                    <div className="text-[var(--muted)] text-[10px] uppercase tracking-widest font-semibold">{v.manufacturer.name}</div>
+                    <div className="text-[var(--muted)] text-12 font-semibold">{v.manufacturer.name}</div>
                     <h3 className="text-[var(--ink)] font-bold text-sm group-hover:text-[var(--red)] transition-colors truncate">{v.name}</h3>
                   </div>
                 </Link>
@@ -848,7 +848,7 @@ export function VehicleDetailClient({
               href={`https://wa.me/${(process.env.NEXT_PUBLIC_COMPANY_WHATSAPP || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I need help finding parts for my ${vehicle.name}`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[var(--sig-ok-fg)] hover:opacity-90 text-white font-bold px-6 py-3 rounded-sm transition-opacity text-sm uppercase tracking-wider"
+              className="inline-flex items-center gap-2 bg-[var(--sig-ok-fg)] hover:opacity-90 text-white font-bold px-6 py-3 rounded-sm transition-opacity text-sm"
             >
               <MessageCircle size={16} /> WhatsApp Us
             </a>
@@ -882,9 +882,9 @@ function LinkedProductCard({ product, isDealer, isCustomer }: { product: LinkedP
         )}
       </div>
       <div className="p-3.5">
-        <div className="text-[var(--muted)] text-[10px] uppercase tracking-widest mb-1 font-mono opacity-70">{product.partNumber}</div>
+        <div className="text-[var(--muted)] text-12 mb-1 font-mono opacity-70">{product.partNumber}</div>
         <h3 className="text-[var(--ink)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-[var(--red)] transition-colors">{product.name}</h3>
-        <div className="text-[var(--muted)] text-[9px] uppercase tracking-widest font-bold mb-0.5">{isCustomer ? "MRP" : "Dealer Price"}</div>
+        <div className="text-[var(--muted)] text-12 font-bold mb-0.5">{isCustomer ? "MRP" : "Dealer Price"}</div>
         <div className="flex items-center justify-between">
           {isCustomer ? (
             product.mrp ? (
@@ -898,7 +898,7 @@ function LinkedProductCard({ product, isDealer, isCustomer }: { product: LinkedP
           {!isDealer && !isCustomer && (
             <div className="flex items-center gap-1 border border-[var(--red)]/20 rounded-sm px-2 py-0.5">
               <Lock size={8} className="text-[var(--red)]" />
-              <span className="text-[var(--red)] text-[9px] font-bold">Login</span>
+              <span className="text-[var(--red)] text-12 font-bold">Login</span>
             </div>
           )}
         </div>

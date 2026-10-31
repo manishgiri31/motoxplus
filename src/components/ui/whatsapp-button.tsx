@@ -18,7 +18,7 @@ export function WhatsAppButton() {
       >
         <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-sm px-4 py-2 shadow-xl whitespace-nowrap">
           <p className="text-[var(--text-primary)] text-xs font-semibold">Chat with us on WhatsApp</p>
-          <p className="text-[var(--text-muted)] text-[10px]">Typically replies within minutes</p>
+          <p className="text-[var(--text-muted)] text-12">Typically replies within minutes</p>
         </div>
       </div>
 

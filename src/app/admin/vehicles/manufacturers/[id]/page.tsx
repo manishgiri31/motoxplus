@@ -12,7 +12,7 @@ export default async function ManufacturerDetailPage(props: { params: Promise<{ 
   return (
     <div className="max-w-4xl">
       <div className="mb-8">
-        <Link href="/admin/vehicles/manufacturers" className="text-[var(--text-muted)] hover:text-red-500 text-xs uppercase tracking-widest font-semibold flex items-center gap-1.5 mb-3">
+        <Link href="/admin/vehicles/manufacturers" className="text-[var(--text-muted)] hover:text-red-500 text-xs font-semibold flex items-center gap-1.5 mb-3">
           <ArrowLeft size={12} /> Back to Manufacturers
         </Link>
         <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">{manufacturer.name}</h1>

@@ -429,7 +429,7 @@ export default function CheckoutPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              <label className="text-[var(--text-muted)] text-xs block mb-2">
                 Full Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -444,7 +444,7 @@ export default function CheckoutPage() {
               </div>
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              <label className="text-[var(--text-muted)] text-xs block mb-2">
                 Phone <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -461,7 +461,7 @@ export default function CheckoutPage() {
           </div>
 
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               Street Address <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -478,7 +478,7 @@ export default function CheckoutPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              <label className="text-[var(--text-muted)] text-xs block mb-2">
                 City <span className="text-red-500">*</span>
               </label>
               <input
@@ -490,7 +490,7 @@ export default function CheckoutPage() {
               />
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+              <label className="text-[var(--text-muted)] text-xs block mb-2">
                 State <span className="text-red-500">*</span>
               </label>
               <input
@@ -525,7 +525,7 @@ export default function CheckoutPage() {
           ))}
           {cart.schemeItems.length > 0 && (
             <div className="pt-2 mt-2 border-t border-dashed border-[var(--border-color)] space-y-2">
-              <div className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">GST Benefit — Free Items</div>
+              <div className="text-amber-400 text-12 font-bold">GST Benefit — Free Items</div>
               {cart.schemeItems.map((item: any, i: number) => (
                 <div key={i} className="flex justify-between text-sm">
                   <span className="text-[var(--text-secondary)]">
@@ -615,25 +615,25 @@ export default function CheckoutPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-[var(--text-primary)] font-semibold text-sm">{option.title}</span>
                     {option.badge && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-red-900/20 text-red-400">
+                      <span className="text-12 font-bold uppercase px-1.5 py-0.5 rounded-sm bg-red-900/20 text-red-400">
                         {option.badge}
                       </span>
                     )}
                   </div>
                   <div className="text-[var(--text-muted)] text-xs">{option.subtitle}</div>
                   {option.id === "ADVANCE_20" && (
-                    <div className="text-[var(--text-muted)] text-[11px] mt-0.5">
+                    <div className="text-[var(--text-muted)] text-12 mt-0.5">
                       Then <span className="text-[var(--text-secondary)] font-medium">{formatCurrency(balanceAfterAdvance)}</span> on delivery
                     </div>
                   )}
-                  <div className={`flex items-center gap-1 mt-1 text-[11px] font-semibold ${option.deliveryTone === "fast" ? "text-green-500" : "text-amber-500"}`}>
+                  <div className={`flex items-center gap-1 mt-1 text-12 font-semibold ${option.deliveryTone === "fast" ? "text-green-500" : "text-amber-500"}`}>
                     {option.deliveryTone === "fast" ? <Zap size={11} /> : <Clock size={11} />}
                     {option.deliveryNote}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="text-[var(--text-primary)] font-black">{formatCurrency(amount)}</div>
-                  <div className="text-[var(--text-muted)] text-[10px]">pay now</div>
+                  <div className="text-[var(--text-muted)] text-12">pay now</div>
                 </div>
               </button>
             );
@@ -642,15 +642,15 @@ export default function CheckoutPage() {
 
         {RAZORPAY_ENABLED && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-color)] pt-4">
-            <div className="flex items-center gap-1.5 text-[var(--text-muted)] text-[11px]">
+            <div className="flex items-center gap-1.5 text-[var(--text-muted)] text-12">
               <ShieldCheck size={14} className="text-green-500" />
               <span>Secured by Razorpay · PCI-DSS compliant, 256-bit encryption</span>
             </div>
             <div className="flex items-center gap-3 text-[var(--text-muted)]">
-              <span className="flex items-center gap-1 text-[10px]"><CreditCard size={13} /> Cards</span>
-              <span className="flex items-center gap-1 text-[10px]"><Smartphone size={13} /> UPI</span>
-              <span className="flex items-center gap-1 text-[10px]"><Building2 size={13} /> Netbanking</span>
-              <span className="flex items-center gap-1 text-[10px]"><Wallet size={13} /> Wallets</span>
+              <span className="flex items-center gap-1 text-12"><CreditCard size={13} /> Cards</span>
+              <span className="flex items-center gap-1 text-12"><Smartphone size={13} /> UPI</span>
+              <span className="flex items-center gap-1 text-12"><Building2 size={13} /> Netbanking</span>
+              <span className="flex items-center gap-1 text-12"><Wallet size={13} /> Wallets</span>
             </div>
           </div>
         )}
@@ -696,7 +696,7 @@ export default function CheckoutPage() {
 
       {/* Notes */}
       <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
-        <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+        <label className="text-[var(--text-muted)] text-xs block mb-2">
           Order Notes <span className="normal-case text-[var(--text-muted)]">(Optional)</span>
         </label>
         <textarea
@@ -712,7 +712,7 @@ export default function CheckoutPage() {
       <div className="glass border border-[var(--border-color)] rounded-sm p-6">
         <div className="flex justify-between items-center mb-5">
           <div>
-            <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-1">
+            <div className="text-[var(--text-muted)] text-xs mb-1">
               Amount to Pay Now
             </div>
             <div className="text-[var(--text-primary)] font-black text-2xl">{formatCurrency(amountDue)}</div>
@@ -755,7 +755,7 @@ export default function CheckoutPage() {
         <button
           onClick={handlePlaceOrder}
           disabled={loading || !isDeliveryComplete || !termsAccepted}
-          className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
+          className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-sm transition-colors text-sm"
         >
           {loading ? (
             <><Spinner size={16} />Processing...</>

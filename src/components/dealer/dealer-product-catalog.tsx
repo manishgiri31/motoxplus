@@ -123,7 +123,7 @@ export function DealerProductCatalog({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => handleCategoryFilter(null)}
-            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${!currentCategory ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+            className={`px-3 py-2 rounded-pill text-xs font-semibold uppercase transition-colors ${!currentCategory ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
           >
             All
           </button>
@@ -131,7 +131,7 @@ export function DealerProductCatalog({
             <button
               key={cat.id}
               onClick={() => handleCategoryFilter(cat.slug)}
-              className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${currentCategory === cat.slug ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+              className={`px-3 py-2 rounded-pill text-xs font-semibold uppercase transition-colors ${currentCategory === cat.slug ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
             >
               {cat.name}
             </button>
@@ -170,7 +170,7 @@ export function DealerProductCatalog({
                   </div>
                 )}
                 {hasVariants && (
-                  <div className="absolute top-2 right-2 bg-[var(--accent)] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                  <div className="absolute top-2 right-2 bg-[var(--accent)] text-white text-12 font-bold px-2 py-0.5 rounded-full">
                     {product._count!.variants} options
                   </div>
                 )}
@@ -178,7 +178,7 @@ export function DealerProductCatalog({
             </Link>
 
             <div className="p-3.5 flex flex-col flex-1">
-              <div className="text-[var(--text-muted)] text-[10px] font-mono mb-1 truncate">
+              <div className="text-[var(--text-muted)] text-12 font-mono mb-1 truncate">
                 {product.partNumber}{product.oemNumber ? ` • OEM: ${product.oemNumber}` : ""}
               </div>
               <Link href={`/products/${product.id}`}>
@@ -186,26 +186,26 @@ export function DealerProductCatalog({
                   {product.name}
                 </h3>
               </Link>
-              <div className="text-[var(--text-muted)] text-[11px] mb-2.5">{product.category.name}</div>
+              <div className="text-[var(--text-muted)] text-12 mb-2.5">{product.category.name}</div>
 
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="min-w-0">
-                  <div className="text-[var(--text-muted)] text-[9px] uppercase tracking-wider mb-0.5">Wholesale Price</div>
+                  <div className="text-[var(--text-muted)] text-12 mb-0.5">Wholesale Price</div>
                   <div className="text-red-500 font-black text-base leading-tight">{formatCurrency(product.price)}</div>
                   {product.mrp && (
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <span className="text-green-600 text-[9px] font-bold bg-green-500/10 px-1.5 py-0.5 rounded-full">
+                      <span className="text-green-600 text-12 font-bold bg-green-500/10 px-1.5 py-0.5 rounded-full">
                         70% OFF
                       </span>
-                      <span className="text-[var(--text-muted)] text-[9px]">
+                      <span className="text-[var(--text-muted)] text-12">
                         MRP <span className="line-through">₹{product.mrp.toLocaleString("en-IN")}</span>
                       </span>
                     </div>
                   )}
-                  <div className="text-[var(--text-muted)] text-[9px] mt-0.5">+ {product.gstRate}% GST • MOQ: {product.moq}</div>
+                  <div className="text-[var(--text-muted)] text-12 mt-0.5">+ {product.gstRate}% GST • MOQ: {product.moq}</div>
                 </div>
                 {!hasVariants && (
-                  <div className={`flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-sm whitespace-nowrap ${stockBadgeCls}`}>
+                  <div className={`flex-shrink-0 text-12 font-semibold px-1.5 py-0.5 rounded-sm whitespace-nowrap ${stockBadgeCls}`}>
                     {stockLabel}
                   </div>
                 )}
@@ -217,7 +217,7 @@ export function DealerProductCatalog({
                 {hasVariants ? (
                   <Link
                     href={`/products/${product.id}`}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-sm text-xs font-bold uppercase tracking-wider bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-sm text-xs font-bold bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white transition-colors"
                   >
                     Select Model &amp; Color
                     <ChevronRight size={13} />
@@ -232,7 +232,7 @@ export function DealerProductCatalog({
                     </div>
                     <button
                       disabled
-                      className="flex-1 flex items-center justify-center py-2 rounded-sm text-[11px] font-bold uppercase tracking-wider bg-red-500/10 text-red-500/80 border border-red-500/20 cursor-not-allowed"
+                      className="flex-1 flex items-center justify-center py-2 rounded-sm text-12 font-bold bg-red-500/10 text-red-500/80 border border-red-500/20 cursor-not-allowed"
                     >
                       Out of Stock
                     </button>
@@ -258,7 +258,7 @@ export function DealerProductCatalog({
                   <button
                     onClick={() => handleAddToCart(product)}
                     disabled={addingToCart === product.id}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-sm text-[11px] font-bold uppercase tracking-wider transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-sm text-12 font-bold transition-all ${
                       addedIds.includes(product.id)
                         ? "bg-green-700 text-white"
                         : "bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white disabled:opacity-50"

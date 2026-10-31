@@ -10,7 +10,7 @@ import type { Tone } from "@/lib/status";
  * value always renders the same tone/label/icon everywhere in the app.
  */
 const badgeVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-sm border px-2 py-[3px] text-[10px] font-semibold uppercase tracking-tech",
+  "inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-[3px] text-12 font-semibold",
   {
     variants: {
       tone: {

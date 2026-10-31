@@ -67,19 +67,19 @@ export default async function VendorPurchaseOrdersPage() {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-eyebrow mb-0.5">Value</div>
+                      <div className="text-[var(--text-muted)] text-12 mb-0.5">Value</div>
                       <div className="text-[var(--text-primary)] font-bold text-sm"><Money amount={po.grandTotal} /></div>
                     </div>
                     <div>
-                      <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-eyebrow mb-0.5">Items</div>
+                      <div className="text-[var(--text-muted)] text-12 mb-0.5">Items</div>
                       <div className="text-[var(--text-primary)] font-bold text-sm"><Numeral value={po.items.length} /></div>
                     </div>
                     <div>
-                      <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-eyebrow mb-0.5">Deliver By</div>
+                      <div className="text-[var(--text-muted)] text-12 mb-0.5">Deliver By</div>
                       <div className="text-[var(--text-primary)] font-bold text-sm">{formatDate(po.deliveryDate)}</div>
                     </div>
                     <div>
-                      <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-eyebrow mb-0.5">Received</div>
+                      <div className="text-[var(--text-muted)] text-12 mb-0.5">Received</div>
                       <div className="text-[var(--text-primary)] font-bold text-sm">{formatDate(po.createdAt)}</div>
                     </div>
                   </div>
@@ -113,7 +113,7 @@ export default async function VendorPurchaseOrdersPage() {
 
               {/* Line items collapsible */}
               <details className="mt-4">
-                <summary className="text-[var(--text-muted)] text-xs cursor-pointer hover:text-[var(--text-primary)] transition-colors uppercase tracking-eyebrow">
+                <summary className="text-[var(--text-muted)] text-xs cursor-pointer hover:text-[var(--text-primary)] transition-colors">
                   View {po.items.length} item{po.items.length !== 1 ? "s" : ""}
                 </summary>
                 <SpecTable

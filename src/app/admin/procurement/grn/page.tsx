@@ -45,12 +45,12 @@ export default async function GRNPage(
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border-color)]">
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">GRN No.</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">PO</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Vendor</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Items</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Quality</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Received</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">GRN No.</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">PO</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Vendor</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Items</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Quality</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Received</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -77,7 +77,7 @@ export default async function GRNPage(
                     <span className="text-[var(--text-primary)] font-bold text-sm">{grn.items.length}</span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-sm ${
                       grn.qualityStatus === "ACCEPTED" ? "bg-green-900/20 text-green-400" :
                       grn.qualityStatus === "REJECTED" ? "bg-red-900/20 text-red-400" :
                       "bg-yellow-900/20 text-yellow-400"

@@ -83,7 +83,7 @@ export default async function AdminProductsPage(
           </Link>
           <Link
             href="/admin/products/new"
-            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-xl transition-colors text-sm uppercase tracking-wider"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill transition-colors text-sm"
           >
             <Plus size={16} />
             Add Product
@@ -118,10 +118,10 @@ export default async function AdminProductsPage(
 
       {/* Vendor filter tabs */}
       <div className="flex gap-2 mb-4">
-        <Link href={`/admin/products?${new URLSearchParams({ ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${!searchParams.vendor ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>All</Link>
-        <Link href={`/admin/products?${new URLSearchParams({ vendor: "all", ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "all" ? "bg-amber-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>Vendor Products</Link>
-        <Link href={`/admin/products?${new URLSearchParams({ vendor: "pending", ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${searchParams.vendor === "pending" ? "bg-yellow-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>
-          Pending Review {pendingVendorCount > 0 && <span className="ml-1 bg-yellow-500 text-black rounded-full px-1.5 text-[9px]">{pendingVendorCount}</span>}
+        <Link href={`/admin/products?${new URLSearchParams({ ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-pill text-xs font-normal uppercase transition-colors ${!searchParams.vendor ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>All</Link>
+        <Link href={`/admin/products?${new URLSearchParams({ vendor: "all", ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors ${searchParams.vendor === "all" ? "bg-amber-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>Vendor Products</Link>
+        <Link href={`/admin/products?${new URLSearchParams({ vendor: "pending", ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`} className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors ${searchParams.vendor === "pending" ? "bg-yellow-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}>
+          Pending Review {pendingVendorCount > 0 && <span className="ml-1 bg-yellow-500 text-black rounded-full px-1.5 text-12">{pendingVendorCount}</span>}
         </Link>
       </div>
 
@@ -129,7 +129,7 @@ export default async function AdminProductsPage(
       <div className="flex flex-wrap gap-2 mb-4">
         <Link
           href={`/admin/products?${new URLSearchParams({ ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
-          className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${!searchParams.category ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+          className={`px-3 py-2 rounded-pill text-xs font-semibold uppercase transition-colors ${!searchParams.category ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
         >
           All
         </Link>
@@ -137,7 +137,7 @@ export default async function AdminProductsPage(
           <Link
             key={cat.id}
             href={`/admin/products?${new URLSearchParams({ category: cat.id, ...(searchParams.vendor && { vendor: searchParams.vendor }), ...(search && { search }), ...(sortKey !== "newest" && { sort: sortKey }) }).toString()}`}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${searchParams.category === cat.id ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+            className={`px-3 py-2 rounded-pill text-xs font-semibold uppercase transition-colors ${searchParams.category === cat.id ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
           >
             {cat.name}
           </Link>
@@ -146,7 +146,7 @@ export default async function AdminProductsPage(
 
       {/* Sort selector */}
       <div className="flex items-center gap-2 mb-6">
-        <span className="text-[var(--text-muted)] text-xs uppercase tracking-wider font-semibold">Sort:</span>
+        <span className="text-[var(--text-muted)] text-xs font-semibold">Sort:</span>
         {SORT_OPTIONS.map((opt) => (
           <Link
             key={opt.value}

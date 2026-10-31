@@ -77,7 +77,7 @@ export function ProductShowcase({ product, theme = "light", reverse, className }
               <Hatch className="opacity-50" />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--text-faint)]">
                 <PackageX size={22} aria-hidden />
-                <span className="text-[10px] font-semibold uppercase tracking-eyebrow">Image Pending</span>
+                <span className="text-12 font-semibold">Image Pending</span>
               </div>
             </>
           )}
@@ -91,7 +91,7 @@ export function ProductShowcase({ product, theme = "light", reverse, className }
       <Reveal delay={0.1} className={reverse ? "lg:order-1" : undefined}>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           {product.category && (
-            <span className="text-[10px] font-semibold uppercase tracking-eyebrow text-[var(--muted)]">
+            <span className="text-12 font-semibold text-[var(--muted)]">
               {product.category}
             </span>
           )}

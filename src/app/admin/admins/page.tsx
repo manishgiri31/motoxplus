@@ -41,11 +41,11 @@ export default async function AdminAdminsPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border-color)]">
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Name</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Email</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Level</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Added</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Actions</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Name</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Email</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Level</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Added</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -57,7 +57,7 @@ export default async function AdminAdminsPage() {
                     <div className="text-[var(--text-primary)] font-semibold text-sm">
                       {admin.user.name || "—"}
                       {isSelf && (
-                        <span className="ml-2 text-[10px] text-red-500 font-bold uppercase tracking-widest">You</span>
+                        <span className="ml-2 text-12 text-red-500 font-bold">You</span>
                       )}
                     </div>
                   </td>
@@ -65,7 +65,7 @@ export default async function AdminAdminsPage() {
                     <span className="text-[var(--text-muted)] text-xs">{admin.user.email}</span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-sm ${
                       admin.isSuperAdmin
                         ? "bg-red-900/30 text-red-400"
                         : "bg-blue-900/20 text-blue-400"
@@ -105,9 +105,9 @@ export default async function AdminAdminsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--border-color)]">
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Name</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Email</th>
-                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Action</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Name</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Email</th>
+                <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">

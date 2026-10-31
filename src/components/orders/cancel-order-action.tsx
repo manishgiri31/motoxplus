@@ -185,7 +185,7 @@ export function CancelOrderAction({ orderId, allowWaive = false }: { orderId: st
 
               <div className="space-y-3 mb-5">
                 <div>
-                  <label className="text-[var(--muted)] text-xs uppercase tracking-wider block mb-1.5">Reason</label>
+                  <label className="text-[var(--muted)] text-xs block mb-1.5">Reason</label>
                   <select
                     value={reasonCode}
                     onChange={(e) => setReasonCode(e.target.value)}

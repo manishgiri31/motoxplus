@@ -36,7 +36,7 @@ export default async function VendorProductsPage() {
         {vendor.status === "APPROVED" && (
           <Link
             href="/vendor/products/new"
-            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-5 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-5 py-3 rounded-xl transition-colors text-sm"
           >
             <Plus size={16} />
             Submit Product
@@ -68,7 +68,7 @@ export default async function VendorProductsPage() {
           {vendor.status === "APPROVED" && (
             <Link
               href="/vendor/products/new"
-              className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+              className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm"
             >
               <Plus size={16} />
               Submit First Product
@@ -77,7 +77,7 @@ export default async function VendorProductsPage() {
         </div>
       ) : (
         <div className="glass border border-[var(--border-color)] rounded-2xl overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-0 text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-bold px-6 py-3 border-b border-[var(--border-color)]">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-0 text-12 text-[var(--text-muted)] font-bold px-6 py-3 border-b border-[var(--border-color)]">
             <span>Product</span>
             <span className="text-right pr-6">Cost Price</span>
             <span className="text-right pr-6">Markup</span>
@@ -92,10 +92,10 @@ export default async function VendorProductsPage() {
               <div>
                 <div className="text-[var(--text-primary)] font-semibold text-sm">{product.name}</div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[var(--text-muted)] text-[10px] font-mono">{product.partNumber}</span>
-                  <span className="text-amber-500/60 text-[10px]">·</span>
-                  <span className="text-[var(--text-muted)] text-[10px]">{product.category.name}</span>
-                  <span className="text-[var(--text-muted)] text-[10px]">· Added {formatDate(product.createdAt)}</span>
+                  <span className="text-[var(--text-muted)] text-12 font-mono">{product.partNumber}</span>
+                  <span className="text-amber-500/60 text-12">·</span>
+                  <span className="text-[var(--text-muted)] text-12">{product.category.name}</span>
+                  <span className="text-[var(--text-muted)] text-12">· Added {formatDate(product.createdAt)}</span>
                 </div>
               </div>
               <div className="text-right pr-6">
@@ -123,7 +123,7 @@ export default async function VendorProductsPage() {
       )}
 
       <div className="mt-6 glass border border-[var(--border-color)] rounded-xl p-4">
-        <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold mb-3">How it works</div>
+        <div className="text-[var(--text-muted)] text-xs font-bold mb-3">How it works</div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { step: "1", title: "You Submit", desc: "Provide product details and your cost price" },

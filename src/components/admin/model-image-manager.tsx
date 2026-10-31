@@ -220,11 +220,11 @@ export function ModelImageManager({ productId }: { productId: string }) {
                             {m.vehicleModel}
                           </span>
                           {badge && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${badge.cls}`}>
+                            <span className={`text-12 font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${badge.cls}`}>
                               {badge.label}
                             </span>
                           )}
-                          <span className="text-[var(--text-muted)] text-[10px] flex-shrink-0">
+                          <span className="text-[var(--text-muted)] text-12 flex-shrink-0">
                             {m.variantCount} color{m.variantCount !== 1 ? "s" : ""}
                           </span>
                         </div>

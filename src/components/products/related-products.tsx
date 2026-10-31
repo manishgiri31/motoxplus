@@ -62,7 +62,7 @@ export async function RelatedProducts({ productId, categoryId, categoryName, veh
         {vehicleContext && (
           <Link
             href={`/products?vehicle=${vehicleContext.slug}`}
-            className="text-[var(--red)] hover:text-[var(--red-hover)] text-xs font-bold uppercase tracking-wider transition-colors"
+            className="text-[var(--red)] hover:text-[var(--red-hover)] text-xs font-bold transition-colors"
           >
             View all →
           </Link>
@@ -87,7 +87,7 @@ export async function RelatedProducts({ productId, categoryId, categoryName, veh
                 )}
               </div>
               <div className="p-4">
-                <div className="text-[var(--muted)] text-[10px] font-mono mb-1">{p.partNumber}</div>
+                <div className="text-[var(--muted)] text-12 font-mono mb-1">{p.partNumber}</div>
                 <h4 className="text-[var(--ink)] text-sm font-bold line-clamp-2 group-hover:text-[var(--red)] transition-colors">
                   {p.name}
                 </h4>

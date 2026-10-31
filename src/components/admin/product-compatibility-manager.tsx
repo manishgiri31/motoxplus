@@ -171,7 +171,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
         {!showForm && (
           <button
             onClick={openAdd}
-            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold px-4 py-2 rounded-pill transition-colors"
           >
             <Plus size={14} /> Add Fitment
           </button>
@@ -184,7 +184,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">
+              <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">
                 Vehicle <span className="text-red-500">*</span>
               </label>
               <select
@@ -201,7 +201,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
               </select>
             </div>
             <div>
-              <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-1.5">Section</label>
+              <label className="block text-[var(--text-muted)] text-xs font-semibold mb-1.5">Section</label>
               <select
                 value={form.sectionId}
                 onChange={(e) => set("sectionId", e.target.value)}
@@ -292,7 +292,7 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
           </div>
 
           <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-pill transition-colors">
               <Check size={14} /> {saving ? "Saving..." : editId ? "Update" : "Add Fitment"}
             </button>
             <button onClick={() => { setShowForm(false); setEditId(null); }} className="flex items-center gap-2 glass border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
@@ -316,10 +316,10 @@ export function ProductCompatibilityManager({ productId }: { productId: string }
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[var(--text-primary)] font-bold text-sm">{r.vehicle?.name ?? "Unknown vehicle"}</span>
-                  {r.generation && <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-[10px] px-1.5 py-0.5 rounded-full">{r.generation.name}</span>}
-                  {r.variant && <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-[10px] px-1.5 py-0.5 rounded-full">{r.variant.name}</span>}
-                  {r.section && <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-[10px] px-1.5 py-0.5 rounded-full">{r.section.name}</span>}
-                  {r.emissionStandard && <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] px-1.5 py-0.5 rounded-full">{r.emissionStandard.replace("_", " ")}</span>}
+                  {r.generation && <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-12 px-1.5 py-0.5 rounded-full">{r.generation.name}</span>}
+                  {r.variant && <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-12 px-1.5 py-0.5 rounded-full">{r.variant.name}</span>}
+                  {r.section && <span className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-muted)] text-12 px-1.5 py-0.5 rounded-full">{r.section.name}</span>}
+                  {r.emissionStandard && <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-12 px-1.5 py-0.5 rounded-full">{r.emissionStandard.replace("_", " ")}</span>}
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs text-[var(--text-muted)]">
                   <span className={`font-semibold ${r.confidence === "VERIFIED" ? "text-emerald-500" : r.confidence === "LIKELY" ? "text-amber-500" : r.confidence === "INCOMPATIBLE" ? "text-red-500" : ""}`}>

@@ -85,7 +85,7 @@ export function DealerRegistrationForm() {
           code to {formData.email}.
         </p>
         <div className="glass border border-[var(--border-color)] rounded-xl p-4 text-left mb-6">
-          <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-2">What happens next?</div>
+          <div className="text-[var(--text-muted)] text-xs mb-2">What happens next?</div>
           {[
             "Verify your email address",
             "Verify your mobile number",
@@ -99,7 +99,7 @@ export function DealerRegistrationForm() {
         </div>
         <button
           onClick={() => router.push(`/verify-email?userId=${userId}`)}
-          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-8 py-3 rounded-pill transition-colors text-sm"
         >
           Verify Email Now
         </button>
@@ -116,7 +116,7 @@ export function DealerRegistrationForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Company Name */}
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Company Name <span className="text-red-500">*</span>
           </label>
           <input
@@ -132,7 +132,7 @@ export function DealerRegistrationForm() {
         {/* GST + PAN (optional) */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               GST Number
             </label>
             <input
@@ -147,7 +147,7 @@ export function DealerRegistrationForm() {
             <div className="text-gray-600 text-xs mt-1">Optional — provide if registered</div>
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               PAN Number
             </label>
             <input
@@ -166,7 +166,7 @@ export function DealerRegistrationForm() {
         {/* Owner + Phone */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               Owner Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -179,7 +179,7 @@ export function DealerRegistrationForm() {
             />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               Phone <span className="text-red-500">*</span>
             </label>
             <input
@@ -196,7 +196,7 @@ export function DealerRegistrationForm() {
         {/* Email + Password */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               Email <span className="text-red-500">*</span>
             </label>
             <input
@@ -209,7 +209,7 @@ export function DealerRegistrationForm() {
             />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               Password <span className="text-red-500">*</span>
             </label>
             <input
@@ -227,7 +227,7 @@ export function DealerRegistrationForm() {
         {/* State + City */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               State <span className="text-red-500">*</span>
             </label>
             <select
@@ -243,7 +243,7 @@ export function DealerRegistrationForm() {
             </select>
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+            <label className="text-[var(--text-muted)] text-xs block mb-2">
               City <span className="text-red-500">*</span>
             </label>
             <input
@@ -259,7 +259,7 @@ export function DealerRegistrationForm() {
 
         {/* Aadhaar (optional) */}
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Aadhaar Number
           </label>
           <input
@@ -276,7 +276,7 @@ export function DealerRegistrationForm() {
 
         {/* Address (optional) */}
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Company Address
           </label>
           <input
@@ -288,7 +288,7 @@ export function DealerRegistrationForm() {
           />
         </div>
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Shop Address
           </label>
           <input
@@ -300,7 +300,7 @@ export function DealerRegistrationForm() {
           />
         </div>
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Pincode
           </label>
           <input
@@ -324,7 +324,7 @@ export function DealerRegistrationForm() {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors uppercase tracking-wider text-sm mt-2"
+          className="w-full bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-xl transition-colors text-sm mt-2"
         >
           {status === "loading" ? "Creating Account..." : "Create Account"}
         </button>

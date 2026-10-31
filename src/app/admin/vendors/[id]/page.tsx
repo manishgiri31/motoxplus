@@ -82,7 +82,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
             <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">
               {vendor.companyName}
             </h1>
-            <span className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-sm border ${STATUS_COLORS[vendor.status]}`}>
+            <span className={`text-xs font-semibold uppercase px-2.5 py-1 rounded-sm border ${STATUS_COLORS[vendor.status]}`}>
               {vendor.status}
             </span>
           </div>
@@ -98,7 +98,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
         <div className="lg:col-span-2 space-y-6">
           {/* Company Details */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
               Company Details
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -120,7 +120,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
                 <div className="flex items-start gap-3">
                   <Globe size={14} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
                   <div>
-                    <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-0.5">Website</div>
+                    <div className="text-[var(--text-muted)] text-xs mb-0.5">Website</div>
                     <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-sm text-red-400 hover:text-red-300">
                       {vendor.website}
                     </a>
@@ -132,7 +132,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
 
             {vendor.notes && (
               <div className="mt-5 pt-5 border-t border-[var(--border-color)]">
-                <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-2">Notes</div>
+                <div className="text-[var(--text-muted)] text-xs mb-2">Notes</div>
                 <p className="text-[var(--text-secondary)] text-sm whitespace-pre-wrap">{vendor.notes}</p>
               </div>
             )}
@@ -141,7 +141,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
           {/* Bank Details */}
           {(vendor.bankName || vendor.accountNumber || vendor.ifscCode) && (
             <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-              <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+              <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
                 Bank Details
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -159,7 +159,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
           {/* Contacts */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest">
+              <h2 className="text-[var(--text-primary)] font-bold text-sm">
                 Contacts
               </h2>
               <VendorContactForm vendorId={vendor.id} />
@@ -177,7 +177,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
                       <div className="flex items-center gap-2">
                         <span className="text-[var(--text-primary)] text-sm font-bold">{c.name}</span>
                         {c.isPrimary && (
-                          <span className="text-[10px] text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
+                          <span className="text-12 text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded-sm uppercase">
                             Primary
                           </span>
                         )}
@@ -199,7 +199,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest">
+                <h2 className="text-[var(--text-primary)] font-bold text-sm">
                   Payment History
                 </h2>
                 <p className="text-[var(--text-muted)] text-xs mt-0.5">
@@ -228,7 +228,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
                     </div>
                     <div className="text-right">
                       <div className="text-[var(--text-muted)] text-xs">{formatDate(p.paymentDate)}</div>
-                      <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-sm ${
+                      <span className={`text-12 font-semibold px-1.5 py-0.5 rounded-sm ${
                         p.status === "PAID" ? "bg-green-900/20 text-green-400" : "bg-yellow-900/20 text-yellow-400"
                       }`}>
                         {p.status}
@@ -245,7 +245,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
         <div className="space-y-6">
           {/* Performance Card */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-5">
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-5">
               Performance
             </h2>
             {avgRating !== null ? (
@@ -261,7 +261,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
                 </div>
                 {latestRating && (
                   <div className="space-y-2 pt-4 border-t border-[var(--border-color)]">
-                    <div className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider mb-3">
+                    <div className="text-[var(--text-muted)] text-12 mb-3">
                       Latest: {latestRating.period}
                     </div>
                     {[
@@ -289,14 +289,14 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
 
           {/* Portal Access */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">
               Portal Access
             </h2>
             {vendor.user ? (
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 rounded-full bg-green-400" />
-                  <span className="text-green-400 text-xs font-semibold uppercase tracking-wider">Active</span>
+                  <span className="text-green-400 text-xs font-semibold">Active</span>
                 </div>
                 <div className="text-[var(--text-primary)] text-sm font-bold">{vendor.user.name}</div>
                 <div className="text-[var(--text-muted)] text-xs">{vendor.user.email}</div>
@@ -308,7 +308,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 rounded-full bg-gray-600" />
-                  <span className="text-[var(--text-muted)] text-xs font-semibold uppercase tracking-wider">
+                  <span className="text-[var(--text-muted)] text-xs font-semibold">
                     No portal access
                   </span>
                 </div>
@@ -321,7 +321,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
 
           {/* Quick Stats */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm uppercase tracking-widest mb-4">
+            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-4">
               Quick Stats
             </h2>
             <div className="space-y-3">
@@ -368,7 +368,7 @@ function InfoRow({
     <div className="flex items-start gap-3">
       <Icon size={14} className="text-[var(--text-muted)] mt-0.5 flex-shrink-0" />
       <div>
-        <div className="text-[var(--text-muted)] text-xs uppercase tracking-wider mb-0.5">{label}</div>
+        <div className="text-[var(--text-muted)] text-xs mb-0.5">{label}</div>
         <div className={`text-[var(--text-primary)] text-sm font-medium ${mono ? "font-mono" : ""}`}>
           {value}
         </div>

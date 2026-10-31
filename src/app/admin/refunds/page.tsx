@@ -76,7 +76,7 @@ export default async function AdminRefundsPage(props: { searchParams: Promise<{ 
           <Link
             key={tab.key}
             href={`/admin/refunds${tab.key ? `?status=${tab.key}` : ""}`}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
               (filterStatus ?? "") === tab.key
                 ? "bg-[var(--accent)] text-white"
                 : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
@@ -84,7 +84,7 @@ export default async function AdminRefundsPage(props: { searchParams: Promise<{ 
           >
             {tab.label}
             {tab.count > 0 && (
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${(filterStatus ?? "") === tab.key ? "bg-[var(--accent-hover)]" : "bg-[var(--bg-card)]"}`}>
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded text-12 ${(filterStatus ?? "") === tab.key ? "bg-[var(--accent-hover)]" : "bg-[var(--bg-card)]"}`}>
                 {tab.count}
               </span>
             )}
@@ -113,7 +113,7 @@ export default async function AdminRefundsPage(props: { searchParams: Promise<{ 
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="text-[var(--text-primary)] font-mono font-bold text-sm">{formatCurrency(c.refundAmount)}</div>
-                  {c.refundId && <div className="text-[var(--text-muted)] text-[10px] font-mono mt-0.5">{c.refundId}</div>}
+                  {c.refundId && <div className="text-[var(--text-muted)] text-12 font-mono mt-0.5">{c.refundId}</div>}
                 </div>
                 {c.refundStatus === "FAILED" && (
                   <div className="flex-shrink-0">

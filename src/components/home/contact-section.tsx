@@ -56,7 +56,7 @@ export function ContactSection() {
                   <item.icon size={16} className="text-[var(--red)]" />
                 </div>
                 <div>
-                  <div className="text-[10px] text-[var(--muted)] uppercase tracking-widest mb-1 font-semibold">{item.title}</div>
+                  <div className="text-12 text-[var(--muted)] mb-1 font-semibold">{item.title}</div>
                   <div className="text-[var(--ink)] text-sm font-medium">{item.detail}</div>
                 </div>
               </Card>
@@ -66,7 +66,7 @@ export function ContactSection() {
             <Card pad="md">
               <div className="flex items-center gap-2 mb-4">
                 <Clock size={14} className="text-[var(--red)]" />
-                <div className="text-[10px] text-[var(--muted)] uppercase tracking-widest font-semibold">Business Hours</div>
+                <div className="text-12 text-[var(--muted)] font-semibold">Business Hours</div>
               </div>
               {[
                 { day: "Mon – Sat", time: "9:00 AM – 6:00 PM" },
@@ -96,7 +96,7 @@ export function ContactSection() {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[var(--muted)] text-[11px] uppercase tracking-wider font-semibold block mb-2">Name</label>
+                    <label className="text-[var(--muted)] text-12 font-semibold block mb-2">Name</label>
                     <input
                       type="text"
                       required
@@ -107,7 +107,7 @@ export function ContactSection() {
                     />
                   </div>
                   <div>
-                    <label className="text-[var(--muted)] text-[11px] uppercase tracking-wider font-semibold block mb-2">Email</label>
+                    <label className="text-[var(--muted)] text-12 font-semibold block mb-2">Email</label>
                     <input
                       type="email"
                       required
@@ -120,7 +120,7 @@ export function ContactSection() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[var(--muted)] text-[11px] uppercase tracking-wider font-semibold block mb-2">Phone</label>
+                    <label className="text-[var(--muted)] text-12 font-semibold block mb-2">Phone</label>
                     <input
                       type="tel"
                       value={formData.phone}
@@ -130,7 +130,7 @@ export function ContactSection() {
                     />
                   </div>
                   <div>
-                    <label className="text-[var(--muted)] text-[11px] uppercase tracking-wider font-semibold block mb-2">Subject</label>
+                    <label className="text-[var(--muted)] text-12 font-semibold block mb-2">Subject</label>
                     <select
                       value={formData.subject}
                       onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
@@ -145,7 +145,7 @@ export function ContactSection() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[var(--muted)] text-[11px] uppercase tracking-wider font-semibold block mb-2">Message</label>
+                  <label className="text-[var(--muted)] text-12 font-semibold block mb-2">Message</label>
                   <textarea
                     required
                     rows={5}

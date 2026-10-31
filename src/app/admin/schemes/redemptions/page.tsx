@@ -61,7 +61,7 @@ export default async function SchemeRedemptionsPage(
       <div className="flex flex-wrap gap-2 mb-4">
         <Link
           href="/admin/schemes/redemptions"
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${!schemeId ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
+          className={`px-3 py-1.5 rounded-pill text-xs font-normal uppercase transition-colors ${!schemeId ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
         >
           All
         </Link>
@@ -69,7 +69,7 @@ export default async function SchemeRedemptionsPage(
           <Link
             key={s.id}
             href={`/admin/schemes/redemptions?schemeId=${s.id}`}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${schemeId === s.id ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
+            className={`px-3 py-1.5 rounded-pill text-xs font-normal uppercase transition-colors ${schemeId === s.id ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)]"}`}
           >
             {s.code}
           </Link>
@@ -79,7 +79,7 @@ export default async function SchemeRedemptionsPage(
       <div className="glass border border-[var(--border-color)] rounded-xl overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border-color)] text-left text-[var(--text-muted)] text-xs uppercase tracking-wider">
+            <tr className="border-b border-[var(--border-color)] text-left text-[var(--text-muted)] text-xs">
               <th className="px-4 py-3">Order</th>
               <th className="px-4 py-3">Dealer</th>
               <th className="px-4 py-3">Scheme</th>
@@ -115,7 +115,7 @@ export default async function SchemeRedemptionsPage(
                   {r.order.schemeAdjustmentAmount > 0 ? formatCurrency(r.order.schemeAdjustmentAmount) : "—"}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[r.status]}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-12 font-bold uppercase ${STATUS_STYLE[r.status]}`}>
                     {r.status}
                   </span>
                 </td>

@@ -80,7 +80,7 @@ export default function NewLeadPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <Link href="/admin/crm/leads" className="flex items-center gap-2 text-[var(--text-muted)] hover:text-red-400 text-sm font-semibold uppercase tracking-wider mb-4 transition-colors">
+        <Link href="/admin/crm/leads" className="flex items-center gap-2 text-[var(--text-muted)] hover:text-red-400 text-sm font-semibold mb-4 transition-colors">
           <ArrowLeft size={14} /> Back to Leads
         </Link>
         <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">Add New Lead</h1>
@@ -90,42 +90,42 @@ export default function NewLeadPage() {
         {error && <div className="bg-red-900/20 border border-red-800 text-red-400 px-4 py-3 rounded-sm text-sm">{error}</div>}
 
         <div className="glass border border-[var(--border-color)] rounded-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">Company Information</h2>
+          <h2 className="text-sm font-bold text-[var(--text-muted)] mb-2">Company Information</h2>
           <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Company Name *</label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Company Name *</label>
             <input required className="themed-input w-full" value={form.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder="Dealer company name" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Owner / Contact Name *</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Owner / Contact Name *</label>
               <input required className="themed-input w-full" value={form.ownerName} onChange={(e) => set("ownerName", e.target.value)} placeholder="Full name" />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Email *</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Email *</label>
               <input required type="email" className="themed-input w-full" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="contact@company.com" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Phone *</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Phone *</label>
               <input required className="themed-input w-full" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+91 98765 43210" />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Alternate Phone</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Alternate Phone</label>
               <input className="themed-input w-full" value={form.alternatePhone} onChange={(e) => set("alternatePhone", e.target.value)} />
             </div>
           </div>
         </div>
 
         <div className="glass border border-[var(--border-color)] rounded-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">Location</h2>
+          <h2 className="text-sm font-bold text-[var(--text-muted)] mb-2">Location</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">City *</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">City *</label>
               <input required className="themed-input w-full" value={form.city} onChange={(e) => set("city", e.target.value)} />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">State *</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">State *</label>
               <select required className="themed-select w-full" value={form.state} onChange={(e) => set("state", e.target.value)}>
                 <option value="">Select state</option>
                 {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -134,27 +134,27 @@ export default function NewLeadPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Pincode</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Pincode</label>
               <input className="themed-input w-full" value={form.pincode} onChange={(e) => set("pincode", e.target.value)} maxLength={6} />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Address</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Address</label>
               <input className="themed-input w-full" value={form.address} onChange={(e) => set("address", e.target.value)} />
             </div>
           </div>
         </div>
 
         <div className="glass border border-[var(--border-color)] rounded-sm p-6 space-y-4">
-          <h2 className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">Lead Details</h2>
+          <h2 className="text-sm font-bold text-[var(--text-muted)] mb-2">Lead Details</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Source *</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Source *</label>
               <select required className="themed-select w-full" value={form.source} onChange={(e) => set("source", e.target.value)}>
                 {SOURCES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Priority</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Priority</label>
               <select className="themed-select w-full" value={form.priority} onChange={(e) => set("priority", e.target.value)}>
                 {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
@@ -162,25 +162,25 @@ export default function NewLeadPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Estimated Monthly Value (₹)</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Estimated Monthly Value (₹)</label>
               <input type="number" min="0" className="themed-input w-full" value={form.estimatedValue} onChange={(e) => set("estimatedValue", e.target.value)} placeholder="0" />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Next Follow-up Date</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Next Follow-up Date</label>
               <input type="date" className="themed-input w-full" value={form.nextFollowUp} onChange={(e) => set("nextFollowUp", e.target.value)} />
             </div>
           </div>
           <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Initial Note</label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Initial Note</label>
             <textarea rows={3} className="themed-input w-full" value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="First contact context, what they're looking for..." />
           </div>
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" disabled={loading} className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-3 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <button type="submit" disabled={loading} className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-3 rounded-sm text-sm transition-colors">
             {loading ? "Creating..." : "Create Lead"}
           </button>
-          <Link href="/admin/crm/leads" className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm uppercase tracking-wider hover:border-red-900/40 transition-colors">
+          <Link href="/admin/crm/leads" className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-6 py-3 rounded-sm text-sm hover:border-red-900/40 transition-colors">
             Cancel
           </Link>
         </div>

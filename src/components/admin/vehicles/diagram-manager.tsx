@@ -155,7 +155,7 @@ function HotspotEditor({
                 e.stopPropagation();
                 openEdit(h);
               }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[var(--accent)] text-white text-[10px] font-bold flex items-center justify-center border-2 border-white/80 hover:scale-110 transition-transform"
+              className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[var(--accent)] text-white text-12 font-bold flex items-center justify-center border-2 border-white/80 hover:scale-110 transition-transform"
               style={{ left: `${h.x}%`, top: `${h.y}%` }}
             >
               {h.calloutNumber ?? "•"}
@@ -173,7 +173,7 @@ function HotspotEditor({
           {pending ? (
             <div className="border border-[var(--border-color)] rounded-xl p-4 space-y-3">
               {error && <p className="text-red-400 text-xs">{error}</p>}
-              <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-widest font-semibold">
+              <p className="text-[var(--text-muted)] text-12 font-semibold">
                 Position: {pending.x.toFixed(1)}%, {pending.y.toFixed(1)}%
               </p>
               <input
@@ -226,7 +226,7 @@ function HotspotEditor({
                 )}
               </div>
               <div className="flex gap-2">
-                <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+                <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-pill">
                   <Check size={13} /> {saving ? "Saving…" : editId ? "Update Hotspot" : "Add Hotspot"}
                 </button>
                 <button onClick={() => setPending(null)} className="flex items-center gap-1.5 border border-[var(--border-color)] text-[var(--text-muted)] text-xs font-semibold px-4 py-2 rounded-lg">
@@ -335,7 +335,7 @@ export function DiagramManager({ vehicleId, sections }: { vehicleId: string; sec
           <p className="text-[var(--text-muted)] text-xs mt-0.5">Upload an exploded-view or line-art image, then click on it to place clickable part hotspots.</p>
         </div>
         {!showForm && (
-          <button onClick={openAdd} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
+          <button onClick={openAdd} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold px-3 py-1.5 rounded-pill">
             <Plus size={13} /> Add Diagram
           </button>
         )}
@@ -355,7 +355,7 @@ export function DiagramManager({ vehicleId, sections }: { vehicleId: string; sec
             <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} placeholder="Diagram image URL" className="bg-[var(--bg-input)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] sm:col-span-3" />
           </div>
           <div className="flex gap-2">
-            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-lg">
+            <button onClick={handleSave} disabled={saving} className="flex items-center gap-1.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white text-xs font-semibold px-4 py-2 rounded-pill">
               <Check size={13} /> {saving ? "Saving…" : editId ? "Update" : "Add"}
             </button>
             <button onClick={() => setShowForm(false)} className="flex items-center gap-1.5 border border-[var(--border-color)] text-[var(--text-muted)] text-xs font-semibold px-4 py-2 rounded-lg">

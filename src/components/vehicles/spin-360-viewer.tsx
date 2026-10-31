@@ -48,7 +48,7 @@ export function Spin360Viewer({ frameUrls }: { frameUrls: string[] }) {
         unoptimized
         priority
       />
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-widest font-semibold text-[var(--text-muted)] bg-[var(--bg-primary)]/70 px-2.5 py-1 rounded-full">
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-12 uppercase font-semibold text-[var(--text-muted)] bg-[var(--bg-primary)]/70 px-2.5 py-1 rounded-full">
         Drag to rotate — {frameIndex + 1}/{frameCount}
       </div>
     </div>

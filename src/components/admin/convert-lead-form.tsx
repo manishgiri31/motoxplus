@@ -69,7 +69,7 @@ export function ConvertLeadForm({ leadId, companyName, ownerName, email, onClose
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)]">
           <div className="flex items-center gap-2">
             <UserCheck size={18} className="text-green-400" />
-            <h2 className="text-lg font-black text-[var(--text-primary)] uppercase tracking-tight">Convert to Dealer</h2>
+            <h2 className="text-lg font-black text-[var(--text-primary)] tracking-tight">Convert to Dealer</h2>
           </div>
           <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white transition-colors"><X size={18} /></button>
         </div>
@@ -83,45 +83,45 @@ export function ConvertLeadForm({ leadId, companyName, ownerName, email, onClose
           {error && <div className="bg-red-900/20 border border-red-800 text-red-400 px-3 py-2 rounded-sm text-sm">{error}</div>}
 
           <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">GST Number *</label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">GST Number *</label>
             <input required className="themed-input w-full" value={form.gstNumber} onChange={(e) => set("gstNumber", e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
           </div>
 
           <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Business Address *</label>
+            <label className="block text-xs text-[var(--text-muted)] mb-1.5">Business Address *</label>
             <textarea required rows={2} className="themed-input w-full" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Full business address" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Pincode *</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Pincode *</label>
               <input required className="themed-input w-full" value={form.pincode} onChange={(e) => set("pincode", e.target.value)} maxLength={6} />
             </div>
             <div>
-              <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Credit Limit (₹)</label>
+              <label className="block text-xs text-[var(--text-muted)] mb-1.5">Credit Limit (₹)</label>
               <input type="number" min="0" className="themed-input w-full" value={form.creditLimit} onChange={(e) => set("creditLimit", e.target.value)} placeholder="0" />
             </div>
           </div>
 
           <div className="border-t border-[var(--border-color)] pt-4">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-3 font-bold">Portal Access Password</p>
+            <p className="text-xs text-[var(--text-muted)] mb-3 font-bold">Portal Access Password</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Password *</label>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">Password *</label>
                 <input required type="password" className="themed-input w-full" value={form.password} onChange={(e) => set("password", e.target.value)} minLength={8} />
               </div>
               <div>
-                <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Confirm *</label>
+                <label className="block text-xs text-[var(--text-muted)] mb-1.5">Confirm *</label>
                 <input required type="password" className="themed-input w-full" value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} />
               </div>
             </div>
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={loading} className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+            <button type="submit" disabled={loading} className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white font-bold py-2.5 rounded-sm text-sm transition-colors">
               {loading ? "Converting..." : "Convert & Create Account"}
             </button>
-            <button type="button" onClick={onClose} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-5 py-2.5 rounded-sm text-sm uppercase tracking-wider hover:border-red-900/40 transition-colors">
+            <button type="button" onClick={onClose} className="glass border border-[var(--border-color)] text-[var(--text-muted)] font-bold px-5 py-2.5 rounded-sm text-sm hover:border-red-900/40 transition-colors">
               Cancel
             </button>
           </div>

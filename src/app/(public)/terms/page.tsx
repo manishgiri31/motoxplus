@@ -21,7 +21,7 @@ export default async function TermsPage() {
         <div className="max-w-3xl mx-auto px-4 md:px-8">
           {/* Header */}
           <div className="mb-12">
-            <div className="flex items-center gap-2 text-[var(--muted)] text-xs uppercase tracking-widest mb-4">
+            <div className="flex items-center gap-2 text-[var(--muted)] text-xs mb-4">
               <Link href="/" className="hover:text-red-500 transition-colors">Home</Link>
               <span>/</span>
               <span>Terms &amp; Conditions</span>
@@ -82,7 +82,7 @@ export default async function TermsPage() {
             {/* ── PART A: DEALER (B2B) TERMS ── */}
             <div className="border-t-2 border-[var(--red)]/40 pt-10">
               <div className="mb-6">
-                <span className="inline-block bg-[var(--red)] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
+                <span className="inline-block bg-[var(--red)] text-white text-12 font-bold uppercase px-3 py-1 rounded-full mb-3">
                   Part A
                 </span>
                 <h2 className="text-2xl font-black text-[var(--ink)] tracking-tight">Dealer (B2B) Terms</h2>
@@ -203,7 +203,7 @@ export default async function TermsPage() {
             {/* ── PART B: RETAIL CUSTOMER (B2C) TERMS ── */}
             <div className="border-t-2 border-[var(--red)]/40 pt-10">
               <div className="mb-6">
-                <span className="inline-block bg-[var(--red)] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3">
+                <span className="inline-block bg-[var(--red)] text-white text-12 font-bold uppercase px-3 py-1 rounded-full mb-3">
                   Part B
                 </span>
                 <h2 className="text-2xl font-black text-[var(--ink)] tracking-tight">Retail Customer (B2C) Terms</h2>

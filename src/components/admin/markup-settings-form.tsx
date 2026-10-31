@@ -47,7 +47,7 @@ export function MarkupSettingsForm({ currentMarkup }: Props) {
 
   return (
     <div className="glass-dark border border-[var(--border-color)] rounded-xl p-6 space-y-6">
-      <div className="flex items-center gap-2 text-[var(--text-secondary)] text-xs uppercase tracking-widest font-bold">
+      <div className="flex items-center gap-2 text-[var(--text-secondary)] text-xs font-bold">
         <span className="w-1 h-4 bg-[var(--accent)] rounded-full inline-block" />
         Vendor Product Markup
       </div>
@@ -62,7 +62,7 @@ export function MarkupSettingsForm({ currentMarkup }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">
+          <label className="text-[var(--text-muted)] text-xs block mb-2">
             Default Markup (%)
           </label>
           <div className="relative">
@@ -78,11 +78,11 @@ export function MarkupSettingsForm({ currentMarkup }: Props) {
               placeholder="20"
             />
           </div>
-          <p className="text-[var(--text-muted)] text-[10px] mt-1">Applied to vendor cost price to get dealer price</p>
+          <p className="text-[var(--text-muted)] text-12 mt-1">Applied to vendor cost price to get dealer price</p>
         </div>
 
         <div className="glass border border-[var(--border-color)] rounded-xl p-4">
-          <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mb-3">Preview</div>
+          <div className="text-[var(--text-muted)] text-xs mb-3">Preview</div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[var(--text-muted)] text-sm">Vendor Cost</span>
@@ -117,7 +117,7 @@ export function MarkupSettingsForm({ currentMarkup }: Props) {
       <button
         onClick={handleSave}
         disabled={status === "loading"}
-        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-normal px-6 py-3 rounded-pill transition-colors text-sm"
       >
         <Save size={14} />
         {status === "loading" ? "Saving..." : "Save Settings"}

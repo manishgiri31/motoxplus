@@ -77,7 +77,7 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
             <p className="text-[var(--text-muted)] text-sm mt-1">{formatDate(order.createdAt)}</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border ${statusColors[order.status] ?? "bg-gray-900/20 text-[var(--text-muted)] border-white/10"}`}>
+            <span className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase border ${statusColors[order.status] ?? "bg-gray-900/20 text-[var(--text-muted)] border-white/10"}`}>
               {order.status}
             </span>
             <AdminOrderStatus orderId={order.id} currentStatus={order.status} />
@@ -163,7 +163,7 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
                         <p className="text-[var(--text-muted)] text-xs font-mono mt-0.5">{payment.razorpayPaymentId}</p>
                       )}
                     </div>
-                    <span className={`text-xs font-bold uppercase ${paymentColors[payment.status] ?? "text-[var(--text-muted)]"}`}>
+                    <span className={`text-xs font-bold ${paymentColors[payment.status] ?? "text-[var(--text-muted)]"}`}>
                       {payment.status}
                     </span>
                   </div>
@@ -190,7 +190,7 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
             </div>
             <div className="flex justify-between text-sm pt-1 border-t border-white/5">
               <span className="text-[var(--text-muted)]">Payment Status</span>
-              <span className={`font-bold text-xs uppercase ${paymentColors[order.paymentStatus] ?? ""}`}>
+              <span className={`font-bold text-xs ${paymentColors[order.paymentStatus] ?? ""}`}>
                 {order.paymentStatus}
               </span>
             </div>
@@ -205,7 +205,7 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--text-muted)]">Stage</span>
-                <span className="text-[var(--text-secondary)] font-mono text-xs uppercase">
+                <span className="text-[var(--text-secondary)] font-mono text-xs">
                   {order.cancellation.fromStatus === "SHIPPED" ? "POST_SHIP" : "PRE_SHIP"}
                 </span>
               </div>
@@ -221,7 +221,7 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
               </div>
               <div className="flex justify-between text-sm pt-1 border-t border-white/5">
                 <span className="text-[var(--text-muted)]">Refund Status</span>
-                <span className={`font-bold text-xs uppercase ${refundStatusColors[order.cancellation.refundStatus] ?? ""}`}>
+                <span className={`font-bold text-xs ${refundStatusColors[order.cancellation.refundStatus] ?? ""}`}>
                   {order.cancellation.refundStatus}
                 </span>
               </div>
@@ -281,7 +281,7 @@ export default async function AdminOrderDetailPage(props: { params: Promise<{ id
                 <h2 className="font-semibold text-[var(--text-primary)] text-sm">Shipment</h2>
               </div>
               <p className="text-[var(--text-primary)] text-sm font-mono">{order.shipment.waybill}</p>
-              <p className="text-[var(--text-muted)] text-xs mt-1 uppercase tracking-wider">{order.shipment.status}</p>
+              <p className="text-[var(--text-muted)] text-xs mt-1">{order.shipment.status}</p>
               {order.shipment.trackingUrl && (
                 <a
                   href={order.shipment.trackingUrl}

@@ -58,12 +58,12 @@ export default async function AccountOrdersPage(props: { searchParams: Promise<{
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--border-color)]">
-                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Order</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Date</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden sm:table-cell">Items</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Invoice</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Order</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Date</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden sm:table-cell">Items</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Status</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Invoice</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -84,7 +84,7 @@ export default async function AccountOrdersPage(props: { searchParams: Promise<{
                       <span className="text-[var(--text-primary)] font-bold text-sm">{formatCurrency(order.grandTotal)}</span>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-xl ${statusColors[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                      <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-xl ${statusColors[order.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                         {order.status}
                       </span>
                     </td>

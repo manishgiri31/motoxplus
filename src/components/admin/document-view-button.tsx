@@ -27,7 +27,7 @@ export function DocumentViewButton({ documentId }: Props) {
     <button
       onClick={view}
       disabled={loading}
-      className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 uppercase tracking-wider"
+      className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
     >
       {loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
       View

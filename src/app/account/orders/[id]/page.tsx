@@ -44,7 +44,7 @@ export default async function AccountOrderDetailPage(
           <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight font-mono">{order.orderNumber}</h1>
           <p className="text-[var(--text-muted)] mt-1">Placed on {formatDate(order.createdAt)}</p>
         </div>
-        <span className={`text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-sm ${
+        <span className={`text-xs font-semibold px-3 py-1.5 rounded-sm ${
           order.status === "DELIVERED" ? "bg-green-900/20 text-green-400" :
           order.status === "PENDING" ? "bg-yellow-900/20 text-yellow-400" :
           order.status === "CONFIRMED" ? "bg-blue-900/20 text-blue-400" :
@@ -58,7 +58,7 @@ export default async function AccountOrderDetailPage(
       {awaitingPayment && (
         <Link
           href={`/account/orders/${order.id}/pay-upi`}
-          className="block mb-6 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-center py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+          className="block mb-6 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-center py-3 rounded-sm transition-colors text-sm"
         >
           Complete Payment — {formatCurrency(order.amountDue)}
         </Link>
@@ -87,7 +87,7 @@ export default async function AccountOrderDetailPage(
                 <div className="text-right">
                   <div className="text-[var(--text-muted)] text-xs mb-1">× {item.quantity}</div>
                   <div className="text-[var(--text-primary)] font-bold text-sm">{formatCurrency(item.total)}</div>
-                  <div className="text-gray-600 text-[10px]">incl. taxes</div>
+                  <div className="text-gray-600 text-12">incl. taxes</div>
                 </div>
               </div>
             ))}
@@ -134,7 +134,7 @@ export default async function AccountOrderDetailPage(
           {order.invoice && (
             <Link
               href={`/account/invoices/${order.invoice.id}`}
-              className="w-full block text-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm uppercase tracking-wider"
+              className="w-full block text-center bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm"
             >
               Download Invoice
             </Link>

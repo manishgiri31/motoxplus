@@ -27,7 +27,7 @@ export function PlatformJourney() {
               <RevealItem className="flex h-14 w-14 flex-shrink-0 items-center justify-center border border-[var(--line)] md:h-16 md:w-16">
                 <span className="tnum font-mono text-xs font-bold text-[var(--red)]">{String(i + 1).padStart(2, "0")}</span>
               </RevealItem>
-              <span className="text-sm font-bold uppercase tracking-tech text-[var(--ink)] md:text-base">{step}</span>
+              <span className="text-sm font-bold text-[var(--ink)] md:text-base">{step}</span>
               {i < STEPS.length - 1 && <ArrowRight size={16} className="mx-2 flex-shrink-0 text-[var(--line)]" aria-hidden />}
             </div>
           ))}

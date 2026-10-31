@@ -52,7 +52,7 @@ export function SchemesTable({ schemes }: { schemes: AdminSchemeRow[] }) {
     <div className="glass border border-[var(--border-color)] rounded-xl overflow-hidden overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[var(--border-color)] text-left text-[var(--text-muted)] text-xs uppercase tracking-wider">
+          <tr className="border-b border-[var(--border-color)] text-left text-[var(--text-muted)] text-xs">
             <th className="px-4 py-3">Scheme</th>
             <th className="px-4 py-3">Benefit</th>
             <th className="px-4 py-3">Min Order</th>
@@ -90,7 +90,7 @@ export function SchemesTable({ schemes }: { schemes: AdminSchemeRow[] }) {
                   <button
                     onClick={() => toggleActive(scheme)}
                     disabled={togglingId === scheme.id}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                    className={`px-2.5 py-1 rounded-full text-12 font-bold transition-colors disabled:opacity-50 ${
                       live
                         ? "bg-green-500/10 text-green-400"
                         : scheme.isActive

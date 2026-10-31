@@ -13,9 +13,9 @@ interface Props {
 }
 
 const INPUT = "w-full themed-input border focus:border-red-600/60 rounded-xl px-4 py-3 text-sm outline-none transition-colors";
-const LABEL = "text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2";
+const LABEL = "text-[var(--text-muted)] text-xs block mb-2";
 const SECTION = "glass-dark border border-[var(--border-color)] rounded-xl p-6 space-y-4";
-const SECTION_TITLE = "text-[var(--text-secondary)] text-xs uppercase tracking-widest font-bold mb-4 flex items-center gap-2";
+const SECTION_TITLE = "text-[var(--text-secondary)] text-xs font-bold mb-4 flex items-center gap-2";
 
 const WARRANTY_OPTIONS = ["No Warranty", "3 Months", "6 Months", "12 Months"];
 const GST_OPTIONS = [0, 5, 12, 18, 28];
@@ -195,7 +195,7 @@ export function ProductForm({ categories, product }: Props) {
               readOnly={isEdit}
               style={isEdit ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
             />
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">
+            <p className="text-[var(--text-muted)] text-12 mt-1">
               {isEdit ? "SKU cannot be changed after creation" : "Leave blank to auto-generate from Part Number"}
             </p>
           </div>
@@ -222,7 +222,7 @@ export function ProductForm({ categories, product }: Props) {
         {/* Vendor product: show cost + markup controls */}
         {isVendorProduct && vendorCostPrice != null && (
           <div className="glass border border-amber-900/30 rounded-xl p-4 mb-4">
-            <div className="text-[10px] uppercase tracking-widest text-amber-500 font-bold mb-3">Vendor Submission</div>
+            <div className="text-12 text-amber-500 font-bold mb-3">Vendor Submission</div>
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <div className="text-[var(--text-muted)] text-xs mb-1">Vendor Cost Price</div>
@@ -245,7 +245,7 @@ export function ProductForm({ categories, product }: Props) {
                   className={INPUT}
                   placeholder="20"
                 />
-                <p className="text-[var(--text-muted)] text-[10px] mt-1">Enter 20 for 20% profit margin</p>
+                <p className="text-[var(--text-muted)] text-12 mt-1">Enter 20 for 20% profit margin</p>
               </div>
               <div>
                 <div className="text-[var(--text-muted)] text-xs mb-1">Base Price (excl. GST)</div>
@@ -298,12 +298,12 @@ export function ProductForm({ categories, product }: Props) {
               className={INPUT + " border-blue-900/40 focus:border-blue-500/60"}
               placeholder="0.00"
             />
-            <p className="text-blue-400 text-[10px] mt-1">Shown to public visitors on website</p>
+            <p className="text-blue-400 text-12 mt-1">Shown to public visitors on website</p>
           </div>
           <div>
             <label className={LABEL}>Wholesale Price excl. GST (₹) — 70% off MRP</label>
             <input required type="number" step="1" min="0" value={form.price} onChange={(e) => set("price", e.target.value)} className={INPUT + " border-green-900/40 focus:border-green-500/60"} placeholder="Auto from MRP" />
-            <p className="text-green-500 text-[10px] mt-1">
+            <p className="text-green-500 text-12 mt-1">
               {form.mrp
                 ? `= ₹${roundToCharmPrice(parseFloat(form.mrp) * 0.30).toLocaleString("en-IN")} (30% of MRP)`
                 : "Auto-filled when MRP is set"}
@@ -327,10 +327,10 @@ export function ProductForm({ categories, product }: Props) {
                 placeholder="Auto-filled by category"
               />
               {form.hsnCode && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-green-500 uppercase tracking-wider">Auto</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-12 font-bold text-green-500">Auto</span>
               )}
             </div>
-            <p className="text-[var(--text-muted)] text-[10px] mt-1">Set automatically based on category</p>
+            <p className="text-[var(--text-muted)] text-12 mt-1">Set automatically based on category</p>
           </div>
         </div>
       </div>
@@ -432,7 +432,7 @@ export function ProductForm({ categories, product }: Props) {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+          className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm"
         >
           {status === "loading" ? "Saving..." : isEdit ? "Update Product" : "Create Product"}
         </button>

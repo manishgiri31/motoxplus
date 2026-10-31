@@ -40,7 +40,7 @@ export function VehicleCard({ vehicle, categorySlug }: { vehicle: VehicleCardDat
         )}
       </div>
       <div className="p-4">
-        <div className="font-mono text-[var(--muted)] text-[10px] uppercase tracking-widest mb-1 opacity-80">
+        <div className="font-mono text-[var(--muted)] text-12 mb-1 opacity-80">
           {vehicle.manufacturer.name}
         </div>
         <h3 className="text-[var(--ink)] font-bold text-base mb-2 group-hover:text-[var(--red)] transition-colors">

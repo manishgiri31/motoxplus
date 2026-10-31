@@ -98,7 +98,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-1.5">Name</label>
+          <label className="block text-xs text-[var(--text-muted)] font-semibold mb-1.5">Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -107,7 +107,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-1.5">Code</label>
+          <label className="block text-xs text-[var(--text-muted)] font-semibold mb-1.5">Code</label>
           <input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -119,7 +119,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-1.5">Benefit %</label>
+          <label className="block text-xs text-[var(--text-muted)] font-semibold mb-1.5">Benefit %</label>
           <input
             type="number"
             step="0.01"
@@ -132,7 +132,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-1.5">Min Order Value (₹)</label>
+          <label className="block text-xs text-[var(--text-muted)] font-semibold mb-1.5">Min Order Value (₹)</label>
           <input
             type="number"
             step="0.01"
@@ -144,7 +144,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-1.5">Max Benefit (₹, optional)</label>
+          <label className="block text-xs text-[var(--text-muted)] font-semibold mb-1.5">Max Benefit (₹, optional)</label>
           <input
             type="number"
             step="0.01"
@@ -159,7 +159,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-1.5">Starts</label>
+          <label className="block text-xs text-[var(--text-muted)] font-semibold mb-1.5">Starts</label>
           <input
             type="date"
             value={startsAt}
@@ -169,7 +169,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-1.5">Ends</label>
+          <label className="block text-xs text-[var(--text-muted)] font-semibold mb-1.5">Ends</label>
           <input
             type="date"
             value={endsAt}
@@ -181,7 +181,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
       </div>
 
       <div>
-        <label className="block text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-2">
+        <label className="block text-xs text-[var(--text-muted)] font-semibold mb-2">
           Eligible Categories <span className="normal-case text-[var(--text-muted)]/70">(none selected = every category eligible)</span>
         </label>
         <div className="flex flex-wrap gap-2">
@@ -210,7 +210,7 @@ export function SchemeForm({ categories, scheme }: { categories: SchemeFormCateg
       <button
         type="submit"
         disabled={saving}
-        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider disabled:opacity-60"
+        className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-6 py-3 rounded-pill transition-colors text-sm disabled:opacity-60"
       >
         {saving && <Spinner size={15} className="text-white" />}
         {isEdit ? "Save Changes" : "Create Scheme"}

@@ -139,7 +139,7 @@ function AutoGroupCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-[var(--text-primary)] font-semibold text-sm truncate">{group.prefix}</p>
-            <span className="flex-shrink-0 text-[10px] bg-purple-900/30 text-purple-400 font-bold px-1.5 py-0.5 rounded-full">
+            <span className="flex-shrink-0 text-12 bg-purple-900/30 text-purple-400 font-bold px-1.5 py-0.5 rounded-full">
               {group.count} products
             </span>
           </div>
@@ -169,7 +169,7 @@ function AutoGroupCard({
           {group.products.map((p, i) => (
             <div key={p.id} className="flex items-center gap-3 py-1 text-xs">
               {i === 0 && (
-                <span className="text-[9px] text-green-400 font-bold uppercase bg-green-900/20 px-1.5 py-0.5 rounded flex-shrink-0">
+                <span className="text-12 text-green-400 font-bold bg-green-900/20 px-1.5 py-0.5 rounded flex-shrink-0">
                   parent
                 </span>
               )}
@@ -521,7 +521,7 @@ function ManualMode() {
           <div className="flex items-center gap-2 mb-5">
             {(["search", "preview", "done"] as ManualStep[]).map((s, i) => (
               <div key={s} className="flex items-center gap-2">
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${
                   step === s ? "bg-purple-600 text-white" :
                   ["search", "preview", "done"].indexOf(step) > i ? "bg-green-900/30 text-green-400" :
                   "glass border border-[var(--border-color)] text-[var(--text-muted)]"
@@ -590,7 +590,7 @@ function ManualMode() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[var(--text-primary)] text-sm font-semibold truncate">{product.name}</span>
-                        {!product.isActive && <span className="text-[10px] text-red-400 font-bold uppercase bg-red-900/20 px-1.5 py-0.5 rounded">inactive</span>}
+                        {!product.isActive && <span className="text-12 text-red-400 font-bold uppercase bg-red-900/20 px-1.5 py-0.5 rounded">inactive</span>}
                       </div>
                       <div className="text-[var(--text-muted)] text-xs font-mono">{product.partNumber} · {product.category?.name}</div>
                     </div>
@@ -601,7 +601,7 @@ function ManualMode() {
                     {isSel && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setParentId(product.id); }}
-                        className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-colors ${isPar ? "bg-green-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-green-600/50 hover:text-green-400"}`}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-12 font-bold uppercase transition-colors ${isPar ? "bg-green-600 text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-green-600/50 hover:text-green-400"}`}
                       >
                         {isPar ? "Parent ✓" : "Set Parent"}
                       </button>
@@ -630,7 +630,7 @@ function ManualMode() {
       {step === "preview" && (
         <div>
           <div className="glass border border-[var(--border-color)] rounded-xl p-5 mb-5">
-            <label className="block text-[var(--text-muted)] text-xs font-semibold uppercase tracking-widest mb-2">Group / Product Name</label>
+            <label className="block text-[var(--text-muted)] text-xs font-semibold mb-2">Group / Product Name</label>
             <input
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
@@ -651,7 +651,7 @@ function ManualMode() {
               return (
                 <div key={s.id} className="border-b border-[var(--border-color)] last:border-0 p-4">
                   <div className="flex items-start gap-3">
-                    <div className={`mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isPar ? "bg-green-900/30 text-green-400" : "bg-purple-900/20 text-purple-400"}`}>
+                    <div className={`mt-1 px-2 py-0.5 rounded text-12 font-bold uppercase flex-shrink-0 ${isPar ? "bg-green-900/30 text-green-400" : "bg-purple-900/20 text-purple-400"}`}>
                       {isPar ? "Parent" : "Variant"}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -661,22 +661,22 @@ function ManualMode() {
                       ) : edit ? (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div>
-                            <label className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider mb-1 block">Label</label>
+                            <label className="text-[var(--text-muted)] text-12 mb-1 block">Label</label>
                             <input value={edit.label} onChange={(e) => setEditField(s.id, "label", e.target.value)}
                               className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-purple-600 rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm focus:outline-none" />
                           </div>
                           <div>
-                            <label className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider mb-1 block">Part No.</label>
+                            <label className="text-[var(--text-muted)] text-12 mb-1 block">Part No.</label>
                             <input value={edit.partNumber} onChange={(e) => setEditField(s.id, "partNumber", e.target.value)}
                               className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-purple-600 rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm font-mono focus:outline-none" />
                           </div>
                           <div>
-                            <label className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider mb-1 block">Price</label>
+                            <label className="text-[var(--text-muted)] text-12 mb-1 block">Price</label>
                             <input type="number" value={edit.price} onChange={(e) => setEditField(s.id, "price", e.target.value)}
                               className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-purple-600 rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm focus:outline-none" />
                           </div>
                           <div>
-                            <label className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider mb-1 block">MRP</label>
+                            <label className="text-[var(--text-muted)] text-12 mb-1 block">MRP</label>
                             <input type="number" value={edit.mrp} onChange={(e) => setEditField(s.id, "mrp", e.target.value)}
                               className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] focus:border-purple-600 rounded-lg px-3 py-1.5 text-[var(--text-primary)] text-sm focus:outline-none" />
                           </div>
@@ -722,7 +722,7 @@ function ManualMode() {
             <span className="text-[var(--text-primary)] font-semibold">&quot;{result.newProductName}&quot;</span> now has {result.variantsCreated} variants.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <Link href={`/admin/products/${result.parentProductId}/edit`} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-5 py-3 rounded-xl transition-colors text-sm">
+            <Link href={`/admin/products/${result.parentProductId}/edit`} className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-5 py-3 rounded-pill transition-colors text-sm">
               Edit Product
             </Link>
             <button onClick={() => { setStep("search"); setSelected(new Set()); setParentId(null); setSearchQuery(""); setSearchResults([]); setResult(null); }}

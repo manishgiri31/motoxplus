@@ -33,7 +33,7 @@ export function SectionNav({
     <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
       <button
         onClick={() => selectSection(null)}
-        className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border transition-colors ${
+        className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition-colors ${
           !selectedSectionSlug
             ? "bg-[var(--accent)] border-[var(--accent)] text-white"
             : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"
@@ -45,7 +45,7 @@ export function SectionNav({
         <button
           key={s.id}
           onClick={() => selectSection(s.slug)}
-          className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border transition-colors ${
+          className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold border transition-colors ${
             selectedSectionSlug === s.slug
               ? "bg-[var(--accent)] border-[var(--accent)] text-white"
               : "border-[var(--border-color)] text-[var(--text-muted)] hover:text-red-500"

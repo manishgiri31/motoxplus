@@ -111,7 +111,7 @@ export function DropdownMenuLabel({
   return (
     <DropdownMenuPrimitive.Label
       className={cn(
-        "px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-tech text-[var(--text-muted)]",
+        "px-2.5 py-1.5 text-12 font-bold text-[var(--text-muted)]",
         inset && "pl-8",
         className
       )}
@@ -125,7 +125,7 @@ export function DropdownMenuSeparator({ className, ...props }: React.ComponentPr
 }
 
 export function DropdownMenuShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
-  return <span className={cn("ml-auto text-[10px] tracking-widest text-[var(--text-faint)]", className)} {...props} />;
+  return <span className={cn("ml-auto text-12 text-[var(--text-faint)]", className)} {...props} />;
 }
 
 export const DropdownMenuSubTrigger = React.forwardRef<

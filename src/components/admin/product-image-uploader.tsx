@@ -315,7 +315,7 @@ export const ProductImageUploader = forwardRef<ImageUploaderRef, Props>(function
                   {img.isPrimary && (
                     <div className="absolute top-1 left-1 bg-yellow-500 rounded-sm px-1.5 py-0.5 flex items-center gap-1">
                       <Star className="w-2.5 h-2.5 fill-black text-black" />
-                      <span className="text-black text-[10px] font-bold">PRIMARY</span>
+                      <span className="text-black text-12 font-bold">PRIMARY</span>
                     </div>
                   )}
 

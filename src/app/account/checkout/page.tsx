@@ -252,14 +252,14 @@ export default function AccountCheckoutPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Full Name <span className="text-red-500">*</span></label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">Full Name <span className="text-red-500">*</span></label>
               <div className="relative">
                 <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input type="text" value={delivery.name} onChange={(e) => updateDelivery("name", e.target.value)} placeholder="Recipient name" className="w-full themed-input rounded-sm pl-9 pr-4 py-3 text-sm outline-none transition-colors" />
               </div>
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Phone <span className="text-red-500">*</span></label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">Phone <span className="text-red-500">*</span></label>
               <div className="relative">
                 <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input type="tel" value={delivery.phone} onChange={(e) => updateDelivery("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit mobile" className="w-full themed-input rounded-sm pl-9 pr-4 py-3 text-sm outline-none transition-colors" />
@@ -268,7 +268,7 @@ export default function AccountCheckoutPage() {
           </div>
 
           <div>
-            <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">Street Address <span className="text-red-500">*</span></label>
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Street Address <span className="text-red-500">*</span></label>
             <div className="relative">
               <MapPin size={14} className="absolute left-3 top-3 text-[var(--text-muted)]" />
               <textarea rows={2} value={delivery.address} onChange={(e) => updateDelivery("address", e.target.value)} placeholder="House/Flat No., Street, Area" className="w-full themed-input rounded-sm pl-9 pr-4 py-3 text-sm outline-none transition-colors resize-none" />
@@ -277,11 +277,11 @@ export default function AccountCheckoutPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">City <span className="text-red-500">*</span></label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">City <span className="text-red-500">*</span></label>
               <input type="text" value={delivery.city} onChange={(e) => updateDelivery("city", e.target.value)} placeholder="City" className="w-full themed-input rounded-sm px-4 py-3 text-sm outline-none transition-colors" />
             </div>
             <div>
-              <label className="text-[var(--text-muted)] text-xs uppercase tracking-wider block mb-2">State <span className="text-red-500">*</span></label>
+              <label className="text-[var(--text-muted)] text-xs block mb-2">State <span className="text-red-500">*</span></label>
               <input type="text" value={delivery.state} onChange={(e) => updateDelivery("state", e.target.value)} placeholder="State" className="w-full themed-input rounded-sm px-4 py-3 text-sm outline-none transition-colors" />
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function AccountCheckoutPage() {
             <span className="text-[var(--text-primary)]">Grand Total</span>
             <span className="text-red-500 text-lg">{formatCurrency(grandTotal)}</span>
           </div>
-          <p className="text-[var(--text-muted)] text-[10px]">Inclusive of all taxes.</p>
+          <p className="text-[var(--text-muted)] text-12">Inclusive of all taxes.</p>
         </div>
       </div>
 
@@ -375,7 +375,7 @@ export default function AccountCheckoutPage() {
       <button
         onClick={handlePlaceOrder}
         disabled={loading || (!upiEnabled && !RAZORPAY_ENABLED)}
-        className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors text-sm uppercase tracking-wider"
+        className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors text-sm"
       >
         {loading ? <><Spinner size={16} /> Placing order...</> : <><ShieldCheck size={16} /> Place Order — {formatCurrency(grandTotal)}</>}
       </button>

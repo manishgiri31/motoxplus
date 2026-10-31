@@ -39,10 +39,10 @@ export default async function CRMPipelinePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/admin/crm/leads" className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <Link href="/admin/crm/leads" className="glass border border-[var(--border-color)] hover:border-red-900/40 text-[var(--text-muted)] font-bold px-4 py-2.5 rounded-sm text-sm transition-colors">
             List View
           </Link>
-          <Link href="/admin/crm/leads/new" className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm text-sm uppercase tracking-wider transition-colors">
+          <Link href="/admin/crm/leads/new" className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill text-sm transition-colors">
             <Plus size={16} /> Add Lead
           </Link>
         </div>
@@ -58,7 +58,7 @@ export default async function CRMPipelinePage() {
               <div className={`glass border border-[var(--border-color)] border-t-2 ${stage.color} rounded-sm`}>
                 <div className="px-3 py-3 border-b border-[var(--border-color)]">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">{stage.label}</span>
+                    <span className="text-xs font-bold text-[var(--text-muted)]">{stage.label}</span>
                     <span className="text-xs font-bold text-[var(--text-muted)] bg-white/5 px-1.5 py-0.5 rounded-sm">{stageLeads.length}</span>
                   </div>
                   {stageValue > 0 && <p className="text-xs text-[var(--text-muted)]">{formatCurrency(stageValue)}/mo</p>}

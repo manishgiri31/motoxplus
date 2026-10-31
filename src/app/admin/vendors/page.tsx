@@ -69,7 +69,7 @@ export default async function AdminVendorsPage(
         </div>
         <Link
           href="/admin/vendors/new"
-          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm text-sm transition-colors uppercase tracking-wider"
+          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill text-sm transition-colors"
         >
           <Plus size={16} />
           Add Vendor
@@ -80,7 +80,7 @@ export default async function AdminVendorsPage(
       <div className="flex flex-wrap gap-2 mb-4">
         <Link
           href="/admin/vendors"
-          className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${
+          className={`px-3 py-2 rounded-sm text-xs font-semibold transition-colors ${
             !searchParams.status
               ? "bg-[var(--accent)] text-white"
               : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
@@ -92,7 +92,7 @@ export default async function AdminVendorsPage(
           <Link
             key={s}
             href={`/admin/vendors?status=${s}`}
-            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${
+            className={`px-3 py-2 rounded-sm text-xs font-semibold transition-colors ${
               searchParams.status === s
                 ? "bg-[var(--accent)] text-white"
                 : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"
@@ -107,14 +107,14 @@ export default async function AdminVendorsPage(
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border-color)]">
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Company</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Code</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">GST</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Category</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Location</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Rating</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Actions</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Company</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Code</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">GST</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Category</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Location</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Rating</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Status</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -146,10 +146,10 @@ export default async function AdminVendorsPage(
                       <span className="text-[var(--text-muted)] text-xs font-mono">{vendor.vendorCode}</span>
                       {vendor.user && (
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`inline-flex items-center gap-1 text-[10px] ${vendor.user.emailVerified ? "text-green-400" : "text-gray-600"}`} title="Email verified">
+                          <span className={`inline-flex items-center gap-1 text-12 ${vendor.user.emailVerified ? "text-green-400" : "text-gray-600"}`} title="Email verified">
                             {vendor.user.emailVerified ? <CheckCircle2 size={11} /> : <XCircle size={11} />} Email
                           </span>
-                          <span className={`inline-flex items-center gap-1 text-[10px] ${vendor.user.mobileVerified ? "text-green-400" : "text-gray-600"}`} title="Mobile verified">
+                          <span className={`inline-flex items-center gap-1 text-12 ${vendor.user.mobileVerified ? "text-green-400" : "text-gray-600"}`} title="Mobile verified">
                             {vendor.user.mobileVerified ? <CheckCircle2 size={11} /> : <XCircle size={11} />} Mobile
                           </span>
                         </div>
@@ -182,7 +182,7 @@ export default async function AdminVendorsPage(
                       )}
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${STATUS_COLORS[vendor.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
+                      <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-sm ${STATUS_COLORS[vendor.status] || "bg-gray-900/20 text-[var(--text-muted)]"}`}>
                         {vendor.status}
                       </span>
                     </td>

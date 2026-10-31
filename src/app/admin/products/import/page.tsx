@@ -207,7 +207,7 @@ export default function ProductImportPage() {
 
           {/* Required columns */}
           <div className="mt-4 glass border border-amber-900/20 rounded-xl p-4">
-            <div className="text-amber-400 text-xs font-bold uppercase tracking-widest mb-2">
+            <div className="text-amber-400 text-xs font-bold mb-2">
               Required Columns
             </div>
             <div className="flex flex-wrap gap-2">
@@ -224,13 +224,13 @@ export default function ProductImportPage() {
               ].map((col) => (
                 <span
                   key={col}
-                  className="bg-amber-900/20 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  className="bg-amber-900/20 text-amber-400 text-12 font-bold px-2 py-0.5 rounded-full"
                 >
                   {col}
                 </span>
               ))}
             </div>
-            <p className="text-[var(--text-muted)] text-[10px] mt-2">
+            <p className="text-[var(--text-muted)] text-12 mt-2">
               Category must match an existing category name exactly (case-insensitive). GST Rate: 0, 5, 12, 18, or 28. HSN Code: exactly 8 digits. Stock Status: In Stock, Few Left, or Out of Stock (defaults to In Stock if left blank).
             </p>
           </div>
@@ -239,7 +239,7 @@ export default function ProductImportPage() {
             <button
               onClick={handleImport}
               disabled={!file || loading}
-              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-white font-normal px-8 py-3 rounded-pill transition-colors text-sm"
             >
               {loading ? (
                 <>
@@ -290,7 +290,7 @@ export default function ProductImportPage() {
             ].map((s) => (
               <div key={s.label} className={`glass border ${s.border} rounded-2xl p-5 text-center`}>
                 <div className={`text-4xl font-black ${s.color}`}>{s.value}</div>
-                <div className="text-[var(--text-muted)] text-xs uppercase tracking-widest mt-1">{s.label}</div>
+                <div className="text-[var(--text-muted)] text-xs mt-1">{s.label}</div>
               </div>
             ))}
           </div>
@@ -342,16 +342,16 @@ export default function ProductImportPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[var(--border-color)]">
-                      <th className="text-left px-6 py-3 text-[var(--text-muted)] text-xs uppercase tracking-wider w-16">
+                      <th className="text-left px-6 py-3 text-[var(--text-muted)] text-xs w-16">
                         Row
                       </th>
-                      <th className="text-left px-6 py-3 text-[var(--text-muted)] text-xs uppercase tracking-wider w-32">
+                      <th className="text-left px-6 py-3 text-[var(--text-muted)] text-xs w-32">
                         SKU
                       </th>
-                      <th className="text-left px-6 py-3 text-[var(--text-muted)] text-xs uppercase tracking-wider">
+                      <th className="text-left px-6 py-3 text-[var(--text-muted)] text-xs">
                         Product Name
                       </th>
-                      <th className="text-left px-6 py-3 text-[var(--text-muted)] text-xs uppercase tracking-wider">
+                      <th className="text-left px-6 py-3 text-[var(--text-muted)] text-xs">
                         Error
                       </th>
                     </tr>
@@ -386,7 +386,7 @@ export default function ProductImportPage() {
             </button>
             <Link
               href="/admin/products"
-              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+              className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-5 py-2.5 rounded-pill text-sm transition-colors"
             >
               View Products
             </Link>

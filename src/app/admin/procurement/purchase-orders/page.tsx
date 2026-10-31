@@ -53,7 +53,7 @@ export default async function PurchaseOrdersPage(
         </div>
         <Link
           href="/admin/procurement/purchase-orders/new"
-          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold px-4 py-2.5 rounded-sm text-sm transition-colors uppercase tracking-wider"
+          className="flex items-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal px-4 py-2.5 rounded-pill text-sm transition-colors"
         >
           <Plus size={16} />
           New PO
@@ -63,7 +63,7 @@ export default async function PurchaseOrdersPage(
       <div className="flex flex-wrap gap-2 mb-6">
         <Link
           href="/admin/procurement/purchase-orders"
-          className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${!searchParams.status ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+          className={`px-3 py-2 rounded-pill text-xs font-semibold uppercase transition-colors ${!searchParams.status ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
         >
           All
         </Link>
@@ -71,7 +71,7 @@ export default async function PurchaseOrdersPage(
           <Link
             key={s}
             href={`/admin/procurement/purchase-orders?status=${s}`}
-            className={`px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${searchParams.status === s ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
+            className={`px-3 py-2 rounded-pill text-xs font-semibold uppercase transition-colors ${searchParams.status === s ? "bg-[var(--accent)] text-white" : "glass border border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/50"}`}
           >
             {s.replace("_", " ")}
           </Link>
@@ -82,13 +82,13 @@ export default async function PurchaseOrdersPage(
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border-color)]">
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">PO Number</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Vendor</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">Delivery By</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden md:table-cell">Value</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest hidden lg:table-cell">GRNs</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Status</th>
-              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] uppercase tracking-widest">Actions</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">PO Number</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Vendor</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">Delivery By</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden md:table-cell">Value</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)] hidden lg:table-cell">GRNs</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Status</th>
+              <th className="px-4 py-3 text-left text-xs text-[var(--text-muted)]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -123,12 +123,12 @@ export default async function PurchaseOrdersPage(
                     <span className="text-[var(--text-primary)] font-bold text-sm">{po._count.goodsReceivedNotes}</span>
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-sm ${STATUS_COLORS[po.status] || "bg-gray-900/20 text-gray-400"}`}>
+                    <span className={`text-xs font-semibold uppercase px-2 py-1 rounded-sm ${STATUS_COLORS[po.status] || "bg-gray-900/20 text-gray-400"}`}>
                       {po.status.replace("_", " ")}
                     </span>
                   </td>
                   <td className="px-4 py-4">
-                    <Link href={`/admin/procurement/purchase-orders/${po.id}`} className="text-xs font-semibold text-[var(--text-muted)] hover:text-red-400 uppercase tracking-wider transition-colors">
+                    <Link href={`/admin/procurement/purchase-orders/${po.id}`} className="text-xs font-semibold text-[var(--text-muted)] hover:text-red-400 transition-colors">
                       View
                     </Link>
                   </td>
