@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { delhiveryPost } from "./client";
-import { getDelhiveryConfig } from "./config";
+import { getDelhiveryConfig, toDelhiveryChannel, type DelhiveryChannel } from "./config";
 import { prisma } from "@/lib/prisma";
 import { roundToPaise } from "@/lib/utils";
 import type {
@@ -27,6 +27,8 @@ export interface BuildShipmentPayloadInput {
   weightKg: number;
   addressType: "home" | "office";
   orderDate: string; // YYYY-MM-DD
+  /** Which Delhivery client the shipment is booked on. Defaults to B2C. */
+  channel?: DelhiveryChannel;
 }
 
 /**
@@ -36,7 +38,7 @@ export interface BuildShipmentPayloadInput {
  * traffic goes through instead of a hand-rolled copy that can drift.
  */
 export function buildShipmentPayload(input: BuildShipmentPayloadInput): DelhiveryShipmentPayload {
-  const { pickup, companyGst } = getDelhiveryConfig();
+  const { pickup, companyGst } = getDelhiveryConfig(input.channel);
   return {
     name: input.destName,
     add: input.destAddress,
@@ -72,9 +74,10 @@ export function buildShipmentPayload(input: BuildShipmentPayloadInput): Delhiver
  * (confirmed missing entirely before the 2026-08-23 live capture — see
  * delhivery-reference.md). `name` is the immutable registered pickup location
  * on the Delhivery client, NOT the same value as return_name/PICKUP_NAME above.
+ * Each channel (B2C / B2B) has its own registered location.
  */
-export function buildPickupLocation(): DelhiveryPickupLocation {
-  const { pickup } = getDelhiveryConfig();
+export function buildPickupLocation(channel?: DelhiveryChannel): DelhiveryPickupLocation {
+  const { pickup } = getDelhiveryConfig(channel);
   return {
     name: pickup.locationName,
     add: pickup.address,
@@ -88,7 +91,7 @@ export function buildPickupLocation(): DelhiveryPickupLocation {
 export function buildCreateShipmentRequest(input: BuildShipmentPayloadInput): DelhiveryCreateShipmentRequest {
   return {
     shipments: [buildShipmentPayload(input)],
-    pickup_location: buildPickupLocation(),
+    pickup_location: buildPickupLocation(input.channel),
   };
 }
 
@@ -192,6 +195,10 @@ async function createShipmentLocked(
   order: ShipmentOrder
 ): Promise<{ waybill: string; trackingUrl: string }> {
   const orderId = order.id;
+  // AWB and (later) pickup must both go through the SAME Delhivery client, so
+  // the channel is resolved once from the order and threaded into the payload
+  // builder (pickup_location) and the API call (token).
+  const channel = toDelhiveryChannel(order.channel);
   // order.dealer is null for a B2C order (Order.dealerId/.dealer are optional
   // — B2C-EXPANSION-PLAN.md Phase 2); its own delivery fields are always
   // populated at creation time for that channel, so the `?? order.dealer?.x`
@@ -247,6 +254,7 @@ async function createShipmentLocked(
     weightKg: Math.max(0.5, totalWeight),
     addressType: "office",
     orderDate: order.createdAt.toISOString().split("T")[0],
+    channel,
   });
 
   const formData = {
@@ -261,7 +269,7 @@ async function createShipmentLocked(
   const response = await delhiveryPost<DelhiveryCreateShipmentResponse>(
     "/api/cmu/create.json",
     formData,
-    { retries: 1 }
+    { retries: 1, channel }
   );
 
   if (!response.success || !response.packages?.[0]) {

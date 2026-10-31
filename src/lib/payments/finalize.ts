@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { roundToPaise } from "@/lib/utils";
+import { balancesAfterPayment } from "./balances";
 import { autoCreateShipment } from "@/lib/delhivery";
 import { decrementStock } from "@/lib/orders/stock";
 import { notifyOrderEvent } from "@/lib/push/order-notifications";
@@ -39,7 +39,6 @@ export async function finalizeCapturedPayment(params: {
   });
   if (!order) throw new Error(`Order ${orderId} not found during payment finalization`);
 
-  const isFullPayment = order.paymentType === "FULL_100";
   let invoiceNumber: string | null = null;
 
   await prisma.$transaction(async (tx) => {
@@ -63,9 +62,7 @@ export async function finalizeCapturedPayment(params: {
     const guarded = await tx.order.updateMany({
       where: { id: orderId, stockReserved: false },
       data: {
-        amountPaid: order.amountDue,
-        amountDue: isFullPayment ? 0 : roundToPaise(order.grandTotal - order.amountDue),
-        paymentStatus: isFullPayment ? "PAID" : "PARTIAL",
+        ...balancesAfterPayment(order),
         status: "CONFIRMED",
         stockReserved: true,
       },

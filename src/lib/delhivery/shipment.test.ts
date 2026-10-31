@@ -12,10 +12,16 @@ const delhiveryPost = vi.fn();
 vi.mock("./client", () => ({ delhiveryPost: (...a: unknown[]) => delhiveryPost(...a) }));
 
 vi.mock("./config", () => ({
-  getDelhiveryConfig: () => ({
-    token: "test-token-1234567890123456789",
+  toDelhiveryChannel: (v: unknown) => {
+    if (v === "B2C" || v === "B2B") return v;
+    throw new Error(`bad channel ${String(v)}`);
+  },
+  // Channel-distinct fixtures so tests can prove which client was selected.
+  getDelhiveryConfig: (channel = "B2C") => ({
+    channel,
+    token: `test-token-${channel}-1234567890`,
     baseUrl: "https://track.delhivery.com",
-    pickup: { name: "P", address: "A", city: "C", state: "S", phone: "9999999999", pincode: "110046", locationName: "L" },
+    pickup: { name: "P", address: "A", city: "C", state: "S", phone: "9999999999", pincode: "110046", locationName: `LOC-${channel}` },
     companyGst: "07AAUCM5765B1Z4",
     clientName: "test-client",
   }),
@@ -40,6 +46,7 @@ const baseOrder = {
   id: "order_1",
   orderNumber: "MX-1",
   status: "CONFIRMED",
+  channel: "B2C",
   paymentType: "COD",
   grandTotal: 1000,
   amountDue: 1000,
@@ -77,7 +84,7 @@ describe("createDelhiveryShipment — F-03 retry suppression", () => {
   it("calls create.json with retries:1 (no auto-retry)", async () => {
     await createDelhiveryShipment("order_1");
     expect(delhiveryPost).toHaveBeenCalledTimes(1);
-    expect(delhiveryPost).toHaveBeenCalledWith("/api/cmu/create.json", expect.any(Object), { retries: 1 });
+    expect(delhiveryPost).toHaveBeenCalledWith("/api/cmu/create.json", expect.any(Object), { retries: 1, channel: "B2C" });
   });
 
   it("takes the advisory lock before hitting create.json", async () => {
@@ -176,5 +183,52 @@ describe("createDelhiveryShipment — payment_mode / cod_amount", () => {
     const p = payloadOf(delhiveryPost.mock.calls[0]);
     expect(p.payment_mode).toBe("Prepaid");
     expect(p.cod_amount).toBe(0);
+  });
+});
+
+function requestOf(call: unknown[]): { shipments: unknown[]; pickup_location: { name: string } } {
+  return JSON.parse((call[1] as { data: string }).data);
+}
+
+describe("createDelhiveryShipment — payment mode per payment type", () => {
+  it("Razorpay/UPI FULL_100 (amountDue 0): Prepaid, cod_amount 0", async () => {
+    txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, paymentType: "FULL_100", grandTotal: 5000, amountDue: 0 });
+    await createDelhiveryShipment("order_1");
+    const p = payloadOf(delhiveryPost.mock.calls[0]);
+    expect(p.payment_mode).toBe("Prepaid");
+    expect(p.cod_amount).toBe(0);
+    expect(p.total_amount).toBe(5000);
+  });
+
+  it("UPI ADVANCE_20 after verify (balance 4000 of 5000): COD, cod_amount 4000", async () => {
+    txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, paymentType: "ADVANCE_20", grandTotal: 5000, amountDue: 4000 });
+    await createDelhiveryShipment("order_1");
+    const p = payloadOf(delhiveryPost.mock.calls[0]);
+    expect(p.payment_mode).toBe("COD");
+    expect(p.cod_amount).toBe(4000);
+  });
+});
+
+describe("createDelhiveryShipment — channel selection", () => {
+  it("B2C order: B2C token and B2C pickup location", async () => {
+    txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, channel: "B2C" });
+    await createDelhiveryShipment("order_1");
+    const call = delhiveryPost.mock.calls[0];
+    expect(call[2]).toEqual({ retries: 1, channel: "B2C" });
+    expect(requestOf(call).pickup_location.name).toBe("LOC-B2C");
+  });
+
+  it("B2B order: B2B token and B2B pickup location", async () => {
+    txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, channel: "B2B" });
+    await createDelhiveryShipment("order_1");
+    const call = delhiveryPost.mock.calls[0];
+    expect(call[2]).toEqual({ retries: 1, channel: "B2B" });
+    expect(requestOf(call).pickup_location.name).toBe("LOC-B2B");
+  });
+
+  it("refuses an order with an unknown channel instead of guessing a client", async () => {
+    txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, channel: undefined });
+    await expect(createDelhiveryShipment("order_1")).rejects.toThrow(/bad channel/);
+    expect(delhiveryPost).not.toHaveBeenCalled();
   });
 });

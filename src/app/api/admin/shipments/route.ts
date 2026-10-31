@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createDelhiveryShipment } from "@/lib/delhivery";
+import { createDelhiveryShipment, autoRequestPickup } from "@/lib/delhivery";
 import { DelhiveryConfigError } from "@/lib/delhivery/errors";
 
 // Route reads the session (cookies) on every request, so it was never a
@@ -55,6 +55,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await createDelhiveryShipment(orderId);
+    // Manual creation should also get a pickup; never throws, idempotent per slot.
+    await autoRequestPickup(orderId);
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof DelhiveryConfigError) {

@@ -13,7 +13,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const actor = await resolveOrderActor(userId);
-  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // 403 (matching POST below), not 401: the session is valid, the account just
+  // isn't verified/active. A 401 here made token-refreshing clients conclude
+  // the session was dead and sign the user out right after login.
+  if (!actor) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
 
   if (actor.channel === "B2C") {
     // B2C carts never carry a scheme selection (GST Benefit is a B2B-only

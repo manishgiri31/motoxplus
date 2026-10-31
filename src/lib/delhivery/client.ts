@@ -1,4 +1,4 @@
-import { getDelhiveryConfig } from "./config";
+import { getDelhiveryConfig, type DelhiveryChannel } from "./config";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -9,14 +9,16 @@ function sleep(ms: number) {
 
 interface FetchOptions extends RequestInit {
   retries?: number;
+  /** Which Delhivery client's token to use. Defaults to B2C (the legacy single-client behaviour). */
+  channel?: DelhiveryChannel;
 }
 
 export async function delhiveryFetch<T>(
   path: string,
   options: FetchOptions = {}
 ): Promise<T> {
-  const { retries = MAX_RETRIES, ...fetchOptions } = options;
-  const { baseUrl, token } = getDelhiveryConfig();
+  const { retries = MAX_RETRIES, channel, ...fetchOptions } = options;
+  const { baseUrl, token } = getDelhiveryConfig(channel);
 
   const headers: Record<string, string> = {
     Authorization: `Token ${token}`,
@@ -67,7 +69,7 @@ export async function delhiveryFetch<T>(
 export async function delhiveryPost<T>(
   path: string,
   formData: Record<string, string>,
-  opts?: { retries?: number }
+  opts?: { retries?: number; channel?: DelhiveryChannel }
 ): Promise<T> {
   const body = new URLSearchParams(formData).toString();
 
@@ -76,5 +78,6 @@ export async function delhiveryPost<T>(
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
     ...(opts?.retries !== undefined ? { retries: opts.retries } : {}),
+    ...(opts?.channel !== undefined ? { channel: opts.channel } : {}),
   });
 }

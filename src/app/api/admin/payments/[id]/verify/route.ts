@@ -9,6 +9,8 @@ import { decrementStock, InsufficientStockError } from "@/lib/orders/stock";
 import { notifyOrderEvent } from "@/lib/push/order-notifications";
 import { createInvoice } from "@/lib/invoicing/create-invoice";
 import { isPlaceholderEmail } from "@/lib/phone";
+import { autoCreateShipment } from "@/lib/delhivery";
+import { balancesAfterPayment } from "@/lib/payments/balances";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -64,9 +66,9 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       const guarded = await tx.order.updateMany({
         where: { id: submission.orderId, stockReserved: false },
         data: {
-          paymentStatus: "PAID",
-          amountPaid: submission.order.amountDue,
-          amountDue: 0,
+          // amountDue becomes the balance owed on delivery (0 only for
+          // FULL_100) — Delhivery COD/Prepaid is derived from it.
+          ...balancesAfterPayment(submission.order),
           status: submission.order.status === "PENDING" ? "CONFIRMED" : submission.order.status,
           stockReserved: true,
         },
@@ -113,9 +115,14 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     throw err;
   }
 
-  // Notify the dealer's devices only if this call actually confirmed the order
-  // (fire-and-forget; never throws).
-  if (didConfirm) void notifyOrderEvent(submission.orderId, "ORDER_CONFIRMED");
+  // Only the call that actually confirmed the order creates the shipment and
+  // notifies the dealer's devices (both fire-and-forget; neither throws). The
+  // Razorpay path does the same in lib/payments/finalize.ts — manual UPI
+  // verification used to skip this, so UPI orders never got an AWB/pickup.
+  if (didConfirm) {
+    void autoCreateShipment(submission.orderId);
+    void notifyOrderEvent(submission.orderId, "ORDER_CONFIRMED");
+  }
 
   // Reload the order with invoice for email
   const updatedOrder = await prisma.order.findUnique({

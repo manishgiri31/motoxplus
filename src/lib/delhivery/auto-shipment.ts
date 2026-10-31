@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { createDelhiveryShipment } from "./shipment";
+import { autoRequestPickup } from "./pickup";
 
 /**
  * Master switch for AUTOMATIC Delhivery shipment creation — the order reaches
@@ -53,6 +54,9 @@ export async function autoCreateShipment(orderId: string): Promise<void> {
   try {
     const { waybill } = await createDelhiveryShipment(orderId);
     await recordShipmentEvent(orderId, "SHIPMENT_CREATED", `Delhivery AWB ${waybill}`);
+    // An AWB alone doesn't get the parcel collected — book the pickup too.
+    // Never throws; a pickup failure must not mark the (successful) shipment failed.
+    await autoRequestPickup(orderId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[Delhivery] auto-shipment failed for order ${orderId}: ${message}`);

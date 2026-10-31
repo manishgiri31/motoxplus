@@ -5,6 +5,11 @@ vi.mock("./shipment", () => ({
   createDelhiveryShipment: (...a: unknown[]) => createDelhiveryShipmentMock(...a),
 }));
 
+const autoRequestPickupMock = vi.fn().mockResolvedValue(undefined);
+vi.mock("./pickup", () => ({
+  autoRequestPickup: (...a: unknown[]) => autoRequestPickupMock(...a),
+}));
+
 const orderEventCreate = vi.fn();
 vi.mock("@/lib/prisma", () => ({
   prisma: { orderEvent: { create: (...a: unknown[]) => orderEventCreate(...a) } },
@@ -17,6 +22,7 @@ const ENV = process.env.DELHIVERY_AUTO_SHIPMENT;
 beforeEach(() => {
   vi.clearAllMocks();
   orderEventCreate.mockResolvedValue({});
+  autoRequestPickupMock.mockResolvedValue(undefined);
 });
 afterEach(() => {
   if (ENV === undefined) delete process.env.DELHIVERY_AUTO_SHIPMENT;
@@ -49,6 +55,7 @@ describe("autoCreateShipment", () => {
     await autoCreateShipment("order_1");
 
     expect(createDelhiveryShipmentMock).toHaveBeenCalledWith("order_1");
+    expect(autoRequestPickupMock).toHaveBeenCalledWith("order_1");
     expect(orderEventCreate).toHaveBeenCalledWith({
       data: { orderId: "order_1", type: "SHIPMENT_CREATED", reason: expect.stringContaining("AWB123") },
     });
@@ -60,6 +67,7 @@ describe("autoCreateShipment", () => {
     await autoCreateShipment("order_1");
 
     expect(createDelhiveryShipmentMock).not.toHaveBeenCalled();
+    expect(autoRequestPickupMock).not.toHaveBeenCalled();
     expect(orderEventCreate).toHaveBeenCalledWith({
       data: { orderId: "order_1", type: "SHIPMENT_AUTO_SKIPPED", reason: expect.any(String) },
     });
@@ -71,6 +79,7 @@ describe("autoCreateShipment", () => {
 
     await expect(autoCreateShipment("order_1")).resolves.toBeUndefined();
 
+    expect(autoRequestPickupMock).not.toHaveBeenCalled();
     expect(orderEventCreate).toHaveBeenCalledWith({
       data: { orderId: "order_1", type: "SHIPMENT_FAILED", reason: expect.stringContaining("bad pin") },
     });

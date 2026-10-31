@@ -67,7 +67,7 @@ export function Navbar() {
     <header className="sticky top-0 z-[9998] h-12 bg-white/80 font-store backdrop-blur-xl backdrop-saturate-150 supports-[not(backdrop-filter:blur(1px))]:bg-white/95 bp-md:h-11">
       <nav aria-label="Main" className="mx-auto flex h-full max-w-[1024px] items-center justify-between px-[22px]">
         <Link href="/" className={cn("flex items-center gap-2 text-17 font-semibold text-store-ink", focus)}>
-          <Image src="/motoxplus/logo.png" alt="" width={400} height={300} className="h-6 w-auto object-contain" priority />
+          <Image src="/motoxplus/logo.png" alt="" width={400} height={300} className="h-8 w-auto object-contain" priority />
           MOTOXPLUS
         </Link>
 
