@@ -318,7 +318,7 @@ jobs:
             # --include=dev is required: the Next.js build needs devDependencies
             # even when NODE_ENV=production is inherited by this shell.
             if [ -f package-lock.json ]; then
-              npm ci --include=dev --no-audit --no-fund
+              npm ci --include=dev --no-audit --no-fund --legacy-peer-deps
             else
               echo "WARNING: package-lock.json not found, falling back to 'npm install'."
               npm install --include=dev --no-audit --no-fund
