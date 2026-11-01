@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Phone, MapPin, CreditCard, Smartphone, ShieldCheck, Lock } from "lucide-react";
+import Link from "next/link";
+import { User, Phone, MapPin, CreditCard, Banknote, ShieldCheck, Lock, XCircle } from "lucide-react";
 import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,7 +15,7 @@ declare global {
   interface Window { Razorpay: any; }
 }
 
-type PaymentMethod = "DIRECT_UPI" | "RAZORPAY";
+type PaymentMethod = "COD" | "RAZORPAY";
 
 interface CartItem {
   productId: string;
@@ -26,6 +27,7 @@ interface CartItem {
 
 interface ServiceabilityResult {
   serviceable: boolean;
+  availableServices?: string[];
   city: string | null;
   state: string | null;
 }
@@ -43,19 +45,23 @@ interface DeliveryForm {
 // dealer checkout uses (src/app/dealer/checkout/page.tsx).
 const RAZORPAY_ENABLED = process.env.NEXT_PUBLIC_RAZORPAY_ENABLED === "true";
 
-// B2C checkout — one price (GST-inclusive), FULL_100 only (no 20% advance,
-// that's a B2B credit arrangement), no scheme/dues/MOQ concepts. See
-// B2C-EXPANSION-PLAN.md Phase 2. Deliberately a separate, simpler page
-// rather than the dealer checkout with channel branches threaded through it.
+// B2C checkout — one price (GST-inclusive), pay online in full (Razorpay) or
+// Cash on Delivery (no 20% advance, that's a B2B credit arrangement), no
+// scheme/dues/MOQ concepts. See B2C-EXPANSION-PLAN.md Phase 2. Deliberately a
+// separate, simpler page rather than the dealer checkout with channel
+// branches threaded through it.
 export default function AccountCheckoutPage() {
   const router = useRouter();
   const [items, setItems] = useState<CartItem[]>([]);
   const [cartLoading, setCartLoading] = useState(true);
-  const [upiEnabled, setUpiEnabled] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(RAZORPAY_ENABLED ? "RAZORPAY" : "DIRECT_UPI");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(RAZORPAY_ENABLED ? "RAZORPAY" : "COD");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [serviceabilityResult, setServiceabilityResult] = useState<ServiceabilityResult | null>(null);
+  // Set when the Razorpay modal is closed without paying. The order already
+  // exists (PENDING), so the page switches to a "choose how to pay" screen
+  // instead of the form — resubmitting the form would create a duplicate order.
+  const [cancelledOrder, setCancelledOrder] = useState<{ id: string; orderNumber: string } | null>(null);
 
   const [delivery, setDelivery] = useState<DeliveryForm>({ name: "", phone: "", address: "", city: "", state: "", pincode: "" });
   const updateDelivery = (field: keyof DeliveryForm, value: string) => setDelivery((prev) => ({ ...prev, [field]: value }));
@@ -67,15 +73,6 @@ export default function AccountCheckoutPage() {
         setItems(data.items || []);
         setCartLoading(false);
       });
-
-    fetch("/api/admin/settings/upi")
-      .then((r) => r.json())
-      .then((data) => {
-        const enabled = data.upiEnabled !== false;
-        setUpiEnabled(enabled);
-        if (enabled) setPaymentMethod("DIRECT_UPI");
-      })
-      .catch(() => {});
 
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -103,8 +100,12 @@ export default function AccountCheckoutPage() {
     delivery.name.trim() && delivery.phone.trim() && delivery.address.trim() &&
     delivery.city.trim() && delivery.state.trim() && delivery.pincode.length === 6;
 
-  const buildOrderPayload = () => ({
-    paymentType: "FULL_100",
+  // COD isn't offered for pincodes Delhivery can't collect cash in. Unknown
+  // (no pincode check yet) counts as allowed; the server re-checks regardless.
+  const codBlocked = serviceabilityResult !== null && !serviceabilityResult.availableServices?.includes("COD");
+
+  const buildOrderPayload = (paymentType: "FULL_100" | "COD") => ({
+    paymentType,
     deliveryName: delivery.name,
     deliveryPhone: delivery.phone,
     deliveryAddress: delivery.address,
@@ -117,14 +118,15 @@ export default function AccountCheckoutPage() {
     try { return await res.json(); } catch { return null; }
   };
 
-  const handleDirectUpi = async () => {
+  // Placing a COD order confirms it immediately (no payment step).
+  const handleCod = async () => {
     setLoading(true);
     setError("");
     try {
       const orderRes = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildOrderPayload()),
+        body: JSON.stringify(buildOrderPayload("COD")),
       });
       const data = await safeJson(orderRes);
       if (!orderRes.ok || !data?.order) {
@@ -132,30 +134,42 @@ export default function AccountCheckoutPage() {
         setLoading(false);
         return;
       }
-      router.push(`/account/orders/${data.order.id}/pay-upi`);
+      router.push(`/account/orders/${data.order.id}?cod=1`);
     } catch {
       setError("Could not reach the server. Check your connection and try again.");
       setLoading(false);
     }
   };
 
-  const handleRazorpay = async () => {
+  // From the payment-cancelled screen: the order already exists, so switch it
+  // to COD rather than creating another one.
+  const switchToCod = async (order: { id: string }) => {
     setLoading(true);
     setError("");
     try {
-      const orderRes = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildOrderPayload()),
-      });
-      const orderData = await safeJson(orderRes);
-      if (!orderRes.ok || !orderData?.order) {
-        setError(orderData?.error || "Failed to create order. Please try again.");
-        setLoading(false);
+      const res = await fetch(`/api/orders/${order.id}/confirm-cod`, { method: "POST" });
+      if (res.ok) {
+        router.push(`/account/orders/${order.id}?cod=1`);
         return;
       }
-      const { order } = orderData;
+      const data = await safeJson(res);
+      setError(data?.error || "Could not confirm Cash on Delivery. Please try again.");
+    } catch {
+      setError("Could not reach the server. Check your connection and try again.");
+    }
+    setLoading(false);
+  };
 
+  // Opens the Razorpay modal for an already-created order. Used both by the
+  // first attempt and by "try again" on the payment-cancelled screen — the
+  // order is reused, a fresh Razorpay order/Payment row is created each time.
+  // cancelledOrder is deliberately NOT cleared here: the order exists, so any
+  // failure must land back on the choose-a-method screen, never on the form
+  // (resubmitting that would create a duplicate order).
+  const openRazorpay = async (order: { id: string; orderNumber: string }) => {
+    setLoading(true);
+    setError("");
+    try {
       const rzpOrderRes = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -163,11 +177,16 @@ export default function AccountCheckoutPage() {
       });
       const rzpData = await safeJson(rzpOrderRes);
       if (!rzpOrderRes.ok || !rzpData?.data) {
-        setError(rzpData?.error || `Could not start payment. Your order was saved — contact support with order number ${order.orderNumber}.`);
+        setError(rzpData?.error || "Could not start online payment. Please try again or choose another method.");
+        setCancelledOrder(order);
         setLoading(false);
         return;
       }
       const razorpayOrder = rzpData.data;
+
+      // Set once Razorpay reports a successful payment, so closing the modal
+      // afterwards (or a verify failure) is never mistaken for a cancellation.
+      let paymentCompleted = false;
 
       const rzp = new window.Razorpay({
         key: razorpayOrder.keyId,
@@ -178,6 +197,7 @@ export default function AccountCheckoutPage() {
         description: `Order ${razorpayOrder.orderNumber}`,
         theme: { color: "#DC2626" },
         handler: async (response: any) => {
+          paymentCompleted = true;
           try {
             const verifyRes = await fetch("/api/payments/verify", {
               method: "POST",
@@ -204,11 +224,41 @@ export default function AccountCheckoutPage() {
             setLoading(false);
           }
         },
-        modal: { ondismiss: () => setLoading(false) },
+        modal: {
+          // Closed without paying: the order stays PENDING and unpaid, so
+          // show it as cancelled and let the customer pick a method again.
+          ondismiss: () => {
+            setLoading(false);
+            if (!paymentCompleted) setCancelledOrder(order);
+          },
+        },
       });
       rzp.open();
     } catch {
       setError("Something went wrong starting the payment. Please try again.");
+      setCancelledOrder(order);
+      setLoading(false);
+    }
+  };
+
+  const handleRazorpay = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const orderRes = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildOrderPayload("FULL_100")),
+      });
+      const orderData = await safeJson(orderRes);
+      if (!orderRes.ok || !orderData?.order) {
+        setError(orderData?.error || "Failed to create order. Please try again.");
+        setLoading(false);
+        return;
+      }
+      await openRazorpay(orderData.order);
+    } catch {
+      setError("Could not reach the server. Check your connection and try again.");
       setLoading(false);
     }
   };
@@ -218,10 +268,68 @@ export default function AccountCheckoutPage() {
       setError("Please complete all delivery address fields.");
       return;
     }
+    if (paymentMethod === "COD" && codBlocked) {
+      setError("Cash on Delivery isn't available for this pincode. Please pay online instead.");
+      return;
+    }
     setError("");
-    if (paymentMethod === "DIRECT_UPI") handleDirectUpi();
+    if (paymentMethod === "COD") handleCod();
     else handleRazorpay();
   };
+
+  if (cancelledOrder) {
+    const optionClass =
+      "w-full flex items-center gap-4 p-4 rounded-sm border border-[var(--border-color)] hover:border-red-600/40 glass text-left transition-colors disabled:opacity-50";
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6 bg-red-900/20 border border-red-900/40 rounded-sm p-5" role="alert">
+          <div className="flex items-start gap-3">
+            <XCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h1 className="text-xl font-black text-[var(--text-primary)] tracking-tight">Payment cancelled</h1>
+              <p className="text-[var(--text-secondary)] text-sm mt-1">
+                No money was charged. Order <span className="font-mono">{cancelledOrder.orderNumber}</span> is saved
+                but unpaid — choose how you&apos;d like to complete it.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
+          <h3 className="text-[var(--text-primary)] font-bold mb-5">Choose payment method</h3>
+          <div className="space-y-3">
+            {RAZORPAY_ENABLED && (
+              <button onClick={() => openRazorpay(cancelledOrder)} disabled={loading} className={optionClass}>
+                <CreditCard size={18} className="text-red-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="text-[var(--text-primary)] font-semibold text-sm">Pay Online</div>
+                  <div className="text-[var(--text-muted)] text-xs">Cards, netbanking, UPI — instant confirmation</div>
+                </div>
+                {loading && <Spinner size={16} />}
+              </button>
+            )}
+            {!codBlocked && (
+              <button onClick={() => switchToCod(cancelledOrder)} disabled={loading} className={optionClass}>
+                <Banknote size={18} className="text-green-500 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="text-[var(--text-primary)] font-semibold text-sm">Cash on Delivery</div>
+                  <div className="text-[var(--text-muted)] text-xs">Order is confirmed now — pay {formatCurrency(grandTotal)} in cash when it arrives</div>
+                </div>
+              </button>
+            )}
+          </div>
+          {error && <p className="mt-4 text-red-400 text-sm">{error}</p>}
+        </div>
+
+        <Link
+          href={`/account/orders/${cancelledOrder.id}`}
+          className="block text-center text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm transition-colors"
+        >
+          Pay later — view order
+        </Link>
+      </div>
+    );
+  }
 
   if (cartLoading) {
     return (
@@ -291,6 +399,8 @@ export default function AccountCheckoutPage() {
             onChange={(v) => updateDelivery("pincode", v)}
             onResult={(result) => {
               setServiceabilityResult(result);
+              // COD can't be delivered here — fall back to online payment.
+              if (result && !result.availableServices?.includes("COD") && RAZORPAY_ENABLED) setPaymentMethod("RAZORPAY");
               if (result?.city && !delivery.city) updateDelivery("city", result.city);
               if (result?.state && !delivery.state) updateDelivery("state", result.state);
             }}
@@ -323,21 +433,6 @@ export default function AccountCheckoutPage() {
       <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
         <h3 className="text-[var(--text-primary)] font-bold mb-5">Payment Method</h3>
         <div className="space-y-3">
-          {upiEnabled && (
-            <button
-              onClick={() => setPaymentMethod("DIRECT_UPI")}
-              className={`w-full flex items-center gap-4 p-4 rounded-sm border text-left transition-all duration-200 ${paymentMethod === "DIRECT_UPI" ? "border-[var(--accent)] bg-red-600/5 ring-1 ring-red-600/20" : "border-[var(--border-color)] hover:border-red-600/40 glass"}`}
-            >
-              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "DIRECT_UPI" ? "border-[var(--accent)]" : "border-[var(--text-muted)]"}`}>
-                {paymentMethod === "DIRECT_UPI" && <div className="w-2 h-2 bg-[var(--accent)] rounded-full" />}
-              </div>
-              <Smartphone size={18} className="text-purple-400 flex-shrink-0" />
-              <div className="flex-1">
-                <div className="text-[var(--text-primary)] font-semibold text-sm">Direct UPI / Bank Transfer</div>
-                <div className="text-[var(--text-muted)] text-xs">Pay via UPI QR or NEFT/IMPS — verified within 1–2 hours</div>
-              </div>
-            </button>
-          )}
           {RAZORPAY_ENABLED && (
             <button
               onClick={() => setPaymentMethod("RAZORPAY")}
@@ -353,9 +448,22 @@ export default function AccountCheckoutPage() {
               </div>
             </button>
           )}
-          {!upiEnabled && !RAZORPAY_ENABLED && (
-            <p className="text-amber-400 text-xs">No payment method is currently available. Please contact support.</p>
-          )}
+          <button
+            onClick={() => setPaymentMethod("COD")}
+            disabled={codBlocked}
+            className={`w-full flex items-center gap-4 p-4 rounded-sm border text-left transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${paymentMethod === "COD" ? "border-[var(--accent)] bg-red-600/5 ring-1 ring-red-600/20" : "border-[var(--border-color)] hover:border-red-600/40 glass"}`}
+          >
+            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${paymentMethod === "COD" ? "border-[var(--accent)]" : "border-[var(--text-muted)]"}`}>
+              {paymentMethod === "COD" && <div className="w-2 h-2 bg-[var(--accent)] rounded-full" />}
+            </div>
+            <Banknote size={18} className="text-green-500 flex-shrink-0" />
+            <div className="flex-1">
+              <div className="text-[var(--text-primary)] font-semibold text-sm">Cash on Delivery</div>
+              <div className="text-[var(--text-muted)] text-xs">
+                {codBlocked ? "Not available for this pincode" : "Pay in cash when your order arrives"}
+              </div>
+            </div>
+          </button>
         </div>
 
         {paymentMethod === "RAZORPAY" && RAZORPAY_ENABLED && (
@@ -374,10 +482,16 @@ export default function AccountCheckoutPage() {
 
       <button
         onClick={handlePlaceOrder}
-        disabled={loading || (!upiEnabled && !RAZORPAY_ENABLED)}
+        disabled={loading}
         className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors text-sm"
       >
-        {loading ? <><Spinner size={16} /> Placing order...</> : <><ShieldCheck size={16} /> Place Order — {formatCurrency(grandTotal)}</>}
+        {loading ? (
+          <><Spinner size={16} /> Placing order...</>
+        ) : paymentMethod === "COD" ? (
+          <><Banknote size={16} /> Place COD Order — {formatCurrency(grandTotal)}</>
+        ) : (
+          <><ShieldCheck size={16} /> Pay Online — {formatCurrency(grandTotal)}</>
+        )}
       </button>
     </div>
   );

@@ -2,14 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { revokeAllSessions } from "@/lib/auth/session";
+import { validateNewPassword } from "@/lib/auth/password-policy";
 import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
-
-const PASSWORD_REQUIREMENTS_MESSAGE =
-  "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, and a number";
-
-function meetsPasswordRequirements(password: string): boolean {
-  return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
-}
 
 export async function POST(req: NextRequest) {
   const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
@@ -24,8 +18,9 @@ export async function POST(req: NextRequest) {
   const limited = await enforceRateLimit(req, "PASSWORD_RESET", userId);
   if (limited) return limited;
 
-  if (!meetsPasswordRequirements(newPassword)) {
-    return NextResponse.json({ error: PASSWORD_REQUIREMENTS_MESSAGE }, { status: 400 });
+  const passwordError = validateNewPassword(newPassword);
+  if (passwordError) {
+    return NextResponse.json({ error: passwordError }, { status: 400 });
   }
 
   const tokenRecord = await prisma.verificationToken.findFirst({

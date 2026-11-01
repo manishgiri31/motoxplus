@@ -4,6 +4,7 @@ import { ok, badRequest, unauthorized, forbidden, notFound, serverError } from "
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { resolveOrderActor, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { getRazorpay } from "@/lib/razorpay";
+import { roundToPaise } from "@/lib/utils";
 
 // Same flag the checkout page uses to hide the Full Payment/20% Advance
 // options — checked here too since the frontend hiding a button is not an
@@ -21,16 +22,25 @@ export async function POST(req: NextRequest) {
     return unauthorized();
   }
 
-  let body: { orderId?: string };
+  let body: { orderId?: string; paymentType?: string };
   try {
     body = await req.json();
   } catch {
     return badRequest("Invalid JSON body");
   }
 
-  const { orderId } = body;
+  const { orderId, paymentType: requestedPaymentType } = body;
   if (!orderId || typeof orderId !== "string") {
     return badRequest("orderId is required");
+  }
+  // Optional: lets the buyer re-choose Full vs 20% Advance for a still-unpaid
+  // order (e.g. after dismissing the Razorpay sheet). COD is never selectable.
+  if (
+    requestedPaymentType !== undefined &&
+    requestedPaymentType !== "FULL_100" &&
+    requestedPaymentType !== "ADVANCE_20"
+  ) {
+    return badRequest("Invalid payment type");
   }
 
   try {
@@ -45,11 +55,38 @@ export async function POST(req: NextRequest) {
     const orderOwnerId = actor.channel === "B2C" ? order.customerId : order.dealerId;
     if (orderOwnerId !== ownerId) return forbidden();
 
-    if (order.amountDue <= 0) {
+    // A confirmed order (e.g. switched to Cash on Delivery) must not take an
+    // online payment: finalizeCapturedPayment only transitions unreserved orders.
+    if (order.status !== "PENDING" || order.stockReserved) {
+      return badRequest("This order is no longer awaiting payment.", "ORDER_NOT_PAYABLE");
+    }
+
+    let { paymentType, amountDue } = order;
+
+    if (requestedPaymentType && requestedPaymentType !== order.paymentType) {
+      // The amount is always server-computed from grandTotal. Switching is only
+      // allowed while nothing has been paid or reserved, so no captured money
+      // can disagree with the new amountDue.
+      const newAmountDue = roundToPaise(
+        requestedPaymentType === "ADVANCE_20" ? order.grandTotal * 0.2 : order.grandTotal
+      );
+      const switched = await prisma.order.updateMany({
+        // B2B only: retail orders are full-payment (or COD), never 20% advance.
+        where: { id: order.id, channel: "B2B", status: "PENDING", stockReserved: false, paymentType: { not: "COD" } },
+        data: { paymentType: requestedPaymentType, amountDue: newAmountDue },
+      });
+      if (switched.count === 0) {
+        return badRequest("The payment method can no longer be changed for this order.", "PAYMENT_TYPE_LOCKED");
+      }
+      paymentType = requestedPaymentType;
+      amountDue = newAmountDue;
+    }
+
+    if (amountDue <= 0) {
       return badRequest("No payment due on this order");
     }
 
-    const amountInPaise = Math.round(order.amountDue * 100);
+    const amountInPaise = Math.round(amountDue * 100);
 
     const razorpayOrder = await getRazorpay().orders.create({
       amount: amountInPaise,
@@ -65,8 +102,8 @@ export async function POST(req: NextRequest) {
       data: {
         orderId: order.id,
         razorpayOrderId: razorpayOrder.id,
-        amount: order.amountDue,
-        paymentType: order.paymentType,
+        amount: amountDue,
+        paymentType,
         status: "PENDING",
       },
     });

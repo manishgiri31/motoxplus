@@ -8,7 +8,8 @@ import { buildSearchWhere } from "@/lib/product-search";
 import { getCompatibleProductIds, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
 import { uniqueProductSlug } from "@/lib/slug";
 import { Prisma } from "@prisma/client";
-import { canSeeWholesalePrice } from "@/lib/pricing/public-visibility";
+import { canSeeWholesalePriceForRole } from "@/lib/pricing/public-visibility";
+import { getCallerRole } from "@/lib/auth/caller-role";
 import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 function autoSku(partNumber: string): string {
@@ -58,7 +59,9 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get("page") || "1");
   const pageSize = parseInt(searchParams.get("pageSize") || "12");
   const adminAllParam = searchParams.get("adminAll") === "1";
-  const session = await getServerSession(authOptions);
+  // Role comes from the NextAuth session OR a mobile Bearer token — the
+  // dealer app reads the catalog through this route.
+  const role = await getCallerRole(req);
   // This route is only ever called by authenticated admin tooling (bulk
   // edit, vehicle-diagram product assignment, consolidation) — the public
   // storefront pages fetch products via direct Prisma calls in their own
@@ -68,11 +71,11 @@ export async function GET(req: NextRequest) {
   // anonymously and scrape the full structured catalog in bulk, which is a
   // materially easier target than scraping rendered HTML pages one at a
   // time. See lib/pricing/public-visibility.ts.
-  if (!canSeeWholesalePrice(session)) {
+  if (!canSeeWholesalePriceForRole(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   // Only admins may bypass the isActive filter
-  const adminAll = adminAllParam && ["ADMIN", "SUPER_ADMIN"].includes(session!.user.role);
+  const adminAll = adminAllParam && ["ADMIN", "SUPER_ADMIN"].includes(role!);
 
   const searchWhere = search ? await buildSearchWhere(search, !adminAll) : {};
 

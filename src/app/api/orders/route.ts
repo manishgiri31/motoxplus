@@ -10,6 +10,8 @@ import { computeShippingQuote } from "@/lib/shipping/quote";
 import { validateSchemeSelection, type SchemeItemCandidate } from "@/lib/schemes/cart-validation";
 import { computeGstSplit, UnrecognizedStateError } from "@/lib/tax/gst-split";
 import { getSellerState } from "@/lib/tax/seller-state";
+import { confirmCodOrder, isCodAvailable, COD_UNAVAILABLE_MESSAGE } from "@/lib/orders/cod";
+import { InsufficientStockError } from "@/lib/orders/stock";
 
 export async function GET(req: NextRequest) {
   // Accepts either the web NextAuth session or the mobile/plain-login JWT
@@ -362,10 +364,16 @@ async function createB2COrder(
 ) {
   const { paymentType, notes, deliveryName, deliveryPhone, deliveryAddress, deliveryCity, deliveryState, deliveryPincode } = params;
 
-  // D1/checkout scope: retail orders are paid in full — no 20% advance
-  // (that's a B2B credit arrangement) and no COD.
-  if (paymentType !== "FULL_100") {
-    return NextResponse.json({ error: "Only full payment is available for retail orders" }, { status: 400 });
+  // Retail orders are either paid online in full (FULL_100, Razorpay) or Cash
+  // on Delivery. No 20% advance — that's a B2B credit arrangement. COD is
+  // created as FULL_100/PENDING like any other order and flipped to a confirmed
+  // COD order below by confirmCodOrder.
+  if (paymentType !== "FULL_100" && paymentType !== "COD") {
+    return NextResponse.json({ error: "Invalid payment type" }, { status: 400 });
+  }
+  const isCod = paymentType === "COD";
+  if (isCod && !(await isCodAvailable(deliveryPincode))) {
+    return NextResponse.json({ error: COD_UNAVAILABLE_MESSAGE, code: "COD_UNAVAILABLE" }, { status: 400 });
   }
   if (
     typeof deliveryName !== "string" || !deliveryName.trim() ||
@@ -430,7 +438,7 @@ async function createB2COrder(
   const orderTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
   const { shippingCost } = computeShippingQuote({ channel, orderTotal });
   const grandTotal = roundToPaise(orderTotal + shippingCost);
-  const amountDue = grandTotal; // FULL_100 only
+  const amountDue = grandTotal; // FULL_100 now; a COD order still owes the whole total at delivery
 
   const placeOfSupply = deliveryState;
   const sellerState = await getSellerState();
@@ -477,7 +485,24 @@ async function createB2COrder(
     },
   });
 
+  if (isCod) {
+    try {
+      await confirmCodOrder(order.id);
+    } catch (err) {
+      if (err instanceof InsufficientStockError) {
+        // Nothing was reserved or invoiced (the transaction rolled back) — close
+        // the order out and leave the cart intact so the customer can adjust it.
+        await prisma.order.update({ where: { id: order.id }, data: { status: "CANCELLED", amountDue: 0 } });
+        return NextResponse.json(
+          { error: "Some items in your cart are no longer available in the requested quantity. Please update your cart." },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
+  }
+
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-  return NextResponse.json({ order });
+  return NextResponse.json({ order: isCod ? await prisma.order.findUnique({ where: { id: order.id } }) : order });
 }

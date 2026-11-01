@@ -1,9 +1,12 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { Spinner } from "@/components/ui/spinner";
-import { Eye, EyeOff, ChevronDown } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AuthAlert, AuthHeading, PasswordField, SelectField, TextAction, TextField } from "./auth-ui";
+import { evaluatePassword, PASSWORD_MAX_BYTES } from "@/lib/auth/password-policy";
+import { normalizeIndianMobile } from "@/lib/phone";
 
 const INDIAN_STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Delhi","Goa","Gujarat",
@@ -12,184 +15,240 @@ const INDIAN_STATES = [
   "Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal",
 ];
 
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type Errors = Partial<Record<string, string>>;
+
+// Which step a server-side rejection belongs to, so a 409 "Email already
+// registered" sent back from step 2's submit lands on the email field instead
+// of a banner about a field the user can no longer see.
+const ACCOUNT_FIELDS = new Set(["name", "email", "phone", "password"]);
+
+function mapServerError(message: string): { field: string; message: string } | null {
+  if (/^email|invalid email/i.test(message)) return { field: "email", message };
+  if (/mobile/i.test(message)) return { field: "phone", message };
+  if (/password/i.test(message)) return { field: "password", message };
+  if (/gst/i.test(message)) return { field: "gstNumber", message };
+  if (/pan/i.test(message)) return { field: "panNumber", message };
+  if (/aadhaar/i.test(message)) return { field: "aadhaarNumber", message };
+  if (/pincode/i.test(message)) return { field: "pincode", message };
+  return null;
+}
+
+// Dealer signup. Two short steps (account → business), validated per step with
+// the same rules the server enforces (src/lib/auth/password-policy.ts is the
+// shared source for the password rules). The old form had a "confirm
+// password" box and a bare 8-character minimum; it now shows the policy as the
+// user types and relies on the show/hide toggle instead of making people type
+// a secret twice blind.
 export function RegisterForm() {
-  const [step, setStep] = useState(1);
-  const [s1, setS1] = useState({ name: "", email: "", password: "", confirmPassword: "" });
-  const [s2, setS2] = useState({ companyName: "", gstNumber: "", panNumber: "", aadhaarNumber: "", ownerName: "", phone: "", state: "", city: "", address: "", pincode: "" });
-  const [showPw, setShowPw] = useState(false);
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [error, setError] = useState("");
-  const [userId, setUserId] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [a, setA] = useState({ name: "", email: "", phone: "", password: "" });
+  const [b, setB] = useState({ companyName: "", ownerName: "", gstNumber: "", panNumber: "", aadhaarNumber: "", address: "", state: "", city: "", pincode: "" });
+  const [errors, setErrors] = useState<Errors>({});
+  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+  const [formError, setFormError] = useState("");
+  const [created, setCreated] = useState<{ userId: string; email: string } | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function setField<K extends keyof typeof a>(k: K, v: string) {
+    setA((p) => ({ ...p, [k]: v }));
+    setErrors((p) => ({ ...p, [k]: undefined }));
+    setFormError("");
+  }
+  function setBField<K extends keyof typeof b>(k: K, v: string) {
+    setB((p) => ({ ...p, [k]: v }));
+    setErrors((p) => ({ ...p, [k]: undefined }));
+    setFormError("");
+  }
+
+  function focusFirstError(errs: Errors) {
+    const first = Object.keys(errs).find((k) => errs[k]);
+    if (first) requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>(`[name="${first}"]`)?.focus());
+  }
+
+  function validateAccount(): Errors {
+    const e: Errors = {};
+    if (a.name.trim().length < 2) e.name = "Enter your full name";
+    if (!EMAIL_REGEX.test(a.email.trim())) e.email = "Enter a valid email address";
+    if (!normalizeIndianMobile(a.phone)) e.phone = "Enter a valid 10-digit mobile number";
+    if (!a.password) e.password = "Create a password";
+    else if (new TextEncoder().encode(a.password).length > PASSWORD_MAX_BYTES) e.password = `Use ${PASSWORD_MAX_BYTES} bytes or fewer`;
+    else if (!evaluatePassword(a.password).meetsRules) e.password = "Password doesn't meet all the requirements below";
+    return e;
+  }
+
+  function validateBusiness(): Errors {
+    const e: Errors = {};
+    if (!b.companyName.trim()) e.companyName = "Enter your company or shop name";
+    if (!b.ownerName.trim()) e.ownerName = "Enter the proprietor or director's name";
+    if (b.gstNumber && !GST_REGEX.test(b.gstNumber)) e.gstNumber = "Enter a valid 15-character GSTIN";
+    if (b.panNumber && !PAN_REGEX.test(b.panNumber)) e.panNumber = "Enter a valid PAN, e.g. ABCDE1234F";
+    if (b.aadhaarNumber && b.aadhaarNumber.length !== 12) e.aadhaarNumber = "Aadhaar is 12 digits";
+    if (!b.address.trim()) e.address = "Enter your shop or office address";
+    if (!b.state) e.state = "Select a state";
+    if (!b.city.trim()) e.city = "Enter your city";
+    if (!/^[1-9][0-9]{5}$/.test(b.pincode)) e.pincode = "Enter a 6-digit pincode";
+    return e;
+  }
 
   function handleStep1(e: React.FormEvent) {
     e.preventDefault();
-    if (s1.password !== s1.confirmPassword) { setError("Passwords do not match"); return; }
-    if (s1.password.length < 8) { setError("Password must be at least 8 characters"); return; }
-    setError("");
+    const errs = validateAccount();
+    setErrors(errs);
+    if (Object.keys(errs).length) return focusFirstError(errs);
     setStep(2);
+    window.scrollTo({ top: 0 });
   }
 
   async function handleStep2(e: React.FormEvent) {
     e.preventDefault();
+    if (status === "loading") return;
+    const errs = validateBusiness();
+    setErrors(errs);
+    if (Object.keys(errs).length) return focusFirstError(errs);
+
     setStatus("loading");
-    setError("");
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...s1, ...s2 }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "Registration failed"); setStatus("error"); return; }
-    setUserId(data.userId);
+    setFormError("");
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...a, ...b }),
+      });
+    } catch {
+      setFormError("Network error. Check your connection and try again.");
+      setStatus("idle");
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setStatus("idle");
+      const message: string = data.error || (res.status === 429 ? "Too many attempts. Please try again later." : "Registration failed. Please try again.");
+      const mapped = res.status === 429 ? null : mapServerError(message);
+      if (mapped) {
+        const errs2 = { [mapped.field]: mapped.message };
+        setErrors(errs2);
+        if (ACCOUNT_FIELDS.has(mapped.field)) setStep(1);
+        focusFirstError(errs2);
+      } else {
+        setFormError(message);
+      }
+      return;
+    }
+    setCreated({ userId: data.userId, email: data.email ?? a.email });
     setStatus("success");
+    window.scrollTo({ top: 0 });
   }
 
-  if (status === "success") {
+  if (status === "success" && created) {
     return (
-      <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10 text-center">
-        <div className="w-16 h-16 bg-green-900/30 border border-green-700/40 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+      <div>
+        <div className="mb-6 grid h-12 w-12 place-items-center rounded-lg bg-[var(--sig-ok-bg)] text-[var(--sig-ok-fg)]">
+          <MailCheck size={22} aria-hidden />
         </div>
-        <h2 className="text-xl font-black text-[var(--text-primary)] mb-2">Application Submitted!</h2>
-        <p className="text-[var(--text-muted)] text-sm mb-6">
-          A verification email has been sent to <span className="text-white">{s1.email}</span>. Please verify your email to complete registration.
-        </p>
-        <Link href={`/verify-email?userId=${userId}`} className="inline-block bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-normal py-3 px-8 rounded-pill transition-colors text-17">
-          Verify Email Now
-        </Link>
+        <AuthHeading
+          title="Check your email"
+          subtitle={
+            <>
+              We sent a 6-digit verification code to <span className="font-semibold text-[var(--ink)]">{created.email}</span>.
+            </>
+          }
+        />
+        <ol className="mb-8 space-y-3 border-t border-[var(--line)] pt-5 text-[15px]">
+          <li className="flex gap-3"><span className="font-mono text-12 pt-0.5 text-[var(--muted)]">01</span><span className="text-[var(--ink)]">Enter the code to verify your email</span></li>
+          <li className="flex gap-3"><span className="font-mono text-12 pt-0.5 text-[var(--muted)]">02</span><span className="text-[var(--muted)]">Sign in, then verify your mobile number</span></li>
+          <li className="flex gap-3"><span className="font-mono text-12 pt-0.5 text-[var(--muted)]">03</span><span className="text-[var(--muted)]">Start ordering</span></li>
+        </ol>
+        <Button asChild size="lg" block>
+          <Link href={`/verify-email?userId=${encodeURIComponent(created.userId)}`}>Enter verification code</Link>
+        </Button>
       </div>
     );
   }
 
-  const inputCls = "w-full themed-input border focus:border-[var(--red)]/60 rounded-lg px-4 py-3 text-sm outline-none transition-colors";
+  const busy = status === "loading";
 
   return (
-    <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10">
-      <div className="flex items-center mb-8">
-        {[1, 2].map((s, i) => (
-          <div key={s} className="flex items-center flex-1">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${s === step ? "bg-[var(--accent)] text-white" : s < step ? "bg-green-700 text-white" : "bg-[var(--border-color)] text-[var(--text-muted)]"}`}>
-              {s < step ? "✓" : s}
-            </div>
-            <span className={`ml-2 text-xs ${s === step ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
-              {s === 1 ? "Account" : "Business"}
-            </span>
-            {i < 1 && <div className="flex-1 mx-3 h-px bg-[var(--border-color)]" />}
-          </div>
-        ))}
+    <div>
+      <div className="mb-8">
+        <p className="mb-2.5 font-mono text-12 uppercase tracking-[0.12em] text-[var(--muted)]">
+          Step {step} of 2 <span aria-hidden>/</span> {step === 1 ? "Account" : "Business"}
+        </p>
+        <div className="grid grid-cols-2 gap-1.5" aria-hidden>
+          <span className="h-0.5 rounded-full bg-[var(--ink)]" />
+          <span className={`h-0.5 rounded-full transition-colors duration-[var(--dur-2)] ${step === 2 ? "bg-[var(--ink)]" : "bg-[var(--line)]"}`} />
+        </div>
       </div>
 
       {step === 1 && (
-        <form onSubmit={handleStep1} className="space-y-4">
-          <h1 className="text-xl font-black text-[var(--text-primary)] mb-1">Create Account</h1>
-          <p className="text-[var(--text-muted)] text-sm mb-6">Apply for a dealer account with MOTOXPLUS India.</p>
-          <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Full Name</label>
-            <input type="text" required value={s1.name} onChange={(e) => setS1({ ...s1, name: e.target.value })} className={inputCls} placeholder="Your full name" />
-          </div>
-          <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Email Address</label>
-            <input type="email" required value={s1.email} onChange={(e) => setS1({ ...s1, email: e.target.value })} className={inputCls} placeholder="you@company.com" />
-          </div>
-          <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Password</label>
-            <div className="relative">
-              <input type={showPw ? "text" : "password"} required minLength={8} value={s1.password} onChange={(e) => setS1({ ...s1, password: e.target.value })} className={inputCls + " pr-12"} placeholder="Min. 8 characters" />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Confirm Password</label>
-            <input type="password" required value={s1.confirmPassword} onChange={(e) => setS1({ ...s1, confirmPassword: e.target.value })} className={inputCls} placeholder="Repeat password" />
-          </div>
-          {error && <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm">{error}</div>}
-          <button type="submit" className="w-full bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-normal py-3.5 rounded-pill transition-colors text-17">
-            Continue to Business Details
-          </button>
+        <form ref={formRef} onSubmit={handleStep1} className="space-y-5" noValidate>
+          <AuthHeading title="Create your dealer account" subtitle="You'll use these details to sign in. Business details come next." />
+          <TextField label="Full name" name="name" autoComplete="name" autoFocus maxLength={100} value={a.name} error={errors.name} placeholder="Your full name" onChange={(e) => setField("name", e.target.value)} />
+          <TextField label="Work email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} maxLength={254} value={a.email} error={errors.email} placeholder="you@company.com" onChange={(e) => setField("email", e.target.value)} />
+          <TextField label="Mobile number" name="phone" type="tel" inputMode="numeric" autoComplete="tel-national" prefix="+91" value={a.phone} error={errors.phone} placeholder="98765 43210" hint="We'll verify this number with a one-time code." onChange={(e) => setField("phone", e.target.value)} />
+          <PasswordField label="Password" name="password" autoComplete="new-password" showStrength value={a.password} error={errors.password} placeholder="Create a password" onChange={(e) => setField("password", e.target.value)} />
+          <Button type="submit" size="lg" block>
+            Continue
+          </Button>
         </form>
       )}
 
       {step === 2 && (
-        <form onSubmit={handleStep2} className="space-y-4">
-          <h1 className="text-xl font-black text-[var(--text-primary)] mb-1">Business Details</h1>
-          <p className="text-[var(--text-muted)] text-sm mb-6">Tell us about your business.</p>
-          <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Company Name</label>
-            <input type="text" required value={s2.companyName} onChange={(e) => setS2({ ...s2, companyName: e.target.value })} className={inputCls} placeholder="Your company name" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[var(--text-muted)] text-xs block mb-2">GST Number</label>
-              <input type="text" pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$" value={s2.gstNumber} onChange={(e) => setS2({ ...s2, gstNumber: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="22AAAAA0000A1Z5" maxLength={15} />
-              <div className="text-[var(--text-muted)] text-xs mt-1">Optional — or provide PAN / Aadhaar below</div>
+        <form ref={formRef} onSubmit={handleStep2} className="space-y-5" noValidate>
+          <AuthHeading title="Tell us about your business" subtitle="Used to set up your dealer pricing and GST invoices." />
+          <TextField label="Company or shop name" name="companyName" autoComplete="organization" autoFocus maxLength={150} value={b.companyName} error={errors.companyName} onChange={(e) => setBField("companyName", e.target.value)} />
+          <TextField label="Proprietor / director" name="ownerName" autoComplete="off" maxLength={100} value={b.ownerName} error={errors.ownerName} placeholder="Name as on business records" onChange={(e) => setBField("ownerName", e.target.value)} />
+
+          <fieldset className="space-y-4 rounded-lg border border-[var(--line)] p-4">
+            <legend className="px-1.5 text-14 font-medium text-[var(--ink)]">
+              Tax identity <span className="font-normal text-[var(--muted)]">(optional)</span>
+            </legend>
+            <TextField label="GSTIN" name="gstNumber" mono autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={15} value={b.gstNumber} error={errors.gstNumber} placeholder="22AAAAA0000A1Z5" onChange={(e) => setBField("gstNumber", e.target.value.toUpperCase().replace(/\s/g, ""))} />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField label="PAN" name="panNumber" mono autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={10} value={b.panNumber} error={errors.panNumber} placeholder="ABCDE1234F" onChange={(e) => setBField("panNumber", e.target.value.toUpperCase().replace(/\s/g, ""))} />
+              <TextField label="Aadhaar" name="aadhaarNumber" mono inputMode="numeric" autoComplete="off" maxLength={12} value={b.aadhaarNumber} error={errors.aadhaarNumber} placeholder="12 digits" onChange={(e) => setBField("aadhaarNumber", e.target.value.replace(/\D/g, ""))} />
             </div>
-            <div>
-              <label className="text-[var(--text-muted)] text-xs block mb-2">Mobile</label>
-              <input type="tel" required value={s2.phone} onChange={(e) => setS2({ ...s2, phone: e.target.value })} className={inputCls} placeholder="10-digit number" />
-            </div>
+            <p className="text-[13px] leading-[1.5] text-[var(--muted)]">Aadhaar is encrypted before it is stored.</p>
+          </fieldset>
+
+          <TextField label="Shop / office address" name="address" autoComplete="street-address" maxLength={300} value={b.address} error={errors.address} onChange={(e) => setBField("address", e.target.value)} />
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <SelectField label="State" name="state" autoComplete="address-level1" value={b.state} error={errors.state} onChange={(e) => setBField("state", e.target.value)}>
+              <option value="">Select state</option>
+              {INDIAN_STATES.map((st) => <option key={st} value={st}>{st}</option>)}
+            </SelectField>
+            <TextField label="City" name="city" autoComplete="address-level2" maxLength={80} value={b.city} error={errors.city} onChange={(e) => setBField("city", e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[var(--text-muted)] text-xs block mb-2">PAN Number</label>
-              <input type="text" pattern="^[A-Z]{5}[0-9]{4}[A-Z]{1}$" value={s2.panNumber} onChange={(e) => setS2({ ...s2, panNumber: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="AAAAA0000A" maxLength={10} />
-              <div className="text-[var(--text-muted)] text-xs mt-1">Optional</div>
-            </div>
-            <div>
-              <label className="text-[var(--text-muted)] text-xs block mb-2">Aadhaar Number</label>
-              <input type="text" pattern="[0-9]{12}" maxLength={12} value={s2.aadhaarNumber} onChange={(e) => setS2({ ...s2, aadhaarNumber: e.target.value.replace(/\D/g, "") })} className={inputCls + " font-mono"} placeholder="000000000000" />
-              <div className="text-[var(--text-muted)] text-xs mt-1">Optional — stored securely</div>
-            </div>
+          <div className="sm:w-1/2 sm:pr-2.5">
+            <TextField label="Pincode" name="pincode" mono inputMode="numeric" autoComplete="postal-code" maxLength={6} value={b.pincode} error={errors.pincode} placeholder="6 digits" onChange={(e) => setBField("pincode", e.target.value.replace(/\D/g, ""))} />
           </div>
-          <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Owner Name</label>
-            <input type="text" required value={s2.ownerName} onChange={(e) => setS2({ ...s2, ownerName: e.target.value })} className={inputCls} placeholder="Proprietor / Director name" />
-          </div>
-          <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Address</label>
-            <input type="text" required value={s2.address} onChange={(e) => setS2({ ...s2, address: e.target.value })} className={inputCls} placeholder="Shop / Office address" />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-[var(--text-muted)] text-xs block mb-2">State</label>
-              <div className="relative">
-                <select required value={s2.state} onChange={(e) => setS2({ ...s2, state: e.target.value })} className={inputCls + " appearance-none pr-8"}>
-                  <option value="">Select</option>
-                  {INDIAN_STATES.map((st) => <option key={st} value={st}>{st}</option>)}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[var(--text-muted)] text-xs block mb-2">City</label>
-              <input type="text" required value={s2.city} onChange={(e) => setS2({ ...s2, city: e.target.value })} className={inputCls} placeholder="City" />
-            </div>
-            <div>
-              <label className="text-[var(--text-muted)] text-xs block mb-2">Pincode</label>
-              <input type="text" required value={s2.pincode} onChange={(e) => setS2({ ...s2, pincode: e.target.value })} className={inputCls + " font-mono"} placeholder="6 digits" maxLength={6} />
-            </div>
-          </div>
-          {error && <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm">{error}</div>}
-          <div className="flex gap-3 mt-2">
-            <button type="button" onClick={() => setStep(1)} className="flex-1 border border-[var(--border-color)] text-[var(--text-muted)] font-bold py-4 rounded-xl transition-colors text-sm">
-              Back
-            </button>
-            <button type="submit" disabled={status === "loading"} className="flex-[2] inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-normal py-3.5 rounded-pill transition-colors text-17">
-              {status === "loading" ? <><Spinner size={15} /> Submitting...</> : "Submit Application"}
-            </button>
-          </div>
+
+          {formError && <AuthAlert>{formError}</AuthAlert>}
+
+          <Button type="submit" size="lg" block loading={busy}>
+            {busy ? "Creating account..." : "Create account"}
+          </Button>
+          <p className="text-[13px] leading-[1.5] text-[var(--muted)]">
+            By creating an account you agree to our{" "}
+            <Link href="/terms" className="underline underline-offset-2 hover:text-[var(--ink)]">Terms</Link> and{" "}
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-[var(--ink)]">Privacy Policy</Link>.
+          </p>
+          <TextAction onClick={() => { setStep(1); setFormError(""); window.scrollTo({ top: 0 }); }} className="inline-flex items-center gap-1">
+            <ArrowLeft size={14} aria-hidden /> Back to account details
+          </TextAction>
         </form>
       )}
 
-      <div className="mt-6 pt-6 border-t border-[var(--border-color)] text-center">
-        <p className="text-[var(--text-muted)] text-sm">
-          Already have an account? <Link href="/login" className="text-red-400 hover:text-red-300 font-semibold">Sign In</Link>
-        </p>
-      </div>
+      <p className="mt-10 border-t border-[var(--line)] pt-6 text-14 text-[var(--muted)]">
+        Already registered?{" "}
+        <Link href="/login" className="font-semibold text-[var(--accent-text)] underline-offset-4 hover:underline">
+          Sign in
+        </Link>
+      </p>
     </div>
   );
 }
-

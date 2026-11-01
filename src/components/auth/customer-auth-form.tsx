@@ -2,34 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { User, Phone, Mail, ChevronRight, ChevronLeft, ShieldCheck } from "lucide-react";
-import { OtpInput } from "./otp-input";
-import { Spinner } from "@/components/ui/spinner";
-import { CountdownTimer } from "./countdown-timer";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { AuthOtpStep } from "./auth-otp-step";
+import { AuthAlert, AuthHeading, TextAction, TextField } from "./auth-ui";
 import { normalizeIndianMobile } from "@/lib/phone";
+import { landingPathForRole, safeCallbackTarget } from "@/lib/auth/safe-redirect";
 
 type Step = "details" | "otp";
 
-const inputCls = "w-full themed-input border rounded-lg pl-11 pr-4 py-3 text-sm";
-const RESEND_COOLDOWN_SECONDS = 45;
-
 // B2C customer signup + login, both in one form (B2C-EXPANSION-PLAN.md
-// Phase 2). Unlike LoginForm, there's no separate "does this account exist"
-// branch — /api/auth/customer/register is enumeration-safe (same response
-// whether the phone is new or already registered) and reuses the existing
-// /api/auth/login-otp verify step for both cases, so this form always asks
-// for name + phone (+ optional email) up front; a returning customer's name
-// is simply ignored server-side. Approval-free — a correct OTP logs straight
-// into /account, no pending-approval step.
+// Phase 2). Unlike the trade login, there's no separate "does this account
+// exist" branch — /api/auth/customer/register is enumeration-safe (same
+// response whether the phone is new or already registered) and reuses the
+// existing /api/auth/login-otp verify step for both cases, so this form always
+// asks for the mobile number up front; a returning customer's name is simply
+// ignored server-side (which is why the name field is optional here). The
+// mobile number is only ever *proved* by the WhatsApp code — approval-free, a
+// correct OTP logs straight into /account.
 export function CustomerAuthForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/account";
+  const callbackParam = searchParams.get("callbackUrl");
 
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [showEmail, setShowEmail] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
 
   const [otp, setOtp] = useState("");
   const [timerKey, setTimerKey] = useState(0);
@@ -41,14 +41,20 @@ export function CustomerAuthForm() {
   async function requestOtp(): Promise<boolean> {
     setStatus("loading");
     setError("");
-    const res = await fetch("/api/auth/customer/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() || "Customer", phone, email: email.trim() || undefined }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data.error || "Couldn't send the code. Please try again.");
+    try {
+      const res = await fetch("/api/auth/customer/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || "Customer", phone, email: email.trim() || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Couldn't send the code. Please try again.");
+        setStatus("error");
+        return false;
+      }
+    } catch {
+      setError("Network error. Check your connection and try again.");
       setStatus("error");
       return false;
     }
@@ -58,8 +64,9 @@ export function CustomerAuthForm() {
 
   async function handleDetailsSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (status === "loading") return;
     if (!normalizedPhone) {
-      setError("Enter a valid 10-digit mobile number");
+      setPhoneError("Enter a valid 10-digit mobile number");
       return;
     }
     if (await requestOtp()) {
@@ -71,18 +78,25 @@ export function CustomerAuthForm() {
   }
 
   async function handleResendOtp() {
-    const ok = await requestOtp();
-    if (!ok) throw new Error(error || "Resend failed");
+    if (!(await requestOtp())) throw new Error("Resend failed");
   }
 
   async function verifyOtp(code: string) {
     setStatus("loading");
     setError("");
-    const res = await fetch("/api/auth/login-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ method: "mobile", mobile: normalizedPhone, otp: code }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/login-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: "mobile", mobile: normalizedPhone, otp: code }),
+      });
+    } catch {
+      setError("Network error. Check your connection and try again.");
+      setStatus("error");
+      setOtp("");
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "Invalid or expired code");
@@ -90,128 +104,86 @@ export function CustomerAuthForm() {
       setOtp("");
       return;
     }
-    window.location.href = callbackUrl;
+    // Same-origin paths only (see safe-redirect.ts); a dealer who typed their
+    // own number here lands in the dealer portal, not /account.
+    window.location.href = safeCallbackTarget(callbackParam, landingPathForRole(data.user?.role));
   }
 
   useEffect(() => {
-    if (otp.length === 6 && status !== "loading") {
-      verifyOtp(otp);
-    }
+    if (otp.length === 6 && status !== "loading") verifyOtp(otp);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
 
+  if (step === "otp") {
+    return (
+      <AuthOtpStep
+        destination={`+91 ••••• ••${normalizedPhone.slice(-2)}`}
+        channel="WhatsApp"
+        otp={otp}
+        onOtpChange={(v) => { setOtp(v); if (error) setError(""); }}
+        status={status}
+        error={error}
+        timerKey={timerKey}
+        onResend={handleResendOtp}
+        onBack={() => { setStep("details"); setError(""); setStatus("idle"); }}
+        backLabel="Change number"
+      />
+    );
+  }
+
   return (
-    <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-[var(--ink)] mb-1">
-            {step === "details" ? "Sign in or sign up" : "Enter verification code"}
-          </h1>
-          <p className="text-[var(--muted)] text-sm">
-            {step === "details" ? (
-              "New here or coming back — just enter your mobile number."
-            ) : (
-              <>We&apos;ve sent a 6-digit code via WhatsApp to <span className="text-[var(--ink)] font-semibold">+91 {normalizedPhone}</span></>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5 rounded-pill bg-[var(--sig-ok-bg)] px-2.5 py-1.5 flex-shrink-0">
-          <ShieldCheck size={12} className="text-[var(--sig-ok-fg)]" />
-          <span className="text-12 text-[var(--sig-ok-fg)] font-semibold">Secure</span>
-        </div>
-      </div>
+    <div>
+      <AuthHeading title="Sign in or sign up" subtitle="Enter your mobile number. We'll send a one-time code on WhatsApp. No password to remember." />
 
-      {step === "details" && (
-        <form onSubmit={handleDetailsSubmit} className="space-y-4">
-          <div>
-            <label className="text-[var(--muted)] text-xs block mb-2">Your Name</label>
-            <div className="relative">
-              <User size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-              <input
-                type="text"
-                required
-                autoFocus
-                value={name}
-                onChange={(e) => { setName(e.target.value); setError(""); }}
-                className={inputCls}
-                placeholder="Rahul Kumar"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-[var(--muted)] text-xs block mb-2">Mobile Number</label>
-            <div className="relative">
-              <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => { setPhone(e.target.value); setError(""); }}
-                className={inputCls}
-                placeholder="98765 43210"
-                autoComplete="tel"
-              />
-            </div>
-          </div>
-          {showEmail ? (
-            <div>
-              <label className="text-[var(--muted)] text-xs block mb-2">Email (optional)</label>
-              <div className="relative">
-                <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputCls}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-          ) : (
-            <button type="button" onClick={() => setShowEmail(true)} className="text-xs text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
-              + Add email (optional)
-            </button>
-          )}
-          {error && <ErrorBanner message={error} />}
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-normal py-3.5 rounded-pill transition-colors text-17 mt-2"
-          >
-            {status === "loading" ? <><Spinner size={15} /> Sending code...</> : <>Continue <ChevronRight size={15} /></>}
-          </button>
-        </form>
-      )}
+      <form onSubmit={handleDetailsSubmit} className="space-y-5" noValidate>
+        <TextField
+          label="Mobile number"
+          type="tel"
+          inputMode="numeric"
+          prefix="+91"
+          autoFocus
+          autoComplete="tel-national"
+          placeholder="98765 43210"
+          value={phone}
+          error={phoneError}
+          onChange={(e) => { setPhone(e.target.value); setPhoneError(""); setError(""); }}
+        />
+        <TextField
+          label="Your name"
+          type="text"
+          autoComplete="name"
+          placeholder="Rahul Kumar"
+          hint="First time here? Add your name. Returning customers can skip this."
+          maxLength={100}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        {showEmail ? (
+          <TextField
+            label="Email (optional)"
+            type="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        ) : (
+          <TextAction onClick={() => setShowEmail(true)}>+ Add an email for order updates</TextAction>
+        )}
 
-      {step === "otp" && (
-        <div className="space-y-6">
-          <OtpInput value={otp} onChange={setOtp} disabled={status === "loading"} />
-          <div aria-live="polite">
-            {status === "loading" && (
-              <p className="text-center text-sm text-[var(--muted)] flex items-center justify-center gap-2">
-                <Spinner size={13} /> Verifying...
-              </p>
-            )}
-            {error && <ErrorBanner message={error} center />}
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <CountdownTimer key={timerKey} seconds={RESEND_COOLDOWN_SECONDS} onResend={handleResendOtp} label="Resend code" compact />
-            <button type="button" onClick={() => setStep("details")} className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors text-xs">
-              <ChevronLeft size={13} className="inline -mt-0.5" /> Change number
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        {error && <AuthAlert>{error}</AuthAlert>}
 
-function ErrorBanner({ message, center = false }: { message: string; center?: boolean }) {
-  return (
-    <div className={`bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm flex items-center gap-2 ${center ? "justify-center text-center" : ""}`} role="alert">
-      <span className="w-1.5 h-1.5 rounded-full bg-[var(--sig-danger-fg)] flex-shrink-0" />
-      {message}
+        <Button type="submit" size="lg" block loading={status === "loading"}>
+          {status === "loading" ? "Sending code..." : "Send code"}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-[13px] leading-[1.5] text-[var(--muted)]">
+        By continuing you agree to our{" "}
+        <Link href="/terms" className="underline underline-offset-2 hover:text-[var(--ink)]">Terms</Link> and{" "}
+        <Link href="/privacy" className="underline underline-offset-2 hover:text-[var(--ink)]">Privacy Policy</Link>.
+      </p>
     </div>
   );
 }

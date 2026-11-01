@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency, roundToPaise } from "@/lib/utils";
-import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone, Info, ShieldCheck, Building2, Wallet, Lock, Zap, Clock } from "lucide-react";
+import { Truck, CreditCard, ChevronRight, User, Phone, MapPin, Smartphone, Info, ShieldCheck, Building2, Wallet, Lock, Zap, Clock, XCircle } from "lucide-react";
 import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
@@ -18,6 +18,13 @@ declare global {
 }
 
 type PaymentType = "ADVANCE_20" | "FULL_100" | "DIRECT_UPI";
+type OnlinePaymentType = "ADVANCE_20" | "FULL_100";
+
+interface CancelledOrder {
+  id: string;
+  orderNumber: string;
+  grandTotal: number;
+}
 
 interface CartItem {
   productId?: string;
@@ -132,6 +139,11 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(true);
   const [serviceabilityResult, setServiceabilityResult] = useState<ServiceabilityResult | null>(null);
+  // Set when the Razorpay modal is closed without paying. The order already
+  // exists (PENDING) and the cart is emptied, so the page switches to a
+  // "choose how to pay" screen instead of the form.
+  const [cancelledOrder, setCancelledOrder] = useState<CancelledOrder | null>(null);
+  const [cancelError, setCancelError] = useState("");
 
   const [delivery, setDelivery] = useState<DeliveryForm>({
     name: "",
@@ -206,7 +218,9 @@ export default function CheckoutPage() {
       .then((data) => {
         const enabled = data.upiEnabled !== false;
         setUpiEnabled(enabled);
-        if (enabled) setPaymentType("DIRECT_UPI");
+        // UPI is only a fallback for when Razorpay is off; with Razorpay on, the
+        // dealer chooses between Full and 20% advance, both paid via Razorpay.
+        if (enabled && !RAZORPAY_ENABLED) setPaymentType("DIRECT_UPI");
       })
       .catch(() => {});
 
@@ -250,6 +264,12 @@ export default function CheckoutPage() {
     paymentType === "ADVANCE_20" ? grandTotal * 0.2 :
     paymentType === "DIRECT_UPI" ? grandTotal : grandTotal;
 
+  // With Razorpay on, the dealer chooses between Full and 20% advance (both via
+  // Razorpay). Direct UPI is only offered as a fallback while Razorpay is off.
+  const visiblePaymentOptions = ALL_PAYMENT_OPTIONS.filter((o) =>
+    RAZORPAY_ENABLED ? o.requiresRazorpay : o.requiresUpi && upiEnabled
+  );
+
   const isDeliveryComplete =
     delivery.name && delivery.phone && delivery.address &&
     delivery.city && delivery.state && delivery.pincode.length === 6;
@@ -278,36 +298,34 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleOnlinePayment = async () => {
+  // Opens the Razorpay modal for an already-created order, charging either the
+  // full total or the 20% advance (the server re-prices the order if `type`
+  // differs from what it was created with). Used by the first attempt and by
+  // the payment-cancelled screen. cancelledOrder is deliberately NOT cleared
+  // here: the order exists and the cart is already emptied, so any failure must
+  // land back on the choose-a-method screen.
+  const openRazorpay = async (order: CancelledOrder, type: OnlinePaymentType) => {
     setLoading(true);
+    setCancelError("");
     try {
-      const orderRes = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildOrderPayload()),
-      });
-
-      const orderData = await safeJson(orderRes);
-      if (!orderRes.ok || !orderData?.order) {
-        alert(orderData?.error || "Failed to create order. Please try again.");
-        setLoading(false);
-        return;
-      }
-      const { order } = orderData;
-
       const rzpOrderRes = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.id }),
+        body: JSON.stringify({ orderId: order.id, paymentType: type }),
       });
 
       const rzpData = await safeJson(rzpOrderRes);
       if (!rzpOrderRes.ok || !rzpData?.data) {
-        alert(rzpData?.error || "Could not start payment. Your order was saved — contact support with order number " + order.orderNumber + ".");
+        setCancelError(rzpData?.error || "Could not start payment. Please try again.");
+        setCancelledOrder(order);
         setLoading(false);
         return;
       }
       const razorpayOrder = rzpData.data;
+
+      // Set once Razorpay reports a successful payment, so closing the modal
+      // afterwards (or a verify failure) is never mistaken for a cancellation.
+      let paymentCompleted = false;
 
       const rzp = new window.Razorpay({
         key: razorpayOrder.keyId,
@@ -318,6 +336,7 @@ export default function CheckoutPage() {
         description: `Order ${razorpayOrder.orderNumber}`,
         theme: { color: "#DC2626" },
         handler: async (response: any) => {
+          paymentCompleted = true;
           // Razorpay invokes this callback asynchronously, outside the try/catch
           // above — money has already been captured on Razorpay's side by this
           // point, so a thrown/network error here must never fail silently:
@@ -353,13 +372,48 @@ export default function CheckoutPage() {
             setLoading(false);
           }
         },
-        modal: { ondismiss: () => setLoading(false) },
+        modal: {
+          // Closed without paying: the order stays PENDING and unpaid, so show
+          // it as cancelled and let the dealer pick Full / 20% advance again.
+          ondismiss: () => {
+            setLoading(false);
+            if (!paymentCompleted) setCancelledOrder(order);
+          },
+        },
       });
 
       rzp.open();
     } catch (err) {
       console.error("[Checkout] Online payment setup failed:", err);
-      alert("Something went wrong starting the payment. Please try again.");
+      setCancelError("Something went wrong starting the payment. Please try again.");
+      setCancelledOrder(order);
+      setLoading(false);
+    }
+  };
+
+  const handleOnlinePayment = async () => {
+    setLoading(true);
+    try {
+      const orderRes = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildOrderPayload()),
+      });
+
+      const orderData = await safeJson(orderRes);
+      if (!orderRes.ok || !orderData?.order) {
+        alert(orderData?.error || "Failed to create order. Please try again.");
+        setLoading(false);
+        return;
+      }
+      const { order } = orderData;
+      await openRazorpay(
+        { id: order.id, orderNumber: order.orderNumber, grandTotal: order.grandTotal },
+        paymentType as OnlinePaymentType
+      );
+    } catch (err) {
+      console.error("[Checkout] Online payment order creation failed:", err);
+      alert("Could not reach the server. Check your connection and try again.");
       setLoading(false);
     }
   };
@@ -398,6 +452,63 @@ export default function CheckoutPage() {
     if (paymentType === "DIRECT_UPI") handleDirectUpi();
     else handleOnlinePayment();
   };
+
+  if (cancelledOrder) {
+    const advanceAmount = roundToPaise(cancelledOrder.grandTotal * 0.2);
+    const optionClass =
+      "w-full flex items-center gap-4 p-4 rounded-sm border border-[var(--border-color)] hover:border-red-600/40 glass text-left transition-colors disabled:opacity-50";
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-6 bg-red-900/20 border border-red-900/40 rounded-sm p-5" role="alert">
+          <div className="flex items-start gap-3">
+            <XCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h1 className="text-xl font-black text-[var(--text-primary)] tracking-tight">Payment cancelled</h1>
+              <p className="text-[var(--text-secondary)] text-sm mt-1">
+                No money was charged. Order <span className="font-mono">{cancelledOrder.orderNumber}</span> is saved
+                but unpaid — choose how you&apos;d like to pay.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass border border-[var(--border-color)] rounded-sm p-6 mb-5">
+          <h3 className="text-[var(--text-primary)] font-bold mb-5">Choose payment option</h3>
+          <div className="space-y-3">
+            <button onClick={() => openRazorpay(cancelledOrder, "FULL_100")} disabled={loading} className={optionClass}>
+              <CreditCard size={18} className="text-red-500 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="text-[var(--text-primary)] font-semibold text-sm">Full Payment via Razorpay</div>
+                <div className="text-[var(--text-muted)] text-xs">Pay 100% now · priority dispatch</div>
+              </div>
+              <div className="text-[var(--text-primary)] font-black flex-shrink-0">{formatCurrency(cancelledOrder.grandTotal)}</div>
+            </button>
+            <button onClick={() => openRazorpay(cancelledOrder, "ADVANCE_20")} disabled={loading} className={optionClass}>
+              <CreditCard size={18} className="text-blue-400 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="text-[var(--text-primary)] font-semibold text-sm">20% Advance via Razorpay</div>
+                <div className="text-[var(--text-muted)] text-xs">
+                  Then {formatCurrency(roundToPaise(cancelledOrder.grandTotal - advanceAmount))} on delivery · standard dispatch
+                </div>
+              </div>
+              <div className="text-[var(--text-primary)] font-black flex-shrink-0">{formatCurrency(advanceAmount)}</div>
+            </button>
+          </div>
+          {loading && (
+            <div className="mt-4 flex items-center gap-2 text-[var(--text-muted)] text-sm"><Spinner size={14} /> Opening Razorpay...</div>
+          )}
+          {cancelError && <p className="mt-4 text-red-400 text-sm">{cancelError}</p>}
+        </div>
+
+        <Link
+          href={`/dealer/orders/${cancelledOrder.id}`}
+          className="block text-center text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm transition-colors"
+        >
+          Pay later — view order
+        </Link>
+      </div>
+    );
+  }
 
   if (cartLoading) {
     return (
@@ -590,7 +701,7 @@ export default function CheckoutPage() {
           Fully paid orders are picked and dispatched first.
         </p>
         <div className="space-y-3">
-          {ALL_PAYMENT_OPTIONS.filter((o) => (!o.requiresUpi || upiEnabled) && (!o.requiresRazorpay || RAZORPAY_ENABLED)).map((option) => {
+          {visiblePaymentOptions.map((option) => {
             const isSelected = paymentType === option.id;
             const amount = option.id === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal;
             const balanceAfterAdvance = option.id === "ADVANCE_20" ? grandTotal - amount : 0;

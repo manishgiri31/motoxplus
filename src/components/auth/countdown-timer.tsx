@@ -7,7 +7,7 @@ interface CountdownTimerProps {
   onComplete?: () => void;
   onResend?: () => Promise<void>;
   label?: string;
-  /** Show "{label} in Ns" instead of the MM:SS clock — reads better for short (<60s) windows. */
+  /** Show "{label} in Ns" instead of the MM:SS clock — reads better for short (<60s) windows. Also left-aligns. */
   compact?: boolean;
 }
 
@@ -36,6 +36,8 @@ export function CountdownTimer({ seconds, onComplete, onResend, label = "Resend 
       await onResend();
       setKey((k) => k + 1);
       setRemaining(seconds);
+    } catch {
+      // The caller surfaces its own error; keep the button available for a retry.
     } finally {
       setResending(false);
     }
@@ -43,22 +45,13 @@ export function CountdownTimer({ seconds, onComplete, onResend, label = "Resend 
 
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");
+  const align = compact ? "" : "text-center";
 
   if (remaining > 0) {
     return (
-      <p className="text-center text-sm text-[var(--text-muted)]">
-        {compact ? (
-          <>
-            {label} in <span className="font-mono text-red-400 font-bold">{remaining}s</span>
-          </>
-        ) : (
-          <>
-            Resend in{" "}
-            <span className="font-mono text-red-400 font-bold">
-              {mm}:{ss}
-            </span>
-          </>
-        )}
+      <p className={`text-14 text-[var(--muted)] ${align}`}>
+        {compact ? <>{label} in </> : <>Resend in </>}
+        <span className="font-mono font-medium tabular-nums text-[var(--ink)]">{compact && remaining < 60 ? `${remaining}s` : `${mm}:${ss}`}</span>
       </p>
     );
   }
@@ -68,7 +61,7 @@ export function CountdownTimer({ seconds, onComplete, onResend, label = "Resend 
       type="button"
       onClick={handleResend}
       disabled={resending}
-      className="w-full text-center text-sm text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+      className={`text-14 font-medium text-[var(--accent-text)] underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] disabled:opacity-50 ${compact ? "" : "w-full text-center"}`}
     >
       {resending ? "Sending..." : label}
     </button>

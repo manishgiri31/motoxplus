@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Mail, Lock, MessageCircle, ShieldCheck, ChevronRight, ChevronLeft } from "lucide-react";
-import { OtpInput } from "./otp-input";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
 import { CountdownTimer } from "./countdown-timer";
+import { AuthOtpStep } from "./auth-otp-step";
+import { AuthAlert, AuthHeading, PasswordField, TextField } from "./auth-ui";
 import { normalizeIndianMobile } from "@/lib/phone";
+import { landingPathForRole, safeCallbackTarget } from "@/lib/auth/safe-redirect";
 
-type Step = "identifier" | "method" | "password" | "otp";
+type Step = "credentials" | "otp";
 type IdentifierKind = "email" | "mobile";
 
 function maskEmail(email: string) {
@@ -22,29 +23,31 @@ function maskMobile(mobile: string) {
   return `+91 ••••• ••${mobile.slice(-2)}`;
 }
 
-const inputCls = "w-full themed-input border rounded-lg pl-11 pr-4 py-3 text-sm";
+// Resolves what the user typed into the one identifier box. Returns null for
+// anything that is neither an Indian mobile number nor shaped like an email.
+function resolveIdentifier(raw: string): { kind: IdentifierKind; value: string } | null {
+  const mobile = normalizeIndianMobile(raw);
+  if (mobile) return { kind: "mobile", value: mobile };
+  const email = raw.trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? { kind: "email", value: email } : null;
+}
 
-// How long "Resend code" stays disabled after a send. Deliberately much
-// shorter than OTP_EXPIRY_MINUTES (5 min, server-side) — the resend cooldown
-// only exists to stop accidental double-sends/spam-clicking, not to mirror
-// how long the code itself stays valid. It used to be hardcoded to the same
-// 300s as the OTP's validity window, which meant "Resend code" stayed
-// disabled for the full 5 minutes even though nothing about abuse
-// prevention requires that.
-const RESEND_COOLDOWN_SECONDS = 45;
-
+// Trade sign-in (dealer / vendor / staff). One screen: identifier + password,
+// with a one-time code as the alternative. It used to be four steps
+// (identifier → "how do you want to sign in?" → password/OTP), which bought no
+// security — the server never reveals whether an account exists — and just
+// meant password managers couldn't fill the form and every login cost an
+// extra tap.
 export function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dealer/dashboard";
+  const callbackParam = searchParams.get("callbackUrl");
 
-  const [step, setStep] = useState<Step>("identifier");
-
+  const [step, setStep] = useState<Step>("credentials");
   const [identifierInput, setIdentifierInput] = useState("");
-  const [kind, setKind] = useState<IdentifierKind>("email");
-  const [resolvedIdentifier, setResolvedIdentifier] = useState(""); // normalized email or bare 10-digit mobile
-
+  const [identifierError, setIdentifierError] = useState("");
+  const [resolved, setResolved] = useState<{ kind: IdentifierKind; value: string } | null>(null);
   const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const [otp, setOtp] = useState("");
   const [timerKey, setTimerKey] = useState(0);
@@ -52,53 +55,60 @@ export function LoginForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
   // Set only for a 429/423 password-step response — drives the countdown +
-  // "Forgot password?" prompt instead of the plain error banner. Kept
-  // separate from `error` so the two states can't fight over which one
-  // renders (see handlePasswordLogin).
+  // "Forgot password?" prompt instead of the plain error banner. Kept separate
+  // from `error` so the two can't fight over which one renders.
   const [lockout, setLockout] = useState<{ message: string; retryAfterSeconds: number } | null>(null);
 
-  const masked = kind === "mobile" ? maskMobile(resolvedIdentifier) : maskEmail(resolvedIdentifier);
-
-  function resetTo(next: Step) {
+  function goTo(next: Step) {
     setStep(next);
     setError("");
     setLockout(null);
     setStatus("idle");
   }
 
-  function handleIdentifierSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const mobile = normalizeIndianMobile(identifierInput);
-    if (mobile) {
-      setKind("mobile");
-      setResolvedIdentifier(mobile);
-    } else {
-      const email = identifierInput.trim().toLowerCase();
-      if (!email.includes("@")) {
-        setError("Enter a valid email address or 10-digit mobile number");
-        return;
-      }
-      setKind("email");
-      setResolvedIdentifier(email);
+  // Never trust callbackUrl blindly: it's attacker-controllable (a link in a
+  // phishing email can set it), so only same-origin paths are followed. With
+  // no (usable) callback the user lands in their own portal by role — the
+  // middleware would bounce a wrong guess, but that's a wasted round trip.
+  function finish(role: string | undefined) {
+    // Full reload instead of router.push+refresh: those race on a slow backend
+    // and refresh() can reapply the stale /login segment after push() has
+    // navigated, bouncing the user back here with the button stuck on "Signing in...".
+    window.location.href = safeCallbackTarget(callbackParam, landingPathForRole(role));
+  }
+
+  function resolveOrFlag(): { kind: IdentifierKind; value: string } | null {
+    const r = resolveIdentifier(identifierInput);
+    if (!r) {
+      setIdentifierError("Enter a valid email address or 10-digit mobile number");
+      return null;
     }
-    resetTo("method");
+    setIdentifierError("");
+    setResolved(r);
+    return r;
   }
 
-  function otpRequestBody() {
-    return kind === "mobile" ? { method: "mobile", mobile: resolvedIdentifier } : { method: "email", email: resolvedIdentifier };
+  function otpBody(r: { kind: IdentifierKind; value: string }) {
+    return r.kind === "mobile" ? { method: "mobile", mobile: r.value } : { method: "email", email: r.value };
   }
 
-  async function requestOtp() {
+  async function requestOtp(r: { kind: IdentifierKind; value: string }): Promise<boolean> {
     setStatus("loading");
     setError("");
-    const res = await fetch("/api/auth/login-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(otpRequestBody()),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "Couldn't send the code. Please try again.");
+    try {
+      const res = await fetch("/api/auth/login-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(otpBody(r)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Couldn't send the code. Please try again.");
+        setStatus("error");
+        return false;
+      }
+    } catch {
+      setError("Network error. Check your connection and try again.");
       setStatus("error");
       return false;
     }
@@ -106,42 +116,43 @@ export function LoginForm() {
     return true;
   }
 
-  async function handleSendOtp(e: React.FormEvent) {
-    e.preventDefault();
-    if (await requestOtp()) {
+  async function handleSendCode() {
+    const r = resolveOrFlag();
+    if (!r) return;
+    if (await requestOtp(r)) {
       setOtp("");
       setTimerKey((k) => k + 1);
-      resetTo("otp");
+      goTo("otp");
     }
   }
 
-  async function handleResendOtp() {
-    const ok = await requestOtp();
-    if (!ok) throw new Error(error || "Resend failed");
+  async function handleResend() {
+    if (!resolved || !(await requestOtp(resolved))) throw new Error("Resend failed");
   }
 
   async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (status === "loading") return;
+    const r = resolveOrFlag();
+    if (!password) setPasswordError("Enter your password");
+    if (!r || !password) return;
+
     setStatus("loading");
     setError("");
     setLockout(null);
 
-    // Hits the same REST endpoint the mobile app uses (and that OTP login on
-    // this very form already uses — see requestOtp/verifyOtp above) instead
-    // of NextAuth's signIn("credentials"). NextAuth's credentials flow always
-    // returns HTTP 401 for every authorize() failure — rate-limited, locked,
-    // wrong password, disabled, no exceptions — and only ever hands the
-    // client a bare error *string*, with no status code or Retry-After
-    // header to act on. That's what made a real 429 indistinguishable from
-    // a wrong password client-side, and made a countdown impossible: the
-    // server computes retryAfterSeconds but NextAuth's transport had nowhere
-    // to put it. This endpoint returns real status codes and headers.
+    // Hits the same REST endpoint the mobile app uses instead of NextAuth's
+    // signIn("credentials"): NextAuth always returns HTTP 401 for every
+    // authorize() failure — rate-limited, locked, wrong password, disabled —
+    // and hands the client a bare error string with no status or Retry-After,
+    // which made a real 429 indistinguishable from a typo and a countdown
+    // impossible. This endpoint returns real status codes and headers.
     let res: Response;
     try {
       res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(kind === "mobile" ? { mobile: resolvedIdentifier, password } : { email: resolvedIdentifier, password }),
+        body: JSON.stringify(r.kind === "mobile" ? { mobile: r.value, password } : { email: r.value, password }),
       });
     } catch {
       setError("Network error. Check your connection and try again.");
@@ -149,12 +160,12 @@ export function LoginForm() {
       return;
     }
 
-    let data: { error?: string; retryAfterSeconds?: number } = {};
+    let data: { error?: string; retryAfterSeconds?: number; user?: { role?: string } } = {};
     try {
       data = await res.json();
     } catch {
-      // Non-JSON body (e.g. a proxy/CDN error page in front of the app) —
-      // fall through to the generic message below rather than throwing.
+      // Non-JSON body (a proxy/CDN error page in front of the app) — fall
+      // through to the generic message below rather than throwing.
     }
 
     if (!res.ok) {
@@ -162,6 +173,7 @@ export function LoginForm() {
         const headerSeconds = Number(res.headers.get("Retry-After"));
         const retryAfterSeconds = Number.isFinite(headerSeconds) && headerSeconds > 0 ? headerSeconds : (data.retryAfterSeconds ?? 60);
         setLockout({ message: data.error || "Too many attempts.", retryAfterSeconds });
+        setPassword("");
       } else if (res.status === 401 || res.status === 400 || res.status === 403) {
         setError(data.error || "Incorrect email/mobile or password.");
       } else {
@@ -171,247 +183,128 @@ export function LoginForm() {
       return;
     }
 
-    // Full reload instead of router.push+refresh: those race against each
-    // other on a slow backend, and refresh() can reapply the stale /login
-    // segment after push() has already navigated, bouncing the user back
-    // here with the submit button frozen on "Signing in...".
-    window.location.href = callbackUrl;
+    finish(data.user?.role);
   }
 
   async function verifyOtp(code: string) {
+    if (!resolved) return;
     setStatus("loading");
     setError("");
-    const res = await fetch("/api/auth/login-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...otpRequestBody(), otp: code }),
-    });
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/login-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...otpBody(resolved), otp: code }),
+      });
+    } catch {
+      setError("Network error. Check your connection and try again.");
+      setStatus("error");
+      setOtp("");
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "Invalid or expired code");
       setStatus("error");
       setOtp("");
       return;
     }
-    window.location.href = callbackUrl;
+    finish(data.user?.role);
   }
 
   // Auto-submit once all 6 digits are entered — no separate "Verify" tap needed.
   useEffect(() => {
-    if (otp.length === 6 && status !== "loading") {
-      verifyOtp(otp);
-    }
+    if (otp.length === 6 && status !== "loading") verifyOtp(otp);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
 
+  if (step === "otp" && resolved) {
+    return (
+      <AuthOtpStep
+        destination={resolved.kind === "mobile" ? maskMobile(resolved.value) : maskEmail(resolved.value)}
+        channel={resolved.kind === "mobile" ? "WhatsApp" : "email"}
+        otp={otp}
+        onOtpChange={(v) => { setOtp(v); if (error) setError(""); }}
+        status={status}
+        error={error}
+        timerKey={timerKey}
+        onResend={handleResend}
+        onBack={() => goTo("credentials")}
+        backLabel="Use password instead"
+      />
+    );
+  }
+
+  const busy = status === "loading";
+  const codeChannel = resolved?.kind === "mobile" || normalizeIndianMobile(identifierInput) ? "WhatsApp" : "email";
+
   return (
-    <div className="bg-[var(--card)] rounded-[18px] p-8 sm:p-10">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-[var(--ink)] mb-1">
-            {step === "identifier" && "Welcome Back"}
-            {step === "method" && "How would you like to sign in?"}
-            {step === "password" && "Enter your password"}
-            {step === "otp" && "Enter verification code"}
-          </h1>
-          <p className="text-[var(--muted)] text-sm">
-            {step === "identifier" && "Sign in to your MOTOXPLUS account."}
-            {step === "method" && <>Signing in as <span className="text-[var(--ink)] font-semibold">{masked}</span></>}
-            {step === "password" && <>for <span className="text-[var(--ink)] font-semibold">{masked}</span></>}
-            {step === "otp" && (
-              <>We&apos;ve sent a 6-digit code to <span className="text-[var(--ink)] font-semibold">{masked}</span></>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5 rounded-pill bg-[var(--sig-ok-bg)] px-2.5 py-1.5 flex-shrink-0">
-          <ShieldCheck size={12} className="text-[var(--sig-ok-fg)]" />
-          <span className="text-12 text-[var(--sig-ok-fg)] font-semibold">Secure</span>
-        </div>
+    <div>
+      <AuthHeading title="Sign in" subtitle="For dealers, vendors and MOTOXPLUS staff." />
+
+      <form onSubmit={handlePasswordLogin} className="space-y-5" noValidate>
+        <TextField
+          label="Email or mobile number"
+          type="text"
+          autoFocus
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="username"
+          placeholder="you@company.com or 98765 43210"
+          value={identifierInput}
+          error={identifierError}
+          onChange={(e) => { setIdentifierInput(e.target.value); setIdentifierError(""); setError(""); }}
+        />
+
+        <PasswordField
+          label="Password"
+          value={password}
+          error={passwordError}
+          autoComplete="current-password"
+          labelAction={
+            <Link href="/forgot-password" className="text-14 text-[var(--accent-text)] underline-offset-4 hover:underline">
+              Forgot password?
+            </Link>
+          }
+          onChange={(e) => { setPassword(e.target.value); setPasswordError(""); if (error) setError(""); }}
+        />
+
+        {lockout ? (
+          <AuthAlert>
+            <p>{lockout.message}</p>
+            <div className="mt-1.5">
+              <CountdownTimer seconds={lockout.retryAfterSeconds} label="Try again" compact onComplete={() => setLockout(null)} />
+            </div>
+            <Link href="/forgot-password" className="mt-1.5 inline-block font-medium underline underline-offset-4 hover:no-underline">
+              Reset your password instead
+            </Link>
+          </AuthAlert>
+        ) : (
+          error && <AuthAlert>{error}</AuthAlert>
+        )}
+
+        <Button type="submit" size="lg" block loading={busy} disabled={!!lockout}>
+          {busy ? "Signing in..." : "Sign in"}
+        </Button>
+      </form>
+
+      <div className="my-6 flex items-center gap-4 text-12 uppercase tracking-[0.12em] text-[var(--muted)]" aria-hidden>
+        <span className="h-px flex-1 bg-[var(--line)]" /> or <span className="h-px flex-1 bg-[var(--line)]" />
       </div>
 
-      {/* Step 1: identifier */}
-      {step === "identifier" && (
-        <form onSubmit={handleIdentifierSubmit} className="space-y-4">
-          <div>
-            <label className="text-[var(--muted)] text-xs block mb-2">Email or Mobile Number</label>
-            <div className="relative">
-              <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-              <input
-                type="text"
-                required
-                autoFocus
-                value={identifierInput}
-                onChange={(e) => { setIdentifierInput(e.target.value); setError(""); }}
-                className={inputCls}
-                placeholder="you@company.com or 98765 43210"
-                autoComplete="username"
-              />
-            </div>
-          </div>
-          {error && <ErrorBanner message={error} />}
-          <button type="submit" className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-normal py-3.5 rounded-pill transition-colors text-17 mt-2">
-            Continue <ChevronRight size={15} />
-          </button>
-        </form>
-      )}
+      <Button type="button" variant="secondary" size="lg" block onClick={handleSendCode} disabled={busy}>
+        Send me a code on {codeChannel}
+      </Button>
+      <p className="mt-2 text-[13px] text-[var(--muted)]">No password needed. The code works once and expires in 5 minutes.</p>
 
-      {/* Step 2: choose method — options depend on whether the identifier resolved to email or mobile */}
-      {step === "method" && (
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={handleSendOtp}
-            disabled={status === "loading"}
-            className="w-full flex items-center gap-3 themed-input border rounded-lg px-4 py-3.5 text-left hover:border-[var(--red)]/50 transition-colors disabled:opacity-50"
-          >
-            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-              {kind === "mobile" ? <MessageCircle size={16} className="text-[var(--red)]" /> : <Mail size={16} className="text-[var(--red)]" />}
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-semibold text-[var(--ink)]">
-                {kind === "mobile" ? "Send code via WhatsApp" : "Send code to email"}
-              </div>
-              <div className="text-xs text-[var(--muted)]">No password needed</div>
-            </div>
-            {status === "loading" ? <Spinner size={15} /> : <ChevronRight size={15} className="text-[var(--muted)]" />}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => resetTo("password")}
-            disabled={status === "loading"}
-            className="w-full flex items-center gap-3 themed-input border rounded-lg px-4 py-3.5 text-left hover:border-[var(--red)]/50 transition-colors disabled:opacity-50"
-          >
-            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-              <Lock size={16} className="text-[var(--muted)]" />
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-semibold text-[var(--ink)]">Use password</div>
-            </div>
-            <ChevronRight size={15} className="text-[var(--muted)]" />
-          </button>
-
-          {error && <ErrorBanner message={error} />}
-
-          <button type="button" onClick={() => resetTo("identifier")} className="w-full flex items-center justify-center gap-1.5 text-[var(--muted)] hover:text-[var(--ink)] transition-colors text-xs pt-1">
-            <ChevronLeft size={13} /> Not you? Change
-          </button>
-        </div>
-      )}
-
-      {/* Step 3a: password */}
-      {step === "password" && (
-        <form onSubmit={handlePasswordLogin} className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[var(--muted)] text-xs">Password</label>
-              <Link href="/forgot-password" className="text-xs text-[var(--red)] hover:text-[var(--red-hover)] transition-colors">Forgot password?</Link>
-            </div>
-            <div className="relative">
-              <Lock size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-              <input
-                type={showPw ? "text" : "password"}
-                required
-                autoFocus
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={inputCls + " pr-12"}
-                placeholder="Your password"
-                autoComplete="current-password"
-              />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
-          {lockout ? (
-            <LockoutBanner message={lockout.message} retryAfterSeconds={lockout.retryAfterSeconds} onExpire={() => setLockout(null)} />
-          ) : (
-            error && <ErrorBanner message={error} />
-          )}
-          <button type="submit" disabled={status === "loading" || !!lockout} className="w-full inline-flex items-center justify-center gap-2 bg-[var(--red)] hover:bg-[var(--red-hover)] disabled:opacity-50 text-white font-normal py-3.5 rounded-pill transition-colors text-17 mt-2">
-            {status === "loading" ? <><Spinner size={15} /> Signing in...</> : <>Sign In <ChevronRight size={15} /></>}
-          </button>
-          <button type="button" onClick={() => resetTo("method")} className="w-full flex items-center justify-center gap-1.5 text-[var(--muted)] hover:text-[var(--ink)] transition-colors text-xs">
-            <ChevronLeft size={13} /> Use another method
-          </button>
-        </form>
-      )}
-
-      {/* Step 3b: OTP */}
-      {step === "otp" && (
-        <div className="space-y-6">
-          <OtpInput value={otp} onChange={setOtp} disabled={status === "loading"} />
-          <div aria-live="polite">
-            {status === "loading" && (
-              <p className="text-center text-sm text-[var(--muted)] flex items-center justify-center gap-2">
-                <Spinner size={13} /> Verifying...
-              </p>
-            )}
-            {error && <ErrorBanner message={error} center />}
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <CountdownTimer key={timerKey} seconds={RESEND_COOLDOWN_SECONDS} onResend={handleResendOtp} label="Resend code" compact />
-            <button type="button" onClick={() => resetTo("method")} className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors text-xs">
-              Use another method
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-7 pt-6 border-t border-[var(--line)] flex items-center justify-between">
-        <p className="text-[var(--muted)] text-sm">
-          Not a dealer?{" "}
-          <Link href="/register" className="text-[var(--red)] hover:text-[var(--red-hover)] font-semibold transition-colors">Apply Now</Link>
-        </p>
-        <Link href="/" className="text-[var(--muted)] hover:text-[var(--ink)] text-xs transition-colors">
-          &larr; Back to site
+      <p className="mt-10 border-t border-[var(--line)] pt-6 text-14 text-[var(--muted)]">
+        New to MOTOXPLUS?{" "}
+        <Link href="/register" className="font-semibold text-[var(--accent-text)] underline-offset-4 hover:underline">
+          Apply for a dealer account
         </Link>
-      </div>
-
-      {step === "identifier" && (
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          {[
-            { role: "Dealers", desc: "Orders & Invoices" },
-            { role: "Vendors", desc: "Purchase Orders" },
-            { role: "Admins", desc: "Full Management" },
-          ].map((item) => (
-            <div key={item.role} className="bg-white rounded-lg p-3 text-center">
-              <div className="text-[var(--muted)] text-12 font-semibold mb-0.5">{item.role}</div>
-              <div className="text-12 text-[var(--muted)] opacity-70 leading-tight">{item.desc}</div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ErrorBanner({ message, center = false }: { message: string; center?: boolean }) {
-  return (
-    <div className={`bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm flex items-center gap-2 ${center ? "justify-center text-center" : ""}`} role="alert">
-      <span className="w-1.5 h-1.5 rounded-full bg-[var(--sig-danger-fg)] flex-shrink-0" />
-      {message}
-    </div>
-  );
-}
-
-// A 429 (rate limited) or 423 (account locked) password-step response gets
-// this instead of the plain ErrorBanner: unlike a wrong password, there's a
-// real wait time attached, and the account owner's actual way out is usually
-// a reset, not more guessing — so both get surfaced instead of leaving the
-// user staring at a dead end with no sense of when (or how) to try again.
-function LockoutBanner({ message, retryAfterSeconds, onExpire }: { message: string; retryAfterSeconds: number; onExpire: () => void }) {
-  return (
-    <div className="bg-[var(--sig-danger-bg)] border border-[var(--sig-danger-bd)] rounded-lg px-4 py-3 text-[var(--sig-danger-fg)] text-sm space-y-2" role="alert">
-      <div className="flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--sig-danger-fg)] flex-shrink-0" />
-        {message}
-      </div>
-      <CountdownTimer seconds={retryAfterSeconds} label="Try again" compact onComplete={onExpire} />
-      <Link href="/forgot-password" className="inline-block font-semibold underline hover:no-underline">
-        Reset your password instead →
-      </Link>
+      </p>
     </div>
   );
 }

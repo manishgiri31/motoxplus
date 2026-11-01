@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { deleteFromR2 } from "@/lib/r2";
 import { slugify, uniqueProductSlug } from "@/lib/slug";
-import { canSeeWholesalePrice } from "@/lib/pricing/public-visibility";
+import { canSeeWholesalePriceForRole } from "@/lib/pricing/public-visibility";
+import { getCallerRole } from "@/lib/auth/caller-role";
 import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 
 const INCLUDE_IMAGES = {
@@ -20,9 +21,10 @@ const INCLUDE_IMAGES = {
 // had no auth check at all, meaning a script could enumerate every product
 // id and pull the full catalog (including wholesale price) with no barrier
 // whatsoever. See lib/pricing/public-visibility.ts.
-export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!canSeeWholesalePrice(session)) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  // NextAuth session OR mobile Bearer token (the dealer app opens product pages through here).
+  const role = await getCallerRole(req);
+  if (!canSeeWholesalePriceForRole(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

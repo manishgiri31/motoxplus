@@ -1583,8 +1583,11 @@ enum PaymentStatus {
 enum PaymentType {
   ADVANCE_20
   FULL_100
-  /// Retained for historical orders only. Removed from checkout 2026-09-13 —
-  /// no new order may be created with this value (see /api/orders validation).
+  /// B2B: retained for historical orders only. Removed from the dealer checkout
+  /// 2026-09-13 — no new B2B order may be created with this value (see
+  /// /api/orders validation). B2C: Cash on Delivery is a live option again
+  /// (lib/orders/cod.ts) — retail orders are created CONFIRMED with the whole
+  /// total due at delivery.
   /// Cancellation (lib/orders/cancellation.ts) and shipment (lib/delhivery/
   /// shipment.ts) logic still handle it correctly for pre-existing orders.
   COD

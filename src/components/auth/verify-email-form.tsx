@@ -57,7 +57,7 @@ export function VerifyEmailForm() {
           </svg>
         </div>
         <h2 className="text-xl font-black text-[var(--text-primary)] mb-2">Email Verified!</h2>
-        <p className="text-[var(--text-muted)] text-sm mb-6">Your email has been verified. Your dealer application is now under review.</p>
+        <p className="text-[var(--text-muted)] text-sm mb-6">Your email is verified. Sign in next. We&apos;ll ask you to verify your mobile number to finish setting up.</p>
         <Link href="/login" className="inline-block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal py-3 px-8 rounded-pill transition-colors text-sm">
           Go to Login
         </Link>

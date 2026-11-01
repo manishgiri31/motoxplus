@@ -13,6 +13,10 @@ import type { Session } from "next-auth";
  * API), so requiring this doesn't cost the storefront anything.
  */
 export function canSeeWholesalePrice(session: Session | null): boolean {
-  const role = session?.user?.role;
+  return canSeeWholesalePriceForRole(session?.user?.role);
+}
+
+/** Same rule for callers that resolved a role themselves (e.g. via a mobile Bearer token, which has no NextAuth Session). */
+export function canSeeWholesalePriceForRole(role: string | null | undefined): boolean {
   return !!role && ["DEALER", "ADMIN", "SUPER_ADMIN", "STAFF"].includes(role);
 }

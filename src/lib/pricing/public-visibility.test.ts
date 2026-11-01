@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canSeeWholesalePrice } from "./public-visibility";
+import { canSeeWholesalePrice, canSeeWholesalePriceForRole } from "./public-visibility";
 import type { Session } from "next-auth";
 
 function sessionWithRole(role: string | undefined): Session | null {
@@ -19,5 +19,20 @@ describe("canSeeWholesalePrice", () => {
     expect(canSeeWholesalePrice(null)).toBe(false);
     expect(canSeeWholesalePrice(sessionWithRole("VENDOR"))).toBe(false);
     expect(canSeeWholesalePrice(sessionWithRole("GUEST"))).toBe(false);
+  });
+});
+
+describe("canSeeWholesalePriceForRole", () => {
+  it("accepts the same roles as the session variant", () => {
+    for (const role of ["DEALER", "ADMIN", "SUPER_ADMIN", "STAFF"]) {
+      expect(canSeeWholesalePriceForRole(role)).toBe(true);
+    }
+  });
+
+  it("rejects anonymous, customers and vendors", () => {
+    expect(canSeeWholesalePriceForRole(null)).toBe(false);
+    expect(canSeeWholesalePriceForRole(undefined)).toBe(false);
+    expect(canSeeWholesalePriceForRole("CUSTOMER")).toBe(false);
+    expect(canSeeWholesalePriceForRole("VENDOR")).toBe(false);
   });
 });

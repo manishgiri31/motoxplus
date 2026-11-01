@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 export default async function AccountOrderDetailPage(
   props: {
     params: Promise<{ id: string }>;
-    searchParams: Promise<{ success?: string }>;
+    searchParams: Promise<{ success?: string; cod?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
@@ -29,13 +29,21 @@ export default async function AccountOrderDetailPage(
 
   if (!order || order.customerId !== customer.id) notFound();
 
-  const awaitingPayment = order.paymentStatus === "PENDING" && order.amountDue > 0;
+  // A COD order is already confirmed — its balance is collected at the door,
+  // so there's nothing to "complete" online.
+  const isCod = order.paymentType === "COD";
+  const awaitingPayment = order.paymentStatus === "PENDING" && order.amountDue > 0 && !isCod;
 
   return (
     <div className="max-w-4xl mx-auto">
       {searchParams.success && (
         <div className="mb-6 bg-green-900/20 border border-green-700/30 rounded-sm p-4 text-green-400">
           ✓ Payment successful! Your order has been confirmed and invoice generated.
+        </div>
+      )}
+      {searchParams.cod && isCod && (
+        <div className="mb-6 bg-green-900/20 border border-green-700/30 rounded-sm p-4 text-green-400">
+          ✓ Order confirmed! Please keep {formatCurrency(order.amountDue)} ready to pay in cash on delivery.
         </div>
       )}
 
@@ -112,7 +120,7 @@ export default async function AccountOrderDetailPage(
               </div>
               {order.amountDue > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-[var(--text-muted)]">Balance Due</span>
+                  <span className="text-[var(--text-muted)]">{isCod ? "Pay on Delivery" : "Balance Due"}</span>
                   <span className="text-yellow-400">{formatCurrency(order.amountDue)}</span>
                 </div>
               )}
