@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 // stays valid (a hardcoded 300s here once left "Resend" disabled for the
 // code's whole lifetime). Per-account and per-IP abuse limits are enforced
 // server-side regardless of what this timer says.
-export const RESEND_COOLDOWN_SECONDS = 45;
+export const RESEND_COOLDOWN_SECONDS = 60;
 
 interface AuthOtpStepProps {
   /** Masked destination, e.g. "+91 ••••• ••10" or "r***@shop.in" — never the raw value. */

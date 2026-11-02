@@ -40,6 +40,11 @@ export const RATE_LIMITS = {
   // OTP send: strictest of all. Each send costs real money via WhatsApp/SMS —
   // this is direct cost-of-abuse protection, not just spam prevention.
   OTP_SEND: {
+    // One send per phone per minute, across every route that texts a phone
+    // (login, signup, forgot-password, mobile verification). Keyed on the
+    // phone before any user lookup, so it applies identically to registered
+    // and unregistered numbers.
+    perIdentifierBurst: { max: 1, windowSeconds: 60, failMode: "open" } as Budget,
     perIdentifier: { max: 10, windowSeconds: 15 * 60, failMode: "open" } as Budget,
     perIdentifierDaily: { max: 30, windowSeconds: 24 * 60 * 60, failMode: "open" } as Budget,
     perIP: { max: 8, windowSeconds: 60, failMode: "open" } as Budget,
@@ -99,7 +104,7 @@ export const RATE_LIMITS = {
   DEFAULT: {
     perIP: { max: 60, windowSeconds: 60, failMode: "open" } as Budget,
   },
-} satisfies Record<string, { perIdentifier?: Budget; perIdentifierDaily?: Budget; perIP: Budget }>;
+} satisfies Record<string, { perIdentifier?: Budget; perIdentifierBurst?: Budget; perIdentifierDaily?: Budget; perIP: Budget }>;
 
 export type RateLimitClass = keyof typeof RATE_LIMITS;
 
@@ -147,6 +152,9 @@ export async function enforceRateLimit(
   }
   if ("perIdentifier" in budget && budget.perIdentifier && identifier) {
     checks.push(checkRateLimit(`rl:${cls}:id:${identifier}`, budget.perIdentifier));
+  }
+  if ("perIdentifierBurst" in budget && budget.perIdentifierBurst && identifier) {
+    checks.push(checkRateLimit(`rl:${cls}:id-burst:${identifier}`, budget.perIdentifierBurst));
   }
   if ("perIdentifierDaily" in budget && budget.perIdentifierDaily && identifier) {
     checks.push(checkRateLimit(`rl:${cls}:id-daily:${identifier}`, budget.perIdentifierDaily));

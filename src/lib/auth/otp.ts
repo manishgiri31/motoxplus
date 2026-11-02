@@ -13,16 +13,25 @@ export function generateOTP(): string {
   return digits.toString().padStart(OTP_LENGTH, "0");
 }
 
-// Fixed-length codes (generateOTP always pads to OTP_LENGTH), but `provided`
-// comes straight from the client and can be any length/content — compare
-// lengths first (timingSafeEqual throws on a mismatch rather than returning
-// false) and only timing-safe-compare once both sides are equal length, so a
-// guesser can't use response timing to learn how many leading digits matched.
-function otpMatches(expected: string, provided: unknown): boolean {
+// OtpCode.code stores this HMAC, never the 6-digit code itself, so a DB leak
+// or backup doesn't hand out live codes. A bare SHA-256 would be useless here
+// (only 10^6 possible inputs, trivially brute-forced offline), hence the keyed
+// HMAC; binding userId + type stops a hash from one user/purpose being
+// replayed against another. JWT_SECRET is reused as the key under a distinct
+// "otp:" label, and — like jwt.ts — there is deliberately no fallback secret.
+function hashOtp(userId: string, type: OtpType, code: string): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET must be set — refusing to hash OTPs with no secret");
+  return crypto.createHmac("sha256", secret).update(`otp:${userId}:${type}:${code}`).digest("hex");
+}
+
+// Both sides are fixed-length hex digests, so timingSafeEqual never sees a
+// length mismatch no matter what the client sent as `provided`.
+function otpMatches(row: { userId: string; type: OtpType; code: string }, provided: unknown): boolean {
   if (typeof provided !== "string") return false;
-  const a = Buffer.from(expected);
-  const b = Buffer.from(provided);
-  if (a.length !== b.length) return false;
+  const a = Buffer.from(row.code);
+  const b = Buffer.from(hashOtp(row.userId, row.type, provided));
+  if (a.length !== b.length) return false; // legacy plaintext row from before hashing was introduced
   return crypto.timingSafeEqual(a, b);
 }
 
@@ -53,38 +62,18 @@ export async function createOTP(userId: string, type: OtpType): Promise<string> 
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
   await prisma.otpCode.create({
-    data: { userId, type, code, expiresAt },
+    data: { userId, type, code: hashOtp(userId, type, code), expiresAt },
   });
 
+  // The plaintext code is returned only so the caller can deliver it.
   return code;
 }
-
-// Local-dev convenience: lets a developer skip actually receiving the OTP
-// (WhatsApp/SMS/email) by entering this fixed code instead, so repeated
-// local testing doesn't require a live message every time. Still requires a
-// real pending OTP to exist (i.e. "Send OTP" was actually called) and burns
-// it the same way a real success does — it's a shortcut past *delivery*,
-// not past the request flow. Gated strictly on NODE_ENV === "development":
-// never "test" (vitest sets NODE_ENV=test, and otp.test.ts deliberately
-// reuses "000000" as a guaranteed-wrong guess) and structurally impossible
-// in any deployed environment, since Next.js always sets NODE_ENV=production there.
-const DEV_BYPASS_CODE = "000000";
 
 export async function verifyOTP(
   userId: string,
   type: OtpType,
   code: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (process.env.NODE_ENV === "development" && code === DEV_BYPASS_CODE) {
-    const pending = await prisma.otpCode.findFirst({
-      where: { userId, type, used: false },
-      orderBy: { createdAt: "desc" },
-    });
-    if (!pending) return { success: false, error: "Invalid or expired OTP" };
-    await prisma.otpCode.updateMany({ where: { id: pending.id, used: false }, data: { used: true } });
-    return { success: true };
-  }
-
   const otp = await prisma.otpCode.findFirst({
     where: { userId, type, used: false },
     orderBy: { createdAt: "desc" },
@@ -100,7 +89,7 @@ export async function verifyOTP(
     return { success: false, error: "Too many incorrect attempts" };
   }
 
-  if (!otpMatches(otp.code, code)) {
+  if (!otpMatches(otp, code)) {
     const updated = await prisma.otpCode.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
     const remaining = Math.max(0, MAX_OTP_ATTEMPTS - updated.attempts);
     return {

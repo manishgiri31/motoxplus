@@ -39,6 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     identifiers.flatMap((value) => [
       resetRateLimit(`rl:LOGIN:id:${value}`),
       resetRateLimit(`rl:OTP_SEND:id:${value}`),
+      resetRateLimit(`rl:OTP_SEND:id-burst:${value}`),
       resetRateLimit(`rl:OTP_SEND:id-daily:${value}`),
       resetRateLimit(`rl:OTP_VERIFY:id:${value}`),
     ])

@@ -1,12 +1,10 @@
 import type { SMSProvider } from "../types";
 import { logger } from "@/lib/logger";
 
-// Overridable via env so a Graph API version bump needs no code change —
-// v23.0 (May 2025) has a long support runway (until Oct 2027) and is what
-// Meta's own authentication-template docs currently exemplify.
-const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v23.0";
+// Overridable via env so a Graph API version bump needs no code change.
+const GRAPH_API_VERSION = process.env.WHATSAPP_GRAPH_API_VERSION || "v25.0";
 const DEFAULT_TEMPLATE_NAME = process.env.WHATSAPP_TEMPLATE_NAME || "login_otp";
-const TEMPLATE_LANGUAGE = process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en_US";
+const TEMPLATE_LANGUAGE = process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en";
 
 // Bounds how long a single send can hang — a wedged Graph API call must not
 // block the request indefinitely.
@@ -118,14 +116,17 @@ export class WhatsAppProvider implements SMSProvider {
         return { success: true, messageId };
       }
 
-      // Diagnostic fields only — status code and Meta's own numeric
-      // error/subcode/type/fbtrace_id. Never the token, never the OTP, never
-      // the full response body (which can echo request fields back).
+      // Diagnostic fields only — status code, Meta's numeric error/subcode/
+      // type/fbtrace_id, and Meta's human-readable message (with the OTP and
+      // token scrubbed in case a parameter-validation error echoes them).
+      // Never the full response body.
+      const rawMessage = typeof data?.error?.message === "string" ? data.error.message : undefined;
       logger.error("[WhatsApp] Send failed", {
         status: res.status,
         code: data?.error?.code,
         subcode: data?.error?.error_subcode,
         type: data?.error?.type,
+        message: rawMessage?.split(otp).join("[redacted]").split(this.accessToken).join("[redacted]"),
         fbtrace_id: data?.error?.fbtrace_id,
       });
 

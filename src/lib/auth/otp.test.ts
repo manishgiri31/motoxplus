@@ -65,6 +65,7 @@ function applyData(row: FakeOtpRow, data: any) {
   if (data.attempts?.increment !== undefined) row.attempts += data.attempts.increment;
 }
 
+vi.stubEnv("JWT_SECRET", "test-secret-for-otp-hashing");
 const { createOTP, verifyOTP, checkResendLimit } = await import("./otp");
 
 const USER = "user_1";
@@ -171,40 +172,40 @@ describe("createOTP", () => {
   });
 });
 
-describe("dev-only OTP bypass ('000000')", () => {
+describe("OTP at rest", () => {
+  it("stores a keyed hash, never the plaintext code", async () => {
+    const code = await createOTP(USER, TYPE);
+    expect(code).toMatch(/^\d{6}$/);
+    expect(rows[0].code).not.toBe(code);
+    expect(rows[0].code).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("does not let a hash minted for one user/purpose verify for another", async () => {
+    const code = await createOTP(USER, TYPE);
+    rows[0].userId = "user_2";
+    const result = await verifyOTP("user_2", TYPE, code);
+    expect(result.success).toBe(false);
+  });
+
+  it("treats a legacy plaintext row as a plain mismatch instead of throwing", async () => {
+    await createOTP(USER, TYPE);
+    rows[0].code = "123456";
+    await expect(verifyOTP(USER, TYPE, "123456")).resolves.toMatchObject({ success: false });
+  });
+});
+
+describe("no test/dev bypass", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.stubEnv("JWT_SECRET", "test-secret-for-otp-hashing");
   });
 
-  it("is inert under NODE_ENV=test — '000000' behaves like any other wrong guess (this suite's own environment)", async () => {
-    await createOTP(USER, TYPE);
-    const result = await verifyOTP(USER, TYPE, "000000");
-    expect(result.success).toBe(false);
-  });
-
-  it("succeeds against a real pending OTP when NODE_ENV=development, without needing the actual code", async () => {
-    const realCode = await createOTP(USER, TYPE);
-    vi.stubEnv("NODE_ENV", "development");
-
-    const result = await verifyOTP(USER, TYPE, "000000");
-    expect(result.success).toBe(true);
-
-    // Burns the row exactly like a real success — the actual code no longer verifies either.
-    const replay = await verifyOTP(USER, TYPE, realCode);
-    expect(replay.success).toBe(false);
-  });
-
-  it("still fails when there is no pending OTP to bypass, even in development", async () => {
-    vi.stubEnv("NODE_ENV", "development");
-    const result = await verifyOTP(USER, TYPE, "000000");
-    expect(result.success).toBe(false);
-  });
-
-  it("is inert when NODE_ENV=production, even if '000000' happens to be guessed", async () => {
-    await createOTP(USER, TYPE);
-    vi.stubEnv("NODE_ENV", "production");
-
-    const result = await verifyOTP(USER, TYPE, "000000");
-    expect(result.success).toBe(false);
+  it.each(["development", "production", "test"])("a fixed code never verifies under NODE_ENV=%s", async (env) => {
+    vi.stubEnv("NODE_ENV", env);
+    const real = await createOTP(USER, TYPE);
+    for (const guess of ["000000", "123456"]) {
+      if (guess === real) continue; // 1-in-a-million collision with the random code
+      expect((await verifyOTP(USER, TYPE, guess)).success).toBe(false);
+    }
   });
 });
