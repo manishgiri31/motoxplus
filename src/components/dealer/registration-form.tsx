@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle } from "lucide-react";
 
@@ -330,7 +331,9 @@ export function DealerRegistrationForm() {
         </button>
 
         <p className="text-gray-600 text-xs text-center">
-          By signing up, you agree to our terms.
+          By signing up, you agree to our{" "}
+          <Link href="/terms" className="underline underline-offset-2 hover:text-gray-900">Terms &amp; Conditions</Link> and{" "}
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-gray-900">Privacy Policy</Link>.
         </p>
       </form>
     </div>

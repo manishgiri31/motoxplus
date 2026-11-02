@@ -780,9 +780,11 @@ export function ProductCatalog({
                     {currentSearch ? highlight(product.name, currentSearch) : product.name}
                   </h3>
                   {product.description && (
-                    <p className="hidden md:block text-[var(--text-muted)] text-xs leading-relaxed mb-2 line-clamp-2">
-                      {product.description}
-                    </p>
+                    <div className="hidden md:block mb-2">
+                      <p className="text-[var(--text-muted)] text-xs leading-relaxed line-clamp-2">
+                        {product.description}
+                      </p>
+                    </div>
                   )}
                   {product.compatibility.length > 0 && (
                     <div className="hidden md:block text-[var(--text-muted)] text-xs mb-3 opacity-70">

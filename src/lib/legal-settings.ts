@@ -64,7 +64,16 @@ let cache: { value: LegalSettings; expiresAt: number } | null = null;
 export async function getLegalSettings(): Promise<LegalSettings> {
   if (cache && cache.expiresAt > Date.now()) return cache.value;
 
-  const rows = await prisma.setting.findMany({ where: { key: { in: Object.values(SETTING_KEYS) } } });
+  // These pages are static informational text — a DB outage must not take them
+  // down (see the "must never fail to render" note above). Serve the defaults,
+  // and skip the cache so the next request retries the DB.
+  let rows: { key: string; value: string }[];
+  try {
+    rows = await prisma.setting.findMany({ where: { key: { in: Object.values(SETTING_KEYS) } } });
+  } catch (err) {
+    console.error("[legal-settings] Setting lookup failed, serving defaults:", err);
+    return DEFAULTS;
+  }
   const byKey = new Map(rows.map((r) => [r.key, r.value]));
 
   const value = (Object.keys(SETTING_KEYS) as (keyof LegalSettings)[]).reduce((acc, field) => {
