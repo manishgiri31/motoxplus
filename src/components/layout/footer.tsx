@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { APK_DOWNLOAD_URL } from "@/components/ui/android-app-button";
 
 const socialLinks = [
   {
@@ -90,12 +91,14 @@ const columns = [
 ];
 
 const link = "text-store-gray-700 hover:underline focus-visible:outline-store-accent";
+// Footer list links: 12px text but a 40px-tall hit area on touch screens.
+const listLink = `${link} inline-flex min-h-10 items-center bp-md:min-h-0`;
 
 export function Footer() {
   const phone = process.env.NEXT_PUBLIC_COMPANY_PHONE || "+91 88168 12379";
   const email = process.env.NEXT_PUBLIC_COMPANY_EMAIL || "info@motoxplus.com";
   return (
-    <footer className="bg-store-bg-alt pb-10 pt-5 font-store text-12 text-store-ink-2">
+    <footer className="bg-store-bg-alt pb-24 pt-5 bp-md:pb-10 font-store text-12 text-store-ink-2">
       <div className="mx-auto w-[calc(100%-32px)] max-w-page bp-md:w-[min(100%-48px,1260px)]">
         <p className="border-b border-store-line pb-4">
           Spare parts and accessories for two-wheelers, manufactured in India.{" "}
@@ -108,14 +111,21 @@ export function Footer() {
           {columns.map((col) => (
             <nav key={col.title} aria-label={col.title}>
               <h2 className="mb-2 text-12 font-semibold tracking-[-0.01em] text-store-ink">{col.title}</h2>
-              <ul className="space-y-2">
+              <ul className="bp-md:space-y-2">
                 {col.links.map((l) => (
                   <li key={l.href}>
-                    <Link href={l.href} className={link}>
+                    <Link href={l.href} className={listLink}>
                       {l.label}
                     </Link>
                   </li>
                 ))}
+                {col.title === "Company" && (
+                  <li>
+                    <a href={APK_DOWNLOAD_URL} download className={listLink}>
+                      Android app
+                    </a>
+                  </li>
+                )}
               </ul>
             </nav>
           ))}
@@ -124,12 +134,12 @@ export function Footer() {
             <address className="space-y-2 not-italic">
               <p>{process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "New Delhi, India"}</p>
               <p>
-                <a href={`tel:${phone.replace(/\s/g, "")}`} className={link}>
+                <a href={`tel:${phone.replace(/\s/g, "")}`} className={`${link} inline-flex min-h-10 items-center bp-md:min-h-0`}>
                   {phone}
                 </a>
               </p>
               <p>
-                <a href={`mailto:${email}`} className={link}>
+                <a href={`mailto:${email}`} className={`${link} inline-flex min-h-10 items-center bp-md:min-h-0`}>
                   {email}
                 </a>
               </p>

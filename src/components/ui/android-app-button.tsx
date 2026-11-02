@@ -6,7 +6,7 @@
  * motoxplus-assets). Same-origin keeps the <a download> attribute working.
  * Override with NEXT_PUBLIC_APK_DOWNLOAD_URL if the file moves.
  */
-const APK_DOWNLOAD_URL =
+export const APK_DOWNLOAD_URL =
   process.env.NEXT_PUBLIC_APK_DOWNLOAD_URL || "/downloads/motoxplus.apk";
 
 function AndroidIcon({ className }: { className?: string }) {
@@ -21,7 +21,9 @@ function AndroidIcon({ className }: { className?: string }) {
  * Sitewide floating APK download badge — the WhatsApp button (bottom-right)
  * establishes the fixed-corner-FAB pattern; this mirrors it on the left so
  * neither collides with the other or with product-catalog's centered
- * floating compare bar.
+ * floating compare bar. Hidden on phones, where a 250px banner would cover
+ * a third of the screen on every page; there the APK link lives in the
+ * footer and the mobile menu instead.
  */
 export function AndroidAppButton() {
   return (
@@ -29,7 +31,7 @@ export function AndroidAppButton() {
       href={APK_DOWNLOAD_URL}
       download
       aria-label="Get the Android App — Download APK for Android"
-      className="fixed bottom-6 left-6 z-50 flex items-center gap-3 rounded-card bg-[#17181A] py-3 pl-3 pr-5 shadow-[var(--elev-3)] transition-[transform,box-shadow] duration-[var(--dur-2)] hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+      className="fixed bottom-6 left-6 z-50 hidden items-center bp-md:flex gap-3 rounded-card bg-[#17181A] py-3 pl-3 pr-5 shadow-[var(--elev-3)] transition-[transform,box-shadow] duration-[var(--dur-2)] hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
     >
       <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-sm bg-[var(--red)]">
         <AndroidIcon className="h-5 w-5 text-white" />

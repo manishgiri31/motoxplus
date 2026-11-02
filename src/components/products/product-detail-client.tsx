@@ -70,6 +70,14 @@ interface VehicleContext { slug: string; name: string; }
 interface Props { product: Product; vehicleContext?: VehicleContext | null; children?: React.ReactNode; }
 
 // Attribute dimensions for Amazon-style selection
+// Buy row: pinned to the bottom of the screen on phones so the primary action is
+// always one thumb-tap away, however far down the variant/price details the user
+// has scrolled. Sticks only while its details column is on screen, then rests in
+// place at the end of it. Static from md up. The WhatsApp button lifts clear of
+// it on product pages (see whatsapp-button.tsx).
+const BUY_BAR =
+  "sticky bottom-0 z-30 -mx-4 border-t border-[var(--line)] bg-[var(--card)] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:static md:z-auto md:mx-0 md:border-0 md:bg-transparent md:p-0";
+
 const DIMS = ["color", "vehicleModel", "finish", "size", "extra"] as const;
 type Dim = (typeof DIMS)[number];
 const DIM_LABELS: Record<Dim, string> = {
@@ -338,8 +346,8 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-16">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-5 md:py-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 mb-12 lg:mb-16">
 
         {/* ── Gallery ── */}
         <div>
@@ -407,7 +415,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
                 <button
                   key={i}
                   onClick={() => setSelectedIdx(i)}
-                  className={`relative w-16 h-16 flex-shrink-0 rounded-sm overflow-hidden border transition-colors ${
+                  className={`relative w-14 h-14 md:w-16 md:h-16 flex-shrink-0 rounded-sm overflow-hidden border transition-colors ${
                     i === selectedIdx ? "border-[var(--red)]" : "border-[var(--line)] opacity-60 hover:opacity-100"
                   }`}
                 >
@@ -783,11 +791,12 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
 
           {/* ── Quantity + Add to Cart ── */}
           {(isDealer || (isCustomer && activeMrp)) && (
-            <div className="flex items-center gap-4">
+            <div className={`${BUY_BAR} flex items-center gap-3 md:gap-4`}>
               <div className="flex items-center bg-[var(--card)] border border-[var(--line)] rounded-sm overflow-hidden">
                 <button
                   onClick={() => setQuantity(Math.max(effectiveMoq, quantity - effectiveMoq))}
-                  className="px-4 py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition-colors"
+                  aria-label="Decrease quantity"
+                  className="grid h-12 w-12 md:h-auto md:w-auto place-items-center md:px-4 md:py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition-colors"
                 >
                   <Minus size={14} />
                 </button>
@@ -808,12 +817,15 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
                     const snapped = Math.max(effectiveMoq, Math.round(v / effectiveMoq) * effectiveMoq);
                     setQuantity(maxOrderQty > 0 ? Math.min(snapped, maxOrderQty) : snapped);
                   }}
-                  className="tnum w-16 text-center text-[var(--ink)] font-bold bg-transparent focus:outline-none py-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  inputMode="numeric"
+                  aria-label="Quantity"
+                  className="tnum w-12 md:w-16 text-center text-[var(--ink)] font-bold bg-transparent focus:outline-none py-3 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   onClick={() => setQuantity(maxOrderQty > 0 ? Math.min(quantity + effectiveMoq, maxOrderQty) : quantity)}
                   disabled={maxOrderQty > 0 && quantity >= maxOrderQty}
-                  className="px-4 py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                  aria-label="Increase quantity"
+                  className="grid h-12 w-12 md:h-auto md:w-auto place-items-center md:px-4 md:py-3 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--paper)] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
                 >
                   <Plus size={14} />
                 </button>
@@ -821,7 +833,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
               <button
                 onClick={handleAddToCart}
                 disabled={loading || addedToCart || (hasVariants && !resolvedVariant) || !!outOfStock}
-                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3 rounded-sm transition-colors text-sm ${
+                className={`flex-1 flex items-center justify-center gap-2 font-bold py-3.5 md:py-3 rounded-sm transition-colors text-sm ${
                   addedToCart
                     ? "bg-[var(--sig-ok-fg)] text-white"
                     : outOfStock
@@ -841,12 +853,14 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
           )}
 
           {!isDealer && !isCustomer && (
-            <Link
-              href="/login"
-              className="block w-full text-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3 rounded-sm transition-colors text-sm"
-            >
-              Login to Order
-            </Link>
+            <div className={BUY_BAR}>
+              <Link
+                href="/login"
+                className="block w-full text-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3.5 md:py-3 rounded-sm transition-colors text-sm"
+              >
+                Login to Order
+              </Link>
+            </div>
           )}
         </div>
       </div>

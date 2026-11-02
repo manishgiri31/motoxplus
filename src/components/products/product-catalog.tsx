@@ -386,9 +386,9 @@ export function ProductCatalog({
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-10">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-5 md:py-10">
       {/* Search — large, prominent, full-width */}
-      <div className="w-full relative mb-6">
+      <div className="w-full relative mb-4 md:mb-6">
         <div className="relative">
           <Search
             size={22}
@@ -403,8 +403,8 @@ export function ProductCatalog({
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={() => { setInputFocused(true); setActiveSuggestion(-1); }}
             onKeyDown={handleKeyDown}
-            placeholder="Search by name, part number, vehicle (e.g. Hero Glamour)..."
-            className={`w-full themed-input border rounded-lg pl-14 pr-14 py-5 text-base md:text-lg font-medium transition-all duration-200 ${
+            placeholder="Search part, number or vehicle"
+            className={`w-full themed-input border rounded-lg pl-12 pr-12 md:pl-14 md:pr-14 py-3.5 md:py-5 text-base md:text-lg font-medium transition-all duration-200 ${
               inputFocused
                 ? "border-[var(--red)]/60 shadow-[0_0_0_3px_var(--accent-ring)]"
                 : ""
@@ -421,7 +421,7 @@ export function ProductCatalog({
             <button
               onClick={handleClear}
               aria-label="Clear search"
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
+              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-9 h-9 md:w-7 md:h-7 flex items-center justify-center rounded-full bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all"
             >
               <X size={15} />
             </button>
@@ -605,10 +605,10 @@ export function ProductCatalog({
         </div>
 
       {/* Category filter chips */}
-      <div className="flex flex-wrap gap-2 mb-8">
+      <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:mb-8 md:flex-wrap md:overflow-visible md:px-0 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => handleCategory(null)}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-colors duration-200 ${
+            className={`flex-shrink-0 whitespace-nowrap px-4 py-2.5 md:py-2 rounded-full text-xs font-bold transition-colors duration-200 ${
               !currentCategory
                 ? "bg-[var(--red)] text-white"
                 : "border border-[var(--line)] text-[var(--muted)] hover:border-[var(--red)]/50 hover:text-[var(--ink)]"
@@ -620,7 +620,7 @@ export function ProductCatalog({
             <button
               key={cat.id}
               onClick={() => handleCategory(cat.slug)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-colors duration-200 ${
+              className={`flex-shrink-0 whitespace-nowrap px-4 py-2.5 md:py-2 rounded-full text-xs font-bold transition-colors duration-200 ${
                 currentCategory === cat.slug
                   ? "bg-[var(--red)] text-white"
                   : "border border-[var(--line)] text-[var(--muted)] hover:border-[var(--red)]/50 hover:text-[var(--ink)]"
@@ -632,7 +632,7 @@ export function ProductCatalog({
       </div>
 
       {/* Results count + active search badge */}
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
+      <div className="flex items-center gap-3 mb-4 md:mb-6 flex-wrap">
         <span className="text-[var(--text-muted)] text-sm">
           Showing <span className="text-[var(--text-primary)] font-semibold">{products.length}</span> of{" "}
           <span className="text-[var(--text-primary)] font-semibold">{totalProducts}</span> products
@@ -681,7 +681,7 @@ export function ProductCatalog({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
           {products.map((product) => {
             const thumb = productThumb(product);
             const discountPct = product.mrp && product.mrp > product.price
@@ -700,7 +700,7 @@ export function ProductCatalog({
                 className="group relative bg-[var(--card)] border border-[var(--line)] hover:border-[var(--red)]/40 overflow-hidden transition-colors duration-200 block"
               >
                 {/* Image */}
-                <div className="relative h-48 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-square md:aspect-auto md:h-48 bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden">
                   {thumb ? (
                     <Image
                       src={thumb}
@@ -716,8 +716,8 @@ export function ProductCatalog({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                   {/* Top-left badges */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start">
-                    <span className="bg-[var(--red)] text-white text-12 font-bold uppercase px-2.5 py-1 rounded-full">
+                  <div className="absolute top-2 left-2 md:top-3 md:left-3 flex flex-col gap-1 md:gap-1.5 items-start max-w-[calc(100%-3rem)]">
+                    <span className="bg-[var(--red)] text-white text-12 font-bold uppercase px-2 md:px-2.5 py-0.5 md:py-1 rounded-full max-w-full truncate">
                       {product.category.name}
                     </span>
                     {discountPct && discountPct > 0 && (
@@ -738,11 +738,11 @@ export function ProductCatalog({
                   </div>
 
                   {/* Top-right quick actions */}
-                  <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+                  <div className="absolute top-2 right-2 md:top-3 md:right-3 flex flex-col gap-2 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:translate-x-2 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-hover:translate-x-0 transition-all duration-300">
                     <button
                       onClick={(e) => handleToggleWishlist(e, product.id)}
                       aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition-colors ${
+                      className={`w-9 h-9 md:w-8 md:h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition-colors ${
                         isWishlisted
                           ? "bg-[var(--red)] border-[var(--red)] text-white"
                           : "bg-black/40 border-white/20 text-white hover:bg-[var(--red)] hover:border-[var(--red)]"
@@ -753,14 +753,14 @@ export function ProductCatalog({
                     <button
                       onClick={(e) => handleQuickView(e, product)}
                       aria-label="Quick view"
-                      className="w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border bg-black/40 border-white/20 text-white hover:bg-[var(--red)] hover:border-[var(--red)] transition-colors"
+                      className="w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border bg-black/40 border-white/20 text-white hover:bg-[var(--red)] hover:border-[var(--red)] transition-colors [@media(hover:none)]:hidden"
                     >
                       <Eye size={13} />
                     </button>
                     <button
                       onClick={(e) => handleToggleCompare(e, product.id)}
                       aria-label={isComparing ? "Remove from compare" : "Add to compare"}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition-colors ${
+                      className={`w-9 h-9 md:w-8 md:h-8 rounded-full flex items-center justify-center backdrop-blur-md border transition-colors ${
                         isComparing
                           ? "bg-[var(--red)] border-[var(--red)] text-white"
                           : "bg-black/40 border-white/20 text-white hover:bg-[var(--red)] hover:border-[var(--red)]"
@@ -772,31 +772,31 @@ export function ProductCatalog({
                 </div>
 
                 {/* Content */}
-                <div className="p-4">
-                  <div className="text-[var(--text-muted)] text-12 mb-1 font-mono opacity-70">
+                <div className="p-3 md:p-4">
+                  <div className="text-[var(--text-muted)] text-12 mb-1 font-mono opacity-70 truncate">
                     {currentSearch ? highlight(product.partNumber, currentSearch) : product.partNumber}
                   </div>
                   <h3 className="text-[var(--text-primary)] font-bold text-sm mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
                     {currentSearch ? highlight(product.name, currentSearch) : product.name}
                   </h3>
                   {product.description && (
-                    <p className="text-[var(--text-muted)] text-xs leading-relaxed mb-2 line-clamp-2">
+                    <p className="hidden md:block text-[var(--text-muted)] text-xs leading-relaxed mb-2 line-clamp-2">
                       {product.description}
                     </p>
                   )}
                   {product.compatibility.length > 0 && (
-                    <div className="text-[var(--text-muted)] text-xs mb-3 opacity-70">
+                    <div className="hidden md:block text-[var(--text-muted)] text-xs mb-3 opacity-70">
                       Fits: {product.compatibility.slice(0, 2).join(", ")}
                       {product.compatibility.length > 2 && " +more"}
                     </div>
                   )}
-                  <div className="pt-3 border-t border-[var(--border-color)]">
+                  <div className="pt-2 md:pt-3 border-t border-[var(--border-color)]">
                     {isCustomer ? (
                       <div>
                         <div className="text-[var(--text-muted)] text-12 font-bold mb-0.5">Price (excl. GST)</div>
                         {product.mrp ? (
                           <>
-                            <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
+                            <div className="text-[var(--red)] font-black text-lg md:text-xl leading-tight tracking-tight">
                               ₹{getExGstFromInclusive(product.mrp, product.gstRate).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                             </div>
                             <div className="text-[var(--text-muted)] text-12 font-semibold mt-0.5">+ {product.gstRate}% GST</div>
@@ -807,10 +807,10 @@ export function ProductCatalog({
                         )}
                       </div>
                     ) : isDealer ? (
-                      <div className="flex items-end justify-between gap-2">
+                      <div className="flex flex-wrap items-end justify-between gap-x-2 gap-y-1.5">
                         <div>
                           <div className="text-[var(--text-muted)] text-12 font-bold mb-0.5">Dealer Price</div>
-                          <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
+                          <div className="text-[var(--red)] font-black text-lg md:text-xl leading-tight tracking-tight">
                             ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </div>
                           {product.mrp && product.mrp > product.price && (
@@ -824,10 +824,10 @@ export function ProductCatalog({
                         </span>
                       </div>
                     ) : (
-                      <div className="flex items-end justify-between gap-2">
+                      <div className="flex flex-wrap items-end justify-between gap-x-2 gap-y-1.5">
                         <div>
                           <div className="text-[var(--text-muted)] text-12 font-bold mb-0.5">Dealer Price (excl. GST)</div>
-                          <div className="text-[var(--red)] font-black text-xl leading-tight tracking-tight">
+                          <div className="text-[var(--red)] font-black text-lg md:text-xl leading-tight tracking-tight">
                             ₹{product.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                           </div>
                           <div className="text-[var(--text-muted)] text-12 font-semibold mt-0.5">+ {product.gstRate}% GST</div>
@@ -873,7 +873,7 @@ export function ProductCatalog({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-[var(--card)] border border-[var(--line)] shadow-[var(--elev-3)] px-5 py-3.5 flex items-center gap-4"
+            className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-5 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md justify-between md:w-auto md:max-w-none md:justify-start bg-[var(--card)] border border-[var(--line)] shadow-[var(--elev-3)] px-4 md:px-5 py-3 md:py-3.5 flex items-center gap-4"
           >
             <div className="flex items-center gap-2">
               <Scale size={15} className="text-[var(--red)]" />

@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react";
 import { Menu, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StoreButton } from "@/components/store/button";
+import { APK_DOWNLOAD_URL } from "@/components/ui/android-app-button";
 
 const links = [
   { label: "Products", href: "/products" },
@@ -64,6 +65,7 @@ export function Navbar() {
   }, []);
 
   return (
+    <>
     <header className="sticky top-0 z-[9998] h-14 bg-white/80 font-store backdrop-blur-xl backdrop-saturate-150 supports-[not(backdrop-filter:blur(1px))]:bg-white/95">
       <nav aria-label="Main" className="mx-auto flex h-full max-w-[1024px] items-center justify-between px-[22px]">
         <Link href="/" className={cn("flex items-center gap-2 text-17 font-semibold text-store-ink", focus)}>
@@ -120,9 +122,13 @@ export function Navbar() {
           </button>
         </div>
       </nav>
+    </header>
 
-      {open && (
-        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-14 overflow-y-auto bg-white bp-md:hidden">
+    {/* Sibling of <header>, not a child: the header's backdrop-filter makes it the
+        containing block for fixed descendants, which collapses this panel to the
+        header's 56px height. */}
+    {open && (
+        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-14 z-[9997] overflow-y-auto bg-white bp-md:hidden">
           <ul className="mx-auto max-w-[1024px] px-[22px] pt-4">
             {[{ label: "Home", href: "/" }, ...links].map((l) => (
               <li key={l.href} className="border-b border-store-line-soft">
@@ -135,7 +141,7 @@ export function Navbar() {
               </li>
             ))}
           </ul>
-          <div className="mx-auto flex max-w-[1024px] flex-col gap-3 px-[22px] py-8">
+          <div className="mx-auto flex max-w-[1024px] flex-col gap-3 px-[22px] pb-[max(2rem,env(safe-area-inset-bottom))] pt-8">
             {session ? (
               <StoreButton href={dashboardHref}>
                 Go to Dashboard
@@ -148,9 +154,16 @@ export function Navbar() {
                 </StoreButton>
               </>
             )}
+            <a
+              href={APK_DOWNLOAD_URL}
+              download
+              className={cn("mt-2 flex min-h-11 items-center justify-center text-14 text-store-link", focus)}
+            >
+              Get the Android app
+            </a>
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }
