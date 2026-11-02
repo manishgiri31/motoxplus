@@ -483,6 +483,13 @@ model Order {
   // The delivery address's state, not the dealer's registered state — a
   // dealer can ship to a different state than their own registration.
   placeOfSupply          String?
+  // WhatsApp order-notification idempotency (lib/whatsapp/order-notifications.ts).
+  // Each is claimed atomically (UPDATE ... WHERE flag IS NULL) before the
+  // template is sent, and cleared again if the send fails, so a message goes
+  // out at most once per order per event.
+  confirmationSentAt     DateTime?
+  cancelNotifiedAt       DateTime?
+  shippedNotifiedAt      DateTime?
   invoice                Invoice?
   dealer                 Dealer?                 @relation(fields: [dealerId], references: [id], onDelete: Restrict)
   customer               Customer?               @relation(fields: [customerId], references: [id], onDelete: Restrict)

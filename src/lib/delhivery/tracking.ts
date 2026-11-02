@@ -10,6 +10,7 @@ import { normalizeShipmentStatus } from "./types";
 import { isPreShipCarrierStatus } from "./carrier-status";
 import { assertB2cCarrierAction } from "./errors";
 import { notifyOrderEvent, type OrderNotificationEvent } from "@/lib/push/order-notifications";
+import { notifyOrderWhatsApp, isShippedCarrierStatus } from "@/lib/whatsapp/order-notifications";
 
 // Same subset as the webhook path: only ship / deliver are reachable here
 // (PROCESSING / RETURNED transitions aren't surfaced in the app).
@@ -199,4 +200,7 @@ export async function syncTrackingToDb(orderId: string): Promise<void> {
     const event = NOTIFY_EVENT_BY_ORDER_STATUS[appliedOrderStatus];
     if (event) void notifyOrderEvent(orderId, event);
   }
+
+  // WhatsApp "shipped" — raw carrier status, exact match (see webhook.ts).
+  if (isShippedCarrierStatus(detail.Status?.Status)) void notifyOrderWhatsApp(orderId, "ORDER_SHIPPED");
 }

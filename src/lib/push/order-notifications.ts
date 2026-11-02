@@ -1,6 +1,7 @@
 import type { Order, OrderCancellation, Shipment } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendExpoPushNotifications } from "./send";
+import { notifyOrderWhatsApp } from "@/lib/whatsapp/order-notifications";
 
 export type OrderNotificationEvent =
   | "ORDER_CONFIRMED"
@@ -65,6 +66,15 @@ function buildMessage(
  * SHIPPED) only notifies once.
  */
 export async function notifyOrderEvent(orderId: string, event: OrderNotificationEvent): Promise<void> {
+  // WhatsApp to the customer for confirm / cancel — every code path that
+  // confirms or cancels an order already calls this function, so it is the one
+  // place to hook. Independent of the dealer-push logic below (B2C orders have
+  // no dealer) and of its dedupe: notifyOrderWhatsApp has its own Order flags,
+  // never throws, and is a no-op unless WHATSAPP_ORDER_NOTIFICATIONS=true.
+  // ORDER_SHIPPED is deliberately not forwarded here: it is sent from the
+  // Delhivery webhook / tracking sync, which have the raw carrier status.
+  if (event === "ORDER_CONFIRMED" || event === "ORDER_CANCELLED") void notifyOrderWhatsApp(orderId, event);
+
   try {
     const markerType = `PUSH_${event}`;
 

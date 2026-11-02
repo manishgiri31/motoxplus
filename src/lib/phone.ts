@@ -26,6 +26,27 @@ export function normalizeIndianMobile(input: string): string | null {
   return MOBILE_REGEX.test(digits) ? digits : null;
 }
 
+/**
+ * WhatsApp Cloud API recipient format: country code + number, digits only, no
+ * "+" (e.g. "919876543210"). Strips spaces, "+", dashes, dots and brackets; a
+ * bare 10-digit Indian number (or one with a trunk "0") gets the 91 prefix.
+ * Anything else must already carry a country code (11–15 digits, E.164 max).
+ * Returns null for input that can't be a deliverable number.
+ */
+export function toWhatsAppPhone(input: string | null | undefined): string | null {
+  if (!input) return null;
+  let digits = input.replace(/[\s+\-.()]/g, "");
+  if (!/^\d+$/.test(digits)) return null;
+
+  if (digits.length === 10) digits = `91${digits}`;
+  else if (digits.length === 11 && digits.startsWith("0")) digits = `91${digits.slice(1)}`;
+
+  if (digits.length < 11 || digits.length > 15) return null;
+  // An Indian number that came in via the 91 prefix must be a real mobile.
+  if (digits.startsWith("91") && digits.length === 12 && !MOBILE_REGEX.test(digits.slice(2))) return null;
+  return digits;
+}
+
 // RFC 2606 reserves .invalid as a domain that can never resolve — used here
 // so a B2C customer who skips the optional email field still gets a value in
 // User.email (NOT NULL, and relied on as non-null across ~40 files/67 call

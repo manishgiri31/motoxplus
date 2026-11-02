@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notifyOrderEvent, type OrderNotificationEvent } from "@/lib/push/order-notifications";
 import type { DelhiveryWebhookPayload } from "./types";
 import { normalizeShipmentStatus } from "./types";
+import { notifyOrderWhatsApp, isShippedCarrierStatus } from "@/lib/whatsapp/order-notifications";
 
 // Order-status transitions that warrant a push to the dealer. PROCESSING /
 // RETURNED deliberately have no entry — the app only surfaces confirm / ship /
@@ -83,6 +84,12 @@ export async function processDelhiveryWebhook(
     const event = NOTIFY_EVENT_BY_ORDER_STATUS[newOrderStatus];
     if (event) void notifyOrderEvent(shipment.orderId, event);
   }
+
+  // WhatsApp "shipped" — keyed on the RAW carrier status (exact match), not on
+  // the order-status transition above, so an unrecognised status that
+  // normalizeShipmentStatus defaults to IN_TRANSIT can't trigger it. Deduped
+  // by Order.shippedNotifiedAt; never throws.
+  if (isShippedCarrierStatus(rawStatus)) void notifyOrderWhatsApp(shipment.orderId, "ORDER_SHIPPED");
 
   return { processed: true, waybill };
 }

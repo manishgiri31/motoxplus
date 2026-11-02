@@ -1,5 +1,34 @@
 import { describe, it, expect } from "vitest";
-import { normalizeIndianMobile } from "./phone";
+import { normalizeIndianMobile, toWhatsAppPhone } from "./phone";
+
+describe("toWhatsAppPhone", () => {
+  it("prefixes 91 onto a bare 10-digit number", () => {
+    expect(toWhatsAppPhone("9876543210")).toBe("919876543210");
+  });
+
+  it("strips spaces, plus, dashes, dots and brackets", () => {
+    expect(toWhatsAppPhone("+91 98765-43210")).toBe("919876543210");
+    expect(toWhatsAppPhone("(98765) 43.210")).toBe("919876543210");
+  });
+
+  it("handles a trunk 0 and an existing country code", () => {
+    expect(toWhatsAppPhone("09876543210")).toBe("919876543210");
+    expect(toWhatsAppPhone("919876543210")).toBe("919876543210");
+  });
+
+  it("keeps a non-Indian number that already has a country code", () => {
+    expect(toWhatsAppPhone("+1 415 555 2671")).toBe("14155552671");
+  });
+
+  it("returns null for empty, non-numeric, too short, too long, or non-mobile Indian input", () => {
+    expect(toWhatsAppPhone(null)).toBeNull();
+    expect(toWhatsAppPhone("")).toBeNull();
+    expect(toWhatsAppPhone("98765abc10")).toBeNull();
+    expect(toWhatsAppPhone("98765")).toBeNull();
+    expect(toWhatsAppPhone("1234567890123456")).toBeNull();
+    expect(toWhatsAppPhone("911234567890")).toBeNull();
+  });
+});
 
 describe("normalizeIndianMobile", () => {
   it("accepts a bare 10-digit Indian mobile number", () => {
