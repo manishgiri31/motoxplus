@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { MAX_SEARCH_QUERY_LENGTH } from "@/lib/query-limits";
 
 /**
  * Get product IDs where any element in the `compatibility` string[]
@@ -51,6 +52,8 @@ export async function buildSearchWhere(
   search: string,
   activeOnly = true
 ): Promise<Prisma.ProductWhereInput> {
+  // Single choke point for the storefront pages AND the API: never run a multi-kilobyte ILIKE.
+  search = search.trim().slice(0, MAX_SEARCH_QUERY_LENGTH);
   const [compatIds, matrixIds] = await Promise.all([
     compatibilityMatchIds(search, activeOnly),
     compatibilityMatrixMatchIds(search, activeOnly),

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parsePageParam } from "@/lib/query-limits";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
   }
 
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") || "1");
+  const page = parsePageParam(searchParams.get("page"));
   const pageSize = 20;
 
   const [payments, total] = await Promise.all([

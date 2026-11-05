@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parsePageParam, parsePageSizeParam, clampSearch } from "@/lib/query-limits";
 import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -52,12 +53,12 @@ const productSchema = z.object({
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category");
-  const search = searchParams.get("search");
+  const search = clampSearch(searchParams.get("search")) ?? null;
   const vehicleSlug = searchParams.get("vehicle");
   const variantSlug = searchParams.get("variant");
   const sectionSlug = searchParams.get("section");
-  const page = parseInt(searchParams.get("page") || "1");
-  const pageSize = parseInt(searchParams.get("pageSize") || "12");
+  const page = parsePageParam(searchParams.get("page"));
+  const pageSize = parsePageSizeParam(searchParams.get("pageSize"), 12);
   const adminAllParam = searchParams.get("adminAll") === "1";
   // Role comes from the NextAuth session OR a mobile Bearer token — the
   // dealer app reads the catalog through this route.

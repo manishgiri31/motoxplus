@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { parsePageParam } from "@/lib/query-limits";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { Plus, AlertCircle, Calendar } from "lucide-react";
@@ -15,7 +16,7 @@ const ALL_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "INTERESTED", "NEGOTIATI
 
 export default async function CRMLeadsPage(props: { searchParams: Promise<{ status?: string; page?: string }> }) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 25;
   const where: Record<string, unknown> = {};
   if (searchParams.status) where.status = searchParams.status;

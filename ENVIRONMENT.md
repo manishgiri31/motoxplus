@@ -137,6 +137,40 @@ For production with multiple instances, Redis is strongly recommended.
 Install: `sudo apt install redis-server`  
 Default URL: `redis://localhost:6379`
 
+#### How Redis is verified
+
+* **At startup** (`src/instrumentation-node.ts`) the app sends a real `PING` and logs one of:
+  * `Rate limiter: Redis OK (PING 3ms)` - healthy.
+  * `WARNING: REDIS_URL is set but Redis is not answering (...)` - configured but down. **The app still boots.**
+  * `Rate limiter: in-memory (per-worker ...)` - `REDIS_URL` is not set (intentional fallback).
+  
+  Older builds logged "Redis" whenever the variable merely existed, which hid a Redis that was never installed.
+* **At runtime** `GET /api/health` includes `checks.redis` (`ok` / `disabled` / `error` + a short `reason`).
+  A Redis error sets the body's `status` to `"degraded"` but keeps the HTTP status 200: only the **database**
+  turns it into a 503, because deploy, rollback and the 15-minute monitor treat non-2xx as "site is broken", and
+  a Redis outage must not take the site down. To alert on it anyway, have the monitor also check the body, e.g.
+  `curl -sf http://localhost:3000/api/health | grep -q '"redis":{"status":"error"' && exit 1`.
+  `/api/health/ready` (the deploy gate) intentionally stays database-only.
+
+#### What happens when Redis is down: fail open
+
+Every rate-limit budget in `src/lib/auth/rate-limit-budgets.ts` is `failMode: "open"`: if Redis is unreachable
+the request is **allowed** and counted in a per-process in-memory counter instead of being rejected.
+
+Why open, not closed: Redis only holds the *coarse* abuse gate. The controls that actually stop brute force do
+not need Redis: the database-backed account lockout (5 wrong passwords -> 30 minute lock) and the per-account OTP
+attempt/resend caps (`src/lib/auth/otp.ts`). Failing closed would turn a routine Redis restart into a site-wide
+login/OTP/search outage (this happened on a host where Redis was never installed). Failing open only makes the
+abuse gate temporarily weaker.
+
+What the fallback costs you: the in-memory counters are **per PM2 worker**, so with N workers the effective limit
+is roughly N x the configured number (e.g. 120/min becomes ~480/min on 4 cores) and counters reset on restart.
+It also means the public-route limiters added in `PUBLIC_API` / `SEARCH_PUBLIC` degrade the same way.
+
+Not rate limited by this mechanism, on purpose: `/api/health*` (monitors and the deploy gate must never get a
+429) and the Razorpay/Delhivery webhooks (authenticated by signature/token; throttling them risks dropping
+payment events). Nginx's `limit_req` zones still apply in front of all of them.
+
 ---
 
 ## APPLICATION

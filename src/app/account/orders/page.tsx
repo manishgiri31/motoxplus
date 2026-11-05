@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { parsePageParam } from "@/lib/query-limits";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -21,7 +22,7 @@ export default async function AccountOrdersPage(props: { searchParams: Promise<{
 
   if (!customer) return null;
 
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 10;
 
   const [orders, total] = await Promise.all([

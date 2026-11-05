@@ -31,6 +31,8 @@ public class SecurityConfig {
                 .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/api/health/**", "/actuator/health/**").permitAll()
+                        // Public read-only catalog endpoints (the storefront browses without logging in).
+                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/products/search").permitAll()
                         // Logout must always succeed (it just clears cookies); refresh authenticates by refresh token.
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .anyRequest().authenticated())

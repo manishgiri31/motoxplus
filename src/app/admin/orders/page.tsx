@@ -1,5 +1,6 @@
 ﻿import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { parsePageParam } from "@/lib/query-limits";
 import Link from "next/link";
 import { AdminOrderStatus } from "@/components/admin/order-status";
 
@@ -18,7 +19,7 @@ export default async function AdminOrdersPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 20;
 
   const where: any = {};

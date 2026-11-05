@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam } from "@/lib/query-limits";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 
@@ -12,7 +13,7 @@ export default async function SchemeRedemptionsPage(
   props: { searchParams: Promise<{ page?: string; schemeId?: string }> }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 25;
   const schemeId = searchParams.schemeId;
 

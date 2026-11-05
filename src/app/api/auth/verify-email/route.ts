@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyOTP } from "@/lib/auth/otp";
+import { enforceRateLimit, rejectOversizedBody, JSON_BODY_MAX_BYTES } from "@/lib/auth/rate-limit-budgets";
 
 export async function POST(req: NextRequest) {
+  const oversized = rejectOversizedBody(req, JSON_BODY_MAX_BYTES);
+  if (oversized) return oversized;
+
   const { userId, otp } = await req.json();
 
   if (!userId || !otp) {
     return NextResponse.json({ error: "User ID and OTP are required" }, { status: 400 });
   }
+
+  // Same OTP_VERIFY budget as the other verify routes: per account (stops many IPs hammering one
+  // userId's 6-digit code) and per IP. verifyOTP's own 5-attempt cap still applies underneath.
+  const limited = await enforceRateLimit(req, "OTP_VERIFY", String(userId));
+  if (limited) return limited;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });

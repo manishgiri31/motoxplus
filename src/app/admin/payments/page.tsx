@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam } from "@/lib/query-limits";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -28,7 +29,7 @@ export default async function AdminPaymentsPage(
   if (!session || !ALLOWED.includes(session.user.role)) redirect("/login");
 
   const filterStatus = searchParams.status || "";
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 20;
 
   const where = filterStatus ? { status: filterStatus as any } : {};

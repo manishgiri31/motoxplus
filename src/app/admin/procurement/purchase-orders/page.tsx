@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam } from "@/lib/query-limits";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -22,7 +23,7 @@ export default async function PurchaseOrdersPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 20;
   const where: any = {};
   if (searchParams.status) where.status = searchParams.status;

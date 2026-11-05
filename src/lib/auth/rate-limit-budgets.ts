@@ -101,6 +101,13 @@ export const RATE_LIMITS = {
   SEARCH_PUBLIC: {
     perIP: { max: 120, windowSeconds: 60, failMode: "open" } as Budget,
   },
+  // Unauthenticated read endpoints that cost a DB query (or an upstream API call) per hit:
+  // categories, public settings, shipping serviceability, token refresh. Same 120/min per IP as
+  // SEARCH_PUBLIC; kept as its own class so each route gets its own bucket and one chatty
+  // endpoint can't starve another.
+  PUBLIC_API: {
+    perIP: { max: 120, windowSeconds: 60, failMode: "open" } as Budget,
+  },
   DEFAULT: {
     perIP: { max: 60, windowSeconds: 60, failMode: "open" } as Budget,
   },

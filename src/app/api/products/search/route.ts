@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { enforceRateLimit } from "@/lib/auth/rate-limit-budgets";
+import { MAX_SEARCH_QUERY_LENGTH } from "@/lib/query-limits";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q")?.trim();
+  const q = searchParams.get("q")?.trim().slice(0, MAX_SEARCH_QUERY_LENGTH);
 
   if (!q || q.length < 2) {
     return NextResponse.json({ suggestions: [] });
   }
+
+  const limited = await enforceRateLimit(req, "SEARCH_PUBLIC");
+  if (limited) return limited;
 
   const pattern = `%${q}%`;
 

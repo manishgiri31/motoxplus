@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { parsePageParam, clampSearch } from "@/lib/query-limits";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ProductCatalog } from "@/components/products/product-catalog";
@@ -16,8 +17,8 @@ export default async function ProductsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
-  const search = searchParams.search?.trim();
+  const page = parsePageParam(searchParams.page);
+  const search = clampSearch(searchParams.search); // bounded: it is also the cache key
   // Session is used ONLY for this page's header copy below — never for the
   // catalog data itself. Product rows (price + mrp) are identical for every
   // viewer regardless of role (see lib/pricing/channel.ts displayChannel()),

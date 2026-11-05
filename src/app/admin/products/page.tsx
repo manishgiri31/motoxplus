@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam } from "@/lib/query-limits";
 import Link from "next/link";
 import { Plus, Truck, FileSpreadsheet, GitMerge, Search } from "lucide-react";
 import { ProductsTable } from "@/components/admin/products-table";
@@ -18,7 +19,7 @@ export default async function AdminProductsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 20;
   const search = searchParams.search?.trim();
   const sortKey = searchParams.sort || "newest";

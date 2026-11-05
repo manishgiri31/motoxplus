@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam } from "@/lib/query-limits";
 import Link from "next/link";
 import { Plus, ListOrdered } from "lucide-react";
 import { SchemesTable } from "@/components/admin/schemes-table";
@@ -7,7 +8,7 @@ export default async function AdminSchemesPage(
   props: { searchParams: Promise<{ page?: string }> }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 20;
 
   const [schemes, total] = await Promise.all([

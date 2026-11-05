@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parsePageParam, clampSearch } from "@/lib/query-limits";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -16,8 +17,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
   const category = searchParams.get("category");
-  const search = searchParams.get("search");
-  const page = parseInt(searchParams.get("page") || "1");
+  const search = clampSearch(searchParams.get("search")) ?? null;
+  const page = parsePageParam(searchParams.get("page"));
   const pageSize = 20;
 
   const where: any = {};

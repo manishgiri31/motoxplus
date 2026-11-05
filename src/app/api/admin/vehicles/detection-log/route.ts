@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parsePageParam } from "@/lib/query-limits";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
 
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") || "1");
+  const page = parsePageParam(searchParams.get("page"));
   const pageSize = 25;
 
   const [logs, total] = await Promise.all([

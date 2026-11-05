@@ -1,6 +1,7 @@
 ﻿import { prisma } from "@/lib/prisma";
 
 import Link from "next/link";
+import { parsePageParam } from "@/lib/query-limits";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { AdminDealerActions } from "@/components/admin/dealer-actions";
 import { GstVerifyButton } from "@/components/admin/gst-verify-button";
@@ -18,7 +19,7 @@ export default async function AdminDealersPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 20;
 
   const where: any = {};

@@ -4,8 +4,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { enforceRateLimit } from "@/lib/auth/rate-limit-budgets";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const limited = await enforceRateLimit(req, "PUBLIC_API");
+  if (limited) return limited;
+
   const categories = await prisma.category.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },

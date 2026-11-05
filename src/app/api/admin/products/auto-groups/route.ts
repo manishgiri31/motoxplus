@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { clampSearch } from "@/lib/query-limits";
 
 function commonPrefix(names: string[]): string {
   if (!names.length) return "";
@@ -73,8 +74,9 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search")?.trim() ?? "";
-  const minWords = Math.max(2, parseInt(searchParams.get("minWords") ?? "3"));
+  const search = clampSearch(searchParams.get("search")) ?? "";
+  // NaN used to flow through Math.max(2, NaN) -> NaN; also bound it above (a 50-word minimum matches nothing).
+  const minWords = Math.min(10, Math.max(2, parseInt(searchParams.get("minWords") ?? "3", 10) || 3));
 
   if (!search) {
     return NextResponse.json({ error: "search param required" }, { status: 400 });

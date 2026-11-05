@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parsePageParam } from "@/lib/query-limits";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") || "1");
+  const page = parsePageParam(searchParams.get("page"));
   const pageSize = 20;
 
   const [schemes, total] = await Promise.all([

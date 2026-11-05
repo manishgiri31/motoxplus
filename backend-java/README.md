@@ -62,17 +62,19 @@ location ~ ^/api/auth/(login|refresh|logout|me|sessions)$ { proxy_pass http://12
 location /api/health { proxy_pass http://127.0.0.1:8080; }
 ```
 
-## Status: 165 Node routes, 9 ported
+## Status: 165 Node routes, 11 ported
 
 | Done | Route |
 |---|---|
+| yes | `GET /api/categories`, `GET /api/products/search` (public; search gains a 120/min per-IP limit and treats `%`/`_` as literal text) |
 | yes | `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET/DELETE /api/auth/sessions` |
 | yes | `GET /api/health`, `/api/health/live`, `/api/health/ready` (readiness also reports Redis) |
 | yes | Platform: JWT (interoperable with Node), bcrypt, Redis rate limiter, DB lockout, body-size cap, deny-by-default security |
 
 Remaining route groups (count): admin 73, auth 12 (OTP, register, password reset, NextAuth), upload 8,
-vendors 7, vendor 6, orders 6, crm 6, procurement 5, payments 5, mobile 5, products 3, dealer 3, webhooks 2,
-staff 2, shipping 2, files 2, cart 2, admins 2, vehicles/schemes/contact/categories/dev 1 each.
+vendors 7, vendor 6, orders 6, crm 6, procurement 5, payments 5, mobile 5, products 2 (list, by id), dealer 3,
+webhooks 2, staff 2, shipping 2, files 2, cart 2, admins 2, vehicles/schemes/contact/dev 1 each, categories
+(POST, admin).
 
 Known gaps to close before the frontend can drop Node entirely:
 

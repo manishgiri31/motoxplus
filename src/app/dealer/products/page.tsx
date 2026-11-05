@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam, clampSearch } from "@/lib/query-limits";
 import { DealerProductCatalog } from "@/components/dealer/dealer-product-catalog";
 import { buildSearchWhere } from "@/lib/product-search";
 
@@ -8,9 +9,9 @@ export default async function DealerProductsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 12;
-  const search = searchParams.search?.trim();
+  const search = clampSearch(searchParams.search); // bounded: it is also the cache key
 
   const searchWhere = search ? await buildSearchWhere(search, true) : {};
 

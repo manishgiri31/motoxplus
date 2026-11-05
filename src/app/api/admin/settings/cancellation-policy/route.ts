@@ -3,13 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CANCELLATION_POLICY_ID, getCancellationPolicy } from "@/lib/orders/cancellation-policy";
+import { enforceRateLimit } from "@/lib/auth/rate-limit-budgets";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 // Public GET — percentages aren't sensitive, and the checkout page and the
 // public /cancellation-policy page both need them to stay in sync with
 // whatever the admin last configured, same as GET /api/admin/settings/upi.
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const limited = await enforceRateLimit(req, "PUBLIC_API");
+  if (limited) return limited;
+
   const policy = await getCancellationPolicy();
   return NextResponse.json(policy);
 }

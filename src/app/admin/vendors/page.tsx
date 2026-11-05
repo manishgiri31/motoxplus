@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam } from "@/lib/query-limits";
 
 import Link from "next/link";
 import { VendorStatusActions } from "@/components/admin/vendor-actions";
@@ -31,7 +32,7 @@ export default async function AdminVendorsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 20;
 
   const where: any = {};

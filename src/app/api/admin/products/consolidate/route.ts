@@ -3,6 +3,7 @@ import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseIdList } from "@/lib/query-limits";
 
 function commonPrefix(names: string[]): string {
   if (names.length === 0) return "";
@@ -130,7 +131,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const ids = searchParams.get("ids")?.split(",").filter(Boolean) ?? [];
+  const ids = parseIdList(searchParams.get("ids"));
 
   if (ids.length < 2) {
     return NextResponse.json({ error: "At least 2 product IDs required" }, { status: 400 });

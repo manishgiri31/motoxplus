@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam } from "@/lib/query-limits";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 
@@ -8,7 +9,7 @@ export default async function GRNPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 20;
 
   const [grns, total] = await Promise.all([

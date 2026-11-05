@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { rotateSession } from "@/lib/auth/session";
 import { COOKIE_ACCESS, COOKIE_REFRESH, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from "@/lib/auth/jwt";
 import { getClientIP } from "@/lib/auth/middleware";
+import { enforceRateLimit } from "@/lib/auth/rate-limit-budgets";
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(req, "PUBLIC_API");
+  if (limited) return limited;
+
   const refreshToken = req.cookies.get(COOKIE_REFRESH)?.value;
   if (!refreshToken) return NextResponse.json({ error: "No refresh token" }, { status: 401 });
 

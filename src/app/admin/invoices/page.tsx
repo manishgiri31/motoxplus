@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { parsePageParam } from "@/lib/query-limits";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { FileText } from "lucide-react";
@@ -17,7 +18,7 @@ export default async function AdminInvoicesPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const page = parseInt(searchParams.page || "1");
+  const page = parsePageParam(searchParams.page);
   const pageSize = 25;
   const q = searchParams.q?.trim();
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parsePageParam } from "@/lib/query-limits";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
   const urgency = searchParams.get("urgency");
-  const page = parseInt(searchParams.get("page") || "1");
+  const page = parsePageParam(searchParams.get("page"));
   const pageSize = 20;
 
   const where: any = {};

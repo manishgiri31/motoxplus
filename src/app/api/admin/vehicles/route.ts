@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
+import { clampSearch } from "@/lib/query-limits";
 
 function toStringArray(v: unknown): string[] {
   if (Array.isArray(v)) return v.map(String).map((s) => s.trim()).filter(Boolean);
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search")?.trim();
+  const search = clampSearch(searchParams.get("search"));
   const manufacturerId = searchParams.get("manufacturerId") ?? undefined;
   const category = searchParams.get("category") ?? undefined;
 
