@@ -23,7 +23,6 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
       colors: { orderBy: { sortOrder: "asc" }, include: { oemColor: true } },
       gallery: { orderBy: { sortOrder: "asc" } },
       diagrams: { orderBy: { sortOrder: "asc" }, include: { hotspots: { orderBy: { sortOrder: "asc" } } } },
-      model3d: { orderBy: { sortOrder: "asc" } },
       spins: { orderBy: { sortOrder: "asc" } },
       vinPatterns: true,
     },
@@ -39,7 +38,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
   const body = await req.json();
   const data: Record<string, unknown> = {};
 
-  const strFields = ["heroImage", "power", "torque", "mileage", "weight", "fuelTank", "modelUrl", "badgeText"] as const;
+  const strFields = ["heroImage", "power", "torque", "mileage", "weight", "fuelTank", "badgeText"] as const;
   for (const k of strFields) if (body[k] !== undefined) data[k] = body[k]?.trim() || null;
 
   if (body.name !== undefined) data.name = body.name.trim();

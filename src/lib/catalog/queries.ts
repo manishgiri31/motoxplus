@@ -230,7 +230,6 @@ async function fetchVehicleDetail(params: VehicleDetailFetchParams) {
         orderBy: { sortOrder: "asc" },
         include: { hotspots: { orderBy: { sortOrder: "asc" } } },
       },
-      model3d: { orderBy: { sortOrder: "asc" } },
       spins: { orderBy: { sortOrder: "asc" } },
     },
   });

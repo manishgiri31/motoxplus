@@ -10,11 +10,6 @@ const EMISSION_OPTIONS = [
   { value: "BS6", label: "BS6" },
   { value: "BS6_PHASE2", label: "BS6 Phase 2" },
 ];
-const FORMAT_OPTIONS = [
-  { value: "GLB", label: "GLB" },
-  { value: "GLTF", label: "GLTF" },
-  { value: "USDZ", label: "USDZ" },
-];
 
 interface Lookups {
   generations: { id: string; name: string }[];
@@ -26,8 +21,8 @@ interface Lookups {
 /**
  * Fetches the vehicle's current generations/variants/colors (plus the
  * manufacturer's OEM color library) once, so the sibling managers below can
- * offer cascading selects (variant → generation, color → OEM color, 3D
- * model/spin → variant + color) without each re-querying the whole vehicle.
+ * offer cascading selects (variant → generation, color → OEM color,
+ * spin → variant + color) without each re-querying the whole vehicle.
  * `refreshKey` is bumped whenever a manager reports a change via `onChanged`,
  * so e.g. adding a generation immediately shows up in the variant picker.
  */
@@ -233,33 +228,6 @@ export function VehicleCatalogManagers({ vehicleId, manufacturerId }: { vehicleI
           { key: "productPartNumber", label: "Part No." },
         ]}
         toFormValues={(r) => ({ productPartNumber: r.productPartNumber, priority: String(r.priority ?? 0) })}
-      />
-
-      <EntityManager
-        title="3D Models (GLB/GLTF/USDZ)"
-        description="Optionally scoped to a specific variant and/or color — the most specific match wins on the public page."
-        apiBase={`/api/admin/vehicles/${vehicleId}/models-3d`}
-        emptyMessage="No 3D models yet."
-        fields={[
-          { key: "url", label: "Model URL", type: "text", required: true, span: 3 },
-          { key: "format", label: "Format", type: "select", options: FORMAT_OPTIONS },
-          { key: "variantId", label: "Variant", type: "select", options: variantOptions },
-          { key: "colorId", label: "Color", type: "select", options: colorOptions },
-          { key: "sortOrder", label: "Sort Order", type: "number" },
-        ]}
-        columns={[
-          { key: "format", label: "Format" },
-          { key: "url", label: "URL" },
-          { key: "variantId", label: "Variant", render: (r) => byId(lookups.variants, r.variantId) },
-          { key: "colorId", label: "Color", render: (r) => byId(lookups.colors, r.colorId) },
-        ]}
-        toFormValues={(r) => ({
-          url: r.url,
-          format: r.format,
-          variantId: r.variantId || "",
-          colorId: r.colorId || "",
-          sortOrder: String(r.sortOrder ?? 0),
-        })}
       />
 
       <EntityManager

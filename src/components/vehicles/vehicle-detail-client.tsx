@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -17,18 +16,6 @@ import { Spin360Viewer } from "@/components/vehicles/spin-360-viewer";
 import { VehicleImage } from "@/components/vehicles/vehicle-image";
 import { categoryBySlug } from "@/lib/vehicle-categories";
 import { Button } from "@/components/ui/button";
-
-const VehicleViewer = dynamic(
-  () => import("@/components/vehicles/vehicle-viewer").then((m) => m.VehicleViewer),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[420px] md:h-[520px] rounded-sm bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
-        <span className="text-[var(--muted)] text-sm">Loading 3D viewer…</span>
-      </div>
-    ),
-  }
-);
 
 interface OemColorData {
   id: string;
@@ -87,13 +74,6 @@ interface DiagramData {
   hotspots: DiagramHotspotData[];
 }
 
-interface Model3DData {
-  id: string;
-  variantId: string | null;
-  colorId: string | null;
-  url: string;
-}
-
 interface SpinData {
   id: string;
   variantId: string | null;
@@ -122,14 +102,12 @@ interface VehicleData {
   mileage: string | null;
   weight: string | null;
   fuelTank: string | null;
-  modelUrl: string | null;
   manufacturer: { name: string; logo: string | null };
   colors: VehicleColorData[];
   gallery: VehicleGalleryImage[];
   generations: GenerationData[];
   variants: VariantData[];
   diagrams: DiagramData[];
-  model3d: Model3DData[];
   spins: SpinData[];
 }
 
@@ -294,21 +272,6 @@ export function VehicleDetailClient({
   const selectedVariant = selection.variantSlug
     ? allVariants.find((v) => v.slug === selection.variantSlug) ?? null
     : null;
-
-  const activeModelUrl = useMemo(() => {
-    const candidates = vehicle.model3d.filter(
-      (m) =>
-        (!m.variantId || m.variantId === selectedVariant?.id) &&
-        (!m.colorId || m.colorId === selectedColorId)
-    );
-    const scored = candidates
-      .map((m) => ({
-        m,
-        score: (m.variantId ? 2 : 0) + (m.colorId ? 1 : 0),
-      }))
-      .sort((a, b) => b.score - a.score);
-    return scored[0]?.m.url ?? vehicle.modelUrl ?? null;
-  }, [vehicle.model3d, vehicle.modelUrl, selectedVariant, selectedColorId]);
 
   const activeSpin = useMemo(() => {
     const candidates = vehicle.spins.filter(
@@ -558,20 +521,13 @@ export function VehicleDetailClient({
         )}
       </AnimatePresence>
 
-      {/* Interactive viewer — 3D model takes priority over 360° spin. Hidden
-          entirely when neither exists; the Gallery section above already
-          covers the "show real photos instead" fallback. */}
-      {(activeModelUrl || activeSpin) && (
+      {/* 360° spin viewer. Hidden entirely when the vehicle has no spin set;
+          the Gallery section above already covers the "show real photos" case. */}
+      {activeSpin && (
         <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
           <div className="max-w-7xl mx-auto">
-            <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-5">
-              {activeModelUrl ? "Interactive 3D Viewer" : "360° View"}
-            </h2>
-            {activeModelUrl ? (
-              <VehicleViewer modelUrl={activeModelUrl} />
-            ) : (
-              <Spin360Viewer frameUrls={activeSpin!.frameUrls} />
-            )}
+            <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-5">360° View</h2>
+            <Spin360Viewer frameUrls={activeSpin.frameUrls} />
           </div>
         </section>
       )}

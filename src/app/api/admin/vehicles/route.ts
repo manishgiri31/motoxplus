@@ -57,7 +57,6 @@ export async function POST(req: NextRequest) {
       mileage: body.mileage?.trim() || null,
       weight: body.weight?.trim() || null,
       fuelTank: body.fuelTank?.trim() || null,
-      modelUrl: body.modelUrl?.trim() || null,
       badgeText: body.badgeText?.trim() || null,
       searchAliases: toStringArray(body.searchAliases),
       ocrKeywords: toStringArray(body.ocrKeywords),

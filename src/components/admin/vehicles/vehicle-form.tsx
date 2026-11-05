@@ -28,7 +28,6 @@ interface VehicleInitial {
   mileage: string | null;
   weight: string | null;
   fuelTank: string | null;
-  modelUrl: string | null;
   badgeText: string | null;
   searchAliases: string[];
   ocrKeywords: string[];
@@ -64,7 +63,6 @@ export function VehicleForm({
     mileage: vehicle?.mileage ?? "",
     weight: vehicle?.weight ?? "",
     fuelTank: vehicle?.fuelTank ?? "",
-    modelUrl: vehicle?.modelUrl ?? "",
     badgeText: vehicle?.badgeText ?? "",
     searchAliases: (vehicle?.searchAliases ?? []).join(", "),
     ocrKeywords: (vehicle?.ocrKeywords ?? []).join(", "),
@@ -181,10 +179,6 @@ export function VehicleForm({
         />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[var(--text-muted)] text-xs mb-1.5">Default GLB Model URL</label>
-          <input value={form.modelUrl} onChange={(e) => set("modelUrl", e.target.value)} className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
-        </div>
         <div>
           <label className="block text-[var(--text-muted)] text-xs mb-1.5">Badge Text (OCR)</label>
           <input value={form.badgeText} onChange={(e) => set("badgeText", e.target.value)} placeholder="SPLENDOR" className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]" />
