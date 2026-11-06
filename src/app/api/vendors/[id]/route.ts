@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { validateVendorSupply, type VendorSupplyValidation } from "@/lib/catalog/part-categories";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -42,9 +43,24 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
     website, creditDays, bankName, accountNumber, ifscCode, notes,
   } = body;
 
+  // What the vendor supplies (approved part categories + vehicle segments) is edited as one unit.
+  let supply: Extract<VendorSupplyValidation, { ok: true }> | null = null;
+  if (body.categoryIds !== undefined || body.vehicleSegments !== undefined) {
+    const v = await validateVendorSupply(body);
+    if (!v.ok) return NextResponse.json({ error: v.error, field: v.field }, { status: 400 });
+    supply = v;
+  }
+
+  const exists = await prisma.vendor.findUnique({ where: { id: params.id }, select: { id: true } });
+  if (!exists) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+
   const vendor = await prisma.vendor.update({
     where: { id: params.id },
     data: {
+      ...(supply && {
+        vehicleSegments: supply.vehicleSegments,
+        partCategories: { deleteMany: {}, create: supply.categoryIds.map((categoryId) => ({ categoryId })) },
+      }),
       ...(companyName && { companyName }),
       ...(ownerName && { ownerName }),
       ...(phone && { phone }),

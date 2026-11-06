@@ -7,7 +7,8 @@ import { VendorStatusActions } from "@/components/admin/vendor-actions";
 import { VendorRatingForm } from "@/components/admin/vendor-rating-form";
 import { VendorPaymentForm } from "@/components/admin/vendor-payment-form";
 import { VendorContactForm } from "@/components/admin/vendor-contact-form";
-import { VendorSupplySummary, vendorSupplyInclude } from "@/components/vendor/vendor-supply-summary";
+import { vendorSupplyInclude } from "@/components/vendor/vendor-supply-summary";
+import { VendorSupplyEditor } from "@/components/vendor/vendor-supply-editor";
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-yellow-900/20 text-yellow-400 border-yellow-900/30",
@@ -100,13 +101,7 @@ export default async function VendorDetailPage(props: { params: Promise<{ id: st
         {/* Left column */}
         <div className="lg:col-span-2 space-y-6">
           {/* What they supply: approving the vendor approves these categories for product listings */}
-          <div className="glass border border-[var(--border-color)] rounded-sm p-6">
-            <h2 className="text-[var(--text-primary)] font-bold text-sm mb-1">What they supply</h2>
-            <p className="text-[var(--text-muted)] text-xs mb-5">
-              Approving this vendor lets them list products under these categories only.
-            </p>
-            <VendorSupplySummary partCategories={vendor.partCategories} vehicleSegments={vendor.vehicleSegments} />
-          </div>
+          <VendorSupplyEditor vendorId={vendor.id} partCategories={vendor.partCategories} vehicleSegments={vendor.vehicleSegments} />
 
           {/* Company Details */}
           <div className="glass border border-[var(--border-color)] rounded-sm p-6">

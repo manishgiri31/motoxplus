@@ -11,7 +11,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-const { validatePartCategoryIds, getVendorListableCategoryIds } = await import("./part-categories");
+const { validatePartCategoryIds, validateVendorSupply, getVendorListableCategoryIds } = await import("./part-categories");
 
 const tree = [
   { id: "g1", name: "Brake System", slug: "brake-system", children: [{ id: "pads", name: "Brake Pads", slug: "brake-pads" }, { id: "discs", name: "Brake Discs", slug: "brake-discs" }] },
@@ -60,5 +60,35 @@ describe("getVendorListableCategoryIds", () => {
   it("expands an approved group to its subcategories", async () => {
     linkFindMany.mockResolvedValue([{ categoryId: "g1" }, { categoryId: "mud" }]);
     expect([...(await getVendorListableCategoryIds("v1"))!].sort()).toEqual(["discs", "g1", "mud", "pads"]);
+  });
+});
+
+describe("validateVendorSupply", () => {
+  beforeEach(() => {
+    categoryFindMany.mockReset().mockResolvedValue(tree);
+  });
+
+  it("normalises categories and dedupes segments", async () => {
+    expect(await validateVendorSupply({ categoryIds: ["pads", "discs"], vehicleSegments: ["SCOOTER", "SCOOTER", "MOTORCYCLE"] })).toEqual({
+      ok: true,
+      categoryIds: ["g1"],
+      vehicleSegments: ["SCOOTER", "MOTORCYCLE"],
+    });
+  });
+
+  it("rejects a missing or malformed category list against the categoryIds field", async () => {
+    expect(await validateVendorSupply({ vehicleSegments: ["SCOOTER"] })).toMatchObject({ ok: false, field: "categoryIds" });
+    expect(await validateVendorSupply({ categoryIds: "pads", vehicleSegments: ["SCOOTER"] })).toMatchObject({ ok: false, field: "categoryIds" });
+    expect(await validateVendorSupply({ categoryIds: [42], vehicleSegments: ["SCOOTER"] })).toMatchObject({ ok: false, field: "categoryIds" });
+  });
+
+  it("rejects empty or unknown vehicle segments before touching the database", async () => {
+    expect(await validateVendorSupply({ categoryIds: ["pads"], vehicleSegments: [] })).toMatchObject({ ok: false, field: "vehicleSegments" });
+    expect(await validateVendorSupply({ categoryIds: ["pads"], vehicleSegments: ["SPACESHIP"] })).toMatchObject({ ok: false, field: "vehicleSegments" });
+    expect(categoryFindMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects deactivated category ids", async () => {
+    expect(await validateVendorSupply({ categoryIds: ["gone"], vehicleSegments: ["SCOOTER"] })).toMatchObject({ ok: false, field: "categoryIds" });
   });
 });

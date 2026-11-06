@@ -5,7 +5,7 @@ The Java port of the Next.js backend (`../src/app/api`). It runs **beside** the 
 Because of that, routes move over one group at a time with no frontend change and no logout of
 existing users. Nothing in the Next.js app was modified or removed.
 
-Stack: Java 17, Spring Boot 4.1, Spring Security, Spring Data JPA (Hibernate 7), Redis (Lettuce), jjwt.
+Stack: Java 21 LTS, Spring Boot 4.1, Flyway, Spring Security, Spring Data JPA (Hibernate 7), Redis (Lettuce), jjwt.
 
 ## Run
 
@@ -39,7 +39,11 @@ npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma 
 
 ## Ground rules for porting more routes
 
-- **Prisma owns the schema.** Hibernate is `ddl-auto=none`; never add migrations here. Map only the columns you use.
+- **Flyway owns the schema** (decision 2026-11-06: one backend, in Java). `V1` is the baseline of the 17 Prisma
+  migrations; every schema change is a new `src/main/resources/db/migration/V<n>__*.sql`. Prisma migrations are
+  frozen: do not add any. Migrations only run with `DB_MIGRATE=true`; see `../docs/marketplace/DB-TAKEOVER.md`.
+  Hibernate stays `ddl-auto=none`. Until the Node app is gone, a Flyway change that alters a table Prisma reads must
+  also be mirrored in `prisma/schema.prisma` by hand (then `npx prisma generate`), never by `prisma migrate`.
 - Timestamps are UTC `LocalDateTime` (`Time.utcNow()`); do **not** set `hibernate.jdbc.time_zone`.
 - Row ids are app-generated (`Cuid.next()`), as Prisma's `@default(cuid())` is client-side.
 - Errors go through `ApiException` -> `{"error": "...", "code": "...", "retryAfterSeconds": n}`.

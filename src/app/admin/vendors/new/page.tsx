@@ -4,16 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
-
-const CATEGORIES = [
-  { value: "RAW_MATERIALS", label: "Raw Materials" },
-  { value: "PACKAGING", label: "Packaging" },
-  { value: "PRINTING", label: "Printing" },
-  { value: "LOGISTICS", label: "Logistics" },
-  { value: "MANUFACTURING_COMPONENTS", label: "Manufacturing Components" },
-  { value: "TOOLING", label: "Tooling" },
-  { value: "SERVICES", label: "Services" },
-];
+import { PartCategoryPicker } from "@/components/catalog/part-category-picker";
+import { VehicleSegmentPicker } from "@/components/catalog/vehicle-segment-picker";
 
 const STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat",
@@ -28,13 +20,15 @@ export default function NewVendorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [createPortal, setCreatePortal] = useState(false);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [vehicleSegments, setVehicleSegments] = useState<string[]>([]);
+  const [supplyErrors, setSupplyErrors] = useState<{ categoryIds?: string; vehicleSegments?: string }>({});
 
   const [form, setForm] = useState({
     companyName: "",
     ownerName: "",
     email: "",
     phone: "",
-    category: "",
     gstNumber: "",
     panNumber: "",
     address: "",
@@ -56,16 +50,28 @@ export default function NewVendorPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const errs: typeof supplyErrors = {};
+    if (categoryIds.length === 0) errs.categoryIds = "Select at least one category this vendor manufactures or supplies";
+    if (vehicleSegments.length === 0) errs.vehicleSegments = "Select at least one vehicle segment";
+    setSupplyErrors(errs);
+    if (errs.categoryIds || errs.vehicleSegments) {
+      document.getElementById(errs.categoryIds ? "partCategories" : "vehicleSegments-motorcycle")?.focus();
+      return;
+    }
     setLoading(true);
 
     try {
       const res = await fetch("/api/vendors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, createPortalAccess: createPortal }),
+        body: JSON.stringify({ ...form, categoryIds, vehicleSegments, createPortalAccess: createPortal }),
       });
 
       const data = await res.json();
+      if (!res.ok && (data.field === "categoryIds" || data.field === "vehicleSegments")) {
+        setSupplyErrors({ [data.field]: data.error });
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Failed to create vendor");
 
       router.push(`/admin/vendors/${data.id}`);
@@ -151,22 +157,6 @@ export default function NewVendorPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>Category *</label>
-              <select
-                className={`${inputClass} themed-select`}
-                value={form.category}
-                onChange={(e) => set("category", e.target.value)}
-                required
-              >
-                <option value="">Select category</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
               <label className={labelClass}>GST Number</label>
               <input
                 className={`${inputClass} font-mono`}
@@ -197,6 +187,34 @@ export default function NewVendorPage() {
                 onChange={(e) => set("creditDays", e.target.value)}
               />
             </div>
+          </div>
+        </div>
+
+        {/* What they supply: once approved, the vendor lists products under these categories only */}
+        <div className="glass border border-[var(--border-color)] rounded-sm p-6">
+          <h2 className="text-[var(--text-primary)] font-bold mb-1 text-sm">What they supply</h2>
+          <p className="text-[var(--text-muted)] text-xs mb-5">
+            The types of parts this vendor manufactures or supplies. Once approved, they can list products under these categories only.
+          </p>
+          <div className="space-y-6">
+            <PartCategoryPicker
+              value={categoryIds}
+              onChange={(v) => {
+                setCategoryIds(v);
+                if (v.length) setSupplyErrors((e) => ({ ...e, categoryIds: undefined }));
+              }}
+              error={supplyErrors.categoryIds}
+              required
+            />
+            <VehicleSegmentPicker
+              value={vehicleSegments}
+              onChange={(v) => {
+                setVehicleSegments(v);
+                if (v.length) setSupplyErrors((e) => ({ ...e, vehicleSegments: undefined }));
+              }}
+              error={supplyErrors.vehicleSegments}
+              required
+            />
           </div>
         </div>
 

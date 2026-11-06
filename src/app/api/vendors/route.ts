@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateVendorCode } from "@/lib/utils";
 import bcrypt from "bcryptjs";
+import { validateVendorSupply } from "@/lib/catalog/part-categories";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -58,15 +59,19 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const {
-    companyName, ownerName, email, phone, category,
+    companyName, ownerName, email, phone,
     gstNumber, panNumber, address, city, state, pincode,
     website, creditDays, bankName, accountNumber, ifscCode, notes,
     createPortalAccess, password,
   } = body;
 
-  if (!companyName || !ownerName || !email || !phone || !category || !address || !city || !state || !pincode) {
+  if (!companyName || !ownerName || !email || !phone || !address || !city || !state || !pincode) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
+
+  // Automotive part categories + vehicle segments replace the old procurement "category" enum for new vendors.
+  const supply = await validateVendorSupply(body);
+  if (!supply.ok) return NextResponse.json({ error: supply.error, field: supply.field }, { status: 400 });
 
   const existing = await prisma.vendor.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "Vendor with this email already exists" }, { status: 409 });
@@ -95,7 +100,8 @@ export async function POST(req: NextRequest) {
       ownerName,
       email,
       phone,
-      category,
+      vehicleSegments: supply.vehicleSegments,
+      partCategories: { create: supply.categoryIds.map((categoryId) => ({ categoryId })) },
       gstNumber: gstNumber || null,
       panNumber: panNumber || null,
       address,

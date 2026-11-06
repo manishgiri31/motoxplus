@@ -40,6 +40,10 @@ class MarketplaceFoundationIntegrationTest extends IntegrationTestBase {
     @DynamicPropertySource
     static void marketplaceOn(DynamicPropertyRegistry r) {
         r.add("marketplace.enabled", () -> "true");
+        r.add("app.db.migrate", () -> "true");
+        // The shared test DB is built from the generated Prisma schema (no _prisma_migrations table), so the
+        // guard is switched off here and exercised on its own in BaselineGuardTest.
+        r.add("app.db.baseline-guard", () -> "false");
     }
 
     @Autowired JwtService jwt;
@@ -72,15 +76,14 @@ class MarketplaceFoundationIntegrationTest extends IntegrationTestBase {
     // ---- migration -------------------------------------------------------------------------------
 
     @Test
-    void flywayCreatedTheMarketplaceSchemaAndLeftPublicAlone() {
-        Integer ok = jdbc.queryForObject(
-                "SELECT count(*) FROM marketplace.flyway_schema_history WHERE version = '1' AND success", Integer.class);
-        assertThat(ok).isEqualTo(1);
+    void flywayAdoptedPublicAsBaselineAndCreatedTheMarketplaceSchema() {
+        // Existing (non-empty) database: V1 is recorded as the baseline, NOT executed; V2 runs for real.
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM public.flyway_schema_history WHERE version = '1' AND type = 'BASELINE' AND success", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM public.flyway_schema_history WHERE version = '2' AND type = 'SQL' AND success", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema = 'marketplace'", String.class))
                 .contains("permission", "role_permission", "audit_log", "idempotency_key", "outbox_event");
-        // Flyway's history table lives in marketplace, never in public (Prisma's schema).
-        assertThat(jdbc.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE 'flyway%'", String.class))
-                .isEmpty();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM marketplace.permission", Integer.class)).isEqualTo(22);
     }
 

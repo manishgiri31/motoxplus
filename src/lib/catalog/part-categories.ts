@@ -6,6 +6,7 @@ import {
   normalizeSelection,
   type PartCategoryGroup,
 } from "./part-category-selection";
+import { VEHICLE_SEGMENT_VALUES, type VehicleSegmentValue } from "./vehicle-segments";
 
 /**
  * Server side of the automotive parts catalogue (see part-category-selection.ts for the model).
@@ -56,6 +57,29 @@ export async function validatePartCategoryIds(ids: string[]): Promise<PartCatego
     return { ok: false, error: "One or more selected categories are no longer available. Refresh and try again." };
   }
   return { ok: true, ids: normalizeSelection(tree, ids) };
+}
+
+export type VendorSupplyValidation =
+  | { ok: true; categoryIds: string[]; vehicleSegments: VehicleSegmentValue[] }
+  | { ok: false; field: "categoryIds" | "vehicleSegments"; error: string };
+
+/**
+ * What a vendor supplies, as sent by an admin form: part category ids (validated against the live
+ * tree, normalised) and vehicle segments (deduplicated, at least one).
+ */
+export async function validateVendorSupply(input: { categoryIds?: unknown; vehicleSegments?: unknown }): Promise<VendorSupplyValidation> {
+  const ids = input.categoryIds;
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string" || id.length === 0 || id.length > 64)) {
+    return { ok: false, field: "categoryIds", error: "Select at least one automotive parts category" };
+  }
+  const segs = input.vehicleSegments;
+  const allowed = new Set<string>(VEHICLE_SEGMENT_VALUES);
+  if (!Array.isArray(segs) || segs.length === 0 || segs.some((s) => typeof s !== "string" || !allowed.has(s))) {
+    return { ok: false, field: "vehicleSegments", error: "Select at least one vehicle segment" };
+  }
+  const categories = await validatePartCategoryIds(ids as string[]);
+  if (!categories.ok) return { ok: false, field: "categoryIds", error: categories.error };
+  return { ok: true, categoryIds: categories.ids, vehicleSegments: Array.from(new Set(segs as VehicleSegmentValue[])) };
 }
 
 /**
