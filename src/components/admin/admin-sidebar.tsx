@@ -26,6 +26,7 @@ import {
   Bike,
   Undo2,
   Gift,
+  FolderTree,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
   { icon: Package, label: "Products", href: "/admin/products" },
+  { icon: FolderTree, label: "Categories", href: "/admin/categories" },
   { icon: Bike, label: "Vehicles", href: "/admin/vehicles" },
   { icon: Users, label: "Dealers", href: "/admin/dealers" },
   { icon: ClipboardList, label: "Orders", href: "/admin/orders" },

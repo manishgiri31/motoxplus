@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getMe } from "@/lib/auth/me";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { MarkupSettingsForm } from "@/components/admin/markup-settings-form";
@@ -7,17 +6,16 @@ import { UpiSettingsForm } from "@/components/admin/upi-settings-form";
 import { CancellationPolicySettingsForm } from "@/components/admin/cancellation-policy-settings-form";
 import { CANCELLATION_POLICY_ID, getCancellationPolicy } from "@/lib/orders/cancellation-policy";
 import { formatDate } from "@/lib/utils";
-
-const UPI_KEYS = ["upi_id", "upi_name", "upi_enabled", "bank_account_name", "bank_account_number", "bank_ifsc", "bank_account_type"];
+import { UPI_SETTING_KEYS, isUpiFlagEnabled, toUpiFormInitial } from "@/lib/payments/upi-settings";
 
 export default async function AdminSettingsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user.role)) redirect("/login");
+  const me = await getMe();
+  if (!me || !["ADMIN", "SUPER_ADMIN"].includes(me.role)) redirect("/login");
 
   const markupSetting = await prisma.setting.findUnique({ where: { key: "vendor_markup_percent" } });
   const currentMarkup = markupSetting ? parseFloat(markupSetting.value) : 20;
 
-  const upiSettings = await prisma.setting.findMany({ where: { key: { in: UPI_KEYS } } });
+  const upiSettings = await prisma.setting.findMany({ where: { key: { in: [...UPI_SETTING_KEYS] } } });
   const upiMap: Record<string, string> = {};
   for (const s of upiSettings) upiMap[s.key] = s.value;
 
@@ -52,15 +50,8 @@ export default async function AdminSettingsPage() {
       </div>
 
       <UpiSettingsForm
-        initial={{
-          upiId: upiMap.upi_id || "5118678468276SB1024@mairtel",
-          upiName: upiMap.upi_name || "MotoXPlus India Private Limited",
-          upiEnabled: upiMap.upi_enabled !== "false",
-          bankAccountName: upiMap.bank_account_name || "MotoXPlus India Private Limited",
-          bankAccountNumber: upiMap.bank_account_number || "7834839071",
-          bankIfsc: upiMap.bank_ifsc || "AIRP0000001",
-          bankAccountType: upiMap.bank_account_type || "Current",
-        }}
+        // Stored values only; an unset field is "" and the form flags it "Not set".
+        initial={toUpiFormInitial(upiMap, isUpiFlagEnabled(upiMap))}
       />
 
       <MarkupSettingsForm currentMarkup={currentMarkup} />

@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parsePageParam } from "@/lib/query-limits";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getMe } from "@/lib/auth/me";
 import { redirect } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
@@ -25,8 +24,8 @@ export default async function AdminPaymentsPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  const session = await getServerSession(authOptions);
-  if (!session || !ALLOWED.includes(session.user.role)) redirect("/login");
+  const me = await getMe();
+  if (!me || !ALLOWED.includes(me.role)) redirect("/login");
 
   const filterStatus = searchParams.status || "";
   const page = parsePageParam(searchParams.page);

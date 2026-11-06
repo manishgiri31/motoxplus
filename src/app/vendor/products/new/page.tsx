@@ -1,20 +1,21 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getMe } from "@/lib/auth/me";
 import { prisma } from "@/lib/prisma";
+import { listCategoryOptions } from "@/lib/catalog/category-options";
 import { redirect } from "next/navigation";
 import { VendorProductForm } from "@/components/vendor/vendor-product-form";
+import { getVendorListableCategoryIds } from "@/lib/catalog/part-categories";
 
 export default async function NewVendorProductPage() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "VENDOR") redirect("/login");
+  const me = await getMe();
+  if (!me || me.role !== "VENDOR") redirect("/login");
 
-  const vendor = await prisma.vendor.findUnique({ where: { userId: session.user.id } });
+  const vendor = await prisma.vendor.findUnique({ where: { userId: me.id } });
   if (!vendor || vendor.status !== "APPROVED") redirect("/vendor/products");
 
-  const categories = await prisma.category.findMany({
-    where: { isActive: true },
-    orderBy: { name: "asc" },
-  });
+  // Vendors who chose part categories when applying list only under those (a group covers its
+  // subcategories); vendors from before the catalogue existed keep the full list.
+  const listable = await getVendorListableCategoryIds(vendor.id);
+  const categories = await listCategoryOptions({ isActive: true, ...(listable && { id: { in: [...listable] } }) });
 
   const markupSetting = await prisma.setting.findUnique({ where: { key: "vendor_markup_percent" } });
   const defaultMarkup = markupSetting ? parseFloat(markupSetting.value) : 20;

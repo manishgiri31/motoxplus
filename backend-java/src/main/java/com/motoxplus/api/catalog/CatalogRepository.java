@@ -26,14 +26,21 @@ public class CatalogRepository {
     public record Suggestion(String id, String slug, String name, String partNumber, String brand,
                              String categoryName, String imageUrl) {}
 
-    /** Active categories in display order, each with the total number of products in it. */
+    /**
+     * Browsable categories in display order, each with the total number of products in it. Browsable = active,
+     * with an active product of its own or in an active subcategory (src/lib/catalog/storefront-categories.ts):
+     * the supplier parts catalogue adds ~100 empty part types that must not appear as shop filters.
+     */
     public List<Map<String, Object>> activeCategories() {
         return jdbc.query("""
                 SELECT c.id, c.name, c.slug, c.description, c.image, c."sortOrder", c."isActive",
-                       c."createdAt", c."updatedAt",
+                       c."createdAt", c."updatedAt", c."parentId",
                        (SELECT count(*) FROM "Product" p WHERE p."categoryId" = c.id) AS "productCount"
                 FROM "Category" c
                 WHERE c."isActive" = true
+                  AND (EXISTS (SELECT 1 FROM "Product" p WHERE p."categoryId" = c.id AND p."isActive" = true)
+                       OR EXISTS (SELECT 1 FROM "Category" k JOIN "Product" p ON p."categoryId" = k.id
+                                  WHERE k."parentId" = c.id AND k."isActive" = true AND p."isActive" = true))
                 ORDER BY c."sortOrder" ASC, c.name ASC
                 """, (rs, i) -> categoryRow(rs));
     }
@@ -49,6 +56,7 @@ public class CatalogRepository {
         m.put("isActive", rs.getBoolean("isActive"));
         m.put("createdAt", Time.iso(rs.getObject("createdAt", LocalDateTime.class)));
         m.put("updatedAt", Time.iso(rs.getObject("updatedAt", LocalDateTime.class)));
+        m.put("parentId", rs.getString("parentId"));
         m.put("_count", Map.of("products", rs.getLong("productCount")));
         return m;
     }

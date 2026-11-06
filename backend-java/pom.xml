@@ -67,6 +67,22 @@
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
+		<!-- Marketplace schema migrations (schema "marketplace" only; Prisma still owns "public"). Off unless MARKETPLACE_ENABLED=true. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+		<!-- OpenAPI 3 spec for /api/v1 (Spring Boot 4 line of springdoc) -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+			<version>3.0.0</version>
+		</dependency>
+
 		<!-- HS256 JWTs, wire-compatible with the "jose" tokens the Next.js app issues -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>

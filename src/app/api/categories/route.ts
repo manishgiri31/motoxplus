@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { BROWSABLE_CATEGORY_WHERE } from "@/lib/catalog/storefront-categories";
 import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -10,9 +11,11 @@ export async function GET(req: NextRequest) {
   const limited = await enforceRateLimit(req, "PUBLIC_API");
   if (limited) return limited;
 
+  // Only categories with something to browse (see storefront-categories.ts); the supplier
+  // catalogue lives at GET /api/part-categories.
   const categories = await prisma.category.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
+    where: BROWSABLE_CATEGORY_WHERE,
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: { _count: { select: { products: true } } },
   });
   return NextResponse.json(categories);

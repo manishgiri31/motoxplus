@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { BROWSABLE_CATEGORY_WHERE, productCategorySlugWhere } from "@/lib/catalog/storefront-categories";
 import { prisma } from "@/lib/prisma";
 import { buildSearchWhere } from "@/lib/product-search";
 import { getCompatibleProductIds, getCompatibleProducts, getCompatibilityCount, getVehicleSections, type CompatibilityFilter } from "@/lib/vehicle/compatibility";
@@ -62,7 +63,7 @@ async function fetchCatalogList(params: CatalogListParams) {
 
   const baseWhere = {
     isActive: true,
-    ...(category && { category: { slug: category } }),
+    ...(category && productCategorySlugWhere(category)),
     ...searchWhere,
     ...vehicleWhere,
   };
@@ -84,8 +85,8 @@ async function fetchCatalogList(params: CatalogListParams) {
       orderBy: [{ source: "asc" }, { stockStatus: "asc" }, { createdAt: "desc" }],
     }),
     prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
+      where: BROWSABLE_CATEGORY_WHERE,
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     prisma.product.count({ where: baseWhere }),
   ]);

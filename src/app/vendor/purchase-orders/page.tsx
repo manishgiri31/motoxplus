@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getMe } from "@/lib/auth/me";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatDate } from "@/lib/utils";
@@ -13,11 +12,11 @@ import { Money, PartNo, Numeral } from "@/components/ui/numeral";
 import { SpecTable } from "@/components/ui/technical";
 
 export default async function VendorPurchaseOrdersPage() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "VENDOR") redirect("/login");
+  const me = await getMe();
+  if (!me || me.role !== "VENDOR") redirect("/login");
 
   const vendor = await prisma.vendor.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: me.id },
   });
   if (!vendor) redirect("/login");
 

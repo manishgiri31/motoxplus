@@ -89,6 +89,16 @@ const config: Config = {
           warning: "#f56300",
           danger: "#e30000",
         },
+        // Marketplace brand (seller acquisition + seller/admin marketplace areas). Fixed hex on
+        // purpose: these are the brand spec, not themeable. Scoped in globals.css under `.mx-seller`.
+        mx: {
+          red: "#E11D2A",
+          "red-deep": "#B11017",
+          black: "#0A0A0B",
+          carbon: "#1A1A1D",
+          off: "#FAFAFA",
+          silver: "#C7CCD1",
+        },
         red: colorRamp("red"),
         gray: colorRamp("gray"),
         zinc: colorRamp("zinc"),
@@ -112,6 +122,8 @@ const config: Config = {
         display: ["var(--font-body)", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
         body: ["var(--font-body)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
+        // Marketplace headings (self-hosted Space Grotesk, loaded only by routes that import it).
+        grotesk: ["var(--font-grotesk)", "var(--font-body)", "system-ui", "Segoe UI", "Arial", "sans-serif"],
         // Store design system: Inter (self-hosted as --font-body), system stack behind it.
         store: ["var(--font-body)", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
       },

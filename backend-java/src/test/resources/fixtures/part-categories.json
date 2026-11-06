@@ -1,0 +1,21 @@
+{
+  "groups": [
+    {
+      "id": "cat_fx_lighting",
+      "name": "Lighting",
+      "slug": "lighting",
+      "children": [
+        {
+          "id": "cat_fx_bulbs",
+          "name": "Bulbs",
+          "slug": "bulbs"
+        },
+        {
+          "id": "cat_fx_leds",
+          "name": "LED Lights",
+          "slug": "led-lights"
+        }
+      ]
+    }
+  ]
+}

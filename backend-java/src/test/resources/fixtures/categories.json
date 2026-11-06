@@ -1,0 +1,77 @@
+[
+  {
+    "id": "cat_fx_engine",
+    "name": "Engine",
+    "slug": "engine",
+    "description": "Engine & drivetrain parts",
+    "image": null,
+    "sortOrder": 0,
+    "isActive": true,
+    "createdAt": "2026-01-01T10:00:00.123Z",
+    "updatedAt": "2026-01-02T11:30:45.500Z",
+    "parentId": null,
+    "_count": {
+      "products": 3
+    }
+  },
+  {
+    "id": "cat_fx_brakes",
+    "name": "Brakes",
+    "slug": "brakes",
+    "description": "Pads, discs & \"quoted\" <tags> ünïcode ₹",
+    "image": "https://cdn.example.test/categories/brakes.png",
+    "sortOrder": 1,
+    "isActive": true,
+    "createdAt": "2026-02-01T00:00:00.000Z",
+    "updatedAt": "2026-02-01T00:00:00.001Z",
+    "parentId": null,
+    "_count": {
+      "products": 1
+    }
+  },
+  {
+    "id": "cat_fx_bulbs",
+    "name": "Bulbs",
+    "slug": "bulbs",
+    "description": null,
+    "image": null,
+    "sortOrder": 1,
+    "isActive": true,
+    "createdAt": "2026-05-02T00:00:00.000Z",
+    "updatedAt": "2026-05-02T00:00:00.000Z",
+    "parentId": "cat_fx_lighting",
+    "_count": {
+      "products": 1
+    }
+  },
+  {
+    "id": "cat_fx_lamps",
+    "name": "Lamps",
+    "slug": "lamps",
+    "description": null,
+    "image": null,
+    "sortOrder": 6,
+    "isActive": true,
+    "createdAt": "2026-05-01T00:00:00.000Z",
+    "updatedAt": "2026-05-01T00:00:00.000Z",
+    "parentId": null,
+    "_count": {
+      "products": 1
+    }
+  },
+  {
+    "id": "cat_fx_lighting",
+    "name": "Lighting",
+    "slug": "lighting",
+    "description": null,
+    "image": null,
+    "sortOrder": 6,
+    "isActive": true,
+    "createdAt": "2026-05-01T00:00:00.000Z",
+    "updatedAt": "2026-05-01T00:00:00.000Z",
+    "parentId": null,
+    "_count": {
+      "products": 0
+    }
+  }
+]

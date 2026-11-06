@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit } from "@/lib/auth/rate-limit-budgets";
+import { isUpiFlagEnabled } from "@/lib/payments/upi-settings";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   // verification) under Full Payment/20% Advance, so an unconfigured
   // environment shouldn't silently surface the manual screenshot/admin-review
   // flow as well — an admin must explicitly flip this on via Settings.
-  if (map.upi_enabled !== "true") {
+  if (!isUpiFlagEnabled(map)) {
     return NextResponse.json({ upiEnabled: false });
   }
 

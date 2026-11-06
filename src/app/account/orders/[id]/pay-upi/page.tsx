@@ -10,13 +10,20 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { formatCurrency } from "@/lib/utils";
 
+// Values are null when not configured (the API never invents a payee/bank).
 interface PaymentSettings {
-  upiId: string;
-  upiName: string;
-  bankAccountNumber: string;
-  bankIfsc: string;
-  bankAccountName: string;
+  upiId: string | null;
+  upiName: string | null;
+  bankAccountNumber: string | null;
+  bankIfsc: string | null;
+  bankAccountName: string | null;
   upiEnabled: boolean;
+  /** Why Direct UPI is unavailable when it is switched on but not configured. */
+  upiMessage: string | null;
+  /** Shown instead of the bank details when they are not configured. */
+  bankMessage: string | null;
+  /** Set only when neither method can be offered. */
+  message: string | null;
 }
 
 interface OrderData {
@@ -225,7 +232,25 @@ export default function AccountPayUpiPage() {
     );
   }
 
-  const upiLink = `upi://pay?pa=${encodeURIComponent(settings.upiId)}&pn=${encodeURIComponent(settings.upiName)}&am=${order.amountDue}&cu=INR`;
+  // Neither Direct UPI nor bank transfer is configured: show why, not a payment UI.
+  if (settings.message) {
+    return (
+      <div className="max-w-lg mx-auto text-center py-16">
+        <div className="w-16 h-16 bg-yellow-900/30 border border-yellow-700/40 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle size={32} className="text-yellow-400" />
+        </div>
+        <h2 className="text-2xl font-black text-[var(--text-primary)] mb-2">Payment details unavailable</h2>
+        <p role="alert" className="text-[var(--text-muted)] text-sm mb-6">{settings.message}</p>
+        <Link href={`/account/orders/${id}`} className="inline-flex items-center gap-2 border border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] font-bold py-3 px-6 rounded-xl text-sm transition-colors">
+          <ArrowLeft size={14} /> Back to Order
+        </Link>
+      </div>
+    );
+  }
+
+  const upiLink = settings.upiId
+    ? `upi://pay?pa=${encodeURIComponent(settings.upiId)}&pn=${encodeURIComponent(settings.upiName ?? "")}&am=${order.amountDue}&cu=INR`
+    : "";
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -258,6 +283,12 @@ export default function AccountPayUpiPage() {
           <span className="text-red-500 text-2xl font-black">{formatCurrency(order.amountDue)}</span>
         </div>
       </div>
+
+      {settings.upiMessage && (
+        <p role="alert" className="mb-4 rounded-xl border border-yellow-700/40 bg-yellow-900/20 px-4 py-3 text-xs text-yellow-300">
+          {settings.upiMessage}
+        </p>
+      )}
 
       <div className="flex gap-2 mb-5">
         {settings.upiEnabled && (
@@ -309,7 +340,7 @@ export default function AccountPayUpiPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="font-mono text-[var(--text-primary)] font-semibold text-sm break-all">{settings.upiId}</div>
               <button
-                onClick={() => copyText(settings.upiId, setCopiedUpi)}
+                onClick={() => copyText(settings.upiId ?? "", setCopiedUpi)}
                 className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
               >
                 {copiedUpi ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
@@ -331,7 +362,12 @@ export default function AccountPayUpiPage() {
         </div>
       )}
 
-      {activeTab === "bank" && (
+      {activeTab === "bank" && settings.bankMessage && (
+        <p role="alert" className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-5 text-sm text-[var(--text-muted)]">
+          {settings.bankMessage}
+        </p>
+      )}
+      {activeTab === "bank" && !settings.bankMessage && (
         <div className="glass border border-[var(--border-color)] rounded-2xl p-6 mb-5">
           <h3 className="text-[var(--text-primary)] font-bold mb-5 flex items-center gap-2">
             <Building2 size={18} className="text-blue-400" /> Bank Account Details
@@ -339,9 +375,9 @@ export default function AccountPayUpiPage() {
 
           <div className="space-y-3">
             {[
-              { label: "Account Name", value: settings.bankAccountName, canCopy: false },
-              { label: "Account Number", value: settings.bankAccountNumber, canCopy: true, setter: setCopiedAcc, copied: copiedAcc },
-              { label: "IFSC Code", value: settings.bankIfsc, canCopy: true, setter: setCopiedIfsc, copied: copiedIfsc },
+              { label: "Account Name", value: settings.bankAccountName ?? "", canCopy: false },
+              { label: "Account Number", value: settings.bankAccountNumber ?? "", canCopy: true, setter: setCopiedAcc, copied: copiedAcc },
+              { label: "IFSC Code", value: settings.bankIfsc ?? "", canCopy: true, setter: setCopiedIfsc, copied: copiedIfsc },
               { label: "Account Type", value: "Current Account", canCopy: false },
               { label: "Bank", value: "Airtel Payments Bank", canCopy: false },
             ].map((row) => (

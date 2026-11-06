@@ -53,22 +53,24 @@ class CatalogIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    void categoriesAreActiveOnlyOrderedAndCountEveryProductLikePrisma() throws Exception {
+    void categoriesAreBrowsableOnlyOrderedAndCountEveryProductLikePrisma() throws Exception {
         String t = token();
         String second = category(t + " Second", 2, true);
         String first = category(t + " First", 1, true);
         category(t + " Hidden", 0, false);
+        category(t + " Empty", 3, true); // active but nothing to browse: hidden from shoppers
+        product(second, "Active S", "pn-" + t + "-s", "B", true);
         product(first, "Active A", "pn-" + t + "-a", "B", true);
         product(first, "Active B", "pn-" + t + "-b", "B", true);
         product(first, "Inactive C", "pn-" + t + "-c", "B", false);
 
         String body = mvc.perform(get("/api/categories")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
-        assertThat(body).doesNotContain(t + " Hidden");
+        assertThat(body).doesNotContain(t + " Hidden").doesNotContain(t + " Empty");
         assertThat(body.indexOf(t + " First")).isPositive().isLessThan(body.indexOf(t + " Second"));
         mvc.perform(get("/api/categories"))
                 .andExpect(jsonPath("$[?(@.name=='" + t + " First')]._count.products").value(3)) // Prisma counts inactive too
-                .andExpect(jsonPath("$[?(@.name=='" + t + " Second')]._count.products").value(0))
+                .andExpect(jsonPath("$[?(@.name=='" + t + " Second')]._count.products").value(1))
                 .andExpect(jsonPath("$[?(@.name=='" + t + " First')].isActive").value(true))
                 .andExpect(jsonPath("$[?(@.name=='" + t + " First')].sortOrder").value(1))
                 .andExpect(jsonPath("$[?(@.name=='" + t + " First')].createdAt").value(org.hamcrest.Matchers.hasItem(

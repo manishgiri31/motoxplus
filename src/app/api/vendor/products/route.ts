@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { uniqueProductSlug } from "@/lib/slug";
 import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 import { z } from "zod";
+import { getVendorListableCategoryIds } from "@/lib/catalog/part-categories";
 
 const vendorProductSchema = z.object({
   name: z.string().min(2),
@@ -60,6 +61,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const data = vendorProductSchema.parse(body);
+
+    const listable = await getVendorListableCategoryIds(vendor.id);
+    if (listable && !listable.has(data.categoryId)) {
+      return NextResponse.json(
+        { error: "You can only list products under the categories approved for your account" },
+        { status: 403 }
+      );
+    }
 
     // Get default markup from settings
     const markupSetting = await prisma.setting.findUnique({ where: { key: "vendor_markup_percent" } });

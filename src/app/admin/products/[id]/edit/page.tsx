@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { listCategoryOptions } from "@/lib/catalog/category-options";
 import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/admin/product-form";
 import { ProductVariantManager } from "@/components/admin/product-variant-manager";
@@ -12,7 +13,7 @@ export default async function EditProductPage(props: { params: Promise<{ id: str
       where: { id: params.id },
       include: { productImages: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }] } },
     }),
-    prisma.category.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    listCategoryOptions(),
   ]);
 
   if (!product) notFound();

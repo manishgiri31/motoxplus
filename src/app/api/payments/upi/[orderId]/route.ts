@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { UPI_SETTING_KEYS, buildOrderPaymentSettings, isUpiFlagEnabled } from "@/lib/payments/upi-settings";
 
 const STAFF_ROLES = ["ADMIN", "SUPER_ADMIN", "ACCOUNTS"];
 
@@ -46,21 +47,14 @@ export async function GET(req: NextRequest, props: { params: Promise<{ orderId: 
 
   if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
 
-  const upiIdSetting = await prisma.setting.findUnique({ where: { key: "upi_id" } });
-  const upiNameSetting = await prisma.setting.findUnique({ where: { key: "upi_name" } });
-  const bankAccountSetting = await prisma.setting.findUnique({ where: { key: "bank_account_number" } });
-  const bankIfscSetting = await prisma.setting.findUnique({ where: { key: "bank_ifsc" } });
-  const bankNameSetting = await prisma.setting.findUnique({ where: { key: "bank_account_name" } });
-  const upiEnabledSetting = await prisma.setting.findUnique({ where: { key: "upi_enabled" } });
+  const settingRows = await prisma.setting.findMany({ where: { key: { in: [...UPI_SETTING_KEYS] } } });
+  const settingMap: Record<string, string> = {};
+  for (const s of settingRows) settingMap[s.key] = s.value;
 
-  const paymentSettings = {
-    upiId: upiIdSetting?.value || "5118678468276SB1024@mairtel",
-    upiName: upiNameSetting?.value || "MotoXPlus India Private Limited",
-    bankAccountNumber: bankAccountSetting?.value || "7834839071",
-    bankIfsc: bankIfscSetting?.value || "AIRP0000001",
-    bankAccountName: bankNameSetting?.value || "MotoXPlus India Private Limited",
-    upiEnabled: upiEnabledSetting?.value !== "false",
-  };
+  // No fallback payee/bank values: anything not configured comes back as null
+  // plus a message the pay-upi page shows (HTTP 200 so the page can render it).
+  // upi_enabled is opt-in everywhere (see isUpiFlagEnabled).
+  const paymentSettings = buildOrderPaymentSettings(settingMap, isUpiFlagEnabled(settingMap));
 
   return NextResponse.json({ order, paymentSettings });
 }

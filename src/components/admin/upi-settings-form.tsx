@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { CheckCircle2 } from "lucide-react";
+import { isNotSet } from "@/lib/payments/upi-settings";
+
+// Amber warning shown beside a field whose stored value is missing. There is no
+// fallback value: if it is blank here, it is blank for dealers too.
+function NotSet({ value }: { value: string }) {
+  if (!isNotSet(value)) return null;
+  return <span role="alert" className="ml-2 text-amber-500 font-semibold">Not set</span>;
+}
 
 interface Props {
   initial: {
@@ -64,25 +72,25 @@ export function UpiSettingsForm({ initial }: Props) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="text-[var(--text-muted)] text-xs block mb-2">UPI ID *</label>
+          <label className="text-[var(--text-muted)] text-xs block mb-2">UPI ID *<NotSet value={form.upiId} /></label>
           <input
             type="text"
             required
             value={form.upiId}
             onChange={(e) => setForm({ ...form, upiId: e.target.value })}
-            placeholder="5118678468276SB1024@mairtel"
+            placeholder="e.g. name@bank"
             className={inputCls + " font-mono"}
           />
           <p className="text-[var(--text-muted)] text-xs mt-1">This UPI ID will appear in the QR code and payment page.</p>
         </div>
         <div>
-          <label className="text-[var(--text-muted)] text-xs block mb-2">UPI Payee Name *</label>
+          <label className="text-[var(--text-muted)] text-xs block mb-2">UPI Payee Name *<NotSet value={form.upiName} /></label>
           <input
             type="text"
             required
             value={form.upiName}
             onChange={(e) => setForm({ ...form, upiName: e.target.value })}
-            placeholder="MotoXPlus India Private Limited"
+            placeholder="Registered payee name"
             className={inputCls}
           />
         </div>
@@ -92,20 +100,20 @@ export function UpiSettingsForm({ initial }: Props) {
         <div className="text-[var(--text-muted)] text-xs mb-3">Bank Account Details</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Account Name</label>
-            <input type="text" value={form.bankAccountName} onChange={(e) => setForm({ ...form, bankAccountName: e.target.value })} className={inputCls} placeholder="MotoXPlus India Private Limited" />
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Account Name<NotSet value={form.bankAccountName} /></label>
+            <input type="text" value={form.bankAccountName} onChange={(e) => setForm({ ...form, bankAccountName: e.target.value })} className={inputCls} placeholder="Account holder name" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Account Number</label>
-            <input type="text" value={form.bankAccountNumber} onChange={(e) => setForm({ ...form, bankAccountNumber: e.target.value })} className={inputCls + " font-mono"} placeholder="7834839071" />
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Account Number<NotSet value={form.bankAccountNumber} /></label>
+            <input type="text" value={form.bankAccountNumber} onChange={(e) => setForm({ ...form, bankAccountNumber: e.target.value })} className={inputCls + " font-mono"} placeholder="Account number" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">IFSC Code</label>
-            <input type="text" value={form.bankIfsc} onChange={(e) => setForm({ ...form, bankIfsc: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="AIRP0000001" />
+            <label className="text-[var(--text-muted)] text-xs block mb-2">IFSC Code<NotSet value={form.bankIfsc} /></label>
+            <input type="text" value={form.bankIfsc} onChange={(e) => setForm({ ...form, bankIfsc: e.target.value.toUpperCase() })} className={inputCls + " font-mono"} placeholder="IFSC code" />
           </div>
           <div>
-            <label className="text-[var(--text-muted)] text-xs block mb-2">Account Type</label>
-            <input type="text" value={form.bankAccountType} onChange={(e) => setForm({ ...form, bankAccountType: e.target.value })} className={inputCls} placeholder="Current" />
+            <label className="text-[var(--text-muted)] text-xs block mb-2">Account Type<NotSet value={form.bankAccountType} /></label>
+            <input type="text" value={form.bankAccountType} onChange={(e) => setForm({ ...form, bankAccountType: e.target.value })} className={inputCls} placeholder="e.g. Current / Savings" />
           </div>
         </div>
       </div>

@@ -62,11 +62,12 @@ location ~ ^/api/auth/(login|refresh|logout|me|sessions)$ { proxy_pass http://12
 location /api/health { proxy_pass http://127.0.0.1:8080; }
 ```
 
-## Status: 165 Node routes, 11 ported
+## Status: 166 Node routes, 12 ported
 
 | Done | Route |
 |---|---|
 | yes | `GET /api/categories`, `GET /api/products/search` (public; search gains a 120/min per-IP limit and treats `%`/`_` as literal text) |
+| yes | `GET /api/part-categories` (public supplier parts catalogue) + `PartCategoryValidator` (category-id validation for vendor/seller registration endpoints) |
 | yes | `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET/DELETE /api/auth/sessions` |
 | yes | `GET /api/health`, `/api/health/live`, `/api/health/ready` (readiness also reports Redis) |
 | yes | Platform: JWT (interoperable with Node), bcrypt, Redis rate limiter, DB lockout, body-size cap, deny-by-default security |
@@ -85,3 +86,15 @@ Known gaps to close before the frontend can drop Node entirely:
   endpoint (or stays on Node) before Prisma can be removed.
 - Business logic with money/tax impact (orders, payments, schemes, GST, refunds) has 44 Node test files that
   must be ported alongside the code.
+
+## Marketplace module (`/api/v1`) - off by default
+
+Design: `docs/marketplace/PHASE-0-AUDIT.md`; phase notes: `docs/marketplace/PHASE-1.md`.
+
+* `MARKETPLACE_ENABLED=true` turns it on. Unset/false (default): no marketplace bean, endpoint or migration exists.
+* When on, Flyway migrates **only** schema `marketplace` (own history table `marketplace.flyway_schema_history`,
+  `clean` disabled). Prisma still owns `public`; do not run `prisma db push` / `migrate reset` against a shared database.
+* Money in `marketplace.*` is integer paise (`Money`); never `double`.
+* Authorisation is database-driven (`marketplace.role_permission`), checked with
+  `@PreAuthorize("@perm.has('...')")` on controllers and `PermissionService.require(...)` in services.
+* `SWAGGER_ENABLED=true` enables Swagger UI; the OpenAPI JSON at `/api/v1/openapi` always requires authentication.

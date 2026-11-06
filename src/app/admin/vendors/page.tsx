@@ -47,6 +47,7 @@ export default async function AdminVendorsPage(
         ratings: { select: { overallScore: true } },
         _count: { select: { payments: true } },
         user: { select: { emailVerified: true, mobileVerified: true } },
+        partCategories: { select: { category: { select: { name: true, parent: { select: { name: true } } } } } },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -163,8 +164,12 @@ export default async function AdminVendorsPage(
                       </div>
                     </td>
                     <td className="px-4 py-4 hidden lg:table-cell">
-                      <span className="text-[var(--text-muted)] text-xs">
-                        {CATEGORY_LABELS[vendor.category] || vendor.category}
+                      <span className="text-[var(--text-muted)] text-xs line-clamp-2 max-w-[16rem]">
+                        {vendor.partCategories.length > 0
+                          ? Array.from(new Set(vendor.partCategories.map((l) => l.category.parent?.name ?? l.category.name))).join(", ")
+                          : vendor.category
+                            ? CATEGORY_LABELS[vendor.category] || vendor.category
+                            : "—"}
                       </span>
                     </td>
                     <td className="px-4 py-4 hidden lg:table-cell">

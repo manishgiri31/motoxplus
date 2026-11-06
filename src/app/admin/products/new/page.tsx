@@ -1,11 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { listCategoryOptions } from "@/lib/catalog/category-options";
 import { ProductForm } from "@/components/admin/product-form";
 
 export default async function NewProductPage() {
-  const categories = await prisma.category.findMany({
-    where: { isActive: true },
-    orderBy: { name: "asc" },
-  });
+  const categories = await listCategoryOptions();
 
   return (
     <div className="max-w-3xl">

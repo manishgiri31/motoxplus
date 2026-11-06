@@ -235,17 +235,26 @@ model Admin {
 }
 
 model Category {
-  id          String           @id @default(cuid())
-  name        String           @unique
-  slug        String           @unique
+  id          String               @id @default(cuid())
+  name        String               @unique
+  slug        String               @unique
   description String?
   image       String?
-  sortOrder   Int              @default(0)
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  sortOrder   Int                  @default(0)
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  /// One level of nesting: a top-level category (parentId null) groups subcategories.
+  /// Top-level categories with at least one active subcategory form the parts catalogue
+  /// suppliers choose from on /become-vendor.
+  parentId    String?
+  parent      Category?            @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Category[]           @relation("CategoryTree")
   products    Product[]
   schemes     SchemeCategory[]
+  vendors     VendorPartCategory[]
+
+  @@index([parentId, sortOrder])
 }
 
 model Product {
@@ -787,39 +796,57 @@ model Invoice {
 }
 
 model Vendor {
-  id             String           @id @default(cuid())
-  userId         String?          @unique
-  vendorCode     String           @unique
-  companyName    String
-  ownerName      String
-  email          String           @unique
-  phone          String
-  gstNumber      String?          @unique
-  panNumber      String?
-  category       VendorCategory
-  status         VendorStatus     @default(PENDING)
-  creditDays     Int              @default(30)
-  bankName       String?
-  accountNumber  String?
-  ifscCode       String?
-  address        String?
-  city           String
-  state          String
-  pincode        String?
-  website        String?
-  notes          String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  aadhaarNumber  String?
-  gstVerified    Boolean          @default(false)
-  gstVerifiedAt  DateTime?
-  products       Product[]
-  purchaseOrders PurchaseOrder[]
-  user           User?            @relation(fields: [userId], references: [id])
-  contacts       VendorContact[]
-  documents      VendorDocument[]
-  payments       VendorPayment[]
-  ratings        VendorRating[]
+  id              String               @id @default(cuid())
+  userId          String?              @unique
+  vendorCode      String               @unique
+  companyName     String
+  ownerName       String
+  email           String               @unique
+  phone           String
+  gstNumber       String?              @unique
+  panNumber       String?
+  /// Legacy procurement segment from the old application form. Null for vendors who applied
+  /// with automotive part categories (see partCategories).
+  category        VendorCategory?
+  /// Vehicle segments the vendor supplies parts for.
+  vehicleSegments VehicleSegment[]     @default([])
+  status          VendorStatus         @default(PENDING)
+  creditDays      Int                  @default(30)
+  bankName        String?
+  accountNumber   String?
+  ifscCode        String?
+  address         String?
+  city            String
+  state           String
+  pincode         String?
+  website         String?
+  notes           String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  aadhaarNumber   String?
+  gstVerified     Boolean              @default(false)
+  gstVerifiedAt   DateTime?
+  products        Product[]
+  purchaseOrders  PurchaseOrder[]
+  user            User?                @relation(fields: [userId], references: [id])
+  contacts        VendorContact[]
+  documents       VendorDocument[]
+  payments        VendorPayment[]
+  ratings         VendorRating[]
+  partCategories  VendorPartCategory[]
+}
+
+/// The automotive part categories a vendor manufactures or supplies. A top-level category
+/// covers all of its subcategories, including ones added later.
+model VendorPartCategory {
+  vendorId   String
+  categoryId String
+  createdAt  DateTime @default(now())
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([vendorId, categoryId])
+  @@index([categoryId])
 }
 
 model VendorContact {
@@ -1654,6 +1681,15 @@ enum VendorCategory {
   MANUFACTURING_COMPONENTS
   TOOLING
   SERVICES
+}
+
+enum VehicleSegment {
+  MOTORCYCLE
+  SCOOTER
+  THREE_WHEELER
+  PASSENGER_CAR
+  COMMERCIAL_VEHICLE
+  OTHER
 }
 
 enum VendorDocumentType {

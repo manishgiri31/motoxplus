@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getMe } from "@/lib/auth/me";
 import { redirect } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
@@ -21,8 +20,8 @@ function statusBadge(status: RefundStatus) {
 
 export default async function AdminRefundsPage(props: { searchParams: Promise<{ status?: string }> }) {
   const searchParams = await props.searchParams;
-  const session = await getServerSession(authOptions);
-  if (!session || !ALLOWED.includes(session.user.role)) redirect("/login");
+  const me = await getMe();
+  if (!me || !ALLOWED.includes(me.role)) redirect("/login");
 
   // Refund ops only cares about cancellations that actually needed money back
   // — NOT_APPLICABLE (waived / nothing paid) never appears in this list.

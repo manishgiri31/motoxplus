@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { BROWSABLE_CATEGORY_WHERE, productCategorySlugWhere } from "@/lib/catalog/storefront-categories";
 import { parsePageParam, clampSearch } from "@/lib/query-limits";
 import { DealerProductCatalog } from "@/components/dealer/dealer-product-catalog";
 import { buildSearchWhere } from "@/lib/product-search";
@@ -17,7 +18,7 @@ export default async function DealerProductsPage(
 
   const where = {
     isActive: true,
-    ...(searchParams.category ? { category: { slug: searchParams.category } } : {}),
+    ...(searchParams.category ? productCategorySlugWhere(searchParams.category) : {}),
     ...searchWhere,
   };
 
@@ -35,7 +36,7 @@ export default async function DealerProductsPage(
       // `asc` here put our own catalog first — see (public)/products/page.tsx.
       orderBy: [{ source: "asc" }, { createdAt: "desc" }],
     }),
-    prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.category.findMany({ where: BROWSABLE_CATEGORY_WHERE, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
     prisma.product.count({ where }),
   ]);
 

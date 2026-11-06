@@ -9,6 +9,9 @@ import { encrypt } from "@/lib/crypto/encryption";
 import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
 import { normalizeIndianMobile } from "@/lib/phone";
+import { validatePartCategoryIds } from "@/lib/catalog/part-categories";
+import { MAX_PART_CATEGORY_IDS } from "@/lib/catalog/part-category-selection";
+import { VEHICLE_SEGMENT_VALUES } from "@/lib/catalog/vehicle-segments";
 
 const schema = z.object({
   companyName: z.string().min(2),
@@ -16,10 +19,9 @@ const schema = z.object({
   email: z.string().email(),
   phone: z.string().min(10),
   password: z.string().min(8),
-  category: z.enum([
-    "RAW_MATERIALS", "PACKAGING", "PRINTING", "LOGISTICS",
-    "MANUFACTURING_COMPONENTS", "TOOLING", "SERVICES",
-  ]),
+  // Automotive part categories: Category ids from GET /api/part-categories (validated against the live tree below).
+  categoryIds: z.array(z.string().min(1).max(64)).min(1).max(MAX_PART_CATEGORY_IDS),
+  vehicleSegments: z.array(z.enum(VEHICLE_SEGMENT_VALUES)).min(1).max(VEHICLE_SEGMENT_VALUES.length),
   state: z.string().min(2),
   city: z.string().min(2),
   companyAddress: z.string().optional().or(z.literal("")),
@@ -41,6 +43,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const data = schema.parse(body);
+
+    const categories = await validatePartCategoryIds(data.categoryIds);
+    if (!categories.ok) {
+      return NextResponse.json({ error: categories.error, field: "categoryIds" }, { status: 400 });
+    }
 
     const normalizedMobile = normalizeIndianMobile(data.phone);
     if (!normalizedMobile) {
@@ -84,7 +91,8 @@ export async function POST(req: NextRequest) {
             ownerName: data.ownerName,
             email: data.email.toLowerCase(),
             phone: normalizedMobile,
-            category: data.category,
+            vehicleSegments: Array.from(new Set(data.vehicleSegments)),
+            partCategories: { create: categories.ids.map((categoryId) => ({ categoryId })) },
             state: data.state,
             city: data.city,
             address: data.shopAddress || data.companyAddress || null,

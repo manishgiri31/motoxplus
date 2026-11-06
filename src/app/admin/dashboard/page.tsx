@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getMe } from "@/lib/auth/me";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
@@ -13,7 +12,7 @@ import { Money, PartNo } from "@/components/ui/numeral";
 import { Button } from "@/components/ui/button";
 
 export default async function AdminDashboardPage() {
-  const session = await getServerSession(authOptions);
+  const me = await getMe();
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
@@ -56,7 +55,7 @@ export default async function AdminDashboardPage() {
       <PageHeader
         eyebrow="OVERVIEW"
         title="Admin Dashboard"
-        description={`Welcome back, ${session?.user?.name}.`}
+        description={`Welcome back, ${me?.name}.`}
       />
 
       <StatGrid className="mb-8">

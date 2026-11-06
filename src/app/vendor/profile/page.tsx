@@ -1,10 +1,10 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getMe } from "@/lib/auth/me";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { Building2, MapPin, Phone, Mail, Globe, CreditCard } from "lucide-react";
 import { VerificationStatusCard } from "@/components/auth/verification-status-card";
+import { VendorSupplySummary, vendorSupplyInclude } from "@/components/vendor/vendor-supply-summary";
 
 const CATEGORY_LABELS: Record<string, string> = {
   RAW_MATERIALS: "Raw Materials",
@@ -17,12 +17,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default async function VendorProfilePage() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "VENDOR") redirect("/login");
+  const me = await getMe();
+  if (!me || me.role !== "VENDOR") redirect("/login");
 
   const vendor = await prisma.vendor.findUnique({
-    where: { userId: session.user.id },
-    include: { contacts: true, user: true },
+    where: { userId: me.id },
+    include: { contacts: true, user: true, ...vendorSupplyInclude },
   });
 
   if (!vendor) redirect("/login");
@@ -54,7 +54,7 @@ export default async function VendorProfilePage() {
             <Row icon={Building2} label="Owner" value={vendor.ownerName} />
             <Row icon={Mail} label="Email" value={vendor.email} />
             <Row icon={Phone} label="Phone" value={vendor.phone} />
-            <Row icon={Building2} label="Category" value={CATEGORY_LABELS[vendor.category] || vendor.category} />
+            {vendor.category && <Row icon={Building2} label="Category" value={CATEGORY_LABELS[vendor.category] || vendor.category} />}
             <Row icon={Building2} label="Vendor Code" value={vendor.vendorCode} mono />
             {vendor.gstNumber && <Row icon={Building2} label="GST" value={vendor.gstNumber} mono />}
             {vendor.panNumber && <Row icon={Building2} label="PAN" value={vendor.panNumber} mono />}
@@ -70,6 +70,19 @@ export default async function VendorProfilePage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* What you supply */}
+        <div className="glass border border-[var(--border-color)] rounded-sm p-6">
+          <h2 className="text-[var(--text-primary)] font-bold text-sm mb-1">What you supply</h2>
+          <p className="text-[var(--text-muted)] text-xs mb-5">
+            You can list products under these categories. To add a category, contact MotoXPlus procurement.
+          </p>
+          <VendorSupplySummary
+            partCategories={vendor.partCategories}
+            vehicleSegments={vendor.vehicleSegments}
+            emptyText="No part categories on record — you can list products in any category."
+          />
         </div>
 
         {/* Address */}

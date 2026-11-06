@@ -673,3 +673,23 @@ a[role="button"]:not(:disabled):active {
   transform: translateY(0.5px);
   filter: brightness(0.97);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Marketplace brand scope. Wrap a subtree in `.mx-seller` and every shared
+   control (Button, Input, Select, Checkbox, focus rings) picks up the MotoXPlus
+   marketplace red instead of the storefront blue — no per-component overrides.
+   #E11D2A on white = 4.76:1 (AA for text and for white-on-red buttons).
+   ══════════════════════════════════════════════════════════════════════════ */
+.mx-seller {
+  --accent: #E11D2A;
+  --accent-hover: #B11017;
+  --accent-active: #8F0D12;
+  --accent-text: #B11017;      /* red used as text on white: 7.0:1 */
+  --accent-soft: #FDECEE;
+  --accent-soft-border: #F6B8BD;
+  --accent-ring: rgba(225, 29, 42, 0.25);
+  --focus-ring: #0A0A0B;
+  --red: #E11D2A;
+  --red-hover: #B11017;
+  --red-soft: #FDECEE;
+}

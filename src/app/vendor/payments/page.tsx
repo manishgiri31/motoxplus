@@ -1,16 +1,15 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getMe } from "@/lib/auth/me";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CreditCard } from "lucide-react";
 
 export default async function VendorPaymentsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "VENDOR") redirect("/login");
+  const me = await getMe();
+  if (!me || me.role !== "VENDOR") redirect("/login");
 
   const vendor = await prisma.vendor.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: me.id },
     include: {
       payments: { orderBy: { paymentDate: "desc" } },
     },
