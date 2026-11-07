@@ -12,8 +12,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Runs the backend-java test suite (real PostgreSQL built from schema.prisma, no Docker needed).
+  # It only gates the JAVA part of the deploy: if it fails, Node still deploys and Java stays on
+  # its previous jar.
+  java_test:
+    name: Java API tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          # Keep in step with <java.version> in backend-java/pom.xml.
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: backend-java/pom.xml
+      - name: mvn test
+        working-directory: backend-java
+        run: sh ./mvnw -B -ntp test
+
   deploy:
     name: Deploy to VPS
+    needs: java_test
+    # Run whether java_test passed or failed (but not if the run was cancelled).
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
@@ -58,6 +81,7 @@ jobs:
           DEPLOY_REF: ${{ github.ref_name }}
           DEPLOY_ACTOR: ${{ github.actor }}
           DEPLOY_RUN_ID: ${{ github.run_id }}
+          JAVA_TESTS_PASSED: ${{ needs.java_test.result == 'success' }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -66,7 +90,7 @@ jobs:
           # 'timeout' is the TCP/SSH connection timeout, not the script timeout.
           timeout: 60s
           command_timeout: 20m
-          envs: DEPLOY_SHA,DEPLOY_REF,DEPLOY_ACTOR,DEPLOY_RUN_ID
+          envs: DEPLOY_SHA,DEPLOY_REF,DEPLOY_ACTOR,DEPLOY_RUN_ID,JAVA_TESTS_PASSED
           script: |
             # -E only makes the ERR trap inherit into functions; -euo pipefail preserved.
             set -Eeuo pipefail
@@ -400,9 +424,77 @@ jobs:
             fi
 
             # ---------------------------------------------------------------
+            # 9b. Java API (backend-java). Runs only AFTER Node is live and healthy,
+            #     and only if the systemd unit is installed AND enabled (opt-in; see
+            #     backend-java/deploy/README.md). A Java failure never touches Node:
+            #     the previous jar is restored and Nginx falls back to Node anyway.
+            # ---------------------------------------------------------------
+            step "Java API"
+            JAVA_UNIT="motoxplus-api"
+            JAVA_DIR="${APP_DIR}/backend-java"
+            JAVA_JAR="${JAVA_DIR}/motoxplus-api.jar"
+            JAVA_HEALTH_URL="http://127.0.0.1:8080/api/health/ready"
+            JAVA_FAILED=0
+            if [ "$(systemctl is-enabled "${JAVA_UNIT}" 2>/dev/null || true)" != "enabled" ]; then
+              echo "systemd unit ${JAVA_UNIT} is not installed/enabled: skipping (Java not in use on this server)."
+            elif [ "${JAVA_TESTS_PASSED:-false}" != "true" ]; then
+              echo "::warning::Java tests did not pass in CI; ${JAVA_UNIT} stays on its current jar."
+            else
+              if [ "$(id -u)" -eq 0 ]; then SYSTEMCTL="systemctl"; else SYSTEMCTL="sudo -n systemctl"; fi
+              # The required version comes from the pom, so a Java upgrade there can't silently outrun the server.
+              JAVA_REQUIRED="$(sed -n 's:.*<java.version>\([0-9][0-9]*\)</java.version>.*:\1:p' "${JAVA_DIR}/pom.xml" | head -n 1 || true)"
+              JAVA_REQUIRED="${JAVA_REQUIRED:-21}"
+              JAVA_MAJOR="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/java.specification.version/ {print $2}' || true)"
+              if [ -z "${JAVA_MAJOR}" ] || [ "${JAVA_MAJOR%%.*}" -lt "${JAVA_REQUIRED}" ]; then
+                echo "::error::Java ${JAVA_REQUIRED}+ is required for ${JAVA_UNIT} (found: '${JAVA_MAJOR:-none}'; install openjdk-${JAVA_REQUIRED}-jre-headless). Node is deployed; Java left as it was."
+                JAVA_FAILED=1
+              elif ! (cd "${JAVA_DIR}" && sh ./mvnw -q -B -ntp -DskipTests package); then
+                echo "::error::Java build failed. Node is deployed; ${JAVA_UNIT} left on its current jar."
+                JAVA_FAILED=1
+              else
+                NEW_JAR="$(ls "${JAVA_DIR}"/target/motoxplus-api-*.jar 2>/dev/null | grep -v -- '-plain' | head -n 1 || true)"
+                if [ -z "${NEW_JAR}" ]; then
+                  echo "::error::Java build produced no jar in ${JAVA_DIR}/target."
+                  JAVA_FAILED=1
+                else
+                  if [ -f "${JAVA_JAR}" ]; then cp -f "${JAVA_JAR}" "${JAVA_JAR}.prev"; fi
+                  cp -f "${NEW_JAR}" "${JAVA_JAR}.new" && mv -f "${JAVA_JAR}.new" "${JAVA_JAR}"
+                  java_healthy=0
+                  if ! ${SYSTEMCTL} restart "${JAVA_UNIT}"; then
+                    echo "::error::Could not restart ${JAVA_UNIT} (as $(id -un); non-root deploy users need passwordless sudo for systemctl)."
+                    attempt=0
+                  else
+                    for attempt in $(seq 1 24); do
+                      if curl -fsS -o /dev/null --max-time 5 "${JAVA_HEALTH_URL}"; then java_healthy=1; break; fi
+                      sleep 5
+                    done
+                  fi
+                  if [ "${java_healthy}" -eq 1 ]; then
+                    echo "Java API healthy after ${attempt} attempt(s): ${JAVA_HEALTH_URL}"
+                  else
+                    echo "::error::Java API did not become healthy at ${JAVA_HEALTH_URL}."
+                    (journalctl -u "${JAVA_UNIT}" -n 80 --no-pager 2>/dev/null || ${SYSTEMCTL} status "${JAVA_UNIT}" --no-pager) || true
+                    if [ -f "${JAVA_JAR}.prev" ]; then
+                      echo "Restoring the previous Java jar."
+                      mv -f "${JAVA_JAR}.prev" "${JAVA_JAR}"
+                      ${SYSTEMCTL} restart "${JAVA_UNIT}" || true
+                    fi
+                    JAVA_FAILED=1
+                  fi
+                fi
+              fi
+            fi
+
+            # ---------------------------------------------------------------
             # 10. Done
             # ---------------------------------------------------------------
             trap - ERR
+            if [ "${JAVA_FAILED}" -ne 0 ]; then
+              echo ""
+              echo "Node deployment SUCCEEDED (${DEPLOY_SHA}) but the Java API step FAILED (see above)."
+              echo "Users are unaffected: Nginx serves the Java routes from Node while Java is down."
+              exit 1
+            fi
             echo ""
             echo "=============================================="
             echo " Deployment SUCCESSFUL"

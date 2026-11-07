@@ -15,7 +15,7 @@ export function vendorApprovedTemplate(name: string, companyName: string, loginU
       <li>Track payments and credit terms</li>
       <li>Update your product/service catalog</li>
     </ul>
-    <p class="small">For assistance, contact your account manager at procurement@motoxplus.in</p>
+    <p class="small">For assistance, contact your account manager at info@motoxplus.com</p>
   `;
   return baseTemplate("Account Approved — MOTOXPLUS Vendor Portal", content);
 }

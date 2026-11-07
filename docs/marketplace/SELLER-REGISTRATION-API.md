@@ -1,63 +1,51 @@
-# Seller registration API contract (frontend -> Java)
+# Vendor registration & onboarding API (Java)
 
-**Status:** contract only. The endpoint below is **not implemented** (backend Phase 2). The `/become-vendor` wizard is built against it
-and refuses to report success unless the server answers 2xx with a `userId` (see `src/lib/seller/registration.ts`, covered by tests).
-Until it exists the page runs with `NEXT_PUBLIC_SELLER_SIGNUP_OPEN` unset, which shows a contact form instead of the wizard.
+**Status:** implemented in `backend-java` (packages `com.motoxplus.api.vendor.*`), behind `MARKETPLACE_ENABLED=true`, tables from
+Flyway `V3__vendor_onboarding.sql`. Replaces the earlier single multipart `POST /api/v1/vendors/register` contract, which was never built.
+Decisions: one vendor concept on `public."Vendor"` + role `VENDOR` (V1); manual approval (V2); Java only (V3).
 
-## `POST /api/v1/vendors/register`  (public, `multipart/form-data`)
+All responses use the standard envelope: errors are `{ error, code?, fieldErrors?, retryAfterSeconds? }`.
+Field-level problems are `400 VALIDATION_FAILED` (or `409 CONFLICT`) with `fieldErrors: { field: message }`.
+Auth is the `mx_access` cookie (set by `/api/auth/login`) or a Bearer JWT. The vendor is always taken from the token.
 
-Parts
-| Part | Type | Required | Notes |
+## Registration (public)
+`POST /api/v1/vendors/register` `{ fullName, mobile, email, password }`
+→ `201 { userId, vendorId, email, status: "PENDING_VERIFICATION", emailVerificationRequired, mobileVerificationRequired }`.
+Creates `User{role: VENDOR}` + `Vendor{status: PENDING}` + `marketplace.vendor_application`, sends the email OTP (shared `OtpCode`,
+interoperable with Node). 409 on duplicate email/mobile. Rate limit `REGISTER` (5/min per IP, 5/h per email).
+The web client then calls the existing `POST /api/auth/login` and continues on `/verify-email` and `/verify-mobile`.
+
+## Onboarding (role VENDOR, email + mobile verified, application not submitted)
+| Method | Path | Body | Notes |
 |---|---|---|---|
-| `payload` | `application/json` | yes | see below |
-| `panDocument` | file | yes | PDF/JPG/PNG, <= 5 MB |
-| `gstCertificate` | file | when `payload.gstin` is set | PDF/JPG/PNG, <= 5 MB |
-| `businessProof` | file | no | PDF/JPG/PNG, <= 5 MB |
-| `bankProof` | file | yes | PDF/JPG/PNG, <= 5 MB |
-| `catalogue` | file | no | PDF/CSV/XLS/XLSX, <= 10 MB |
+| GET | `/api/v1/vendors/me/application` | | Application, derived `state`, `steps`, `missingDocuments`, last `decision` |
+| PUT | `/api/v1/vendors/me/application/business` | `{ businessName, businessType, pan, gstin, address, state, city, pincode }` | GSTIN must match PAN and be unique |
+| PUT | `/api/v1/vendors/me/application/categories` | `{ categoryIds, vehicleSegments }` | Shared `PartCategoryValidator`; stored as `VendorPartCategory` rows |
+| PUT | `/api/v1/vendors/me/application/bank` | `{ accountHolder, bankName, accountNumber, ifsc }` | Number AES-GCM encrypted (`ENCRYPTION_KEY`); only last 4 returned |
+| POST | `/api/v1/vendors/me/application/documents` | multipart `documentType`, `file` | PDF/JPG/PNG by content, ≤ 5 MB, private bucket only |
+| DELETE | `/api/v1/vendors/me/application/documents/{documentType}` | | |
+| GET | `/api/v1/vendors/me/application/documents/{documentId}/url` | | `{ url, expiresIn: 300 }`, own documents only |
+| POST | `/api/v1/vendors/me/application/submit` | `{ acceptTerms, acceptVendorAgreement, declareGenuineProducts, declareAccurateInformation }` | All must be true; incomplete steps come back as `fieldErrors` keyed by check code |
 
-The client enforces these limits for UX only. **The server must re-validate** content type (by sniffing, not by extension), size, count and total
-(< 20 MB: Nginx and `spring.servlet.multipart` both cap at 20 MB), store files in private storage, and never serve them publicly.
+Edits return `403 VERIFICATION_REQUIRED` before email/mobile verification and `409 APPLICATION_LOCKED` while under review or after approval.
 
-### `payload`
-```json
-{
-  "fullName": "string 2-100", "mobile": "10-digit Indian mobile, normalised", "email": "lower-case", "password": "policy: 8+ chars, upper, lower, digit, <= 72 bytes",
-  "businessName": "string", "businessType": "MANUFACTURER|WHOLESALER|DISTRIBUTOR|STOCKIST|RETAILER|OTHER",
-  "pan": "AAAAA9999A", "gstin": "15 chars | null  (characters 3-12 must equal pan)",
-  "address": "string", "state": "string", "city": "string", "pincode": "[1-9][0-9]{5}",
-  "categoryIds": ["public.\"Category\" ids"],
-  "vehicleSegments": ["MOTORCYCLE|SCOOTER|THREE_WHEELER|PASSENGER_CAR|COMMERCIAL_VEHICLE|OTHER"],
-  "vehicleBrands": ["Hero", "..."], "otherVehicleBrand": "string | null",
-  "productBrands": ["string"], "skuRange": "UNDER_50|50_200|200_1000|1000_5000|OVER_5000", "monthlyCapacity": "string | null",
-  "bank": { "accountHolder": "string", "bankName": "string", "accountNumber": "9-18 digits", "ifsc": "AAAA0XXXXXX" },
-  "warehouse": { "address": "string", "pincode": "string", "pickupContact": "10-digit mobile" },
-  "agreement": { "accepted": true, "version": "string" }
-}
-```
+Document types: `PAN_CARD` (required), `GST_CERTIFICATE` (required when a GSTIN is given), `CANCELLED_CHEQUE` (required),
+`BUSINESS_REGISTRATION`, `ADDRESS_PROOF` (optional). Aadhaar is never collected.
 
-**Category validation (changed 2026-11-05, from the session that owns the part-category tree):** `categories`/`otherCategory` are gone.
-`categoryIds` are ids of the two-level `public."Category"` tree (migration `20261105000000_vendor_part_categories`: `Category.parentId`),
-normalised so a **group id means the whole group**. Valid ids are active top-level categories that have at least one active child, plus those
-active children. Public read endpoint for the picker: `GET /api/part-categories` -> `{ groups: [{ id, name, slug, children: [{ id, name, slug }] }] }`.
-The Java registration service must call the shared validator (`com.motoxplus.api.catalog.PartCategoryValidator` / `PartCategoryRepository`,
-being added by that session) and must not re-implement the rule. Marketplace sellers get their **own** link table in schema `marketplace`
-(e.g. `vendor_part_category`), not the procurement `public."VendorPartCategory"`, because sellers do not reuse `public."Vendor"`.
+## State (derived, never stored)
+`Vendor.status` APPROVED→`ACTIVE`, REJECTED→`REJECTED`, SUSPENDED→`SUSPENDED`, BLACKLISTED→`BLOCKED`. For PENDING: unverified contact →
+`PENDING_VERIFICATION`; submitted → `UNDER_REVIEW`; details done but required documents missing → `DOCUMENTS_PENDING`; otherwise `DRAFT`.
 
-### Responses
-| Status | Body | Frontend behaviour |
+## Admin review
+View: `marketplace.vendor.view` (ADMIN, SUPER_ADMIN, SUPPORT). Decide / reveal bank number: `marketplace.vendor.approve` (ADMIN, SUPER_ADMIN).
+
+| Method | Path | Notes |
 |---|---|---|
-| 201 | `{ "userId": "...", "vendorId": "...", "status": "PENDING_VERIFICATION", "emailVerificationRequired": true, "mobileVerificationRequired": true }` | Success panel, link to existing `/verify-email?userId=...` then `/verify-mobile`. **A 2xx without `userId` is treated as a failure.** |
-| 400 / 413 / 415 / 422 | `{ "error", "code": "VALIDATION_FAILED", "fieldErrors": { "<payload field or file part>": "message" } }` | Jumps to the step owning the first field and shows each message. |
-| 409 | `{ "error": "Email already registered" \| "Mobile number already registered" }` | Account step, field error. (Same wording as today's routes; note this reveals account existence.) |
-| 429 | `{ "error", "code": "RATE_LIMITED", "retryAfterSeconds" }` | Message with wait time. Use the `RateLimitBudgets` pattern (per-IP). |
-| 404 / 405 / 501 / 502 / 503 / 504, network failure | any | "Not available right now - your application has not been submitted." Draft kept in memory. |
+| GET | `/api/v1/admin/vendor-applications?state=&q=&page=&size=` | Self-registered vendors only |
+| GET | `/api/v1/admin/vendor-applications/{vendorId}` | + `checks` (from submission), `history` (audit log), `agreements`, `categoryNames` |
+| GET | `/api/v1/admin/vendor-applications/{vendorId}/documents/{documentId}/url` | 5-minute link; audited |
+| GET | `/api/v1/admin/vendor-applications/{vendorId}/bank-account` | Full number; audited |
+| POST | `/api/v1/admin/vendor-applications/{vendorId}/{approve\|reject\|request-changes\|suspend\|reactivate\|block}` | `{ reason }` required (≥ 5 chars) except approve/reactivate |
 
-### Server behaviour the UI assumes
-* Creates the user (role `SELLER`; add to Prisma `UserRole` in Phase 2), the seller record in status `PENDING_VERIFICATION`, and sends the email
-  and mobile OTPs through the **existing** OTP services, so the existing `/verify-email` and `/verify-mobile` pages work unchanged.
-* Stores the agreement `version` and acceptance time with the application. The seller agreement text itself does not exist yet (needs legal);
-  the page links to `NEXT_PUBLIC_SELLER_AGREEMENT_URL` (default `/terms`) and sends `NEXT_PUBLIC_SELLER_AGREEMENT_VERSION` (default `"unpublished"`).
-* PAN, GSTIN and bank details are encrypted at rest, masked in every API response, and never logged. No verification result is ever set by this call
-  (GSTIN/PAN/bank verification are separate, admin/provider-driven steps).
-* Idempotent against double-submit: the same email+mobile while an application is `PENDING_VERIFICATION` must not create a second one.
+Transitions: approve / request-changes need `UNDER_REVIEW`; reject needs a pending application; suspend needs `ACTIVE`; reactivate needs
+`SUSPENDED`; block works from any state. Each transition is guarded on the current status, so concurrent reviewers can't both act (409).

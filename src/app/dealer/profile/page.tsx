@@ -76,8 +76,8 @@ export default async function DealerProfilePage() {
         <div className="mt-8 pt-6 border-t border-[var(--border-color)]">
           <p className="text-[var(--text-muted)] text-sm">
             To update your profile information, please contact{" "}
-            <a href="mailto:support@motoxplus.in" className="text-red-400 hover:text-red-300">
-              support@motoxplus.in
+            <a href="mailto:info@motoxplus.com" className="text-red-400 hover:text-red-300">
+              info@motoxplus.com
             </a>
           </p>
         </div>

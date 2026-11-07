@@ -10,10 +10,11 @@ const DEFAULT_EXPIRY_SECONDS = 15 * 60; // 15 minutes
  */
 export async function generateSignedUrl(
   key: string,
-  expiresInSeconds = DEFAULT_EXPIRY_SECONDS
+  expiresInSeconds = DEFAULT_EXPIRY_SECONDS,
+  bucket: string = getR2Bucket()
 ): Promise<string> {
   const command = new GetObjectCommand({
-    Bucket: getR2Bucket(),
+    Bucket: bucket,
     Key: key,
   });
   return getSignedUrl(getR2Client(), command, { expiresIn: expiresInSeconds });

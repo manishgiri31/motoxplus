@@ -158,7 +158,7 @@ export default async function VendorProfilePage() {
         <div className="glass border border-[var(--border-color)] rounded-sm p-4">
           <p className="text-[var(--text-muted)] text-xs text-center">
             Registered on {formatDate(vendor.createdAt)} · Credit terms: {vendor.creditDays} days ·
-            To update information, contact <span className="text-red-400">support@motoxplus.in</span>
+            To update information, contact <span className="text-red-400">info@motoxplus.com</span>
           </p>
         </div>
       </div>

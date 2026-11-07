@@ -39,7 +39,10 @@ public class CatalogController {
     }
 
     @GetMapping("/categories")
-    public List<Map<String, Object>> categories() {
+    public List<Map<String, Object>> categories(HttpServletRequest req) {
+        // Same PUBLIC_API budget and Redis key as the Node route, so a visitor's count is shared
+        // whichever backend Nginx sends them to.
+        rateLimit.enforce(req, RateLimitBudgets.PUBLIC_API, null);
         return catalog.activeCategories();
     }
 

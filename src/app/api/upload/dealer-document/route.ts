@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
 import {
-  uploadFile,
+  uploadPrivateDocument,
+  deleteStoredFile,
   folders,
   newUUID,
   extFromMime,
@@ -74,7 +75,13 @@ export async function POST(req: NextRequest) {
   const key = folders.dealerDocument(dealer.id, documentType.toLowerCase(), uuid, ext);
 
   try {
-    const { url } = await uploadFile(buffer, key, detectedType, true);
+    // KYC goes to the private bucket; `url` is an `r2-private://` marker, never a public link.
+    const { storedUrl: url } = await uploadPrivateDocument(buffer, key, detectedType);
+
+    const previous = await prisma.dealerDocument.findUnique({
+      where: { dealerId_documentType: { dealerId: dealer.id, documentType } },
+      select: { key: true, fileUrl: true },
+    });
 
     // Upsert — one document per type per dealer
     const doc = await prisma.dealerDocument.upsert({
@@ -82,6 +89,13 @@ export async function POST(req: NextRequest) {
       update: { fileUrl: url, fileName: file.name, fileSize: file.size, mimeType: detectedType, key, uploadedAt: new Date() },
       create: { dealerId: dealer.id, documentType, fileUrl: url, fileName: file.name, fileSize: file.size, mimeType: detectedType, key },
     });
+
+    // A replaced document must not linger in storage (it may be in the public bucket from before).
+    if (previous?.key && previous.key !== key) {
+      await deleteStoredFile(previous.key, previous.fileUrl).catch((e) =>
+        console.error("[dealer-document] failed to delete replaced file:", e instanceof Error ? e.message : e)
+      );
+    }
 
     await logStorageAction({
       userId,

@@ -16,7 +16,7 @@ export function dealerApprovedTemplate(name: string, companyName: string, loginU
       <li>Track shipments in real time</li>
       <li>Download GST invoices</li>
     </ul>
-    <p class="small">For assistance, contact your account manager at sales@motoxplus.in</p>
+    <p class="small">For assistance, contact your account manager at info@motoxplus.com</p>
   `;
   return baseTemplate("Account Active — MOTOXPLUS Dealer Portal", content);
 }

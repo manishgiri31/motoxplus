@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ${documents.map((d: string) => `<li>${d}</li>`).join("")}
     </ul>
     ${note ? `<p class="text">${note}</p>` : ""}
-    <p class="small">Reply to this email or contact us at support@motoxplus.in to submit these documents.</p>
+    <p class="small">Reply to this email or contact us at info@motoxplus.com to submit these documents.</p>
   `;
 
   await sendEmail({

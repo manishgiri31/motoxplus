@@ -121,12 +121,12 @@ export async function POST(req: NextRequest) {
         </table>
       </div>
       <hr class="divider"/>
-      <p class="small">Once verified, your order will move to production and you'll receive a tax invoice. If you have any questions, contact us at accounts@motoxplus.in</p>
+      <p class="small">Once verified, your order will move to production and you'll receive a tax invoice. If you have any questions, contact us at info@motoxplus.com</p>
     `),
   }).catch(() => {});
 
   // Notify admin team
-  const adminEmail = process.env.ACCOUNTS_EMAIL || "accounts@motoxplus.in";
+  const adminEmail = process.env.ACCOUNTS_EMAIL || "info@motoxplus.com";
   const ownerLabel = actor.channel === "B2C" ? "Retail customer" : "Dealer";
   const ownerName = actor.channel === "B2C" ? (actor.customer.user.name || "Customer") : actor.dealer.companyName;
   sendEmail({

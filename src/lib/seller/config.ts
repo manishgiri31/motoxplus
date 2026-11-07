@@ -15,3 +15,6 @@ export const SELLER_AGREEMENT_VERSION = process.env.NEXT_PUBLIC_SELLER_AGREEMENT
 
 /** Where the agreement is published. Falls back to the general terms until a seller agreement exists. */
 export const SELLER_AGREEMENT_URL = process.env.NEXT_PUBLIC_SELLER_AGREEMENT_URL || "/terms";
+
+/** Where every "Start selling" button goes: the registration flow once it's open, the interest form until then. */
+export const START_SELLING_HREF = SELLER_SIGNUP_OPEN ? "/become-vendor/register" : "#register";

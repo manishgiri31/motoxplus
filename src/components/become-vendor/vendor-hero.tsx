@@ -3,6 +3,7 @@ import { BadgeCheck, Truck, Users, ArrowRight } from "lucide-react";
 import { Container } from "@/components/store/container";
 import { Button } from "@/components/ui/button";
 import { getProducts, imageUrl } from "@/lib/store/products";
+import { START_SELLING_HREF } from "@/lib/seller/config";
 import { ctaClass, ctaOutlineDark } from "./styles";
 
 // Real MotoXPlus catalogue photography only. We have no photographs of engine, brake or suspension parts
@@ -34,14 +35,13 @@ export function VendorHero() {
             </span>
           </h1>
           <p className="mt-6 max-w-[58ch] text-[18px] leading-relaxed text-[#4b4b52]">
-            Are you a manufacturer, wholesaler, distributor or spare-parts supplier? Join MotoXPlus and connect with
-            dealers, retailers, workshops and customers across India. List your products, receive orders and grow your
-            business through one platform.
+            Are you a manufacturer, wholesaler, distributor or automotive spare-parts stockist? Join MotoXPlus, list your
+            products and connect with dealers, retailers, workshops and customers across India.
           </p>
 
           <div className="mt-9 flex flex-wrap gap-3">
             <Button asChild size="lg" className={ctaClass}>
-              <a href="#register">
+              <a href={START_SELLING_HREF}>
                 Start selling <ArrowRight aria-hidden />
               </a>
             </Button>

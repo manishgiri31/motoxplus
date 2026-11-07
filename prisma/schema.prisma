@@ -1699,6 +1699,8 @@ enum VendorDocumentType {
   BANK_STATEMENT
   CANCELLED_CHEQUE
   OTHER
+  /// Added by Flyway V3__vendor_onboarding.sql (backend-java). Mirrored here so Prisma can read these rows.
+  ADDRESS_PROOF
 }
 
 enum PurchaseRequestStatus {

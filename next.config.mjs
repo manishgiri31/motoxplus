@@ -114,6 +114,19 @@ const nextConfig = {
       //     --file app-release.apk \
       //     --content-type application/vnd.android.package-archive \
       //     --content-disposition 'attachment; filename="motoxplus.apk"' --remote
+      // Site search lives in the Java API (backend-java SearchController). In production
+      // Nginx routes /api/search straight to Java; this rewrite covers `next dev` and any
+      // deployment where Next.js is hit directly. There is deliberately no Next.js route.
+      {
+        source: "/api/search",
+        destination: `${(process.env.JAVA_API_URL || "http://127.0.0.1:8080").replace(/\/+$/, "")}/api/search`,
+      },
+      // The versioned API (vendor onboarding, vendor review, marketplace) is Java-only; same arrangement as
+      // /api/search: Nginx sends /api/v1/ to Java in production, this rewrite covers `next dev`.
+      {
+        source: "/api/v1/:path*",
+        destination: `${(process.env.JAVA_API_URL || "http://127.0.0.1:8080").replace(/\/+$/, "")}/api/v1/:path*`,
+      },
       {
         source: "/downloads/motoxplus.apk",
         destination:

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { deleteProductImage, deleteFile, logStorageAction } from "@/lib/storage";
+import { deleteProductImage, deleteStoredFile, logStorageAction } from "@/lib/storage";
 
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -25,7 +25,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
   // Try DealerDocument
   const doc = await prisma.dealerDocument.findUnique({ where: { id } });
   if (doc) {
-    await deleteFile(doc.key);
+    await deleteStoredFile(doc.key, doc.fileUrl);
     await prisma.dealerDocument.delete({ where: { id } });
     await logStorageAction({ userId: session.user.id, action: "DELETE", fileKey: doc.key });
     return NextResponse.json({ deleted: true, type: "dealer-document" });

@@ -102,12 +102,13 @@ class MarketplaceFoundationIntegrationTest extends IntegrationTestBase {
                 .noneMatch(p -> p.startsWith("vendor."));
         assertThat(perm.permissionsForRole("ACCOUNTS")).contains("marketplace.settlement.approve")
                 .doesNotContain("marketplace.vendor.approve");
-        assertThat(perm.permissionsForRole("SELLER")).contains("vendor.product.create", "vendor.settlement.view")
+        // Decision V1 (V3 migration): vendors use the existing VENDOR role; the planned SELLER roles are gone.
+        assertThat(perm.permissionsForRole("VENDOR")).contains("vendor.product.create", "vendor.settlement.view")
                 .noneMatch(p -> p.startsWith("marketplace."));
-        assertThat(perm.permissionsForRole("SELLER_STAFF")).contains("vendor.inventory.update")
-                .doesNotContain("vendor.settlement.view", "vendor.product.create");
-        // The existing procurement supplier role (and buyers) have no marketplace power at all.
-        for (String role : new String[]{"VENDOR", "DEALER", "CUSTOMER", "GUEST", "STAFF", "SALES", "MARKETING"}) {
+        assertThat(perm.permissionsForRole("SELLER")).isEmpty();
+        assertThat(perm.permissionsForRole("SELLER_STAFF")).isEmpty();
+        // Buyers and other staff have no marketplace power at all.
+        for (String role : new String[]{"DEALER", "CUSTOMER", "GUEST", "STAFF", "SALES", "MARKETING"}) {
             assertThat(perm.permissionsForRole(role)).as(role).isEmpty();
         }
         assertThat(perm.permissionsForRole(null)).isEmpty();
@@ -130,19 +131,19 @@ class MarketplaceFoundationIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andExpect(jsonPath("$.permissions[?(@ == 'marketplace.vendor.approve')]").exists());
 
-        mvc.perform(get("/api/v1/me/permissions").header("Authorization", bearer("VENDOR")))
+        mvc.perform(get("/api/v1/me/permissions").header("Authorization", bearer("DEALER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.permissions").isEmpty());
 
         mvc.perform(get("/api/v1/admin/rbac/roles").header("Authorization", bearer("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roles.SELLER").isArray());
+                .andExpect(jsonPath("$.roles.VENDOR").isArray());
 
         // Authenticated but unauthorised -> 403 with the standard error body (not a 500).
         mvc.perform(get("/api/v1/admin/rbac/roles").header("Authorization", bearer("DEALER")))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("Forbidden"));
-        mvc.perform(get("/api/v1/admin/rbac/roles").header("Authorization", bearer("SELLER")))
+        mvc.perform(get("/api/v1/admin/rbac/roles").header("Authorization", bearer("VENDOR")))
                 .andExpect(status().isForbidden());
     }
 

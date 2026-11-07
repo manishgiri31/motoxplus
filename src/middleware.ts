@@ -63,8 +63,15 @@ export default withAuth(
         return NextResponse.redirect(new URL("/verify-mobile", req.url));
       }
       if (role === "VENDOR") {
-        if (token?.vendorStatus !== "APPROVED") {
-          return NextResponse.redirect(new URL("/pending-approval", req.url));
+        // Applicants (and suspended/rejected/blocked vendors) only reach the onboarding area, which shows their
+        // application state; approved vendors have no reason to be there. The Java API enforces the same rules
+        // from the database, so a stale token can't unlock anything server-side.
+        const onboarding = pathname === "/vendor/onboarding" || pathname.startsWith("/vendor/onboarding/");
+        if (token?.vendorStatus !== "APPROVED" && !onboarding) {
+          return NextResponse.redirect(new URL("/vendor/onboarding", req.url));
+        }
+        if (token?.vendorStatus === "APPROVED" && onboarding) {
+          return NextResponse.redirect(new URL("/vendor/dashboard", req.url));
         }
       } else if (token?.dealerStatus === "SUSPENDED" || token?.dealerStatus === "REJECTED") {
         return NextResponse.redirect(new URL("/pending-approval", req.url));

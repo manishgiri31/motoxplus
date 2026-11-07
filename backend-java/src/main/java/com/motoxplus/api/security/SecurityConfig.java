@@ -32,9 +32,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/api/health/**", "/actuator/health/**").permitAll()
                         // Public read-only catalog endpoints (the storefront browses without logging in).
-                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/products/search", "/api/part-categories").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/products/search", "/api/search", "/api/part-categories").permitAll()
                         // Logout must always succeed (it just clears cookies); refresh authenticates by refresh token.
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        // Vendor self-registration happens before there is an account (404 while marketplace is disabled).
+                        .requestMatchers(HttpMethod.POST, "/api/v1/vendors/register").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> writeJson(res, 401, "Unauthorized"))

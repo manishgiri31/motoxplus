@@ -26,11 +26,17 @@ export async function getVerifiedDealer(userId: string) {
 }
 
 export async function getVerifiedVendor(userId: string) {
-  const vendor = await prisma.vendor.findUnique({ where: { userId } });
-  if (!vendor) return null;
+  const vendor = await prisma.vendor.findUnique({ where: { userId }, include: { user: true } });
+  if (!vendor?.user) return null;
+  if (!vendor.user.isActive) return null;
+  if (!vendor.user.emailVerified) return null;
+  if (!vendor.user.mobileVerified) return null;
   if (vendor.status !== "APPROVED") return null;
   return vendor;
 }
+
+export const VENDOR_NOT_VERIFIED_MESSAGE =
+  "Your vendor account is not active. Complete email and mobile verification, and wait for MotoXPlus to approve your application.";
 
 // B2C customers have no approval step and no email-verification requirement
 // (signup is phone-OTP only, see /api/auth/customer/register) — only

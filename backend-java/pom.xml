@@ -82,6 +82,27 @@
 			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
 			<version>3.0.0</version>
 		</dependency>
+		<!-- Cloudflare R2 is S3-compatible: uploads, presigned URLs. JDK HTTP client only; Netty/Apache clients excluded. -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.29.0</version>
+			<exclusions>
+				<exclusion>
+					<groupId>software.amazon.awssdk</groupId>
+					<artifactId>netty-nio-client</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>software.amazon.awssdk</groupId>
+					<artifactId>apache-client</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>url-connection-client</artifactId>
+			<version>2.29.0</version>
+		</dependency>
 
 		<!-- HS256 JWTs, wire-compatible with the "jose" tokens the Next.js app issues -->
 		<dependency>

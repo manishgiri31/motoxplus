@@ -1,0 +1,145 @@
+package com.motoxplus.api.vendor.registration;
+
+import com.motoxplus.api.auth.PasswordPolicy;
+import com.motoxplus.api.auth.otp.OtpService;
+import com.motoxplus.api.auth.otp.OtpService.OtpType;
+import com.motoxplus.api.common.Cuid;
+import com.motoxplus.api.common.PhoneUtil;
+import com.motoxplus.api.common.Time;
+import com.motoxplus.api.marketplace.audit.AuditLogService;
+import com.motoxplus.api.notify.email.EmailService;
+import com.motoxplus.api.notify.email.EmailTemplates;
+import com.motoxplus.api.security.AuthenticatedUser;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.sql.Timestamp;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
+import com.motoxplus.api.web.FieldErrorsException;
+
+/**
+ * Step 1 of vendor onboarding: the login account. Mirrors the dealer flow (src/app/api/dealer/register/route.ts):
+ * same uniqueness rules, same password policy and bcrypt cost, email OTP sent right away. The vendor row starts
+ * PENDING with empty business fields that the onboarding steps fill in; nothing is "verified" by this call.
+ */
+@Service
+@ConditionalOnProperty(name = "marketplace.enabled", havingValue = "true")
+public class VendorRegistrationService {
+    private static final Logger log = LoggerFactory.getLogger(VendorRegistrationService.class);
+    private static final BCryptPasswordEncoder BCRYPT = new BCryptPasswordEncoder(12);
+    private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    public record Request(String fullName, String mobile, String email, String password) {}
+
+    public record Registered(String userId, String vendorId, String email) {}
+
+    private final JdbcTemplate jdbc;
+    private final TransactionTemplate tx;
+    private final AuditLogService audit;
+    private final OtpService otp;
+    private final EmailService email;
+    private final String appUrl;
+
+    public VendorRegistrationService(JdbcTemplate jdbc, TransactionTemplate tx, AuditLogService audit, OtpService otp,
+                                     EmailService email, @Value("${app.public-url:https://motoxplus.com}") String appUrl) {
+        this.jdbc = jdbc;
+        this.tx = tx;
+        this.audit = audit;
+        this.otp = otp;
+        this.email = email;
+        this.appUrl = appUrl.replaceAll("/+$", "");
+    }
+
+    public Registered register(Request in, String ip) {
+        String name = in.fullName() == null ? "" : in.fullName().trim().replaceAll("\\s+", " ");
+        String mail = in.email() == null ? "" : in.email().trim().toLowerCase(Locale.ROOT);
+        String mobile = PhoneUtil.normalizeIndianMobile(in.mobile());
+
+        Map<String, String> errors = new LinkedHashMap<>();
+        if (name.length() < 2) errors.put("fullName", "Full name is required");
+        else if (name.length() > 100) errors.put("fullName", "Full name must be at most 100 characters");
+        if (mobile == null) errors.put("mobile", "Enter a valid 10-digit Indian mobile number");
+        if (mail.isEmpty()) errors.put("email", "Email address is required");
+        else if (mail.length() > 254 || !EMAIL.matcher(mail).matches()) errors.put("email", "Enter a valid email address");
+        String pw = PasswordPolicy.validate(in.password(), mail, name);
+        if (pw != null) errors.put("password", pw);
+        if (!errors.isEmpty()) throw FieldErrorsException.invalid(errors);
+
+        // Same wording as the dealer/supplier routes (this does reveal that an account exists, as they do).
+        if (exists("SELECT 1 FROM public.\"User\" WHERE email = ?", mail) || exists("SELECT 1 FROM public.\"Vendor\" WHERE email = ?", mail)) {
+            throw FieldErrorsException.conflict("email", "Email already registered");
+        }
+        if (exists("SELECT 1 FROM public.\"User\" WHERE \"mobileNumber\" = ?", mobile)) {
+            throw FieldErrorsException.conflict("mobile", "Mobile number already registered");
+        }
+
+        String hash = BCRYPT.encode(in.password());
+        String userId = Cuid.next();
+        String vendorId = Cuid.next();
+        try {
+            tx.executeWithoutResult(s -> {
+                Timestamp now = Timestamp.valueOf(Time.utcNow());
+                jdbc.update("""
+                        INSERT INTO public."User" (id, name, email, password, role, "mobileNumber", "mobileVerified", "isActive", "createdAt", "updatedAt")
+                        VALUES (?, ?, ?, ?, 'VENDOR'::"UserRole", ?, false, true, ?, ?)
+                        """, userId, name, mail, hash, mobile, now, now);
+                // Business fields are NOT NULL in the legacy table; they start empty and the onboarding steps fill them.
+                jdbc.update("""
+                        INSERT INTO public."Vendor" (id, "userId", "vendorCode", "companyName", "ownerName", email, phone, city, state,
+                                                     status, "createdAt", "updatedAt")
+                        VALUES (?, ?, ?, '', ?, ?, ?, '', '', 'PENDING'::"VendorStatus", ?, ?)
+                        """, vendorId, userId, uniqueVendorCode(), name, mail, mobile, now, now);
+                jdbc.update("INSERT INTO marketplace.vendor_application (vendor_id) VALUES (?)", vendorId);
+                audit.record(new AuthenticatedUser(userId, mail, "VENDOR", null), "vendor.registered", "vendor", vendorId, vendorId, ip,
+                        Map.of("channel", "web"));
+            });
+        } catch (DuplicateKeyException e) {
+            // Lost a race with a concurrent registration of the same email/mobile.
+            String msg = String.valueOf(e.getMostSpecificCause().getMessage());
+            if (msg.contains("mobileNumber")) throw FieldErrorsException.conflict("mobile", "Mobile number already registered");
+            throw FieldErrorsException.conflict("email", "Email already registered");
+        }
+
+        sendVerificationEmail(userId, name, mail);
+        return new Registered(userId, vendorId, mail);
+    }
+
+    /** Like Node: a failed email never fails the registration; /verify-email can resend the code. */
+    private void sendVerificationEmail(String userId, String name, String mail) {
+        try {
+            String code = otp.create(userId, OtpType.EMAIL_VERIFICATION);
+            String url = appUrl + "/verify-email?userId=" + URLEncoder.encode(userId, StandardCharsets.UTF_8);
+            var msg = EmailTemplates.vendorVerifyEmail(name, url, code);
+            email.send(mail, msg.subject(), msg.html(), "vendor-verify:" + userId);
+        } catch (RuntimeException e) {
+            log.error("[VendorRegister] verification email not sent: {}", e.getMessage());
+        }
+    }
+
+    /** Same shape as generateVendorCode() in src/lib/utils.ts ("VND" + 6 time digits + 2 random), retried on collision. */
+    private String uniqueVendorCode() {
+        for (int i = 0; i < 10; i++) {
+            String ms = Long.toString(System.currentTimeMillis());
+            String code = "VND" + ms.substring(ms.length() - 6) + String.format("%02d", RANDOM.nextInt(100));
+            if (!exists("SELECT 1 FROM public.\"Vendor\" WHERE \"vendorCode\" = ?", code)) return code;
+        }
+        throw new IllegalStateException("could not allocate a vendor code");
+    }
+
+    private boolean exists(String sql, Object arg) {
+        return !jdbc.queryForList(sql, Integer.class, arg).isEmpty();
+    }
+}

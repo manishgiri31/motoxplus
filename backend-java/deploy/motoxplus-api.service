@@ -1,0 +1,50 @@
+# systemd unit for the MotoXPlus Java API. Install once (see backend-java/deploy/README.md):
+#   sudo cp backend-java/deploy/motoxplus-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now motoxplus-api
+#
+# The deploy workflow only builds and restarts this service if it is installed, so nothing changes on the
+# server until you do the step above.
+
+[Unit]
+Description=MotoXPlus Java API (backend-java)
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Unprivileged system user (created in README step 2). systemd reads the root-only .env below as root
+# before dropping to this user, so the file can stay mode 600.
+User=motoxplus-api
+Group=motoxplus-api
+WorkingDirectory=/var/www/motoxplus/backend-java
+# Same file the Next.js app uses: DATABASE_URL, JWT_SECRET, REDIS_URL, ...
+# Lines must be plain KEY=value or KEY="value" (no "export " prefix) for systemd to read them.
+EnvironmentFile=/var/www/motoxplus/.env
+
+# Command-line flags win over anything in .env, so these can't be changed by editing .env by accident:
+#   --server.address=127.0.0.1  only Nginx can reach the API (client IPs come from X-Real-IP, which a
+#                               direct caller could forge); --server.port=8080 even if .env has PORT=3000
+#   --app.db.migrate=false      NEVER run Flyway migrations on a normal start. Taking over the schema is a
+#   --marketplace.enabled=false separate, deliberate step (docs/marketplace/DB-TAKEOVER.md); a stray
+#                               DB_MIGRATE=true in the shared .env must not migrate production on restart.
+ExecStart=/usr/bin/java -Xms128m -Xmx512m -XX:+ExitOnOutOfMemoryError \
+  -jar /var/www/motoxplus/backend-java/motoxplus-api.jar \
+  --server.address=127.0.0.1 --server.port=8080 \
+  --app.cookie.secure=true \
+  --app.db.migrate=false --marketplace.enabled=false
+
+Restart=on-failure
+RestartSec=5
+# The JVM exits with 143 on SIGTERM; that is a clean stop, not a failure.
+SuccessExitStatus=143
+TimeoutStopSec=30
+
+# Hardening: the API writes nothing to disk (logs go to the journal).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

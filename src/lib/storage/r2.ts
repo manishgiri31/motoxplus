@@ -38,3 +38,14 @@ export function getR2PublicUrl(): string {
   const url = requireEnv("R2_PUBLIC_URL");
   return url.replace(/\/$/, ""); // strip trailing slash
 }
+
+/**
+ * Bucket for KYC and other private documents (PAN, GST, bank proofs). It must have public access OFF;
+ * objects are only reachable through short-lived signed URLs. Returns null while it is not configured,
+ * so callers can fall back (loudly) instead of failing uploads.
+ */
+export function getR2PrivateBucket(): string | null {
+  const val = process.env.R2_PRIVATE_BUCKET_NAME?.trim();
+  if (!val || val.startsWith("your_") || val.startsWith("your-")) return null;
+  return val;
+}

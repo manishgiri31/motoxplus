@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma";
-import { generateSignedUrl } from "@/lib/storage";
+import { signStoredFile } from "@/lib/storage";
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -26,8 +26,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
   }
 
   try {
-    const signedUrl = await generateSignedUrl(doc.key, 900); // 15 minutes
-    return NextResponse.json({ signedUrl, expiresIn: 900 });
+    // 5 minutes: enough to open the document, short enough that a forwarded link dies quickly.
+    const signedUrl = await signStoredFile(doc.key, doc.fileUrl, 300);
+    return NextResponse.json({ signedUrl, expiresIn: 300 });
   } catch (err: any) {
     console.error("[files/signed]", err?.message ?? err);
     return NextResponse.json({ error: "Could not generate signed URL" }, { status: 500 });

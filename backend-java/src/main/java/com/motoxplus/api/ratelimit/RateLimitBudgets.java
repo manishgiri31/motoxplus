@@ -21,10 +21,16 @@ public enum RateLimitBudgets {
     /** 5 failures / 15 min per identifier, matching the 5-strike account lockout. */
     LOGIN(new Budget(5, 15 * 60, OPEN), new Budget(20, 15 * 60, OPEN), null, null),
     PASSWORD_RESET(new Budget(8, 15 * 60, OPEN), new Budget(20, 15 * 60, OPEN), null, null),
+    /** Self-registration: Node's 5/min per IP, plus 5/hour per email so one address can't be hammered. */
+    REGISTER(new Budget(5, 60 * 60, OPEN), new Budget(5, 60, OPEN), null, null),
+    /** KYC document uploads: generous for retries, bounded so storage can't be flooded. */
+    DOCUMENT_UPLOAD(new Budget(40, 60 * 60, OPEN), new Budget(60, 60 * 60, OPEN), null, null),
     ORDER_CREATE(new Budget(20, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),
     ORDER_CANCEL(new Budget(15, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),
     SCHEME_APPLY(new Budget(20, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),
     SEARCH_PUBLIC(null, new Budget(120, 60, OPEN), null, null),
+    /** Site-wide search box (GET /api/search): debounced typing stays well under 60/min per visitor. */
+    SEARCH_GROUPED(null, new Budget(60, 60, OPEN), null, null),
     /** Public read-only JSON (e.g. the parts catalogue); own bucket so one chatty endpoint can't starve another. */
     PUBLIC_API(null, new Budget(120, 60, OPEN), null, null),
     DEFAULT(null, new Budget(60, 60, OPEN), null, null);

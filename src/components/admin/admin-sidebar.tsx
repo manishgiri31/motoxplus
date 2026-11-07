@@ -27,6 +27,7 @@ import {
   Undo2,
   Gift,
   FolderTree,
+  UserCheck,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ const navItems = [
   { icon: Undo2, label: "Refunds", href: "/admin/refunds" },
   { icon: Gift, label: "GST Schemes", href: "/admin/schemes" },
   { icon: Truck, label: "Vendors", href: "/admin/vendors" },
+  { icon: UserCheck, label: "Vendor applications", href: "/admin/vendors/applications" },
 ];
 const procurementItems = [
   { icon: ClipboardList, label: "Requests", href: "/admin/procurement/requests" },
@@ -147,7 +149,9 @@ export function AdminSidebar({ user }: Props) {
   const staffNav = isStaff ? (STAFF_NAV[user.department || ""] ?? []) : [];
 
   const navLink = (href: string, label: string, Icon: any) => {
-    const isActive = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href));
+    // The most specific matching item wins, so /admin/vendors/applications doesn't also light up "Vendors".
+    const longerMatch = navItems.some((n) => n.href.length > href.length && n.href.startsWith(href) && pathname.startsWith(n.href));
+    const isActive = pathname === href || (href !== "/admin/dashboard" && pathname.startsWith(href) && !longerMatch);
     return (
       <Link
         key={href}

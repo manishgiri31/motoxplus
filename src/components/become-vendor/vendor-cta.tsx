@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/store/container";
 import { Button } from "@/components/ui/button";
+import { START_SELLING_HREF } from "@/lib/seller/config";
 import { ctaClass } from "./styles";
 
 export function VendorCTA() {
@@ -17,11 +18,11 @@ export function VendorCTA() {
         </div>
         <div className="flex flex-col items-start gap-4 bp-lg:items-end">
           <Button asChild size="lg" className={ctaClass}>
-            <a href="#register">Register as a vendor</a>
+            <a href={START_SELLING_HREF}>Start selling</a>
           </Button>
           <p className="text-[14px] text-white/70">
             Already registered?{" "}
-            <Link href="/login" className="font-semibold text-white underline underline-offset-4 hover:text-mx-silver">
+            <Link href="/login?callbackUrl=%2Fvendor%2Fdashboard" className="font-semibold text-white underline underline-offset-4 hover:text-mx-silver">
               Login to your Vendor Dashboard
             </Link>
             .

@@ -4,6 +4,12 @@ import { ArrowLeft } from "lucide-react";
 
 interface AuthPageLayoutProps {
   children: React.ReactNode;
+  /** Side-panel heading; defaults to the dealer/customer account copy. */
+  heading?: string;
+  /** Side-panel points; defaults to the dealer/customer account copy. */
+  points?: { title: string; body: string }[];
+  /** Extra class on the page root, e.g. "mx-seller" to switch accents to the marketplace red. */
+  className?: string;
 }
 
 // public/motoxplus/logo.png is a 1536×1024 canvas with the mark occupying
@@ -33,9 +39,9 @@ const POINTS = [
   { title: "Sign-in you can trust", body: "Verified contact details, one-time codes, and automatic lockout after repeated failures." },
 ];
 
-export function AuthPageLayout({ children }: AuthPageLayoutProps) {
+export function AuthPageLayout({ children, heading = "Parts, pricing and paperwork. One account.", points = POINTS, className = "" }: AuthPageLayoutProps) {
   return (
-    <div className="min-h-screen bg-[var(--paper)] lg:grid lg:grid-cols-[minmax(400px,5fr)_7fr]">
+    <div className={`min-h-screen bg-[var(--paper)] lg:grid lg:grid-cols-[minmax(400px,5fr)_7fr] ${className}`}>
       <aside className="relative hidden border-r border-[var(--line)] bg-[var(--card)] lg:block">
         <div className="bp-grid pointer-events-none absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" aria-hidden />
         <div className="sticky top-0 flex h-screen flex-col justify-between p-12 xl:p-14">
@@ -46,10 +52,10 @@ export function AuthPageLayout({ children }: AuthPageLayoutProps) {
           <div className="max-w-[420px]">
             <p className="mb-5 font-mono text-12 uppercase tracking-[0.14em] text-[var(--muted)]">MOTOXPLUS India</p>
             <h2 className="font-display text-[34px] font-semibold leading-[1.12] tracking-[-0.02em] text-[var(--ink)] [text-wrap:balance] xl:text-40">
-              Parts, pricing and paperwork. One account.
+              {heading}
             </h2>
             <ol className="mt-10 border-t border-[var(--line)]">
-              {POINTS.map((p, i) => (
+              {points.map((p, i) => (
                 <li key={p.title} className="grid grid-cols-[28px_1fr] gap-x-3 border-b border-[var(--line)] py-4">
                   <span className="pt-0.5 font-mono text-12 text-[var(--muted)]">0{i + 1}</span>
                   <div>

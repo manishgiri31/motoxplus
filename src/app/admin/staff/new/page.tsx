@@ -65,7 +65,7 @@ export default function NewStaffPage() {
           </div>
           <div>
             <label className="block text-xs text-[var(--text-muted)] mb-1.5">Work Email *</label>
-            <input required type="email" className="themed-input w-full" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="name@motoxplus.in" />
+            <input required type="email" className="themed-input w-full" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="name@motoxplus.com" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

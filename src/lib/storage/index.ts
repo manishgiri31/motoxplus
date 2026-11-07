@@ -10,12 +10,20 @@
  *   R2_PUBLIC_URL       — Public bucket URL (e.g. https://pub-xxx.r2.dev)
  */
 
-export { getR2Client, getR2Bucket, getR2PublicUrl } from "./r2";
+export { getR2Client, getR2Bucket, getR2PublicUrl, getR2PrivateBucket } from "./r2";
 export { folders, newUUID, extFromMime } from "./folders";
 export { uploadBuffer, uploadProductImage, uploadPdf, uploadFile } from "./upload";
 export type { UploadResult, ProductImageUploadResult } from "./upload";
 export { deleteFile, deleteProductImage, deleteFiles } from "./delete";
 export { generateSignedUrl } from "./signed";
+export {
+  PRIVATE_URL_PREFIX,
+  isPrivateStoredUrl,
+  uploadPrivateDocument,
+  bucketForStoredFile,
+  signStoredFile,
+  deleteStoredFile,
+} from "./private";
 export { logStorageAction } from "./audit";
 export { looksLikePdf, detectImageMimeType } from "./validate";
 export type { AuditAction } from "./audit";

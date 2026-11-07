@@ -6,6 +6,7 @@ import { uniqueProductSlug } from "@/lib/slug";
 import { roundToCharmPrice } from "@/lib/pricing/charm-price";
 import { z } from "zod";
 import { getVendorListableCategoryIds } from "@/lib/catalog/part-categories";
+import { getVerifiedVendor, VENDOR_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 
 const vendorProductSchema = z.object({
   name: z.string().min(2),
@@ -52,11 +53,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const vendor = await prisma.vendor.findUnique({ where: { userId: session.user.id } });
-  if (!vendor) return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
-  if (vendor.status !== "APPROVED") {
-    return NextResponse.json({ error: "Only approved vendors can submit products" }, { status: 403 });
-  }
+  const vendor = await getVerifiedVendor(session.user.id);
+  if (!vendor) return NextResponse.json({ error: VENDOR_NOT_VERIFIED_MESSAGE }, { status: 403 });
 
   try {
     const body = await req.json();

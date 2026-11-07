@@ -2,11 +2,11 @@ import { DeleteObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getR2Client, getR2Bucket } from "./r2";
 
 /** Delete a single object by key. Silently ignores 404 (already deleted). */
-export async function deleteFile(key: string): Promise<void> {
+export async function deleteFile(key: string, bucket: string = getR2Bucket()): Promise<void> {
   if (!key) return;
   try {
     await getR2Client().send(
-      new DeleteObjectCommand({ Bucket: getR2Bucket(), Key: key })
+      new DeleteObjectCommand({ Bucket: bucket, Key: key })
     );
   } catch (err: any) {
     if (err?.name === "NoSuchKey") return;

@@ -5,10 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Menu, Search, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StoreButton } from "@/components/store/button";
 import { APK_DOWNLOAD_URL } from "@/components/ui/android-app-button";
+import { SiteSearch } from "@/components/search/site-search";
 
 const links = [
   { label: "Products", href: "/products" },
@@ -90,9 +91,7 @@ export function Navbar() {
         </ul>
 
         <div className="flex items-center gap-1">
-          <Link href="/products" aria-label="Search products" className={cn("grid h-11 w-11 place-items-center text-black/80 hover:text-black", focus)}>
-            <Search size={16} />
-          </Link>
+          <SiteSearch className={cn("grid h-11 w-11 place-items-center text-black/80 transition-colors duration-base ease-apple hover:text-black", focus)} />
           <div className="hidden items-center gap-3 bp-md:flex">
             {!session && (
               <Link href="/login" className={cn("text-12 text-black/80 transition-colors duration-base ease-apple hover:text-black", focus)}>

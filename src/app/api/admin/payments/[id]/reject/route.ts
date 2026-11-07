@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
           <tr><td style="color:#6b7280;font-size:12px;padding:6px 0;">Submitted UTR</td><td style="color:#fff;font-size:13px;font-family:monospace;text-align:right;">${escapeHtml(submission.utrNumber)}</td></tr>
         </table>
       </div>
-      <p class="text">Please resubmit your payment details from your ${isB2C ? "account" : "dealer"} portal. If you believe this is an error, contact us at accounts@motoxplus.in</p>
+      <p class="text">Please resubmit your payment details from your ${isB2C ? "account" : "dealer"} portal. If you believe this is an error, contact us at info@motoxplus.com</p>
       <a href="${process.env.NEXTAUTH_URL || "https://motoxplus.com"}${portalOrdersPath}" class="btn" style="text-decoration:none;display:inline-block;margin-top:16px;">Go to Order</a>
     `),
   }).catch(() => {});

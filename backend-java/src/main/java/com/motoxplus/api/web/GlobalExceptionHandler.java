@@ -26,6 +26,21 @@ public class GlobalExceptionHandler {
         return res.body(body);
     }
 
+    @ExceptionHandler(FieldErrorsException.class)
+    public ResponseEntity<Map<String, Object>> handleFieldErrors(FieldErrorsException e) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", e.getMessage());
+        body.put("code", e.code());
+        body.put("fieldErrors", e.fieldErrors());
+        return ResponseEntity.status(e.status()).body(body);
+    }
+
+    /** Multipart body over spring.servlet.multipart limits. */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(Map.of("error", "File is too large", "code", "PAYLOAD_TOO_LARGE"));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleBadJson(HttpMessageNotReadableException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid JSON body"));
