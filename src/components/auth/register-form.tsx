@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AuthAlert, AuthHeading, PasswordField, SelectField, TextAction, TextField } from "./auth-ui";
 import { evaluatePassword, PASSWORD_MAX_BYTES } from "@/lib/auth/password-policy";
 import { normalizeIndianMobile } from "@/lib/phone";
+import { isWellFormedGstin } from "@/lib/gst/gstin";
 
 const INDIAN_STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Delhi","Goa","Gujarat",
@@ -15,7 +16,6 @@ const INDIAN_STATES = [
   "Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal",
 ];
 
-const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -84,7 +84,10 @@ export function RegisterForm() {
     const e: Errors = {};
     if (!b.companyName.trim()) e.companyName = "Enter your company or shop name";
     if (!b.ownerName.trim()) e.ownerName = "Enter the proprietor or director's name";
-    if (b.gstNumber && !GST_REGEX.test(b.gstNumber)) e.gstNumber = "Enter a valid 15-character GSTIN";
+    // Dealer = B2B account: GSTIN required (the server also checks it live
+    // against the GST registry). Retail buyers sign up as a Customer instead.
+    if (!b.gstNumber) e.gstNumber = "GSTIN is required for a dealer account";
+    else if (!isWellFormedGstin(b.gstNumber)) e.gstNumber = "Enter a valid 15-character GSTIN";
     if (b.panNumber && !PAN_REGEX.test(b.panNumber)) e.panNumber = "Enter a valid PAN, e.g. ABCDE1234F";
     if (b.aadhaarNumber && b.aadhaarNumber.length !== 12) e.aadhaarNumber = "Aadhaar is 12 digits";
     if (!b.address.trim()) e.address = "Enter your shop or office address";

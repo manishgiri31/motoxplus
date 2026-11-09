@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { checkDealerGstin } from "@/lib/gst/dealer-gstin";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -25,12 +26,19 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     return NextResponse.json({ error: "GST number, address, pincode and password are required" }, { status: 400 });
   }
 
-  const hashedPassword = await bcrypt.hash(password, 12);
-
   const existingUser = await prisma.user.findUnique({ where: { email: lead.email } });
   if (existingUser) {
     return NextResponse.json({ error: "A user with this email already exists" }, { status: 409 });
   }
+
+  // Same B2B rule as self-registration: the GSTIN must be well-formed and not
+  // unregistered/inactive on the GST registry; unreachable registry = PENDING.
+  const gst = await checkDealerGstin(typeof gstNumber === "string" ? gstNumber : "");
+  if (!gst.ok) return NextResponse.json({ error: gst.error }, { status: gst.status });
+  const existingGST = await prisma.dealer.findUnique({ where: { gstNumber: gst.gstin } });
+  if (existingGST) return NextResponse.json({ error: "GST number already registered" }, { status: 409 });
+
+  const hashedPassword = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.create({
     data: {
@@ -38,11 +46,12 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       email: lead.email,
       password: hashedPassword,
       role: "DEALER",
+      customerType: "B2B",
       dealer: {
         create: {
           companyName: lead.companyName,
           ownerName: lead.ownerName,
-          gstNumber,
+          ...gst.dealerFields,
           phone: lead.phone,
           state: lead.state,
           city: lead.city,

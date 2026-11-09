@@ -33,12 +33,27 @@ interface InvoiceOrderInput {
  * dealerId/customerId are carried straight from the Order — exactly one is
  * set (B2C-EXPANSION-PLAN.md Phase 2's owner-exactly-one CHECK), never
  * re-derived from channel here.
+ *
+ * buyerGstin is frozen here, at issue time: the dealer's GSTIN only if it is
+ * verified (gstVerified — confirmed live against the GST registry or by
+ * staff), never one that merely looks well-formed. B2C invoices (customerId)
+ * carry none and don't need one. GST rates/amounts are untouched by this —
+ * they come from each product's HSN/gstRate on the order lines, the same for
+ * both customer types.
  */
 export async function createInvoice(
   tx: Prisma.TransactionClient,
   params: { order: InvoiceOrderInput; channel: OrderChannel }
 ): Promise<{ invoiceNumber: string }> {
   const invoiceNumber = generateInvoiceNumber();
+  let buyerGstin: string | null = null;
+  if (params.order.dealerId) {
+    const dealer = await tx.dealer.findUnique({
+      where: { id: params.order.dealerId },
+      select: { gstNumber: true, gstVerified: true },
+    });
+    buyerGstin = dealer?.gstVerified && dealer.gstNumber ? dealer.gstNumber : null;
+  }
   await tx.invoice.create({
     data: {
       invoiceNumber,
@@ -52,6 +67,7 @@ export async function createInvoice(
       sgstAmount: params.order.sgstAmount,
       igstAmount: params.order.igstAmount,
       placeOfSupply: params.order.placeOfSupply,
+      buyerGstin,
       channel: params.channel,
     },
   });

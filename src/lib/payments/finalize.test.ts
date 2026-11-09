@@ -30,6 +30,8 @@ const txMock = {
   payment: { updateMany: vi.fn() },
   order: { updateMany: vi.fn() },
   invoice: { create: vi.fn() },
+  // createInvoice reads the dealer's verified GSTIN to freeze it on the invoice.
+  dealer: { findUnique: vi.fn().mockResolvedValue({ gstNumber: "27AAPFU0939F1ZV", gstVerified: true }) },
 };
 const prismaMock = {
   order: { findUnique: vi.fn() },
@@ -116,6 +118,8 @@ describe("finalizeCapturedPayment — F-05 (Payment→PAID inside the transactio
         sgstAmount: 50,
         igstAmount: 0,
         placeOfSupply: "Delhi",
+        // The dealer's verified GSTIN, frozen onto the invoice at issue time.
+        buyerGstin: "27AAPFU0939F1ZV",
         channel: "B2B",
       },
     });

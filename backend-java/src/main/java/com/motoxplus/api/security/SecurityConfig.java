@@ -39,6 +39,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         // Vendor self-registration happens before there is an account (404 while marketplace is disabled).
                         .requestMatchers(HttpMethod.POST, "/api/v1/vendors/register").permitAll()
+                        // Server-to-server GSTIN check for the Node dealer registration route; the controller itself
+                        // requires INTERNAL_API_TOKEN (and Nginx never routes /api/internal/ here from outside).
+                        .requestMatchers(HttpMethod.POST, "/api/internal/gstin/verify").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> writeJson(res, 401, "Unauthorized"))

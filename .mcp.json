@@ -7,7 +7,7 @@
       ],
       "env": {
         "D1_CLIENT_ID": "ucp-service-cli",
-        "D1_CLIENT_SECRET": "EHORR7HAYY0MYZ7AQ9L3JFWX7NAYU8BI",
+        "D1_CLIENT_SECRET": "97GPXOUF6OWHNEZ2L2DEVE92B6R5T31M",
         "D1_AUTH_URL": "https://ucp-auth.delhivery.com/holyknight",
         "D1_REALM": "ucp-8AS2ARN00LMI",
         "D1_CLIENT_CMS": "cms::client::501c380d-79dd-11f1-8d4f-065def3b1707",

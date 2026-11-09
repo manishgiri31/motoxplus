@@ -10,8 +10,9 @@ import { validateNewPassword } from "@/lib/auth/password-policy";
 import { getClientIP } from "@/lib/auth/middleware";
 import { normalizeIndianMobile } from "@/lib/phone";
 import { Prisma } from "@prisma/client";
+import { isWellFormedGstin } from "@/lib/gst/gstin";
+import { checkDealerGstin, GSTIN_REQUIRED_MESSAGE } from "@/lib/gst/dealer-gstin";
 
-const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 const AADHAAR_REGEX = /^[0-9]{12}$/;
 const PINCODE_REGEX = /^[1-9][0-9]{5}$/;
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   const email = str(body.email, 254).toLowerCase();
   const password = typeof body.password === "string" ? body.password : "";
   const companyName = str(body.companyName, 150);
-  const gstNumber = str(body.gstNumber, 15).toUpperCase();
+  const gstNumber = str(body.gstNumber, 20).replace(/\s/g, "").toUpperCase();
   const panNumber = str(body.panNumber, 10).toUpperCase();
   const aadhaarNumber = str(body.aadhaarNumber, 12);
   const ownerName = str(body.ownerName, 100);
@@ -57,8 +58,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
   }
 
-  if (gstNumber && !GST_REGEX.test(gstNumber)) {
+  // This route registers dealers, i.e. B2B accounts: a GSTIN is mandatory
+  // (retail buyers without one use the Customer sign-up,
+  // /api/auth/customer/register, and become B2C).
+  if (!gstNumber) {
+    return NextResponse.json({ error: GSTIN_REQUIRED_MESSAGE }, { status: 400 });
+  }
+  if (!isWellFormedGstin(gstNumber)) {
     return NextResponse.json({ error: "Invalid GST number" }, { status: 400 });
+  }
+  if (!companyName || !ownerName || !phone || !state || !city) {
+    return NextResponse.json(
+      { error: "Company name, owner name, mobile number, state and city are required for a dealer account" },
+      { status: 400 }
+    );
   }
   if (panNumber && !PAN_REGEX.test(panNumber)) {
     return NextResponse.json({ error: "Invalid PAN number" }, { status: 400 });
@@ -91,15 +104,20 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "Email already registered" }, { status: 409 });
 
-  if (gstNumber) {
-    const existingGST = await prisma.dealer.findUnique({ where: { gstNumber } });
-    if (existingGST) return NextResponse.json({ error: "GST number already registered" }, { status: 409 });
-  }
+  const existingGST = await prisma.dealer.findUnique({ where: { gstNumber } });
+  if (existingGST) return NextResponse.json({ error: "GST number already registered" }, { status: 409 });
 
   if (normalizedMobile) {
     const existingMobile = await prisma.user.findUnique({ where: { mobileNumber: normalizedMobile } });
     if (existingMobile) return NextResponse.json({ error: "Mobile number already registered" }, { status: 409 });
   }
+
+  // Live GST-registry check (after the cheap checks above, so a duplicate
+  // email never costs a registry lookup). A well-formed GSTIN is not trusted
+  // on its own: rejected if unregistered/inactive, saved unverified (PENDING)
+  // if the registry can't be reached right now.
+  const gst = await checkDealerGstin(gstNumber);
+  if (!gst.ok) return NextResponse.json({ error: gst.error }, { status: gst.status });
 
   const hashed = await bcrypt.hash(password, 12);
 
@@ -111,27 +129,24 @@ export async function POST(req: NextRequest) {
         email,
         password: hashed,
         role: "DEALER",
+        customerType: "B2B",
         mobileNumber: normalizedMobile,
-        ...(companyName && ownerName && phone && state && city
-          ? {
-              dealer: {
-                create: {
-                  companyName,
-                  gstNumber: gstNumber || null,
-                  panNumber: panNumber || null,
-                  aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : null,
-                  ownerName,
-                  phone: normalizedMobile || phone,
-                  state,
-                  city,
-                  address: address || null,
-                  pincode: pincode || null,
-                  // No admin approval step — a verified dealer is active immediately.
-                  status: "ACTIVE",
-                },
-              },
-            }
-          : {}),
+        dealer: {
+          create: {
+            companyName,
+            ...gst.dealerFields,
+            panNumber: panNumber || null,
+            aadhaarNumber: aadhaarNumber ? encrypt(aadhaarNumber) : null,
+            ownerName,
+            phone: normalizedMobile || phone,
+            state,
+            city,
+            address: address || null,
+            pincode: pincode || null,
+            // No admin approval step — a verified dealer is active immediately.
+            status: "ACTIVE",
+          },
+        },
       },
     });
   } catch (err) {

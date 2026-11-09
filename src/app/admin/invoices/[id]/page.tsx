@@ -93,7 +93,7 @@ export default async function AdminInvoiceDetailPage(props: { params: Promise<{ 
                 <p className="text-[var(--text-muted)] text-xs mt-0.5">
                   {[dealer.city, dealer.state, dealer.pincode].filter(Boolean).join(", ")}
                 </p>
-                <p className="text-[var(--text-muted)] text-xs mt-1">GST: {dealer.gstNumber}</p>
+                {invoice.buyerGstin && <p className="text-[var(--text-muted)] text-xs mt-1">GST: {invoice.buyerGstin}</p>}
                 <p className="text-[var(--text-muted)] text-xs mt-0.5">Ph: {dealer.phone}</p>
               </>
             ) : (

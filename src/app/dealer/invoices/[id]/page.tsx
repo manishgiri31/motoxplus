@@ -32,7 +32,8 @@ export default async function InvoiceDetailPage(props: { params: Promise<{ id: s
     city: invoice.dealer!.city,
     state: invoice.dealer!.state,
     pincode: invoice.dealer!.pincode ?? "",
-    gstNumber: invoice.dealer!.gstNumber,
+    // The GSTIN frozen on the invoice when it was issued (verified only).
+    gstNumber: invoice.buyerGstin,
     phone: invoice.dealer!.phone,
   };
 

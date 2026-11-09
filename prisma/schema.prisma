@@ -39,6 +39,13 @@ model User {
   userSessions        UserSession[]
   vendor              Vendor?
   customer            Customer?
+  // B2B = dealer (GSTIN-registered trade account), B2C = retail customer.
+  // NULL for non-buying accounts (admin/staff/vendor). Set by the DB trigger
+  // "User_customerType_guard" (Flyway V5) from role when not given, and that
+  // trigger refuses B2B -> B2C unless an approved account update opts in.
+  customerType        CustomerType?
+
+  @@index([customerType])
 }
 
 /**
@@ -53,6 +60,11 @@ model Customer {
   userId             String              @unique
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  // Latest delivery address used at checkout (name/mobile live on User).
+  deliveryAddress    String?
+  deliveryCity       String?
+  deliveryState      String?
+  deliveryPincode    String?
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   cart               Cart?
   orders             Order[]
@@ -142,40 +154,50 @@ model VerificationToken {
 }
 
 model Dealer {
-  id                 String              @id @default(cuid())
-  userId             String              @unique
-  companyName        String
-  gstNumber          String?             @unique
-  ownerName          String
-  phone              String
-  state              String
-  city               String
-  address            String?
-  pincode            String?
-  status             DealerStatus        @default(ACTIVE)
-  creditLimit        Float               @default(0)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  aadhaarNumber      String?
-  companyAddress     String?
-  gstVerified        Boolean             @default(false)
-  gstVerifiedAt      DateTime?
-  panNumber          String?
-  shopAddress        String?
+  id                    String                   @id @default(cuid())
+  userId                String                   @unique
+  companyName           String
+  gstNumber             String?                  @unique
+  ownerName             String
+  phone                 String
+  state                 String
+  city                  String
+  address               String?
+  pincode               String?
+  status                DealerStatus             @default(ACTIVE)
+  creditLimit           Float                    @default(0)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  aadhaarNumber         String?
+  companyAddress        String?
+  gstVerified           Boolean                  @default(false)
+  gstVerifiedAt         DateTime?
+  // Live GSTIN verification (backend-java gst/*, Flyway V5). gstVerified
+  // above stays the single "may print this GSTIN on a tax invoice" flag.
+  gstVerificationStatus GstinVerificationStatus?
+  gstVerificationSource String? // "GST_API" | "ADMIN"
+  gstLegalName          String?
+  gstTradeName          String?
+  gstRegistrationStatus String? // registry status text, verbatim
+  gstPrincipalAddress   String?
+  gstLastCheckedAt      DateTime?
+  gstCheckAttempts      Int                      @default(0)
+  panNumber             String?
+  shopAddress           String?
   // Cached running balance — always equal to the sum of this dealer's
   // DealerDuesEntry.amount rows (see that model). Kept denormalized on the
   // Dealer row for a fast read at checkout ("Previous Dues" line), same
   // pattern as Order's cached subtotal/gstAmount/grandTotal rather than
   // summing items on every read. Positive = dealer owes MotoXplus.
-  outstandingDues    Float               @default(0)
-  cart               Cart?
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deviceTokens       DeviceToken[]
-  documents          DealerDocument[]
-  duesEntries        DealerDuesEntry[]
-  invoices           Invoice[]
-  orders             Order[]
-  paymentSubmissions PaymentSubmission[]
+  outstandingDues       Float                    @default(0)
+  cart                  Cart?
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceTokens          DeviceToken[]
+  documents             DealerDocument[]
+  duesEntries           DealerDuesEntry[]
+  invoices              Invoice[]
+  orders                Order[]
+  paymentSubmissions    PaymentSubmission[]
 }
 
 /**
@@ -784,6 +806,9 @@ model Invoice {
   sgstAmount    Float        @default(0)
   igstAmount    Float        @default(0)
   placeOfSupply String?
+  // Buyer's verified GSTIN frozen at issue time (lib/invoicing/create-invoice.ts).
+  // NULL on B2C invoices and for dealers without a verified GSTIN.
+  buyerGstin    String?
   issuedAt      DateTime     @default(now())
   dueDate       DateTime?
   createdAt     DateTime     @default(now())
@@ -1547,6 +1572,18 @@ model VehicleDownload {
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   @@index([vehicleId, isActive, sortOrder])
+}
+
+enum CustomerType {
+  B2B
+  B2C
+}
+
+enum GstinVerificationStatus {
+  PENDING
+  VERIFIED
+  INVALID
+  INACTIVE
 }
 
 enum UserRole {

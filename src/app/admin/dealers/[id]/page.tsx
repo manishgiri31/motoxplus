@@ -50,6 +50,41 @@ function InfoRow({
   );
 }
 
+function customerTypeLabel(type: "B2B" | "B2C" | null): string {
+  if (type === "B2B") return "B2B · Dealer";
+  if (type === "B2C") return "B2C · Retail customer";
+  return "Not set";
+}
+
+// What the GST registry check (backend-java gst/*) or staff concluded about this GSTIN.
+function gstVerificationLabel(dealer: {
+  gstVerified: boolean;
+  gstVerificationStatus: "PENDING" | "VERIFIED" | "INVALID" | "INACTIVE" | null;
+  gstVerificationSource: string | null;
+  gstRegistrationStatus: string | null;
+  gstLastCheckedAt: Date | null;
+  gstCheckAttempts: number;
+}): string {
+  const checked = dealer.gstLastCheckedAt ? ` · checked ${formatDate(dealer.gstLastCheckedAt)}` : "";
+  if (dealer.gstVerified) {
+    return dealer.gstVerificationSource === "ADMIN"
+      ? "Verified by staff"
+      : `Verified on GST portal${dealer.gstRegistrationStatus ? ` (${dealer.gstRegistrationStatus})` : ""}${checked}`;
+  }
+  switch (dealer.gstVerificationStatus) {
+    case "INVALID":
+      return `Not found on GST portal${checked}`;
+    case "INACTIVE":
+      return `${dealer.gstRegistrationStatus ?? "Inactive"} on GST portal${checked}`;
+    case "PENDING":
+      return dealer.gstCheckAttempts > 0
+        ? `Pending — GST portal not reachable yet (${dealer.gstCheckAttempts} attempts)`
+        : "Pending — awaiting GST portal check";
+    default:
+      return "Not verified";
+  }
+}
+
 export default async function DealerDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const dealer = await prisma.dealer.findUnique({
@@ -111,6 +146,15 @@ export default async function DealerDetailPage(props: { params: Promise<{ id: st
                 label="Address"
                 value={[dealer.address || dealer.shopAddress || dealer.companyAddress, dealer.city, dealer.state, dealer.pincode].filter(Boolean).join(", ")}
               />
+              <InfoRow icon={Building2} label="Customer Type" value={customerTypeLabel(dealer.user.customerType)} />
+              {dealer.gstNumber && (
+                <InfoRow icon={FileText} label="GST Verification" value={gstVerificationLabel(dealer)} />
+              )}
+              {dealer.gstLegalName && <InfoRow icon={Building2} label="Legal Name (GST)" value={dealer.gstLegalName} />}
+              {dealer.gstTradeName && <InfoRow icon={Building2} label="Trade Name (GST)" value={dealer.gstTradeName} />}
+              {dealer.gstPrincipalAddress && (
+                <InfoRow icon={MapPin} label="GST Billing Address" value={dealer.gstPrincipalAddress} />
+              )}
             </div>
           </div>
 

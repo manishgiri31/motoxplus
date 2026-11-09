@@ -505,5 +505,20 @@ async function createB2COrder(
 
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
+  // Keep the B2C customer's latest delivery address on their account (name and
+  // mobile already live on User). Best-effort: the order itself is the record
+  // of where this shipment goes, so a failure here must not fail checkout.
+  await prisma.customer
+    .update({
+      where: { id: customerId },
+      data: {
+        deliveryAddress: deliveryAddress.trim(),
+        deliveryCity: deliveryCity.trim(),
+        deliveryState: deliveryState.trim(),
+        deliveryPincode,
+      },
+    })
+    .catch((err) => console.error("[Orders] Could not save customer delivery address:", err));
+
   return NextResponse.json({ order: isCod ? await prisma.order.findUnique({ where: { id: order.id } }) : order });
 }

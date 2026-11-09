@@ -8,6 +8,7 @@ import { encrypt } from "@/lib/crypto/encryption";
 import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
 import { normalizeIndianMobile } from "@/lib/phone";
+import { checkDealerGstin } from "@/lib/gst/dealer-gstin";
 
 const registerSchema = z.object({
   companyName: z.string().min(2),
@@ -17,7 +18,8 @@ const registerSchema = z.object({
   password: z.string().min(8),
   state: z.string().min(2),
   city: z.string().min(2),
-  gstNumber: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/).optional().or(z.literal("")),
+  // Dealer = B2B: GSTIN mandatory; checksum + live registry check below.
+  gstNumber: z.string().trim().max(20).optional().or(z.literal("")),
   panNumber: z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/).optional().or(z.literal("")),
   aadhaarNumber: z.string().regex(/^[0-9]{12}$/).optional().or(z.literal("")),
   companyAddress: z.string().optional().or(z.literal("")),
@@ -51,12 +53,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mobile number already registered" }, { status: 400 });
     }
 
-    if (data.gstNumber) {
-      const existingGST = await prisma.dealer.findUnique({ where: { gstNumber: data.gstNumber } });
+    const gstNumber = (data.gstNumber ?? "").replace(/\s/g, "").toUpperCase();
+    if (gstNumber) {
+      const existingGST = await prisma.dealer.findUnique({ where: { gstNumber } });
       if (existingGST) {
         return NextResponse.json({ error: "GST number already registered" }, { status: 400 });
       }
     }
+
+    const gst = await checkDealerGstin(gstNumber);
+    if (!gst.ok) return NextResponse.json({ error: gst.error }, { status: gst.status });
 
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
@@ -66,11 +72,12 @@ export async function POST(req: NextRequest) {
         email: data.email.toLowerCase(),
         password: hashedPassword,
         role: "DEALER",
+        customerType: "B2B",
         mobileNumber: normalizedMobile,
         dealer: {
           create: {
             companyName: data.companyName,
-            gstNumber: data.gstNumber || null,
+            ...gst.dealerFields,
             panNumber: data.panNumber || null,
             aadhaarNumber: data.aadhaarNumber ? encrypt(data.aadhaarNumber) : null,
             ownerName: data.ownerName,

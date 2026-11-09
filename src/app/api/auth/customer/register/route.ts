@@ -69,6 +69,8 @@ export async function POST(req: NextRequest) {
         email: normalizedEmail ?? placeholderEmailForMobile(mobile),
         mobileNumber: mobile,
         role: "CUSTOMER",
+        // Retail sign-up = B2C: no GSTIN asked for or stored.
+        customerType: "B2C",
         isActive: true,
         customer: { create: {} },
       },
