@@ -33,6 +33,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/health/**", "/actuator/health/**").permitAll()
                         // Public read-only catalog endpoints (the storefront browses without logging in).
                         .requestMatchers(HttpMethod.GET, "/api/categories", "/api/products/search", "/api/search", "/api/part-categories").permitAll()
+                        // Photos of live marketplace listings (the controller serves only live listings of approved vendors).
+                        .requestMatchers(HttpMethod.GET, "/api/v1/listing-images/*").permitAll()
                         // Logout must always succeed (it just clears cookies); refresh authenticates by refresh token.
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         // Vendor self-registration happens before there is an account (404 while marketplace is disabled).

@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
-  { icon: Package, label: "My Products", href: "/vendor/products" },
+  { icon: Package, label: "Listings", href: "/vendor/listings" },
   { icon: ClipboardList, label: "Purchase Orders", href: "/vendor/purchase-orders" },
   { icon: FileText, label: "My Invoices", href: "/vendor/invoices" },
   { icon: CreditCard, label: "Payments", href: "/vendor/payments" },

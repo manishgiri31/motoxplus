@@ -11,6 +11,7 @@ import com.motoxplus.api.vendor.ApplicationState;
 import com.motoxplus.api.vendor.ApplicationView;
 import com.motoxplus.api.vendor.VendorRepository;
 import com.motoxplus.api.vendor.VendorSnapshot;
+import com.motoxplus.api.vendor.listings.ProductProjection;
 import com.motoxplus.api.web.ApiException;
 import com.motoxplus.api.web.FieldErrorsException;
 import java.time.OffsetDateTime;
@@ -52,10 +53,12 @@ public class VendorReviewService {
     private final EmailService email;
     private final JsonMapper json;
     private final String appUrl;
+    private final ProductProjection listings;
 
     public VendorReviewService(JdbcTemplate jdbc, TransactionTemplate tx, VendorRepository vendors, AuditLogService audit,
                                StorageService storage, FieldCrypto crypto, EmailService email, JsonMapper json,
-                               @Value("${app.public-url:https://motoxplus.com}") String appUrl) {
+                               @Value("${app.public-url:https://motoxplus.com}") String appUrl, ProductProjection listings) {
+        this.listings = listings;
         this.jdbc = jdbc;
         this.tx = tx;
         this.vendors = vendors;
@@ -253,6 +256,8 @@ public class VendorReviewService {
                     WHERE id = ? AND status = ?::"VendorStatus"
                     """, to, v.vendorId(), from);
             if (n != 1) throw conflict("This vendor changed while you were reviewing. Reload and try again.");
+            // Live listings are on the storefront only while the vendor is APPROVED (suspend/block hides, reactivate restores).
+            int listingsChanged = listings.syncVendor(v.vendorId());
             if (decision != null) {
                 jdbc.update("""
                         UPDATE marketplace.vendor_application SET decision = ?, decision_reason = ?, decided_at = now(), decided_by = ?,
@@ -264,6 +269,7 @@ public class VendorReviewService {
             details.put("from", from);
             details.put("to", to);
             if (!reason.isEmpty()) details.put("reason", reason);
+            if (listingsChanged > 0) details.put("listingsVisibilityChanged", listingsChanged);
             audit.record(admin, auditAction, "vendor", v.vendorId(), v.vendorId(), ip, details);
         });
     }

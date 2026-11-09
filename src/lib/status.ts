@@ -26,6 +26,7 @@ export type StatusDomain =
   | "urgency"
   | "upi"
   | "compatibility"
+  | "listing"
   | "user";
 
 /** Icon is a NAME, not a component — keeps lucide out of src/lib and off the
@@ -175,6 +176,13 @@ const MAP: Record<StatusDomain, Record<string, StatusMeta>> = {
     LIKELY: { tone: "info", label: "Likely", icon: "check" },
     UNVERIFIED: { tone: "warn", label: "Unverified", icon: "alert" },
     INCOMPATIBLE: { tone: "danger", label: "Incompatible", icon: "ban" },
+  },
+
+  // Vendor listing status (marketplace.vendor_listing.status)
+  listing: {
+    DRAFT: { tone: "neutral", label: "Draft", icon: "circle" },
+    LIVE: { tone: "ok", label: "Live", icon: "dot" },
+    UNPUBLISHED: { tone: "warn", label: "Unpublished", icon: "pause" },
   },
 
   // UserRole

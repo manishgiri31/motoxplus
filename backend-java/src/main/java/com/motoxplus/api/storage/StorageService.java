@@ -117,6 +117,22 @@ public class StorageService {
                 .build()).url().toString();
     }
 
+    public record Loaded(byte[] bytes, String contentType) {}
+
+    /**
+     * Reads a stored object so the API can serve it itself (listing photos: same origin, so the CSP and the private
+     * bucket both stay as they are). Returns null when the object does not exist.
+     */
+    public Loaded read(String key, String storedUrl) {
+        if (s3 == null) throw new StorageUnavailableException("Storage is not configured");
+        try {
+            var res = s3.getObjectAsBytes(GetObjectRequest.builder().bucket(bucketFor(storedUrl)).key(key).build());
+            return new Loaded(res.asByteArray(), res.response().contentType());
+        } catch (NoSuchKeyException e) {
+            return null;
+        }
+    }
+
     public void delete(String key, String storedUrl) {
         if (s3 == null || key == null || key.isEmpty()) return;
         try {

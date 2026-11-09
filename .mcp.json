@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "delhivery-one": {
+      "command": "uvx",
+      "args": [
+        "d1-mcp-mint@latest"
+      ],
+      "env": {
+        "D1_CLIENT_ID": "ucp-service-cli",
+        "D1_CLIENT_SECRET": "EHORR7HAYY0MYZ7AQ9L3JFWX7NAYU8BI",
+        "D1_AUTH_URL": "https://ucp-auth.delhivery.com/holyknight",
+        "D1_REALM": "ucp-8AS2ARN00LMI",
+        "D1_CLIENT_CMS": "cms::client::501c380d-79dd-11f1-8d4f-065def3b1707",
+        "D1_MCP_URL": "https://mcp-client.delhivery.com/mcp"
+      }
+    }
+  }
+}

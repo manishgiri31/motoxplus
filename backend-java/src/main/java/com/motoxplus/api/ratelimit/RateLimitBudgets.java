@@ -25,6 +25,12 @@ public enum RateLimitBudgets {
     REGISTER(new Budget(5, 60 * 60, OPEN), new Budget(5, 60, OPEN), null, null),
     /** KYC document uploads: generous for retries, bounded so storage can't be flooded. */
     DOCUMENT_UPLOAD(new Budget(40, 60 * 60, OPEN), new Budget(60, 60 * 60, OPEN), null, null),
+    /** Vendor listing create/edit/publish/unpublish: room for a day of catalogue work, bounded against scripts. */
+    LISTING_WRITE(new Budget(600, 60 * 60, OPEN), new Budget(600, 60 * 60, OPEN), null, null),
+    /** Listing photos: up to 8 per listing, several listings an hour. */
+    LISTING_IMAGE_UPLOAD(new Budget(200, 60 * 60, OPEN), new Budget(300, 60 * 60, OPEN), null, null),
+    /** Public listing photos (storefront grids load many at once, often behind one shared IP). */
+    LISTING_IMAGE_PUBLIC(null, new Budget(600, 60, OPEN), null, null),
     ORDER_CREATE(new Budget(20, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),
     ORDER_CANCEL(new Budget(15, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),
     SCHEME_APPLY(new Budget(20, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),
