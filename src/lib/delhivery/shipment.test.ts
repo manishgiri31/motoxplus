@@ -230,3 +230,41 @@ describe("createDelhiveryShipment — channel handling", () => {
     expect(delhiveryPost).not.toHaveBeenCalled();
   });
 });
+
+describe("createDelhiveryShipment — vendor warehouse (order.pickupLocationName)", () => {
+  const vendorWarehouse = {
+    delhiveryName: "VND-VND12345678-110020",
+    status: "ACTIVE",
+    address: "Plot 4, Okhla",
+    city: "New Delhi",
+    state: "Delhi",
+    pin: "110020",
+    phone: "9876543210",
+    returnAddress: "Shed 9, Narela",
+    returnCity: "Delhi",
+    returnState: "Delhi",
+    returnPin: "110040",
+    vendor: { companyName: "Kumar Auto Components" },
+  };
+
+  it("collects from the vendor's warehouse and returns RTO there", async () => {
+    const tx = { ...txMock, delhiveryWarehouse: { findUnique: vi.fn().mockResolvedValue(vendorWarehouse) } };
+    prismaMock.$transaction.mockImplementationOnce((fn: (t: typeof tx) => unknown) => fn(tx));
+    txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, pickupLocationName: "VND-VND12345678-110020" });
+
+    await createDelhiveryShipment("order_1");
+
+    const call = delhiveryPost.mock.calls[0];
+    expect(requestOf(call).pickup_location).toMatchObject({ name: "VND-VND12345678-110020", pin_code: "110020", add: "Plot 4, Okhla" });
+    expect(payloadOf(call)).toMatchObject({ return_name: "Kumar Auto Components", return_add: "Shed 9, Narela", return_pin: "110040" });
+  });
+
+  it("refuses to manifest when the order's warehouse is no longer ACTIVE", async () => {
+    const tx = { ...txMock, delhiveryWarehouse: { findUnique: vi.fn().mockResolvedValue({ ...vendorWarehouse, status: "FAILED" }) } };
+    prismaMock.$transaction.mockImplementationOnce((fn: (t: typeof tx) => unknown) => fn(tx));
+    txMock.order.findUnique.mockResolvedValueOnce({ ...baseOrder, pickupLocationName: "VND-VND12345678-110020" });
+
+    await expect(createDelhiveryShipment("order_1")).rejects.toThrow(/not ACTIVE/);
+    expect(delhiveryPost).not.toHaveBeenCalled();
+  });
+});

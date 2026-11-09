@@ -98,11 +98,20 @@ describe("createShipmentForOrder — Order.channel picks the module", () => {
 });
 
 describe("requestPickup", () => {
-  it("B2C provider uses the existing B2C pickup", async () => {
+  it("B2C provider uses the existing B2C pickup for an order without a vendor warehouse", async () => {
+    orderFindUnique.mockResolvedValue({ channel: "B2C", pickupLocationName: null });
     const r = await getProvider("B2C").requestPickup("o1");
-    expect(requestDelhiveryPickupMock).toHaveBeenCalledWith("B2C", expect.any(Date));
+    expect(requestDelhiveryPickupMock).toHaveBeenCalledWith("B2C", expect.any(Date), "WH-B2C");
     expect(requestB2bPickupMock).not.toHaveBeenCalled();
     expect(r).toMatchObject({ channel: "B2C", warehouse: "WH-B2C", pickupId: "9", packageCount: 2 });
+  });
+
+  it("B2C provider books the order's vendor warehouse, one open pickup per warehouse per day", async () => {
+    orderFindUnique.mockResolvedValue({ channel: "B2C", pickupLocationName: "VND-VND12345678-110020" });
+    const r = await getProvider("B2C").requestPickup("o1");
+    expect(requestDelhiveryPickupMock).toHaveBeenCalledWith("B2C", expect.any(Date), "VND-VND12345678-110020");
+    // The once-per-day claim is keyed by this warehouse, not the MotoXPlus one.
+    expect(r).toMatchObject({ channel: "B2C", warehouse: "VND-VND12345678-110020" });
   });
 
   it("B2B provider uses the B2B pickup with the slot split into pickup_date / start_time", async () => {

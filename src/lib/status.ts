@@ -27,6 +27,7 @@ export type StatusDomain =
   | "upi"
   | "compatibility"
   | "listing"
+  | "warehouse"
   | "user";
 
 /** Icon is a NAME, not a component — keeps lucide out of src/lib and off the
@@ -183,6 +184,13 @@ const MAP: Record<StatusDomain, Record<string, StatusMeta>> = {
     DRAFT: { tone: "neutral", label: "Draft", icon: "circle" },
     LIVE: { tone: "ok", label: "Live", icon: "dot" },
     UNPUBLISHED: { tone: "warn", label: "Unpublished", icon: "pause" },
+  },
+
+  // DelhiveryWarehouse.status (vendor pickup warehouse)
+  warehouse: {
+    PENDING: { tone: "progress", label: "Setting up", icon: "refresh", pulse: true },
+    ACTIVE: { tone: "ok", label: "Active", icon: "check", terminal: true },
+    FAILED: { tone: "danger", label: "Setup failed", icon: "alert" },
   },
 
   // UserRole

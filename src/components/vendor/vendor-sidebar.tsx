@@ -16,12 +16,14 @@ import {
   X,
   Truck,
   Package,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
   { icon: Package, label: "Listings", href: "/vendor/listings" },
+  { icon: Warehouse, label: "Pickup warehouse", href: "/vendor/warehouse" },
   { icon: ClipboardList, label: "Purchase Orders", href: "/vendor/purchase-orders" },
   { icon: FileText, label: "My Invoices", href: "/vendor/invoices" },
   { icon: CreditCard, label: "Payments", href: "/vendor/payments" },

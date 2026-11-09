@@ -115,6 +115,7 @@ export function ListingsIndex() {
     return (
       <div className="mx-auto max-w-[1120px]">
         <PageHeader title="Listings" rule={false} className="pb-0" />
+        <WarehouseNotice status={overview.warehouseStatus} />
         <FirstListing commissionBp={overview.commission.saleCommissionBp} />
       </div>
     );
@@ -135,6 +136,8 @@ export function ListingsIndex() {
         rule={false}
         className="pb-0"
       />
+
+      <WarehouseNotice status={overview.warehouseStatus} />
 
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:pb-0" role="tablist" aria-label="Filter by status">
@@ -338,6 +341,29 @@ function TableSkeleton() {
           <div className="h-4 flex-1 animate-pulse rounded bg-[var(--surface-2)]" />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Drafts can be written any time, but nothing goes live until Delhivery can collect from the vendor. */
+function WarehouseNotice({ status }: { status: ListingsOverview["warehouseStatus"] }) {
+  if (status === "ACTIVE") return null;
+  const text =
+    status === "PENDING"
+      ? "Your pickup warehouse is being set up with Delhivery. Listings can go live once it's active."
+      : status === "FAILED"
+        ? "Delhivery couldn't set up your pickup warehouse. Fix or retry it before publishing listings."
+        : "Add your pickup warehouse so Delhivery can collect your orders. Listings can't go live until then.";
+  return (
+    <div
+      data-tone={status === "FAILED" ? "danger" : "warn"}
+      role="status"
+      className="mb-6 flex flex-col gap-3 rounded-lg border border-[var(--tone-bd)] bg-[var(--tone-bg)] px-4 py-3 text-14 text-[var(--text-primary)] sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p>{text}</p>
+      <Link href="/vendor/warehouse" className="shrink-0 font-semibold text-[var(--tone-fg)] hover:underline">
+        {status ? "View warehouse" : "Add warehouse"}
+      </Link>
     </div>
   );
 }

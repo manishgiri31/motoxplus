@@ -89,6 +89,8 @@ export interface ListingsOverview {
   commission: { saleCommissionBp: number };
   gstRates: number[];
   limits: { maxImages: number; maxImageBytes: number; maxFitment: number };
+  /** The vendor's Delhivery pickup warehouse; null = not added yet. Nothing can be published until it is ACTIVE. */
+  warehouseStatus: "PENDING" | "ACTIVE" | "FAILED" | null;
 }
 
 export interface VehicleOption {

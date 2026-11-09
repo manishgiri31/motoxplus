@@ -7,6 +7,8 @@ import com.motoxplus.api.marketplace.iam.PermissionService;
 import com.motoxplus.api.security.AuthenticatedUser;
 import com.motoxplus.api.vendor.VendorContext;
 import com.motoxplus.api.vendor.VendorSnapshot;
+import com.motoxplus.api.vendor.warehouse.WarehouseRepository;
+import com.motoxplus.api.vendor.warehouse.WarehouseService;
 import com.motoxplus.api.web.ApiException;
 import com.motoxplus.api.web.FieldErrorsException;
 import java.util.ArrayList;
@@ -48,9 +50,10 @@ public class ListingService {
     private final CommissionRates commission;
     private final AuditLogService audit;
     private final TransactionTemplate tx;
+    private final WarehouseRepository warehouses;
 
     public ListingService(ListingRepository listings, ProductProjection projection, VendorContext vendors, PermissionService perms,
-                          CommissionRates commission, AuditLogService audit, TransactionTemplate tx) {
+                          CommissionRates commission, AuditLogService audit, TransactionTemplate tx, WarehouseRepository warehouses) {
         this.listings = listings;
         this.projection = projection;
         this.vendors = vendors;
@@ -58,6 +61,7 @@ public class ListingService {
         this.commission = commission;
         this.audit = audit;
         this.tx = tx;
+        this.warehouses = warehouses;
     }
 
     /** The approved vendor making this request, holding {@code permission}. */
@@ -74,6 +78,8 @@ public class ListingService {
         VendorSnapshot v = vendor(user, VIEW);
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("counts", listings.counts(v.vendorId()));
+        // Listings can be drafted at any time, but none can go live until the Delhivery pickup warehouse is ACTIVE.
+        m.put("warehouseStatus", warehouses.statusForVendor(v.vendorId()));
         m.put("categories", listings.listableCategories(v.vendorId()));
         m.put("commission", Map.of("saleCommissionBp", commission.current().saleCommissionBp()));
         m.put("gstRates", ListingRules.GST_RATES);
@@ -174,6 +180,9 @@ public class ListingService {
     /** Publish-on-valid: no review queue. Re-publishing an unpublished listing reuses its storefront product and URL. */
     public Map<String, Object> publish(AuthenticatedUser user, String listingId, String ip) {
         VendorSnapshot v = vendor(user, UPDATE);
+        // Nothing can be sold that Delhivery can't collect: no ACTIVE warehouse, no live listing.
+        String warehouse = warehouses.statusForVendor(v.vendorId());
+        if (!"ACTIVE".equals(warehouse)) throw WarehouseService.notActive(warehouse);
         tx.executeWithoutResult(s -> {
             Listing l = listings.lock(v.vendorId(), listingId).orElseThrow(ListingService::notFound);
             if (l.live()) return; // already live: nothing to do, nothing to audit

@@ -84,7 +84,7 @@ class MarketplaceFoundationIntegrationTest extends IntegrationTestBase {
                 "SELECT count(*) FROM public.flyway_schema_history WHERE version = '2' AND type = 'SQL' AND success", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForList("SELECT table_name FROM information_schema.tables WHERE table_schema = 'marketplace'", String.class))
                 .contains("permission", "role_permission", "audit_log", "idempotency_key", "outbox_event");
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM marketplace.permission", Integer.class)).isEqualTo(22);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM marketplace.permission", Integer.class)).isEqualTo(23); // 22 from V2 + vendor.warehouse.manage (V6)
     }
 
     @Test

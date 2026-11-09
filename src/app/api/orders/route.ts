@@ -13,6 +13,7 @@ import { computeGstSplit, UnrecognizedStateError } from "@/lib/tax/gst-split";
 import { getSellerState } from "@/lib/tax/seller-state";
 import { confirmCodOrder, isCodAvailable, COD_UNAVAILABLE_MESSAGE } from "@/lib/orders/cod";
 import { InsufficientStockError } from "@/lib/orders/stock";
+import { resolveCheckoutPickup } from "@/lib/delhivery/pickup-location";
 
 export async function GET(req: NextRequest) {
   // Accepts either the web NextAuth session or the mobile/plain-login JWT
@@ -162,6 +163,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Which Delhivery warehouse collects this order. A vendor's products need that vendor's ACTIVE warehouse;
+  // one order is one shipment, so items from different warehouses must be ordered separately.
+  const pickup = await resolveCheckoutPickup("B2B", cart.items);
+  if (!pickup.ok) {
+    return NextResponse.json(
+      { error: pickup.error, code: pickup.code, unavailableProductIds: pickup.productIds },
+      { status: 409 }
+    );
+  }
+
   // Pure COD (nothing paid upfront) was removed 2026-09-13 — every new B2B
   // order is either paid in full now or via a 20% advance now with the
   // remaining 80% collected as cash/COD by the courier at delivery (see
@@ -295,6 +306,7 @@ export async function POST(req: NextRequest) {
         orderNumber: generateOrderNumber(),
         dealerId: dealer.id,
         channel,
+        pickupLocationName: pickup.pickupLocationName,
         subtotal: pricing.subtotal,
         gstAmount: pricing.gstAmount,
         shippingCost,
@@ -433,6 +445,15 @@ async function createB2COrder(
     );
   }
 
+  // Same warehouse rule as B2B above: ACTIVE seller warehouse required, one warehouse per order.
+  const pickup = await resolveCheckoutPickup("B2C", cart.items);
+  if (!pickup.ok) {
+    return NextResponse.json(
+      { error: pickup.error, code: pickup.code, unavailableProductIds: pickup.productIds },
+      { status: 409 }
+    );
+  }
+
   const channel = "B2C" as const;
   const pricing = computeOrderPricing({ channel, items });
 
@@ -461,6 +482,7 @@ async function createB2COrder(
       orderNumber: generateOrderNumber(),
       customerId,
       channel,
+      pickupLocationName: pickup.pickupLocationName,
       subtotal: pricing.subtotal,
       gstAmount: pricing.gstAmount,
       shippingCost,

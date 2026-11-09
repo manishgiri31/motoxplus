@@ -474,6 +474,9 @@ model Order {
   // B2C expansion Phase 0 (B2C-EXPANSION-PLAN.md) — additive, defaults every
   // existing row to B2B. Nothing sets B2C yet; see lib/pricing, lib/shipping.
   channel                OrderChannel            @default(B2B)
+  /// Delhivery pickup location this order ships from (DelhiveryWarehouse.delhiveryName), fixed at checkout.
+  /// NULL on orders placed before Flyway V6: they ship from the configured MotoXPlus location.
+  pickupLocationName     String?
   amountPaid             Float                   @default(0)
   amountDue              Float
   status                 OrderStatus             @default(PENDING)
@@ -540,6 +543,7 @@ model Order {
   @@index([status, createdAt])
   @@index([paymentStatus])
   @@index([createdAt])
+  @@index([pickupLocationName])
 }
 
 model OrderCancellation {
@@ -859,6 +863,7 @@ model Vendor {
   payments        VendorPayment[]
   ratings         VendorRating[]
   partCategories  VendorPartCategory[]
+  delhiveryWarehouse DelhiveryWarehouse?
 }
 
 /// The automotive part categories a vendor manufactures or supplies. A top-level category
@@ -1140,6 +1145,51 @@ model Warehouse {
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// A Delhivery pickup warehouse (Flyway V6 — mirrored here by hand, Flyway owns the table). One per vendor, plus at
+/// most one MOTOXPLUS row (partial unique index in SQL). Written only by the Java API (vendor setup); Node reads it at
+/// checkout and when manifesting/booking pickups. Not the older, unused `Warehouse` model above.
+model DelhiveryWarehouse {
+  id               String             @id @default(cuid())
+  ownerType        WarehouseOwnerType
+  vendorId         String?            @unique
+  /// Permanent name on Delhivery: VND-<vendorCode>-<pin> for vendors. Reserved before Delhivery is called.
+  delhiveryName    String             @unique
+  address          String
+  pin              String
+  city             String
+  state            String
+  phone            String
+  email            String
+  returnAddress    String
+  returnPin        String
+  returnCity       String
+  returnState      String
+  gstin            String?
+  status           WarehouseStatus    @default(PENDING)
+  lastError        String?
+  /// REJECTED | NOT_SENT (Delhivery has nothing, details may change) | UNCERTAIN (may exist, retry only).
+  lastErrorCode    String?
+  attempts         Int                @default(0)
+  attemptStartedAt DateTime?
+  activatedAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @default(now())
+  vendor           Vendor?            @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+
+  @@index([status])
+}
+
+enum WarehouseOwnerType {
+  MOTOXPLUS
+  VENDOR
+}
+
+enum WarehouseStatus {
+  PENDING
+  ACTIVE
+  FAILED
 }
 
 // dealerId/customerId both nullable — see the Cart model's doc comment above

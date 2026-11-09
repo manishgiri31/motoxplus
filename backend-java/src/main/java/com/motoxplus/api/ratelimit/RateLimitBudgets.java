@@ -31,6 +31,8 @@ public enum RateLimitBudgets {
     LISTING_IMAGE_UPLOAD(new Budget(200, 60 * 60, OPEN), new Budget(300, 60 * 60, OPEN), null, null),
     /** Public listing photos (storefront grids load many at once, often behind one shared IP). */
     LISTING_IMAGE_PUBLIC(null, new Budget(600, 60, OPEN), null, null),
+    /** Vendor warehouse submit/retry: each one can call Delhivery (rate-limited on their side), so keep it tight. */
+    WAREHOUSE_WRITE(new Budget(10, 60 * 60, OPEN), new Budget(20, 60 * 60, OPEN), null, null),
     ORDER_CREATE(new Budget(20, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),
     ORDER_CANCEL(new Budget(15, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),
     SCHEME_APPLY(new Budget(20, 60 * 60, OPEN), new Budget(30, 60 * 60, OPEN), null, null),

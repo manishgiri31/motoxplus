@@ -72,24 +72,39 @@ interface DelhiveryPickupResponse {
 }
 
 /**
- * Requests a Delhivery pickup at the registered pickup location for the next
- * slot, using the given channel's token and registered pickup location (B2C
- * and B2B are separate Delhivery clients, so each gets its own request).
- * expected_package_count is the number of that channel's shipments still
- * waiting for pickup (MANIFESTED) — Delhivery keeps one request per
- * location/slot, so each new order folds into the same request instead of
- * leaving the count at 1.
+ * Requests a Delhivery pickup at one warehouse for the next slot. `warehouse`
+ * is the Delhivery pickup location name (a vendor's DelhiveryWarehouse, or the
+ * MOTOXPLUS one); omitted = the configured MotoXPlus location. Packages are
+ * counted per warehouse, because each warehouse is collected separately.
+ *
+ * Uses the given channel's token (B2C and B2B are separate Delhivery clients,
+ * so each gets its own request). expected_package_count is the number of that
+ * warehouse's shipments still waiting for pickup (MANIFESTED) — Delhivery keeps
+ * one request per location/slot, so each new order folds into the same request
+ * instead of leaving the count at 1.
  *
  * Throws on failure; callers (the channel provider / auto-pickup.ts) decide how to surface that.
  */
 export async function requestDelhiveryPickup(
   channel: DelhiveryChannel,
-  now: Date = new Date()
+  now: Date = new Date(),
+  warehouse?: string | null
 ): Promise<PickupResult> {
   const { pickup } = getDelhiveryConfig(channel);
   const slot = nextPickupSlot(now);
+  const location = warehouse || pickup.locationName;
+  const isConfiguredLocation = location === pickup.locationName;
 
-  const waiting = await prisma.shipment.count({ where: { status: "MANIFESTED", order: { channel } } });
+  // Only this warehouse's parcels: orders with no pickupLocationName (placed before vendor warehouses) ship from
+  // the configured location, so they count towards it.
+  const waiting = await prisma.shipment.count({
+    where: {
+      status: "MANIFESTED",
+      order: isConfiguredLocation
+        ? { channel, OR: [{ pickupLocationName: null }, { pickupLocationName: location }] }
+        : { channel, pickupLocationName: location },
+    },
+  });
   const packageCount = Math.max(1, waiting);
 
   try {
@@ -99,7 +114,7 @@ export async function requestDelhiveryPickup(
       body: JSON.stringify({
         pickup_time: slot.pickupTime,
         pickup_date: slot.pickupDate,
-        pickup_location: pickup.locationName,
+        pickup_location: location,
         expected_package_count: packageCount,
       }),
       // A pickup request is not a money/AWB-minting call, but a blind repeat

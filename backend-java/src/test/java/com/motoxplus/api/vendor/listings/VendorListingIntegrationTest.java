@@ -117,6 +117,13 @@ class VendorListingIntegrationTest extends IntegrationTestBase {
                 vid, uid, code, email, vendorStatus);
         // Approved for the whole brake group (so both brake subcategories), not the engine group.
         jdbc.update("INSERT INTO \"VendorPartCategory\" (\"vendorId\", \"categoryId\", \"createdAt\") VALUES (?, 'lt-brakes', now())", vid);
+        // Publishing needs an ACTIVE Delhivery pickup warehouse (V6); that flow has its own test (WarehouseIntegrationTest).
+        jdbc.update("""
+                INSERT INTO "DelhiveryWarehouse" (id, "ownerType", "vendorId", "delhiveryName", address, pin, city, state, phone, email,
+                    "returnAddress", "returnPin", "returnCity", "returnState", status, "activatedAt")
+                VALUES (?, 'VENDOR', ?, ?, 'Plot 4, Okhla Phase 2', '110020', 'New Delhi', 'Delhi', '9876543210', ?,
+                    'Plot 4, Okhla Phase 2', '110020', 'New Delhi', 'Delhi', 'ACTIVE', now())""",
+                "w-" + vid, vid, "VND-" + code + "-110020", email);
         return new Seller(uid, vid, code, bearerFor(uid, email, "VENDOR"));
     }
 

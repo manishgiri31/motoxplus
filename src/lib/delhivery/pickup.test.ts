@@ -105,9 +105,25 @@ describe("requestDelhiveryPickup", () => {
     expect(r.pickupId).toBe("987");
   });
 
-  it("scopes the waiting-package count to the channel", async () => {
+  it("scopes the waiting-package count to the channel and the configured location (incl. legacy orders)", async () => {
     await requestDelhiveryPickup("B2C", new Date("2026-11-01T04:00:00Z"));
-    expect(shipmentCount).toHaveBeenCalledWith({ where: { status: "MANIFESTED", order: { channel: "B2C" } } });
+    expect(shipmentCount).toHaveBeenCalledWith({
+      where: {
+        status: "MANIFESTED",
+        order: { channel: "B2C", OR: [{ pickupLocationName: null }, { pickupLocationName: "LOC-B2C" }] },
+      },
+    });
+  });
+
+  it("books a vendor warehouse's pickup at that warehouse, counting only its parcels", async () => {
+    shipmentCount.mockResolvedValue(2);
+    const r = await requestDelhiveryPickup("B2C", new Date("2026-11-01T04:00:00Z"), "VND-VND12345678-110020");
+    expect(shipmentCount).toHaveBeenCalledWith({
+      where: { status: "MANIFESTED", order: { channel: "B2C", pickupLocationName: "VND-VND12345678-110020" } },
+    });
+    const [, opts] = delhiveryFetchMock.mock.calls[0];
+    expect(JSON.parse(opts.body)).toMatchObject({ pickup_location: "VND-VND12345678-110020", expected_package_count: 2 });
+    expect(r.packageCount).toBe(2);
   });
 
   it("B2C: uses the B2C token and the B2C pickup location", async () => {

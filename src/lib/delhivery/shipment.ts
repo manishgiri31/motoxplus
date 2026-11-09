@@ -3,6 +3,7 @@ import { delhiveryPost } from "./client";
 import { getDelhiveryConfig, toDelhiveryChannel, type DelhiveryChannel } from "./config";
 import { prisma } from "@/lib/prisma";
 import { roundToPaise } from "@/lib/utils";
+import { resolveShipmentOrigin, type ShipmentOrigin } from "./pickup-location";
 import type {
   DelhiveryCreateShipmentRequest,
   DelhiveryCreateShipmentResponse,
@@ -29,6 +30,11 @@ export interface BuildShipmentPayloadInput {
   orderDate: string; // YYYY-MM-DD
   /** Which Delhivery client the shipment is booked on. Defaults to B2C. */
   channel?: DelhiveryChannel;
+  /**
+   * The vendor warehouse this shipment is collected from (and returned to). Absent = the configured MotoXPlus
+   * location, exactly as before vendor warehouses existed.
+   */
+  origin?: ShipmentOrigin | null;
 }
 
 /**
@@ -49,12 +55,12 @@ export function buildShipmentPayload(input: BuildShipmentPayloadInput): Delhiver
     phone: input.destPhone,
     order: input.orderRef,
     payment_mode: input.paymentMode,
-    return_pin: pickup.pincode,
-    return_city: pickup.city,
-    return_phone: pickup.phone,
-    return_name: pickup.name,
-    return_add: pickup.address,
-    return_state: pickup.state,
+    return_pin: input.origin?.returnPin ?? pickup.pincode,
+    return_city: input.origin?.returnCity ?? pickup.city,
+    return_phone: input.origin?.phone ?? pickup.phone,
+    return_name: input.origin?.returnName ?? pickup.name,
+    return_add: input.origin?.returnAddress ?? pickup.address,
+    return_state: input.origin?.returnState ?? pickup.state,
     return_country: "India",
     products_desc: input.productsDesc,
     hsn_code: input.hsnCode,
@@ -76,7 +82,17 @@ export function buildShipmentPayload(input: BuildShipmentPayloadInput): Delhiver
  * on the Delhivery client, NOT the same value as return_name/PICKUP_NAME above.
  * Each channel (B2C / B2B) has its own registered location.
  */
-export function buildPickupLocation(channel?: DelhiveryChannel): DelhiveryPickupLocation {
+export function buildPickupLocation(channel?: DelhiveryChannel, origin?: ShipmentOrigin | null): DelhiveryPickupLocation {
+  if (origin) {
+    return {
+      name: origin.locationName,
+      add: origin.address,
+      city: origin.city,
+      pin_code: origin.pin,
+      country: "India",
+      phone: origin.phone,
+    };
+  }
   const { pickup } = getDelhiveryConfig(channel);
   return {
     name: pickup.locationName,
@@ -91,7 +107,7 @@ export function buildPickupLocation(channel?: DelhiveryChannel): DelhiveryPickup
 export function buildCreateShipmentRequest(input: BuildShipmentPayloadInput): DelhiveryCreateShipmentRequest {
   return {
     shipments: [buildShipmentPayload(input)],
-    pickup_location: buildPickupLocation(input.channel),
+    pickup_location: buildPickupLocation(input.channel, input.origin),
   };
 }
 
@@ -208,6 +224,14 @@ async function createShipmentLocked(
   // — B2C-EXPANSION-PLAN.md Phase 2); its own delivery fields are always
   // populated at creation time for that channel, so the `?? order.dealer?.x`
   // fallback only ever matters for a B2B order's historical/missing field.
+  // Where Delhivery collects this parcel: the vendor's warehouse fixed at checkout, or (null) the configured
+  // MotoXPlus location. Throws if that warehouse is unknown or no longer ACTIVE — never ship from the wrong place.
+  const origin = await resolveShipmentOrigin(
+    order.pickupLocationName,
+    () => getDelhiveryConfig(channel).pickup.locationName,
+    tx
+  );
+
   const destPincode = order.deliveryPincode || order.dealer?.pincode;
   const destCity = order.deliveryCity || order.dealer?.city;
   const destState = order.deliveryState || order.dealer?.state;
@@ -260,6 +284,7 @@ async function createShipmentLocked(
     addressType: "office",
     orderDate: order.createdAt.toISOString().split("T")[0],
     channel,
+    origin,
   });
 
   const formData = {

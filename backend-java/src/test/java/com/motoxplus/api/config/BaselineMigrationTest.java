@@ -105,10 +105,10 @@ class BaselineMigrationTest {
         DataSource ds = freshDatabase();
         var result = flyway(ds, "latest").migrate();
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(4); // V1 baseline script + V2 marketplace + V3 vendor onboarding + V4 listings
+        assertThat(result.migrationsExecuted).isEqualTo(6); // V1 baseline script + V2 marketplace + V3 vendor onboarding + V4 listings + V5 customer type/GSTIN + V6 Delhivery warehouses
         JdbcTemplate jdbc = new JdbcTemplate(ds);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM public.\"Order\"", Integer.class)).isZero();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM marketplace.permission", Integer.class)).isEqualTo(22);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM marketplace.permission", Integer.class)).isEqualTo(23); // 22 from V2 + vendor.warehouse.manage (V6)
     }
 
     // ---- BaselineGuard ----------------------------------------------------------------------------
@@ -178,7 +178,7 @@ class BaselineMigrationTest {
                 .callbacks(new BaselineGuard()).cleanDisabled(true).load().migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).as("only V2, V3 and V4 run; V1 is adopted, not executed").isEqualTo(3);
+        assertThat(result.migrationsExecuted).as("only V2..V6 run; V1 is adopted, not executed").isEqualTo(5);
         assertThat(jdbc.queryForObject("SELECT name FROM \"User\" WHERE id = 'keep'", String.class)).isEqualTo("Keep Me");
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM public.flyway_schema_history WHERE type = 'BASELINE' AND version = '1'", Integer.class)).isEqualTo(1);

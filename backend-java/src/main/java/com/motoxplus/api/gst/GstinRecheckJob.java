@@ -51,7 +51,7 @@ public class GstinRecheckJob {
         List<Map<String, Object>> due = jdbc.queryForList("""
                 SELECT id, "gstNumber" FROM public."Dealer"
                  WHERE "gstVerificationStatus" = 'PENDING' AND "gstNumber" IS NOT NULL AND "gstCheckAttempts" < ?
-                   AND ("gstLastCheckedAt" IS NULL OR "gstLastCheckedAt" < ? - make_interval(mins => 30 * "gstCheckAttempts"))
+                   AND ("gstLastCheckedAt" IS NULL OR "gstLastCheckedAt" < CAST(? AS timestamp(3)) - make_interval(mins => 30 * "gstCheckAttempts"))
                  ORDER BY "gstLastCheckedAt" NULLS FIRST
                  LIMIT ?
                 """, MAX_ATTEMPTS, now, BATCH);

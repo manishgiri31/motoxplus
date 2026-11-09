@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma";
 import { createDelhiveryShipment } from "../shipment";
 import { requestDelhiveryPickup, nextPickupSlot } from "../pickup";
 import { bookPickupOncePerDay } from "../pickup-day";
@@ -18,19 +19,23 @@ export const b2cProvider: DelhiveryProvider = {
   },
 
   // One pickup per warehouse per day (not per order): the first order of the day
-  // sends it, later orders find it open. orderId is not needed — the pickup is
-  // keyed by the warehouse.
-  async requestPickup() {
+  // for a warehouse sends it, later orders for that warehouse find it open. The
+  // warehouse is the order's pickupLocationName (a vendor's warehouse), or the
+  // configured MotoXPlus location for orders without one.
+  async requestPickup(orderId) {
     const now = new Date();
     const slot = nextPickupSlot(now);
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { pickupLocationName: true } });
+    if (!order) throw new Error(`Order ${orderId} not found`);
+    const warehouse = order.pickupLocationName || getDelhiveryConfig("B2C").pickup.locationName;
     return bookPickupOncePerDay({
       channel: "B2C",
-      warehouse: getDelhiveryConfig("B2C").pickup.locationName,
+      warehouse,
       ...slot,
       send: async () => {
-        // Counts this channel's shipments still MANIFESTED (waiting for pickup)
+        // Counts THIS warehouse's shipments still MANIFESTED (waiting for pickup)
         // and sends that as expected_package_count.
-        const r = await requestDelhiveryPickup("B2C", now);
+        const r = await requestDelhiveryPickup("B2C", now, warehouse);
         return { packageCount: r.packageCount, pickupId: r.pickupId, alreadyScheduled: r.alreadyScheduled };
       },
     });
