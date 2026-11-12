@@ -7,7 +7,8 @@ import { resolveOrderActor, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/veri
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
 import { computeOrderPricing } from "@/lib/pricing/compute";
 import { resolveUnitPrice } from "@/lib/pricing/resolve";
-import { computeShippingQuote } from "@/lib/shipping/quote";
+import { computeShippingQuote, FREE_DELIVERY_THRESHOLD } from "@/lib/shipping/quote";
+import { calculateShippingRate, calculateOrderWeight } from "@/lib/delhivery/rates";
 import { validateSchemeSelection, type SchemeItemCandidate } from "@/lib/schemes/cart-validation";
 import { computeGstSplit, UnrecognizedStateError } from "@/lib/tax/gst-split";
 import { getSellerState } from "@/lib/tax/seller-state";
@@ -458,7 +459,31 @@ async function createB2COrder(
   const pricing = computeOrderPricing({ channel, items });
 
   const orderTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
-  const { shippingCost } = computeShippingQuote({ channel, orderTotal });
+
+  // Real Delhivery rate from the pickup warehouse's own pin to the customer's pin.
+  // Free delivery (₹25,000+) is MotoXPlus's cost; the rate is still fetched only when we charge.
+  const warehouse = pickup.pickupLocationName
+    ? await prisma.delhiveryWarehouse.findFirst({ where: { delhiveryName: pickup.pickupLocationName }, select: { pin: true } })
+    : null;
+  const originPincode = warehouse?.pin ?? process.env.DELHIVERY_ORIGIN_PINCODE;
+  if (!originPincode) {
+    return NextResponse.json({ error: "Pickup pincode is not configured", code: "SHIPPING_RATE_UNAVAILABLE" }, { status: 503 });
+  }
+  const rate = await calculateShippingRate({
+    originPincode,
+    destinationPincode: deliveryPincode,
+    weightKg: calculateOrderWeight(cart.items),
+    paymentMode: isCod ? "COD" : "Prepaid",
+    codAmount: isCod ? orderTotal : 0, // COD amount is the order total; the shipping share is added after, so this is the rate's input only
+  });
+  // Never charge the customer the ₹100 fallback that calculateShippingRate returns when Delhivery and the slabs both fail.
+  if (rate.source === "default" && orderTotal < FREE_DELIVERY_THRESHOLD) {
+    return NextResponse.json(
+      { error: "Delivery charge could not be calculated right now. Please try again in a few minutes.", code: "SHIPPING_RATE_UNAVAILABLE" },
+      { status: 503 }
+    );
+  }
+  const shippingCost = orderTotal >= FREE_DELIVERY_THRESHOLD ? 0 : roundToPaise(rate.shippingCost);
   const grandTotal = roundToPaise(orderTotal + shippingCost);
   const amountDue = grandTotal; // FULL_100 now; a COD order still owes the whole total at delivery
 
