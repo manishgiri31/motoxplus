@@ -2,8 +2,6 @@ import { delhiveryFetch } from "./client";
 import { prisma } from "@/lib/prisma";
 import type { DelhiveryRateResponse, RateInput, RateResult } from "./types";
 
-const ORIGIN_PINCODE = process.env.DELHIVERY_ORIGIN_PINCODE || "110046";
-
 export async function calculateShippingRate(input: RateInput): Promise<RateResult> {
   // 1. Try Delhivery live rate API
   try {
@@ -33,7 +31,7 @@ async function fetchDelhiveryRate(input: RateInput): Promise<RateResult | null> 
     md: "E",
     ss: "Delivered",
     d: String(input.weightKg),
-    o: ORIGIN_PINCODE,
+    o: input.originPincode, // the pickup warehouse's pin, never a global default
     dc: input.destinationPincode,
     cgm: String(weightGrams),
     pt: input.paymentMode,
