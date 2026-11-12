@@ -524,6 +524,11 @@ model Order {
   confirmationSentAt     DateTime?
   cancelNotifiedAt       DateTime?
   shippedNotifiedAt      DateTime?
+  // Client-supplied Idempotency-Key from POST /api/orders (lib/orders/
+  // idempotency.ts). Unique per owner, so a retried "Place order" from the
+  // mobile app returns the order it already created instead of a second one.
+  // Null for web orders, which do not send the header.
+  idempotencyKey         String?
   invoice                Invoice?
   dealer                 Dealer?                 @relation(fields: [dealerId], references: [id], onDelete: Restrict)
   customer               Customer?               @relation(fields: [customerId], references: [id], onDelete: Restrict)
@@ -537,6 +542,8 @@ model Order {
   paymentSubmissions     PaymentSubmission[]
   shipment               Shipment?
 
+  @@unique([dealerId, idempotencyKey])
+  @@unique([customerId, idempotencyKey])
   @@index([dealerId, status])
   @@index([dealerId, createdAt])
   @@index([customerId, createdAt])

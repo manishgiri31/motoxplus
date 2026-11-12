@@ -15,6 +15,7 @@ import { getSellerState } from "@/lib/tax/seller-state";
 import { confirmCodOrder, isCodAvailable, COD_UNAVAILABLE_MESSAGE } from "@/lib/orders/cod";
 import { InsufficientStockError } from "@/lib/orders/stock";
 import { resolveCheckoutPickup } from "@/lib/delhivery/pickup-location";
+import { isIdempotencyKeyConflict, readIdempotencyKey, replayedOrderResponse } from "@/lib/orders/idempotency";
 
 export async function GET(req: NextRequest) {
   // Accepts either the web NextAuth session or the mobile/plain-login JWT
@@ -97,6 +98,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const idem = readIdempotencyKey(req);
+  if (idem.error) return idem.error;
+  const idempotencyKey = idem.key;
+
   const {
     paymentType,
     notes,
@@ -117,11 +122,20 @@ export async function POST(req: NextRequest) {
   const actor = await resolveOrderActor(userId);
   if (!actor) return NextResponse.json({ error: ACCOUNT_NOT_VERIFIED_MESSAGE }, { status: 403 });
 
+  // A retry of a request that already created its order gets that order
+  // back, before rate limiting or any cart/stock work — nothing is created,
+  // reserved or cleared a second time. See lib/orders/idempotency.ts.
+  const owner = actor.channel === "B2C" ? { customerId: actor.customer.id } : { dealerId: actor.dealer.id };
+  if (idempotencyKey) {
+    const existing = await prisma.order.findFirst({ where: { ...owner, idempotencyKey } });
+    if (existing) return replayedOrderResponse(existing);
+  }
+
   const limited = await enforceRateLimit(req, "ORDER_CREATE", actor.channel === "B2C" ? actor.customer.id : actor.dealer.id);
   if (limited) return limited;
 
   if (actor.channel === "B2C") {
-    return createB2COrder(actor.customer.id, {
+    return createB2COrder(actor.customer.id, idempotencyKey, {
       paymentType,
       notes,
       deliveryName,
@@ -301,52 +315,64 @@ export async function POST(req: NextRequest) {
   // created pre-CONFIRMED with stock reserved immediately); that branch was
   // removed with pure COD itself on 2026-09-13 — see the PaymentType.COD
   // doc comment in prisma/schema.prisma.
-  const order = await prisma.$transaction(async (tx) => {
-    const created = await tx.order.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        dealerId: dealer.id,
-        channel,
-        pickupLocationName: pickup.pickupLocationName,
-        subtotal: pricing.subtotal,
-        gstAmount: pricing.gstAmount,
-        shippingCost,
-        grandTotal,
-        paymentType,
-        amountDue,
-        amountPaid: 0,
-        notes,
-        status: "PENDING",
-        paymentStatus: "PENDING",
-        stockReserved: false,
-        schemeBenefitValue: schemeValidation?.ok ? schemeValidation.itemsValue : 0,
-        cgstAmount: gstSplit.cgstAmount,
-        sgstAmount: gstSplit.sgstAmount,
-        igstAmount: gstSplit.igstAmount,
-        placeOfSupply,
-        shippingAddress: deliveryAddress,
-        deliveryName: deliveryName || dealer.ownerName,
-        deliveryPhone: deliveryPhone || dealer.phone,
-        deliveryCity: deliveryCity || dealer.city,
-        deliveryState: deliveryState || dealer.state,
-        deliveryPincode,
-        items: { create: [...pricing.lines, ...schemeLines] },
-      },
-    });
-
-    if (schemeValidation?.ok) {
-      await tx.schemeRedemption.create({
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({
         data: {
-          orderId: created.id,
-          schemeId: schemeValidation.scheme.id,
-          benefitValue: schemeValidation.benefit,
-          itemsValue: schemeValidation.itemsValue,
+          orderNumber: generateOrderNumber(),
+          dealerId: dealer.id,
+          idempotencyKey,
+          channel,
+          pickupLocationName: pickup.pickupLocationName,
+          subtotal: pricing.subtotal,
+          gstAmount: pricing.gstAmount,
+          shippingCost,
+          grandTotal,
+          paymentType,
+          amountDue,
+          amountPaid: 0,
+          notes,
+          status: "PENDING",
+          paymentStatus: "PENDING",
+          stockReserved: false,
+          schemeBenefitValue: schemeValidation?.ok ? schemeValidation.itemsValue : 0,
+          cgstAmount: gstSplit.cgstAmount,
+          sgstAmount: gstSplit.sgstAmount,
+          igstAmount: gstSplit.igstAmount,
+          placeOfSupply,
+          shippingAddress: deliveryAddress,
+          deliveryName: deliveryName || dealer.ownerName,
+          deliveryPhone: deliveryPhone || dealer.phone,
+          deliveryCity: deliveryCity || dealer.city,
+          deliveryState: deliveryState || dealer.state,
+          deliveryPincode,
+          items: { create: [...pricing.lines, ...schemeLines] },
         },
       });
-    }
 
-    return created;
-  });
+      if (schemeValidation?.ok) {
+        await tx.schemeRedemption.create({
+          data: {
+            orderId: created.id,
+            schemeId: schemeValidation.scheme.id,
+            benefitValue: schemeValidation.benefit,
+            itemsValue: schemeValidation.itemsValue,
+          },
+        });
+      }
+
+      return created;
+    });
+  } catch (err) {
+    // A concurrent retry with the same key won the race and created the
+    // order; this transaction rolled back (no scheme redemption either).
+    if (idempotencyKey && isIdempotencyKeyConflict(err)) {
+      const existing = await prisma.order.findFirst({ where: { dealerId: dealer.id, idempotencyKey } });
+      if (existing) return replayedOrderResponse(existing);
+    }
+    throw err;
+  }
 
   // Clear cart (regular + scheme items, and the scheme selection itself).
   await prisma.$transaction([
@@ -365,6 +391,7 @@ export async function POST(req: NextRequest) {
 // shipping/tax modules, not the order-creation code itself.
 async function createB2COrder(
   customerId: string,
+  idempotencyKey: string | null,
   params: {
     paymentType: unknown;
     notes: unknown;
@@ -502,36 +529,48 @@ async function createB2COrder(
     throw err;
   }
 
-  const order = await prisma.order.create({
-    data: {
-      orderNumber: generateOrderNumber(),
-      customerId,
-      channel,
-      pickupLocationName: pickup.pickupLocationName,
-      subtotal: pricing.subtotal,
-      gstAmount: pricing.gstAmount,
-      shippingCost,
-      grandTotal,
-      paymentType: "FULL_100",
-      amountDue,
-      amountPaid: 0,
-      notes: typeof notes === "string" ? notes : null,
-      status: "PENDING",
-      paymentStatus: "PENDING",
-      stockReserved: false,
-      cgstAmount: gstSplit.cgstAmount,
-      sgstAmount: gstSplit.sgstAmount,
-      igstAmount: gstSplit.igstAmount,
-      placeOfSupply,
-      shippingAddress: deliveryAddress,
-      deliveryName,
-      deliveryPhone,
-      deliveryCity,
-      deliveryState,
-      deliveryPincode,
-      items: { create: pricing.lines },
-    },
-  });
+  let order;
+  try {
+    order = await prisma.order.create({
+      data: {
+        orderNumber: generateOrderNumber(),
+        customerId,
+        idempotencyKey,
+        channel,
+        pickupLocationName: pickup.pickupLocationName,
+        subtotal: pricing.subtotal,
+        gstAmount: pricing.gstAmount,
+        shippingCost,
+        grandTotal,
+        paymentType: "FULL_100",
+        amountDue,
+        amountPaid: 0,
+        notes: typeof notes === "string" ? notes : null,
+        status: "PENDING",
+        paymentStatus: "PENDING",
+        stockReserved: false,
+        cgstAmount: gstSplit.cgstAmount,
+        sgstAmount: gstSplit.sgstAmount,
+        igstAmount: gstSplit.igstAmount,
+        placeOfSupply,
+        shippingAddress: deliveryAddress,
+        deliveryName,
+        deliveryPhone,
+        deliveryCity,
+        deliveryState,
+        deliveryPincode,
+        items: { create: pricing.lines },
+      },
+    });
+  } catch (err) {
+    // Concurrent retry with the same key already created the order — return
+    // it rather than running COD confirmation (stock reservation) again.
+    if (idempotencyKey && isIdempotencyKeyConflict(err)) {
+      const existing = await prisma.order.findFirst({ where: { customerId, idempotencyKey } });
+      if (existing) return replayedOrderResponse(existing);
+    }
+    throw err;
+  }
 
   if (isCod) {
     try {
@@ -540,7 +579,13 @@ async function createB2COrder(
       if (err instanceof InsufficientStockError) {
         // Nothing was reserved or invoiced (the transaction rolled back) — close
         // the order out and leave the cart intact so the customer can adjust it.
-        await prisma.order.update({ where: { id: order.id }, data: { status: "CANCELLED", amountDue: 0 } });
+        // Release the idempotency key too: this attempt answered 409, so a
+        // retry with the same key (after the customer fixes the cart) must
+        // run again rather than replay this cancelled order as a 200.
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: "CANCELLED", amountDue: 0, idempotencyKey: null },
+        });
         return NextResponse.json(
           { error: "Some items in your cart are no longer available in the requested quantity. Please update your cart." },
           { status: 409 }
