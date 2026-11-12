@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { calculateShippingRate } from "@/lib/delhivery";
 
-const ORIGIN_PINCODE = process.env.DELHIVERY_ORIGIN_PINCODE || "110046";
+const ORIGIN_PINCODE = process.env.DELHIVERY_ORIGIN_PINCODE || "110045";
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId(req);
