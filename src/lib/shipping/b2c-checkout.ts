@@ -137,11 +137,13 @@ export async function quoteB2CShipping(params: {
   orderTotal: number;
   deliveryPincode: string;
   paymentMode: "Prepaid" | "COD";
+  /** Dealer (B2B) orders use the same per-order Delhivery quote; defaults to B2C. */
+  channel?: "B2C" | "B2B";
 }): Promise<B2CShippingQuote | B2CCheckoutError> {
-  const { lines, orderTotal, deliveryPincode, paymentMode } = params;
+  const { lines, orderTotal, deliveryPincode, paymentMode, channel = "B2C" } = params;
 
   // One order = one Delhivery shipment = one pickup location (vendor items need that vendor's ACTIVE warehouse).
-  const pickup = await resolveCheckoutPickup("B2C", lines);
+  const pickup = await resolveCheckoutPickup(channel, lines);
   if (!pickup.ok) {
     return { ok: false, status: 409, code: pickup.code, error: pickup.error, productIds: pickup.productIds };
   }

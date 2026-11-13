@@ -9,7 +9,7 @@ import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
 import { computeOrderPricing } from "@/lib/pricing/compute";
-import { computeShippingQuote, FREE_DELIVERY_THRESHOLD } from "@/lib/shipping/quote";
+import { FREE_DELIVERY_THRESHOLD } from "@/lib/shipping/quote";
 
 declare global {
   interface Window {
@@ -139,6 +139,13 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(true);
   const [serviceabilityResult, setServiceabilityResult] = useState<ServiceabilityResult | null>(null);
+  // Real Delhivery charge for this order, fetched once the delivery pincode is known.
+  const [shippingQuote, setShippingQuote] = useState<{
+    status: "idle" | "loading" | "ok" | "error";
+    cost: number | null;
+    free: boolean;
+    message?: string;
+  }>({ status: "idle", cost: null, free: false });
   // Set when the Razorpay modal is closed without paying. The order already
   // exists (PENDING) and the cart is emptied, so the page switches to a
   // "choose how to pay" screen instead of the form.
@@ -159,6 +166,44 @@ export default function CheckoutPage() {
   };
 
   // Pre-fill dealer profile
+  // Fetch the real shipping charge whenever the pincode or payment type changes.
+  useEffect(() => {
+    if (!cart) return;
+    if (!/^\d{6}$/.test(delivery.pincode)) {
+      setShippingQuote({ status: "idle", cost: null, free: false });
+      return;
+    }
+    let cancelled = false;
+    setShippingQuote((q) => ({ ...q, status: "loading" }));
+    fetch("/api/dealer/shipping-quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deliveryPincode: delivery.pincode, paymentType }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok || typeof data?.shippingCost !== "number") {
+          setShippingQuote({
+            status: "error",
+            cost: null,
+            free: false,
+            message: data?.error ?? "Delivery charge could not be calculated. Please try again.",
+          });
+          return;
+        }
+        setShippingQuote({ status: "ok", cost: data.shippingCost, free: Boolean(data.freeDelivery) });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setShippingQuote({ status: "error", cost: null, free: false, message: "Delivery charge could not be calculated. Please try again." });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cart, delivery.pincode, paymentType]);
+
   useEffect(() => {
     fetch("/api/dealer/account")
       .then((r) => r.json())
@@ -239,16 +284,9 @@ export default function CheckoutPage() {
   }, []);
 
   const orderTotal = roundToPaise((cart?.subtotal ?? 0) + (cart?.gstAmount ?? 0));
-  // Mirrors the server's unconditional computeShippingQuote(orderTotal) in
-  // /api/orders — shipping cost doesn't depend on courier serviceability
-  // (that only affects the "may be outside courier coverage" delivery-
-  // arrangement notice below). Gating this on serviceabilityResult used to
-  // show ₹0 shipping (and a lower grand total) whenever the check hadn't
-  // resolved yet, e.g. while the Delhivery API was slow/unreachable, even
-  // though the order actually created moments later always carried the real
-  // shipping charge — a bait-and-switch between what checkout displayed and
-  // what the dealer was actually billed.
-  const shippingCost = cart ? computeShippingQuote({ channel: "B2B", orderTotal }).shippingCost : 0;
+  // The same Delhivery quote POST /api/orders charges (dealer branch). Shown only once it has loaded, and
+  // the Place Order button waits for it, so the dealer never sees a shipping figure that later changes.
+  const shippingCost = shippingQuote.cost ?? 0;
   const freeDeliveryRemaining = Math.max(0, FREE_DELIVERY_THRESHOLD - orderTotal);
   const freeDeliveryProgress = Math.min(100, (orderTotal / FREE_DELIVERY_THRESHOLD) * 100);
 
@@ -272,7 +310,8 @@ export default function CheckoutPage() {
 
   const isDeliveryComplete =
     delivery.name && delivery.phone && delivery.address &&
-    delivery.city && delivery.state && delivery.pincode.length === 6;
+    delivery.city && delivery.state && delivery.pincode.length === 6 &&
+    shippingQuote.status === "ok";
 
   const buildOrderPayload = () => ({
     paymentType,
@@ -685,7 +724,15 @@ export default function CheckoutPage() {
               <span className="text-green-400 text-xs font-bold">Free delivery unlocked!</span>
             </div>
           )}
-          <ShippingEstimate shippingCost={shippingCost} />
+          <ShippingEstimate
+            shippingCost={shippingQuote.cost}
+            free={shippingQuote.free}
+            note={
+              shippingQuote.status === "error" ? shippingQuote.message
+                : shippingQuote.status === "loading" ? "Calculating..."
+                : "Enter delivery pincode"
+            }
+          />
           <div className="flex justify-between font-bold pt-1 border-t border-[var(--border-color)]">
             <span className="text-[var(--text-primary)]">Grand Total</span>
             <span className="text-red-500 text-lg">{formatCurrency(grandTotal)}</span>
