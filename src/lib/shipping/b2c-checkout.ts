@@ -26,6 +26,9 @@ export interface B2CCartLine {
     gstRate: number;
     source: string;
     vendorId: string | null;
+    packageLength?: number | null;
+    packageWidth?: number | null;
+    packageHeight?: number | null;
     weight?: number | null;
     packageWeight?: number | null;
   };
