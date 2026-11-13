@@ -77,17 +77,11 @@ async function calculateFromSlabs(input: RateInput): Promise<RateResult | null> 
   };
 }
 
-export function calculateOrderWeight(
-  items: Array<{
-    quantity: number;
-    product: { packageWeight?: number | null; weight?: number | null };
-  }>
-): number {
-  let total = 0;
-  for (const item of items) {
-    const weight =
-      item.product.packageWeight ?? item.product.weight ?? 0.5;
-    total += weight * item.quantity;
-  }
-  return Math.max(0.5, total);
-}
+import { calculateOrderWeight } from "./weight";
+export {
+  calculateOrderWeight,
+  itemChargeableWeightKg,
+  VOLUMETRIC_DIVISOR,
+  DEFAULT_ITEM_WEIGHT_KG,
+  type ShippingDimensionsInput,
+} from "./weight";
