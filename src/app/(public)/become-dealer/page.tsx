@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Percent, PackageCheck, LayoutDashboard, Megaphone } from "lucide-react";
 import { DealerRegistrationForm } from "@/components/dealer/registration-form";
 import { Eyebrow } from "@/components/ui/technical";

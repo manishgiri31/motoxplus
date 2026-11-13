@@ -1,5 +1,5 @@
+"use client";
 import { safeFetch } from "@/lib/safe-fetch";
-﻿"use client";
 
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -91,7 +91,7 @@ export function VerifyEmailForm() {
       </form>
 
       <div className="mt-6 pt-6 border-t border-[var(--border-color)] text-center">
-        <Link href="/login" className="text-[var(--text-muted)] text-sm hover:text-[var(--text-secondary)]">← Back to Login</Link>
+        <Link href="/login" className="text-[var(--text-muted)] text-sm hover:text-[var(--text-secondary)]">â† Back to Login</Link>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthPageLayout, AuthCardSkeleton } from "@/components/auth/auth-page-layout";
 import { VerifyEmailForm } from "@/components/auth/verify-email-form";

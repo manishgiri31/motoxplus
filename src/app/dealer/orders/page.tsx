@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-﻿import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { parsePageParam } from "@/lib/query-limits";
 import { prisma } from "@/lib/prisma";

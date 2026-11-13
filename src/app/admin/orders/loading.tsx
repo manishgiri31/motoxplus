@@ -1,4 +1,4 @@
-﻿export default function AdminOrdersLoading() {
+export default function AdminOrdersLoading() {
   return (
     <div className="flex-1 p-6 md:p-8">
       <div className="flex items-center justify-between mb-6">

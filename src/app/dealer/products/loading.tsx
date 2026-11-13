@@ -1,4 +1,4 @@
-﻿export default function ProductsLoading() {
+export default function ProductsLoading() {
   return (
     <div className="flex-1 p-6 md:p-8">
       <div className="flex gap-4 mb-6">

@@ -1,5 +1,5 @@
+"use client";
 import { safeFetch } from "@/lib/safe-fetch";
-﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,7 +8,7 @@ import { OtpInput } from "./otp-input";
 import { Spinner } from "@/components/ui/spinner";
 import { CountdownTimer } from "./countdown-timer";
 
-// OTP is sent via WhatsApp (see src/lib/sms/providers/whatsapp.ts) — the
+// OTP is sent via WhatsApp (see src/lib/sms/providers/whatsapp.ts) â€” the
 // button must be disabled for this long between sends, matching the app's
 // server-side send cooldown expectations, and the countdown is shown so the
 // user knows when "Resend OTP" becomes available again.
