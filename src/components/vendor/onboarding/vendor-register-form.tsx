@@ -61,7 +61,11 @@ export function VendorRegisterForm() {
       setBusy(false);
       if (err instanceof ApiError && err.fieldErrors && Object.keys(err.fieldErrors).length) {
         setErrors(err.fieldErrors as Partial<Record<keyof Values, string>>);
-        setBanner(err.status === 409 ? err.message : "Please fix the highlighted fields.");
+        setBanner(
+          err.status === 409
+            ? "This email or mobile already has a MotoXPlus account. Sign in with it and add a vendor profile to the same login; no second account needed."
+            : "Please fix the highlighted fields."
+        );
       } else if (err instanceof ApiError && err.status === 429) {
         setBanner(`Too many attempts. Try again in ${err.retryAfterSeconds ?? 60} seconds.`);
       } else if (err instanceof ApiError && [404, 501, 502, 503, 504].includes(err.status)) {
@@ -105,7 +109,19 @@ export function VendorRegisterForm() {
           </>
         }
       />
-      {banner && <AuthAlert className="mb-5">{banner}</AuthAlert>}
+      {banner && (
+        <AuthAlert className="mb-5">
+          {banner}
+          {banner.startsWith("This email or mobile already") && (
+            <>
+              {" "}
+              <Link href="/login?callbackUrl=%2Fbecome-vendor%2Fregister" className="font-semibold underline underline-offset-2">
+                Sign in
+              </Link>
+            </>
+          )}
+        </AuthAlert>
+      )}
       <form ref={formRef} onSubmit={submit} noValidate className="space-y-4">
         <TextField label="Full name" name="fullName" autoComplete="name" value={v.fullName} onChange={on("fullName")} error={errors.fullName} maxLength={100} />
         <TextField

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { WorkspaceSwitcher, type WorkspaceUser } from "@/components/portal/workspace-switcher";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dealer/dashboard" },
@@ -31,7 +32,7 @@ const navItems = [
 ];
 
 interface Props {
-  user: {
+  user: WorkspaceUser & {
     name?: string | null;
     email?: string | null;
   };
@@ -90,6 +91,8 @@ export function DealerSidebar({ user }: Props) {
           </div>
         </div>
       </div>
+
+      <WorkspaceSwitcher user={user} />
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2">

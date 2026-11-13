@@ -189,6 +189,37 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.fieldErrors.password").exists());
     }
 
+    @Test
+    void aSignedInDealerAddsAVendorProfileToTheSameAccount() throws Exception {
+        String n = UUID.randomUUID().toString().substring(0, 8);
+        String uid = "dealer-" + n;
+        String email = uid + "@example.test";
+        jdbc.update("""
+                INSERT INTO "User" (id, name, email, password, role, "mobileNumber", "mobileVerified", "emailVerified", "updatedAt")
+                VALUES (?, 'Asha Traders', ?, 'x', 'DEALER', ?, true, now(), now())""", uid, email, "8" + String.format("%09d", Math.abs(n.hashCode()) % 1_000_000_000));
+        String dealer = bearerFor(uid, email, "DEALER");
+
+        JsonNode first = read(mvc.perform(post("/api/v1/vendors/attach").header("Authorization", dealer)).andExpect(status().isOk()));
+        String vendorId = first.get("vendorId").asString();
+        // Same login: no second User, role untouched (the web app switches workspace), vendor auto-approved.
+        assertThat(jdbc.queryForObject("SELECT \"userId\" FROM \"Vendor\" WHERE id = ?", String.class, vendorId)).isEqualTo(uid);
+        assertThat(jdbc.queryForObject("SELECT role::text FROM \"User\" WHERE id = ?", String.class, uid)).isEqualTo("DEALER");
+        assertThat(jdbc.queryForObject("SELECT status::text FROM \"Vendor\" WHERE id = ?", String.class, vendorId)).isEqualTo("APPROVED");
+        // Idempotent.
+        mvc.perform(post("/api/v1/vendors/attach").header("Authorization", dealer))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.vendorId").value(vendorId));
+
+        // Once the workspace is VENDOR, the same account sees its (verified, active, profile pending) application.
+        jdbc.update("UPDATE \"User\" SET role = 'VENDOR' WHERE id = ?", uid);
+        mvc.perform(get("/api/v1/vendors/me/application").header("Authorization", bearerFor(uid, email, "VENDOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("ACTIVE"))
+                .andExpect(jsonPath("$.profileComplete").value(false));
+
+        mvc.perform(post("/api/v1/vendors/attach").header("Authorization", staff("ADMIN"))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/vendors/attach")).andExpect(status().isUnauthorized());
+    }
+
     // ------------------------------------------------------------------ onboarding
 
     @Test

@@ -12,6 +12,10 @@ export default withAuth(
 
     // Vendor portal — only VENDOR role
     if (pathname.startsWith("/vendor") && role !== "VENDOR") {
+      // Same login with a vendor profile, currently in the dealer/customer workspace: send them to their dashboard,
+      // whose sidebar has "Switch to Vendor" (lib/auth/workspaces.ts), instead of a confusing login page.
+      if (token?.vendorId && role === "DEALER") return NextResponse.redirect(new URL("/dealer/dashboard", req.url));
+      if (token?.vendorId && role === "CUSTOMER") return NextResponse.redirect(new URL("/account", req.url));
       return NextResponse.redirect(new URL("/login", req.url));
     }
 

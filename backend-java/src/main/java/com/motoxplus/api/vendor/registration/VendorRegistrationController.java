@@ -1,6 +1,7 @@
 package com.motoxplus.api.vendor.registration;
 
 import com.motoxplus.api.ratelimit.RateLimitBudgets;
+import com.motoxplus.api.security.AuthenticatedUser;
 import com.motoxplus.api.ratelimit.RateLimitEnforcer;
 import com.motoxplus.api.web.ClientIp;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +11,7 @@ import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,5 +46,22 @@ public class VendorRegistrationController {
         out.put("emailVerificationRequired", true);
         out.put("mobileVerificationRequired", true);
         return ResponseEntity.status(HttpStatus.CREATED).body(out);
+    }
+
+    /**
+     * POST /api/v1/vendors/attach (signed in as a dealer or customer): adds a vendor profile to the current account,
+     * so one email/mobile/password reaches both workspaces. 200 -> { userId, vendorId, email }.
+     * 403 NOT_ELIGIBLE (staff/admin) · 409 email used by another vendor record · 401 not signed in.
+     */
+    @PostMapping("/api/v1/vendors/attach")
+    public Map<String, Object> attach(@AuthenticationPrincipal AuthenticatedUser user,
+                                      HttpServletRequest req) {
+        rateLimit.enforce(req, RateLimitBudgets.REGISTER, user == null ? null : user.userId());
+        var r = service.attach(user, ClientIp.resolve(req));
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("userId", r.userId());
+        out.put("vendorId", r.vendorId());
+        out.put("email", r.email());
+        return out;
     }
 }

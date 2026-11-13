@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Percent, PackageCheck, LayoutDashboard, Megaphone } from "lucide-react";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
 import { DealerRegistrationForm } from "@/components/dealer/registration-form";
+import { AttachDealerProfile } from "@/components/dealer/attach-dealer-profile";
 import { Eyebrow } from "@/components/ui/technical";
 import { Card } from "@/components/ui/card";
 
@@ -16,7 +20,12 @@ const benefits = [
   { Icon: Megaphone, title: "Marketing Support", desc: "Get branded materials, product guides, and sales support." },
 ];
 
-export default function BecomeDealerPage() {
+export default async function BecomeDealerPage() {
+  // One login, several profiles: a signed-in vendor adds a dealer profile to the same account instead of a new one.
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role === "DEALER") redirect("/dealer/dashboard");
+  const vendor = session?.user?.role === "VENDOR" ? session.user : null;
+
   return (
     <div className="min-h-screen bg-[var(--paper)]">
       <section className="py-16 md:py-20 px-4 md:px-8">
@@ -45,7 +54,7 @@ export default function BecomeDealerPage() {
             </div>
 
             {/* Form */}
-            <DealerRegistrationForm />
+            {vendor?.email ? <AttachDealerProfile email={vendor.email} hasDealer={!!vendor.dealerId} /> : <DealerRegistrationForm />}
           </div>
         </div>
       </section>

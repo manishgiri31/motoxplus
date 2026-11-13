@@ -27,7 +27,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import com.motoxplus.api.web.ApiException;
 import com.motoxplus.api.web.FieldErrorsException;
+import java.util.Set;
+import org.springframework.http.HttpStatus;
 
 /**
  * Step 1 of vendor onboarding: the login account. Mirrors the dealer flow (src/app/api/dealer/register/route.ts):
@@ -103,16 +106,7 @@ public class VendorRegistrationService {
                         INSERT INTO public."User" (id, name, email, password, role, "mobileNumber", "mobileVerified", "isActive", "createdAt", "updatedAt")
                         VALUES (?, ?, ?, ?, 'VENDOR'::"UserRole", ?, false, true, ?, ?)
                         """, userId, name, mail, hash, mobile, now, now);
-                // Business fields are NOT NULL in the legacy table; they start empty and the onboarding steps fill them.
-                jdbc.update("""
-                        INSERT INTO public."Vendor" (id, "userId", "vendorCode", "companyName", "ownerName", email, phone, city, state,
-                                                     status, "createdAt", "updatedAt")
-                        VALUES (?, ?, ?, '', ?, ?, ?, '', '', 'APPROVED'::"VendorStatus", ?, ?)
-                        """, vendorId, userId, uniqueVendorCode(), name, mail, mobile, now, now);
-                jdbc.update("""
-                        INSERT INTO marketplace.vendor_application (vendor_id, decision, decided_at, decided_by)
-                        VALUES (?, 'APPROVED', now(), ?)
-                        """, vendorId, AUTO_APPROVER);
+                insertVendorProfile(vendorId, userId, name, mail, mobile, now);
                 audit.record(new AuthenticatedUser(userId, mail, "VENDOR", null), "vendor.registered", "vendor", vendorId, vendorId, ip,
                         Map.of("channel", "web", "approval", "automatic"));
             });
@@ -125,6 +119,66 @@ public class VendorRegistrationService {
 
         sendVerificationEmail(userId, name, mail);
         return new Registered(userId, vendorId, mail);
+    }
+
+    /**
+     * One login, several profiles: a signed-in dealer or customer adds a vendor profile to the SAME account (same
+     * email, mobile, password and verification). The account's role is not changed here; the web app switches the
+     * active workspace afterwards (src/app/api/auth/switch-workspace). Idempotent: an account that already has a
+     * vendor profile gets that one back.
+     */
+    public Registered attach(AuthenticatedUser user, String ip) {
+        if (user == null) throw ApiException.unauthorized();
+        var rows = jdbc.queryForList("""
+                SELECT u.name, u.email, u."mobileNumber", u.role::text AS role, u."isActive", v.id AS vendor_id
+                FROM public."User" u LEFT JOIN public."Vendor" v ON v."userId" = u.id
+                WHERE u.id = ?
+                """, user.userId());
+        if (rows.isEmpty()) throw ApiException.unauthorized();
+        Map<String, Object> u = rows.get(0);
+        if (!Boolean.TRUE.equals(u.get("isActive"))) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "This account is not active", "ACCOUNT_INACTIVE", null);
+        }
+        // Both the signed-in role and the stored one: staff/admin sessions never get a vendor profile this way.
+        if (!Set.of("DEALER", "CUSTOMER").contains(user.role()) || !Set.of("DEALER", "CUSTOMER").contains(String.valueOf(u.get("role")))) {
+            throw new ApiException(HttpStatus.FORBIDDEN,
+                    "Only dealer and customer accounts can add a vendor profile", "NOT_ELIGIBLE", null);
+        }
+        if (u.get("vendor_id") != null) return new Registered(user.userId(), (String) u.get("vendor_id"), (String) u.get("email"));
+        String mail = (String) u.get("email");
+        if (exists("SELECT 1 FROM public.\"Vendor\" WHERE email = ?", mail)) {
+            // A vendor record created by an admin (no login) already uses this email; linking it is a support task.
+            throw FieldErrorsException.conflict("email", "This email already belongs to another vendor record. Write to info@motoxplus.com to link it");
+        }
+        String name = u.get("name") == null ? "" : ((String) u.get("name")).trim();
+        String mobile = u.get("mobileNumber") == null ? "" : (String) u.get("mobileNumber");
+        String vendorId = Cuid.next();
+        try {
+            tx.executeWithoutResult(s -> {
+                insertVendorProfile(vendorId, user.userId(), name, mail, mobile, Timestamp.valueOf(Time.utcNow()));
+                audit.record(user, "vendor.registered", "vendor", vendorId, vendorId, ip,
+                        Map.of("channel", "existing-account", "fromRole", String.valueOf(u.get("role")), "approval", "automatic"));
+            });
+        } catch (DuplicateKeyException e) {
+            // Two tabs at once: the other one created it.
+            return jdbc.queryForList("SELECT id FROM public.\"Vendor\" WHERE \"userId\" = ?", String.class, user.userId()).stream()
+                    .findFirst().map(id -> new Registered(user.userId(), id, mail)).orElseThrow(() -> e);
+        }
+        return new Registered(user.userId(), vendorId, mail);
+    }
+
+    /** Vendor row (auto-approved, like dealers) + its application. Business fields start empty; onboarding fills them. */
+    private void insertVendorProfile(String vendorId, String userId, String name, String mail, String mobile, Timestamp now) {
+        // Business fields are NOT NULL in the legacy table; they start empty and the onboarding steps fill them.
+        jdbc.update("""
+                INSERT INTO public."Vendor" (id, "userId", "vendorCode", "companyName", "ownerName", email, phone, city, state,
+                                             status, "createdAt", "updatedAt")
+                VALUES (?, ?, ?, '', ?, ?, ?, '', '', 'APPROVED'::"VendorStatus", ?, ?)
+                """, vendorId, userId, uniqueVendorCode(), name, mail, mobile, now, now);
+        jdbc.update("""
+                INSERT INTO marketplace.vendor_application (vendor_id, decision, decided_at, decided_by)
+                VALUES (?, 'APPROVED', now(), ?)
+                """, vendorId, AUTO_APPROVER);
     }
 
     /** Like Node: a failed email never fails the registration; /verify-email can resend the code. */

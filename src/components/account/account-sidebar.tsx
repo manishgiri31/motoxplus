@@ -8,6 +8,7 @@ import { fullLogout } from "@/lib/auth/client-logout";
 import { ShoppingCart, ClipboardList, User, LogOut, Menu, X } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { WorkspaceSwitcher, type WorkspaceUser } from "@/components/portal/workspace-switcher";
 
 const navItems = [
   { icon: ClipboardList, label: "My Orders", href: "/account/orders" },
@@ -15,7 +16,7 @@ const navItems = [
 ];
 
 interface Props {
-  user: {
+  user: WorkspaceUser & {
     name?: string | null;
     email?: string | null;
   };
@@ -63,6 +64,8 @@ export function AccountSidebar({ user }: Props) {
           </div>
         </div>
       </div>
+
+      <WorkspaceSwitcher user={user} />
 
       <nav className="flex-1 px-3 py-2">
         {navItems.map((item) => {

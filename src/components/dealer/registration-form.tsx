@@ -57,7 +57,11 @@ export function DealerRegistrationForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error || "Registration failed");
+        setErrorMsg(
+          data.code === "ACCOUNT_EXISTS"
+            ? `${data.error}. Already selling on MotoXPlus? Sign in with that account and open "Become a dealer" to add a dealer profile to the same login.`
+            : data.error || "Registration failed"
+        );
         setStatus("error");
         return;
       }

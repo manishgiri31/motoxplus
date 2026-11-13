@@ -9,6 +9,7 @@ import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { getClientIP } from "@/lib/auth/middleware";
 import { normalizeIndianMobile } from "@/lib/phone";
 import { checkDealerGstin } from "@/lib/gst/dealer-gstin";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 
 const registerSchema = z.object({
   companyName: z.string().min(2),
@@ -27,6 +28,60 @@ const registerSchema = z.object({
   pincode: z.string().regex(/^[0-9]{6}$/).optional().or(z.literal("")),
 });
 
+/**
+ * One login, several profiles (lib/auth/workspaces.ts): a signed-in vendor adds a dealer profile to the SAME account.
+ * Only the business fields are taken; name, mobile, email, password and verification are the account's own.
+ * The active workspace is switched afterwards by /api/auth/switch-workspace.
+ */
+const attachSchema = registerSchema.pick({
+  companyName: true,
+  state: true,
+  city: true,
+  gstNumber: true,
+  panNumber: true,
+  companyAddress: true,
+  shopAddress: true,
+  pincode: true,
+});
+
+async function attachDealerProfile(req: NextRequest, body: unknown) {
+  const userId = await getCurrentUserId(req);
+  if (!userId) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { dealer: true } });
+  if (!user || !user.isActive) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
+  if (user.dealer) return NextResponse.json({ success: true, userId: user.id, dealerId: user.dealer.id, existing: true });
+  if (user.role !== "VENDOR") {
+    return NextResponse.json({ error: "Only a vendor account can add a dealer profile this way" }, { status: 403 });
+  }
+
+  const data = attachSchema.parse(body);
+  const gstNumber = (data.gstNumber ?? "").replace(/\s/g, "").toUpperCase();
+  if (gstNumber && (await prisma.dealer.findUnique({ where: { gstNumber } }))) {
+    return NextResponse.json({ error: "GST number already registered" }, { status: 400 });
+  }
+  const gst = await checkDealerGstin(gstNumber);
+  if (!gst.ok) return NextResponse.json({ error: gst.error }, { status: gst.status });
+
+  const dealer = await prisma.dealer.create({
+    data: {
+      userId: user.id,
+      companyName: data.companyName,
+      ...gst.dealerFields,
+      panNumber: data.panNumber || null,
+      ownerName: user.name || data.companyName,
+      phone: user.mobileNumber || "",
+      state: data.state,
+      city: data.city,
+      address: data.shopAddress || data.companyAddress || null,
+      companyAddress: data.companyAddress || null,
+      shopAddress: data.shopAddress || null,
+      pincode: data.pincode || null,
+      status: "ACTIVE",
+    },
+  });
+  return NextResponse.json({ success: true, userId: user.id, dealerId: dealer.id });
+}
+
 export async function POST(req: NextRequest) {
   const ip = getClientIP(req);
   if (!(await checkIPRateLimit(ip, 5, 60))) {
@@ -35,6 +90,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+    if (body && typeof body === "object" && (body as { attach?: unknown }).attach === true) {
+      return await attachDealerProfile(req, body);
+    }
     const data = registerSchema.parse(body);
 
     const normalizedMobile = normalizeIndianMobile(data.phone);
@@ -46,11 +104,12 @@ export async function POST(req: NextRequest) {
       prisma.user.findUnique({ where: { email: data.email.toLowerCase() } }),
       prisma.user.findUnique({ where: { mobileNumber: normalizedMobile } }),
     ]);
+    // Same wording as before, plus the way in: one account can hold a dealer and a vendor profile.
     if (existingUser) {
-      return NextResponse.json({ error: "Email already registered" }, { status: 400 });
+      return NextResponse.json({ error: "Email already registered", code: "ACCOUNT_EXISTS" }, { status: 400 });
     }
     if (existingMobile) {
-      return NextResponse.json({ error: "Mobile number already registered" }, { status: 400 });
+      return NextResponse.json({ error: "Mobile number already registered", code: "ACCOUNT_EXISTS" }, { status: 400 });
     }
 
     const gstNumber = (data.gstNumber ?? "").replace(/\s/g, "").toUpperCase();

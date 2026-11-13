@@ -19,6 +19,7 @@ import {
   Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WorkspaceSwitcher, type WorkspaceUser } from "@/components/portal/workspace-switcher";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/vendor/dashboard" },
@@ -31,10 +32,9 @@ const navItems = [
 ];
 
 interface Props {
-  user: {
+  user: WorkspaceUser & {
     name?: string | null;
     email?: string | null;
-    vendorId?: string;
   };
 }
 
@@ -80,6 +80,8 @@ export function VendorSidebar({ user }: Props) {
           </div>
         </div>
       </div>
+
+      <WorkspaceSwitcher user={user} />
 
       <nav className="flex-1 px-3 py-2">
         {navItems.map((item) => {
