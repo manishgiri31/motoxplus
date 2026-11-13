@@ -52,6 +52,24 @@ describe("getDelhiveryConfig — B2C (track.delhivery.com)", () => {
     });
   });
 
+  it("rejects the .env.example placeholder token (24 chars, so the length check alone let it through)", async () => {
+    Object.assign(process.env, { DELHIVERY_TOKEN: "your_delhivery_api_token", DELHIVERY_PICKUP_LOCATION_NAME: "LEGACY" });
+    const { getDelhiveryConfig } = await import("./config");
+    expect(() => getDelhiveryConfig("B2C")).toThrow(/DELHIVERY_TOKEN: is still the \.env\.example placeholder/);
+  });
+
+  it("strips a trailing slash from DELHIVERY_BASE_URL and treats an empty one as unset", async () => {
+    Object.assign(process.env, { DELHIVERY_TOKEN: "l".repeat(24), DELHIVERY_PICKUP_LOCATION_NAME: "LEGACY" });
+    process.env.DELHIVERY_BASE_URL = "https://track.delhivery.com/";
+    let { getDelhiveryConfig } = await import("./config");
+    expect(getDelhiveryConfig("B2C").baseUrl).toBe("https://track.delhivery.com");
+
+    vi.resetModules();
+    process.env.DELHIVERY_BASE_URL = "";
+    ({ getDelhiveryConfig } = await import("./config"));
+    expect(getDelhiveryConfig("B2C").baseUrl).toBe("https://track.delhivery.com");
+  });
+
   it("rejects a token under 20 characters", async () => {
     Object.assign(process.env, { DELHIVERY_TOKEN_B2C: "short", DELHIVERY_PICKUP_LOCATION_B2C: "LOC C" });
     const { getDelhiveryConfig } = await import("./config");

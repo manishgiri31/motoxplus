@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Truck } from "lucide-react";
 import { formatCurrency, roundToPaise } from "@/lib/utils";
 import { computeOrderPricing } from "@/lib/pricing/compute";
-import { computeShippingQuote } from "@/lib/shipping/quote";
+import { FREE_DELIVERY_THRESHOLD } from "@/lib/shipping/quote";
 
 interface CartItem {
   id: string;
@@ -117,8 +117,9 @@ export default function AccountCartPage() {
     })),
   });
   const orderTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
-  const { shippingCost } = computeShippingQuote({ channel: "B2C", orderTotal });
-  const grandTotal = roundToPaise(orderTotal + shippingCost);
+  // Delivery is the real Delhivery rate to the customer's pincode, which the cart doesn't know yet — the
+  // checkout page quotes it (POST /api/shipping/checkout-quote). Only "free" is certain here.
+  const freeDelivery = orderTotal >= FREE_DELIVERY_THRESHOLD;
   const unpriced = items.filter((item) => itemMrp(item) == null);
 
   if (loading) {
@@ -232,17 +233,19 @@ export default function AccountCartPage() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-[var(--text-muted)] flex items-center gap-1"><Truck size={12} /> Shipping</span>
-                  {shippingCost === 0 ? (
+                  {freeDelivery ? (
                     <span className="text-green-400 font-semibold text-sm">Free</span>
                   ) : (
-                    <span className="text-[var(--text-primary)] font-semibold text-sm">{formatCurrency(shippingCost)}</span>
+                    <span className="text-[var(--text-muted)] text-sm">Calculated at checkout</span>
                   )}
                 </div>
                 <div className="flex justify-between font-bold pt-3 border-t border-[var(--border-color)]">
-                  <span className="text-[var(--text-primary)]">Grand Total</span>
-                  <span className="text-red-500 text-lg">{formatCurrency(grandTotal)}</span>
+                  <span className="text-[var(--text-primary)]">{freeDelivery ? "Grand Total" : "Items Total"}</span>
+                  <span className="text-red-500 text-lg">{formatCurrency(orderTotal)}</span>
                 </div>
-                <p className="text-[var(--text-muted)] text-12">Inclusive of all taxes.</p>
+                <p className="text-[var(--text-muted)] text-12">
+                  Inclusive of all taxes.{!freeDelivery && <> Free delivery on orders of {formatCurrency(FREE_DELIVERY_THRESHOLD)} or more.</>}
+                </p>
               </div>
               <Link
                 href="/account/checkout"

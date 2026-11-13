@@ -3,13 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, Phone, MapPin, CreditCard, Banknote, ShieldCheck, Lock, XCircle } from "lucide-react";
+import { User, Phone, MapPin, CreditCard, Banknote, ShieldCheck, Lock, XCircle, RotateCw } from "lucide-react";
 import { PincodeChecker } from "@/components/shipping/pincode-checker";
 import { ShippingEstimate } from "@/components/shipping/shipping-estimate";
 import { Spinner } from "@/components/ui/spinner";
 import { formatCurrency, roundToPaise } from "@/lib/utils";
 import { computeOrderPricing } from "@/lib/pricing/compute";
-import { computeShippingQuote } from "@/lib/shipping/quote";
 
 declare global {
   interface Window { Razorpay: any; }
@@ -30,6 +29,27 @@ interface ServiceabilityResult {
   availableServices?: string[];
   city: string | null;
   state: string | null;
+}
+
+// POST /api/shipping/checkout-quote — computed by the same code POST /api/orders charges with.
+interface CheckoutQuote {
+  orderTotal: number;
+  shippingCost: number;
+  grandTotal: number;
+  freeDelivery: boolean;
+  source: string;
+}
+
+type QuoteState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ok"; quote: CheckoutQuote }
+  | { status: "error"; error: string };
+
+interface PlacedOrder {
+  id: string;
+  orderNumber: string;
+  grandTotal?: number;
 }
 
 interface DeliveryForm {
@@ -61,7 +81,9 @@ export default function AccountCheckoutPage() {
   // Set when the Razorpay modal is closed without paying. The order already
   // exists (PENDING), so the page switches to a "choose how to pay" screen
   // instead of the form — resubmitting the form would create a duplicate order.
-  const [cancelledOrder, setCancelledOrder] = useState<{ id: string; orderNumber: string } | null>(null);
+  const [cancelledOrder, setCancelledOrder] = useState<PlacedOrder | null>(null);
+  const [quoteState, setQuoteState] = useState<QuoteState>({ status: "idle" });
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
 
   const [delivery, setDelivery] = useState<DeliveryForm>({ name: "", phone: "", address: "", city: "", state: "", pincode: "" });
   const updateDelivery = (field: keyof DeliveryForm, value: string) => setDelivery((prev) => ({ ...prev, [field]: value }));
@@ -115,9 +137,49 @@ export default function AccountCheckoutPage() {
       gstRate: item.product.gstRate,
     })),
   });
-  const orderTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
-  const { shippingCost } = computeShippingQuote({ channel: "B2C", orderTotal });
-  const grandTotal = roundToPaise(orderTotal + shippingCost);
+  // Items only (incl. GST) — a preview until the server quote arrives. Shipping and the grand total are never
+  // computed here: they come from the server quote, which runs the same code the order route charges with.
+  const itemsTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
+
+  const quotePincode = delivery.pincode;
+  const quotePaymentMode = paymentMethod === "COD" ? "COD" : "Prepaid"; // COD changes Delhivery's rate
+  useEffect(() => {
+    if (cartLoading || items.length === 0 || !/^\d{6}$/.test(quotePincode)) {
+      setQuoteState({ status: "idle" });
+      return;
+    }
+    const controller = new AbortController();
+    setQuoteState({ status: "loading" });
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/shipping/checkout-quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deliveryPincode: quotePincode, paymentMode: quotePaymentMode }),
+          signal: controller.signal,
+        });
+        const data = await res.json().catch(() => null);
+        if (controller.signal.aborted) return;
+        if (res.ok && data && typeof data.grandTotal === "number") {
+          setQuoteState({ status: "ok", quote: data as CheckoutQuote });
+        } else {
+          setQuoteState({ status: "error", error: data?.error || "Could not calculate the delivery charge. Please try again." });
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setQuoteState({ status: "error", error: "Could not reach the server to calculate delivery. Check your connection." });
+        }
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [quotePincode, quotePaymentMode, cartLoading, items.length, quoteAttempt]);
+
+  const quote = quoteState.status === "ok" ? quoteState.quote : null;
+  const shippingNote =
+    quoteState.status === "loading" ? "Calculating…" : quoteState.status === "error" ? "Unavailable" : "Enter pincode";
 
   const isDeliveryComplete =
     delivery.name.trim() && delivery.phone.trim() && delivery.address.trim() &&
@@ -166,7 +228,7 @@ export default function AccountCheckoutPage() {
 
   // From the payment-cancelled screen: the order already exists, so switch it
   // to COD rather than creating another one.
-  const switchToCod = async (order: { id: string }) => {
+  const switchToCod = async (order: PlacedOrder) => {
     setLoading(true);
     setError("");
     try {
@@ -189,7 +251,7 @@ export default function AccountCheckoutPage() {
   // cancelledOrder is deliberately NOT cleared here: the order exists, so any
   // failure must land back on the choose-a-method screen, never on the form
   // (resubmitting that would create a duplicate order).
-  const openRazorpay = async (order: { id: string; orderNumber: string }) => {
+  const openRazorpay = async (order: PlacedOrder) => {
     setLoading(true);
     setError("");
     try {
@@ -291,6 +353,10 @@ export default function AccountCheckoutPage() {
       setError("Please complete all delivery address fields.");
       return;
     }
+    if (!quote) {
+      setError(quoteState.status === "error" ? quoteState.error : "Enter your delivery pincode to see the final total.");
+      return;
+    }
     if (paymentMethod === "COD" && codBlocked) {
       setError("Cash on Delivery isn't available for this pincode. Please pay online instead.");
       return;
@@ -336,7 +402,9 @@ export default function AccountCheckoutPage() {
                 <Banknote size={18} className="text-green-500 flex-shrink-0" />
                 <div className="flex-1">
                   <div className="text-[var(--text-primary)] font-semibold text-sm">Cash on Delivery</div>
-                  <div className="text-[var(--text-muted)] text-xs">Order is confirmed now — pay {formatCurrency(grandTotal)} in cash when it arrives</div>
+                  <div className="text-[var(--text-muted)] text-xs">
+                    Order is confirmed now — pay{typeof cancelledOrder.grandTotal === "number" ? ` ${formatCurrency(cancelledOrder.grandTotal)}` : ""} in cash when it arrives
+                  </div>
                 </div>
               </button>
             )}
@@ -443,12 +511,35 @@ export default function AccountCheckoutPage() {
           ))}
         </div>
         <div className="border-t border-[var(--border-color)] pt-4 space-y-2">
-          <ShippingEstimate shippingCost={shippingCost} />
+          <div className="flex justify-between text-sm">
+            <span className="text-[var(--text-secondary)]">Items</span>
+            <span className="text-[var(--text-primary)]">{formatCurrency(quote?.orderTotal ?? itemsTotal)}</span>
+          </div>
+          <ShippingEstimate
+            shippingCost={quote ? quote.shippingCost : null}
+            free={quote?.freeDelivery}
+            note={shippingNote}
+          />
           <div className="flex justify-between font-bold pt-1 border-t border-[var(--border-color)]">
             <span className="text-[var(--text-primary)]">Grand Total</span>
-            <span className="text-red-500 text-lg">{formatCurrency(grandTotal)}</span>
+            <span className="text-red-500 text-lg">{quote ? formatCurrency(quote.grandTotal) : "—"}</span>
           </div>
-          <p className="text-[var(--text-muted)] text-12">Inclusive of all taxes.</p>
+          {quoteState.status === "error" ? (
+            <div className="flex items-start justify-between gap-3 text-12" role="alert">
+              <p className="text-red-400">{quoteState.error}</p>
+              <button
+                type="button"
+                onClick={() => setQuoteAttempt((n) => n + 1)}
+                className="flex items-center gap-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] whitespace-nowrap"
+              >
+                <RotateCw size={12} /> Retry
+              </button>
+            </div>
+          ) : (
+            <p className="text-[var(--text-muted)] text-12">
+              Inclusive of all taxes.{!quote && " Delivery is calculated from your pincode."}
+            </p>
+          )}
         </div>
       </div>
 
@@ -505,15 +596,23 @@ export default function AccountCheckoutPage() {
 
       <button
         onClick={handlePlaceOrder}
-        disabled={loading}
+        disabled={loading || !quote}
         className="w-full flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-sm transition-colors text-sm"
       >
         {loading ? (
           <><Spinner size={16} /> Placing order...</>
+        ) : !quote ? (
+          quoteState.status === "loading" ? (
+            <><Spinner size={16} /> Calculating total...</>
+          ) : quoteState.status === "error" ? (
+            "Delivery charge unavailable"
+          ) : (
+            "Enter delivery pincode to continue"
+          )
         ) : paymentMethod === "COD" ? (
-          <><Banknote size={16} /> Place COD Order — {formatCurrency(grandTotal)}</>
+          <><Banknote size={16} /> Place COD Order — {formatCurrency(quote.grandTotal)}</>
         ) : (
-          <><ShieldCheck size={16} /> Pay Online — {formatCurrency(grandTotal)}</>
+          <><ShieldCheck size={16} /> Pay Online — {formatCurrency(quote.grandTotal)}</>
         )}
       </button>
     </div>
