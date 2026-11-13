@@ -78,12 +78,17 @@ export interface RateResult {
   };
 }
 
+// One row of /api/kinko/v1/invoice/charges/.json (the endpoint returns an array).
 export interface DelhiveryRateResponse {
-  total_amount: number;
-  freight_charge: number;
-  cod_charges: number;
-  fuel_surcharge: number;
   status: string;
+  zone: string | null;
+  charged_weight: number;
+  gross_amount: number;
+  total_amount: number;
+  charge_DL: number;
+  charge_COD: number;
+  charge_FSC: number;
+  tax_data: { SGST: number; CGST: number; IGST: number };
 }
 
 // ─── Shipment Creation ────────────────────────────────────────────────────────

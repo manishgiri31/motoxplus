@@ -19,38 +19,39 @@ export async function calculateShippingRate(input: RateInput): Promise<RateResul
     // fall through to default
   }
 
-  // 3. Default flat rate
-  return { shippingCost: 100, source: "default" };
+  // 3. Nothing could price this shipment. Callers treat source "default" as
+  // "unavailable" and never charge the amount, so no fake flat rate is shown.
+  return { shippingCost: 0, source: "default" };
 }
 
 async function fetchDelhiveryRate(input: RateInput): Promise<RateResult | null> {
+  // Verified against the live account: Surface mode, grams, origin/destination pins.
+  // total_amount is the GST-inclusive charge for the shipment.
   const weightGrams = Math.round(input.weightKg * 1000);
-  const codAmount = input.paymentMode === "COD" ? (input.codAmount ?? 0) : 0;
 
   const params = new URLSearchParams({
-    md: "E",
+    md: "S", // Surface
     ss: "Delivered",
-    d: String(input.weightKg),
-    o: input.originPincode, // the pickup warehouse's pin, never a global default
-    dc: input.destinationPincode,
+    o_pin: input.originPincode, // the pickup warehouse's pin, never a global default
+    d_pin: input.destinationPincode,
     cgm: String(weightGrams),
-    pt: input.paymentMode,
-    cod: String(codAmount),
+    pt: input.paymentMode === "COD" ? "COD" : "Pre-paid",
   });
 
-  const data = await delhiveryFetch<DelhiveryRateResponse>(
-    `/api/kinko/v1/rate-calculator/?${params.toString()}`
+  const rows = await delhiveryFetch<DelhiveryRateResponse[]>(
+    `/api/kinko/v1/invoice/charges/.json?${params.toString()}`
   );
 
-  if (!data || typeof data.total_amount !== "number") return null;
+  const data = Array.isArray(rows) ? rows[0] : undefined;
+  if (!data || typeof data.total_amount !== "number" || data.total_amount <= 0) return null;
 
   return {
     shippingCost: Math.round(data.total_amount),
     source: "delhivery_api",
     breakdown: {
-      freight: data.freight_charge,
-      codCharges: data.cod_charges,
-      fuelSurcharge: data.fuel_surcharge,
+      freight: data.charge_DL,
+      codCharges: data.charge_COD,
+      fuelSurcharge: data.charge_FSC,
     },
   };
 }
