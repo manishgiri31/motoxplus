@@ -855,7 +855,7 @@ export function ProductDetailClient({ product, vehicleContext, children }: Props
           {!isDealer && !isCustomer && (
             <div className={BUY_BAR}>
               <Link
-                href="/login"
+                href={`/login?as=customer&callbackUrl=${encodeURIComponent(`/products/${product.slug}`)}`}
                 className="block w-full text-center bg-[var(--red)] hover:bg-[var(--red-hover)] text-white font-bold py-3.5 md:py-3 rounded-sm transition-colors text-sm"
               >
                 Login to Order

@@ -9,7 +9,7 @@ export default async function AccountInvoiceDetailPage(props: { params: Promise<
   const session = await getServerSession(authOptions);
   const customer = await prisma.customer.findUnique({ where: { userId: session!.user.id } });
 
-  if (!customer) return null;
+  if (!customer) notFound();
 
   const invoice = await prisma.invoice.findUnique({
     where: { id: params.id },

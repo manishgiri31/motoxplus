@@ -1,5 +1,7 @@
 "use client";
 
+
+import { safeFetch } from "@/lib/safe-fetch";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProductImageUploader, ImageUploaderRef } from "@/components/admin/product-image-uploader";
@@ -124,14 +126,14 @@ export function ProductForm({ categories, product }: Props) {
     const url = isEdit ? `/api/products/${product.id}` : "/api/products";
     const method = isEdit ? "PATCH" : "POST";
 
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       setErrorMsg(err.error || (err.details ? JSON.stringify(err.details) : "Failed to save product"));
       setStatus("error");
       return;

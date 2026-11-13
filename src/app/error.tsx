@@ -28,6 +28,7 @@ export default function ErrorBoundary({
           <Link href="/">Go home</Link>
         </Button>
       </div>
+      {error.digest && <p className="mt-4 font-mono text-12 text-[var(--muted)]">Reference: {error.digest}</p>}
     </div>
   );
 }

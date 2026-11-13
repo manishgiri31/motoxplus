@@ -1,5 +1,7 @@
 "use client";
 
+
+import { safeFetch } from "@/lib/safe-fetch";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -34,12 +36,12 @@ export function VerificationStatusCard({
   async function handleChangeEmail(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading"); setError("");
-    const res = await fetch("/api/auth/change-email", {
+    const res = await safeFetch("/api/auth/change-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newEmail }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error || "Failed to update email"); setStatus("error"); return; }
     await update();
     router.push(`/verify-email?userId=${data.userId}`);

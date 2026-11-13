@@ -68,11 +68,34 @@ export default function AccountCheckoutPage() {
 
   useEffect(() => {
     fetch("/api/cart")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : { items: [] }))
+      .then((data) => setItems(data.items || []))
+      .catch(() => setItems([]))
+      .finally(() => setCartLoading(false));
+
+    // Prefill from the account: name + mobile, and the address saved at
+    // signup (or the last order). Only fills fields still empty, so it never
+    // overwrites something the customer already started typing.
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        setItems(data.items || []);
-        setCartLoading(false);
-      });
+        const u = data?.user;
+        if (!u) return;
+        const saved = {
+          name: u.name ?? "",
+          phone: u.mobileNumber ?? "",
+          address: u.customer?.deliveryAddress ?? "",
+          city: u.customer?.deliveryCity ?? "",
+          state: u.customer?.deliveryState ?? "",
+          pincode: u.customer?.deliveryPincode ?? "",
+        };
+        setDelivery((prev) => {
+          const next = { ...prev };
+          for (const k of Object.keys(saved) as (keyof DeliveryForm)[]) if (!next[k].trim()) next[k] = saved[k];
+          return next;
+        });
+      })
+      .catch(() => {});
 
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";

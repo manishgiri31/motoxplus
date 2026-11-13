@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       dealer: { select: { id: true, companyName: true, status: true, gstNumber: true } },
       admin: { select: { isSuperAdmin: true } },
       vendor: { select: { id: true, status: true } },
-      customer: { select: { id: true } },
+      customer: { select: { id: true, deliveryAddress: true, deliveryCity: true, deliveryState: true, deliveryPincode: true } },
     },
   });
 

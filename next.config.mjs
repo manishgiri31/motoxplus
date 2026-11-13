@@ -13,7 +13,8 @@ const securityHeaders = [
   // Permissions policy — deny unused browser APIs
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=(self), interest-cohort=()",
+    // geolocation=(self): the customer signup form's "Use current location" (src/lib/customer/locate.ts).
+    value: "camera=(), microphone=(), geolocation=(self), payment=(self), interest-cohort=()",
   },
   // HSTS — 2 years, include subdomains + preload. Prod-only: the dev server
   // is plain HTTP, and a browser that ever receives this header for
@@ -42,7 +43,8 @@ const securityHeaders = [
       "font-src 'self'",
       // API calls: self + Razorpay APIs + R2 (presigned uploads from the admin/dealer
       // image uploaders PUT directly to R2 from the browser)
-      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://*.r2.dev https://pub-966fa80d99d64e388b250232523a507f.r2.dev",
+      // + OpenStreetMap Nominatim: reverse geocoding for "Use current location" at /signup.
+      "connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://*.r2.dev https://pub-966fa80d99d64e388b250232523a507f.r2.dev https://nominatim.openstreetmap.org",
       // Razorpay checkout iframe
       "frame-src https://api.razorpay.com https://checkout.razorpay.com",
       "object-src 'none'",

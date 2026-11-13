@@ -5,30 +5,24 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AuthOtpStep } from "./auth-otp-step";
-import { AuthAlert, AuthHeading, TextAction, TextField } from "./auth-ui";
+import { AuthAlert, AuthHeading, TextField } from "./auth-ui";
 import { normalizeIndianMobile } from "@/lib/phone";
 import { landingPathForRole, safeCallbackTarget } from "@/lib/auth/safe-redirect";
 
-type Step = "details" | "otp";
+type Step = "phone" | "otp";
 
-// B2C customer signup + login, both in one form (B2C-EXPANSION-PLAN.md
-// Phase 2). Unlike the trade login, there's no separate "does this account
-// exist" branch — /api/auth/customer/register is enumeration-safe (same
-// response whether the phone is new or already registered) and reuses the
-// existing /api/auth/login-otp verify step for both cases, so this form always
-// asks for the mobile number up front; a returning customer's name is simply
-// ignored server-side (which is why the name field is optional here). The
-// mobile number is only ever *proved* by the WhatsApp code — approval-free, a
-// correct OTP logs straight into /account.
+// Returning-customer sign-in: mobile number → WhatsApp code → back to the
+// catalogue (or wherever callbackUrl points). New customers go to /signup,
+// which collects name, email and address and verifies both phone and email.
+// /api/auth/login-otp answers the same way whether or not the number is
+// registered, so the "create an account" link stays visible on both steps.
 export function CustomerAuthForm() {
   const searchParams = useSearchParams();
   const callbackParam = searchParams.get("callbackUrl");
+  const signupHref = callbackParam ? `/signup?callbackUrl=${encodeURIComponent(callbackParam)}` : "/signup";
 
-  const [step, setStep] = useState<Step>("details");
-  const [name, setName] = useState("");
+  const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [showEmail, setShowEmail] = useState(false);
   const [phoneError, setPhoneError] = useState("");
 
   const [otp, setOtp] = useState("");
@@ -42,10 +36,10 @@ export function CustomerAuthForm() {
     setStatus("loading");
     setError("");
     try {
-      const res = await fetch("/api/auth/customer/register", {
+      const res = await fetch("/api/auth/login-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || "Customer", phone, email: email.trim() || undefined }),
+        body: JSON.stringify({ method: "mobile", mobile: normalizedPhone }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -62,7 +56,7 @@ export function CustomerAuthForm() {
     return true;
   }
 
-  async function handleDetailsSubmit(e: React.FormEvent) {
+  async function handlePhoneSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (status === "loading") return;
     if (!normalizedPhone) {
@@ -72,13 +66,8 @@ export function CustomerAuthForm() {
     if (await requestOtp()) {
       setOtp("");
       setTimerKey((k) => k + 1);
-      setError("");
       setStep("otp");
     }
-  }
-
-  async function handleResendOtp() {
-    if (!(await requestOtp())) throw new Error("Resend failed");
   }
 
   async function verifyOtp(code: string) {
@@ -104,8 +93,8 @@ export function CustomerAuthForm() {
       setOtp("");
       return;
     }
-    // Same-origin paths only (see safe-redirect.ts); a dealer who typed their
-    // own number here lands in the dealer portal, not /account.
+    // Same-origin paths only (see safe-redirect.ts). Customers land on the
+    // catalogue; a dealer who typed their own number lands in their portal.
     window.location.href = safeCallbackTarget(callbackParam, landingPathForRole(data.user?.role));
   }
 
@@ -114,28 +103,46 @@ export function CustomerAuthForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
 
+  const newHere = (
+    <p className="mt-8 border-t border-[var(--line)] pt-6 text-14 text-[var(--muted)]">
+      New to MOTOXPLUS?{" "}
+      <Link href={signupHref} className="font-semibold text-[var(--accent-text)] underline-offset-4 hover:underline">
+        Create an account
+      </Link>
+    </p>
+  );
+
   if (step === "otp") {
     return (
-      <AuthOtpStep
-        destination={`+91 ••••• ••${normalizedPhone.slice(-2)}`}
-        channel="WhatsApp"
-        otp={otp}
-        onOtpChange={(v) => { setOtp(v); if (error) setError(""); }}
-        status={status}
-        error={error}
-        timerKey={timerKey}
-        onResend={handleResendOtp}
-        onBack={() => { setStep("details"); setError(""); setStatus("idle"); }}
-        backLabel="Change number"
-      />
+      <div>
+        <AuthOtpStep
+          destination={`+91 ••••• ••${normalizedPhone.slice(-2)}`}
+          channel="WhatsApp"
+          otp={otp}
+          onOtpChange={(v) => { setOtp(v); if (error) setError(""); }}
+          status={status}
+          error={error}
+          timerKey={timerKey}
+          onResend={async () => { if (!(await requestOtp())) throw new Error("Resend failed"); }}
+          onBack={() => { setStep("phone"); setError(""); setStatus("idle"); }}
+          backLabel="Change number"
+        />
+        <p className="mt-6 text-[13px] leading-[1.5] text-[var(--muted)]">
+          No code? Codes only go to numbers with an account.{" "}
+          <Link href={signupHref} className="font-medium text-[var(--accent-text)] underline-offset-4 hover:underline">
+            Create one
+          </Link>
+          .
+        </p>
+      </div>
     );
   }
 
   return (
     <div>
-      <AuthHeading title="Sign in or sign up" subtitle="Enter your mobile number. We'll send a one-time code on WhatsApp. No password to remember." />
+      <AuthHeading title="Welcome back" subtitle="Enter your mobile number. We'll send a one-time code on WhatsApp." />
 
-      <form onSubmit={handleDetailsSubmit} className="space-y-5" noValidate>
+      <form onSubmit={handlePhoneSubmit} className="space-y-5" noValidate>
         <TextField
           label="Mobile number"
           type="tel"
@@ -148,29 +155,6 @@ export function CustomerAuthForm() {
           error={phoneError}
           onChange={(e) => { setPhone(e.target.value); setPhoneError(""); setError(""); }}
         />
-        <TextField
-          label="Your name"
-          type="text"
-          autoComplete="name"
-          placeholder="Rahul Kumar"
-          hint="First time here? Add your name. Returning customers can skip this."
-          maxLength={100}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        {showEmail ? (
-          <TextField
-            label="Email (optional)"
-            type="email"
-            autoComplete="email"
-            autoCapitalize="none"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        ) : (
-          <TextAction onClick={() => setShowEmail(true)}>+ Add an email for order updates</TextAction>
-        )}
 
         {error && <AuthAlert>{error}</AuthAlert>}
 
@@ -179,11 +163,7 @@ export function CustomerAuthForm() {
         </Button>
       </form>
 
-      <p className="mt-6 text-[13px] leading-[1.5] text-[var(--muted)]">
-        By continuing you agree to our{" "}
-        <Link href="/terms" className="underline underline-offset-2 hover:text-[var(--ink)]">Terms</Link> and{" "}
-        <Link href="/privacy" className="underline underline-offset-2 hover:text-[var(--ink)]">Privacy Policy</Link>.
-      </p>
+      {newHere}
     </div>
   );
 }

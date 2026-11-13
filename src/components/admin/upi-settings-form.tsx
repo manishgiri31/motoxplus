@@ -1,5 +1,7 @@
 "use client";
 
+
+import { safeFetch } from "@/lib/safe-fetch";
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { CheckCircle2 } from "lucide-react";
@@ -34,14 +36,14 @@ export function UpiSettingsForm({ initial }: Props) {
     e.preventDefault();
     setSaving(true);
     setError("");
-    const res = await fetch("/api/admin/settings/upi", {
+    const res = await safeFetch("/api/admin/settings/upi", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
     setSaving(false);
     if (!res.ok) {
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       setError(d.error || "Save failed.");
       return;
     }

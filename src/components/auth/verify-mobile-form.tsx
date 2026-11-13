@@ -1,3 +1,4 @@
+import { safeFetch } from "@/lib/safe-fetch";
 ﻿"use client";
 
 import { useState } from "react";
@@ -41,12 +42,12 @@ export function VerifyMobileForm() {
     e.preventDefault();
     if (!MOBILE_REGEX.test(mobile)) { setError("Please enter a valid phone number."); setStatus("error"); return; }
     setStatus("loading"); setError("");
-    const res = await fetch("/api/auth/send-mobile-otp", {
+    const res = await safeFetch("/api/auth/send-mobile-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mobile }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error || "Unable to send OTP right now. Please try again later."); setStatus("error"); return; }
     setStatus("idle");
     setStep("enter-otp");
@@ -57,12 +58,12 @@ export function VerifyMobileForm() {
     e.preventDefault();
     if (otp.length !== 6) { setError("Please enter the 6-digit OTP."); return; }
     setStatus("loading"); setError("");
-    const res = await fetch("/api/auth/verify-mobile", {
+    const res = await safeFetch("/api/auth/verify-mobile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ otp }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(friendlyOtpError(data.error || "Verification failed")); setStatus("error"); return; }
     setStep("success");
     if (session) {
@@ -71,12 +72,12 @@ export function VerifyMobileForm() {
   }
 
   async function handleResend() {
-    const res = await fetch("/api/auth/send-mobile-otp", {
+    const res = await safeFetch("/api/auth/send-mobile-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mobile }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || "Unable to send OTP right now. Please try again later.");
     setTimerKey((k) => k + 1);
   }

@@ -1,3 +1,4 @@
+import { safeFetch } from "@/lib/safe-fetch";
 ﻿"use client";
 
 import { useState } from "react";
@@ -22,12 +23,12 @@ export function VerifyEmailForm() {
     e.preventDefault();
     if (otp.length !== 6) { setError("Enter the 6-digit OTP"); return; }
     setStatus("loading"); setError("");
-    const res = await fetch("/api/auth/verify-email", {
+    const res = await safeFetch("/api/auth/verify-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, otp }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error || "Verification failed"); setStatus("error"); return; }
     setStatus("success");
     if (session) {
@@ -38,12 +39,12 @@ export function VerifyEmailForm() {
   }
 
   async function handleResend() {
-    const res = await fetch("/api/auth/send-email-verification", {
+    const res = await safeFetch("/api/auth/send-email-verification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || "Failed to resend");
     setTimerKey((k) => k + 1);
   }

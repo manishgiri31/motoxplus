@@ -36,9 +36,13 @@ export function Navbar() {
       ? "/dealer/dashboard"
       : role === "VENDOR"
       ? "/vendor/dashboard"
-      : ["ADMIN", "SUPER_ADMIN"].includes(role)
+      : ["ADMIN", "SUPER_ADMIN", "STAFF"].includes(role)
       ? "/admin/dashboard"
+      : role === "CUSTOMER"
+      ? "/account/orders"
       : "/login";
+  // Customers have no dashboard: their account is orders + cart.
+  const dashboardLabel = role === "CUSTOMER" ? "My orders" : "Dashboard";
 
   // Lock page scroll while the mobile menu is open; Escape closes it and returns focus.
   useEffect(() => {
@@ -100,7 +104,7 @@ export function Navbar() {
             )}
             {session ? (
               <StoreButton href={dashboardHref} size="sm" className="whitespace-nowrap px-3 py-1 text-12">
-                Dashboard
+                {dashboardLabel}
               </StoreButton>
             ) : (
               <StoreButton href="/become-dealer" size="sm" className="whitespace-nowrap px-3 py-1 text-12">
@@ -143,7 +147,7 @@ export function Navbar() {
           <div className="mx-auto flex max-w-[1024px] flex-col gap-3 px-[22px] pb-[max(2rem,env(safe-area-inset-bottom))] pt-8">
             {session ? (
               <StoreButton href={dashboardHref}>
-                Go to Dashboard
+                {role === "CUSTOMER" ? "My orders" : "Go to Dashboard"}
               </StoreButton>
             ) : (
               <>

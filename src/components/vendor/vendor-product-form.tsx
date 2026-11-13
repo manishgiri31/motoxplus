@@ -1,5 +1,7 @@
 "use client";
 
+
+import { safeFetch } from "@/lib/safe-fetch";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
@@ -78,14 +80,14 @@ export function VendorProductForm({ categories, defaultMarkup }: Props) {
       compatibility: form.compatibility.split(",").map((s) => s.trim()).filter(Boolean),
     };
 
-    const res = await fetch("/api/vendor/products", {
+    const res = await safeFetch("/api/vendor/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       setErrorMsg(err.error || "Failed to submit product");
       setStatus("error");
       return;

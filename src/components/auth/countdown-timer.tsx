@@ -51,7 +51,7 @@ export function CountdownTimer({ seconds, onComplete, onResend, label = "Resend 
     return (
       <p className={`text-14 text-[var(--muted)] ${align}`}>
         {compact ? <>{label} in </> : <>Resend in </>}
-        <span className="font-mono font-medium tabular-nums text-[var(--ink)]">{compact && remaining < 60 ? `${remaining}s` : `${mm}:${ss}`}</span>
+        <span className="font-mono font-medium tabular-nums text-[var(--ink)]">{compact && remaining <= 60 ? `${remaining}s` : `${mm}:${ss}`}</span>
       </p>
     );
   }

@@ -18,9 +18,15 @@ const statusColors: Record<string, string> = {
 export default async function AccountOrdersPage(props: { searchParams: Promise<{ page?: string }> }) {
   const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions);
-  const customer = await prisma.customer.findUnique({ where: { userId: session!.user.id } });
-
-  if (!customer) return null;
+  // The layout guarantees a CUSTOMER session. Every customer should already
+  // have a Customer row (signup creates it); if one is ever missing, create it
+  // here rather than render a blank page.
+  const customer = await prisma.customer.upsert({
+    where: { userId: session!.user.id },
+    create: { userId: session!.user.id },
+    update: {},
+    select: { id: true },
+  });
 
   const page = parsePageParam(searchParams.page);
   const pageSize = 10;

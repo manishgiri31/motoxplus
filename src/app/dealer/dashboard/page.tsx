@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -34,7 +35,8 @@ export default async function DealerDashboardPage() {
     },
   });
 
-  if (!dealer) return null;
+  // A DEALER login with no Dealer row is a broken account; show 404 rather than a blank page.
+  if (!dealer) notFound();
 
   const stats = {
     totalOrders: await prisma.order.count({ where: { dealerId: dealer.id } }),

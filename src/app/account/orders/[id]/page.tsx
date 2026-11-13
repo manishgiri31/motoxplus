@@ -16,7 +16,7 @@ export default async function AccountOrderDetailPage(
   const session = await getServerSession(authOptions);
   const customer = await prisma.customer.findUnique({ where: { userId: session!.user.id } });
 
-  if (!customer) return null;
+  if (!customer) notFound();
 
   const order = await prisma.order.findUnique({
     where: { id: params.id },

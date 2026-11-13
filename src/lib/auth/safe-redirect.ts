@@ -11,7 +11,8 @@ export const ROLE_LANDING: Record<string, string> = {
   ADMIN: "/admin/dashboard",
   SUPER_ADMIN: "/admin/dashboard",
   STAFF: "/admin/dashboard",
-  CUSTOMER: "/account",
+  // Customers shop from the public catalogue; /account is just orders + cart.
+  CUSTOMER: "/products",
 };
 
 /** Returns `raw` if it's a safe in-app path, otherwise `fallback`. */
@@ -23,7 +24,7 @@ export function safeRedirectPath(raw: string | null | undefined, fallback: strin
   if (/[\\\u0000-\u001f\u007f]/.test(raw)) return fallback;
   if (!raw.startsWith("/") || raw.startsWith("//")) return fallback;
   // Landing back on an auth page after a successful login is a loop at best.
-  if (/^\/(login|register|forgot-password|reset-password)(\/|\?|#|$)/.test(raw)) return fallback;
+  if (/^\/(login|signup|register|forgot-password|reset-password)(\/|\?|#|$)/.test(raw)) return fallback;
   return raw;
 }
 

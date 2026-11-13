@@ -106,7 +106,7 @@ describe("landingPathForRole", () => {
     expect(landingPathForRole("DEALER")).toBe("/dealer/dashboard");
     expect(landingPathForRole("VENDOR")).toBe("/vendor/dashboard");
     expect(landingPathForRole("STAFF")).toBe("/admin/dashboard");
-    expect(landingPathForRole("CUSTOMER")).toBe("/account");
+    expect(landingPathForRole("CUSTOMER")).toBe("/products");
     expect(landingPathForRole(undefined)).toBe("/");
   });
 });

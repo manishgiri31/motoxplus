@@ -18,7 +18,13 @@ export interface Me {
   dealer: { id: string; companyName: string; status: DealerStatus; gstNumber: string | null } | null;
   admin: { isSuperAdmin: boolean } | null;
   vendor: { id: string; status: VendorStatus } | null;
-  customer: { id: string } | null;
+  customer: {
+    id: string;
+    deliveryAddress: string | null;
+    deliveryCity: string | null;
+    deliveryState: string | null;
+    deliveryPincode: string | null;
+  } | null;
 }
 
 /**

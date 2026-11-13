@@ -374,13 +374,11 @@ export function VehicleDetailClient({
         </section>
       )}
 
-      {/* Colors */}
+      {/* Colors: hidden until the vehicle has some, rather than a "coming soon" placeholder */}
+      {vehicle.colors.length > 0 && (
       <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
           <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-5">Available Colors</h2>
-          {vehicle.colors.length === 0 ? (
-            <p className="text-[var(--muted)] text-sm">Color options coming soon.</p>
-          ) : (
             <div className="flex flex-wrap gap-4">
               {vehicle.colors.map((c) => (
                 <button
@@ -407,17 +405,15 @@ export function VehicleDetailClient({
                 </button>
               ))}
             </div>
-          )}
         </div>
       </section>
+      )}
 
-      {/* Gallery */}
+      {/* Gallery: hidden until there are images */}
+      {vehicle.gallery.length > 0 && (
       <section className="py-12 px-4 md:px-8 border-b border-[var(--line)]">
         <div className="max-w-7xl mx-auto">
           <h2 className="font-display text-xl font-bold text-[var(--ink)] mb-5">Gallery</h2>
-          {vehicle.gallery.length === 0 ? (
-            <p className="text-[var(--muted)] text-sm">Gallery images coming soon.</p>
-          ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {vehicle.gallery.map((g, i) => (
                 <button
@@ -438,9 +434,9 @@ export function VehicleDetailClient({
                 </button>
               ))}
             </div>
-          )}
         </div>
       </section>
+      )}
 
       {/* Gallery lightbox */}
       <AnimatePresence>

@@ -79,12 +79,12 @@ export default withAuth(
     }
 
     // Redirect authenticated users away from auth pages
-    const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/reset-password"];
+    const AUTH_PAGES = ["/login", "/signup", "/register", "/forgot-password", "/reset-password"];
     if (AUTH_PAGES.some((p) => pathname === p) && token) {
       if (role === "DEALER") return NextResponse.redirect(new URL("/dealer/dashboard", req.url));
       if (ADMIN_ROLES.includes(role)) return NextResponse.redirect(new URL("/admin/dashboard", req.url));
       if (role === "VENDOR") return NextResponse.redirect(new URL("/vendor/dashboard", req.url));
-      if (role === "CUSTOMER") return NextResponse.redirect(new URL("/account", req.url));
+      if (role === "CUSTOMER") return NextResponse.redirect(new URL("/products", req.url));
     }
 
     return NextResponse.next();
@@ -128,6 +128,7 @@ export const config = {
     "/vendor/:path*",
     "/account/:path*",
     "/login",
+    "/signup",
     "/register",
     "/forgot-password",
     "/reset-password",

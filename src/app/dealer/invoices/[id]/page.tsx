@@ -9,7 +9,8 @@ export default async function InvoiceDetailPage(props: { params: Promise<{ id: s
   const session = await getServerSession(authOptions);
   const dealer = await prisma.dealer.findUnique({ where: { userId: session!.user.id } });
 
-  if (!dealer) return null;
+  // A DEALER login with no Dealer row is a broken account; show 404 rather than a blank page.
+  if (!dealer) notFound();
 
   const invoice = await prisma.invoice.findUnique({
     where: { id: params.id },

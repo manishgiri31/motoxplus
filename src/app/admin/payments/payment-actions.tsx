@@ -1,5 +1,7 @@
 "use client";
 
+
+import { safeFetch } from "@/lib/safe-fetch";
 import { useState } from "react";
 import { CheckCircle2, XCircle, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,21 +21,27 @@ export function PaymentActions({ submissionId, status }: Props) {
 
   const doReview = async () => {
     setLoading("review");
-    await fetch(`/api/admin/payments/${submissionId}/review`, { method: "POST" });
+    setError("");
+    const res = await safeFetch(`/api/admin/payments/${submissionId}/review`, { method: "POST" });
     setLoading(null);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "Couldn't mark as under review.");
+      return;
+    }
     router.refresh();
   };
 
   const doVerify = async () => {
     setLoading("verify");
-    const res = await fetch(`/api/admin/payments/${submissionId}/verify`, {
+    const res = await safeFetch(`/api/admin/payments/${submissionId}/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
     setLoading(null);
     if (!res.ok) {
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       setError(d.error || "Verification failed.");
       return;
     }
@@ -43,7 +51,7 @@ export function PaymentActions({ submissionId, status }: Props) {
   const doReject = async () => {
     if (!rejectReason.trim()) { setError("Rejection reason is required."); return; }
     setLoading("reject");
-    const res = await fetch(`/api/admin/payments/${submissionId}/reject`, {
+    const res = await safeFetch(`/api/admin/payments/${submissionId}/reject`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reason: rejectReason.trim() }),
@@ -51,7 +59,7 @@ export function PaymentActions({ submissionId, status }: Props) {
     setLoading(null);
     setShowRejectModal(false);
     if (!res.ok) {
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       setError(d.error || "Rejection failed.");
       return;
     }

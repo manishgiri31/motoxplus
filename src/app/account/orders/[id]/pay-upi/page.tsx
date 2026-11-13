@@ -66,8 +66,9 @@ export default function AccountPayUpiPage() {
 
   useEffect(() => {
     fetch(`/api/payments/upi/${id}`)
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
+        if (!data) return; // falls through to the "order not found" state
         setOrder(data.order);
         setSettings(data.paymentSettings);
         if (data.paymentSettings?.upiEnabled === false) {
@@ -84,6 +85,7 @@ export default function AccountPayUpiPage() {
           setForm((f) => ({ ...f, phone: data.order.deliveryPhone }));
         }
       })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -113,11 +115,21 @@ export default function AccountPayUpiPage() {
     fd.append("file", file);
     fd.append("orderId", id);
 
-    const res = await fetch("/api/upload/payment-screenshot", { method: "POST", body: fd });
-    const data = await res.json();
+    // A proxy error (413 for a large file, 502) isn't JSON, and a dropped
+    // connection throws; either used to leave "Uploading..." on screen forever.
+    let res: Response;
+    let data: { url?: string; key?: string; error?: string } = {};
+    try {
+      res = await fetch("/api/upload/payment-screenshot", { method: "POST", body: fd });
+      data = await res.json().catch(() => ({}));
+    } catch {
+      setUploading(false);
+      setSubmitError("Network error while uploading. Check your connection and try again.");
+      return;
+    }
     setUploading(false);
 
-    if (!res.ok) {
+    if (!res.ok || !data.url || !data.key) {
       setSubmitError(data.error || "Screenshot upload failed.");
       return;
     }
@@ -139,7 +151,10 @@ export default function AccountPayUpiPage() {
     }
 
     setSubmitting(true);
-    const res = await fetch("/api/payments/upi/submit", {
+    let res: Response;
+    let data: { error?: string } = {};
+    try {
+    res = await fetch("/api/payments/upi/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -153,7 +168,12 @@ export default function AccountPayUpiPage() {
         screenshotKey: uploadedKey,
       }),
     });
-    const data = await res.json();
+    data = await res.json().catch(() => ({}));
+    } catch {
+      setSubmitting(false);
+      setSubmitError("Network error. Your payment details were not submitted. Try again.");
+      return;
+    }
     setSubmitting(false);
 
     if (!res.ok) {

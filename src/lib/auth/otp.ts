@@ -69,6 +69,50 @@ export async function createOTP(userId: string, type: OtpType): Promise<string> 
   return code;
 }
 
+/**
+ * Checks a code WITHOUT consuming it: a wrong guess still counts against the
+ * 5-attempt cap, but a correct one leaves the code live and returns its row id
+ * for a later claimOTP(). Lets a flow that needs two codes at once (customer
+ * signup: WhatsApp + email) accept both or neither — with verifyOTP, a right
+ * phone code next to a mistyped email code would burn the phone code and force
+ * the customer to request a new one for no reason.
+ */
+export async function checkOTP(
+  userId: string,
+  type: OtpType,
+  code: string
+): Promise<{ success: true; otpId: string } | { success: false; error: string }> {
+  const otp = await prisma.otpCode.findFirst({
+    where: { userId, type, used: false },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!otp) return { success: false, error: "Code expired. Request a new one." };
+  if (otp.expiresAt < new Date()) {
+    await prisma.otpCode.updateMany({ where: { id: otp.id, used: false }, data: { used: true } });
+    return { success: false, error: "Code expired. Request a new one." };
+  }
+  if (otp.attempts >= MAX_OTP_ATTEMPTS) {
+    await prisma.otpCode.updateMany({ where: { id: otp.id, used: false }, data: { used: true } });
+    return { success: false, error: "Too many incorrect attempts. Request a new code." };
+  }
+  if (!otpMatches(otp, code)) {
+    const updated = await prisma.otpCode.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
+    const remaining = Math.max(0, MAX_OTP_ATTEMPTS - updated.attempts);
+    return {
+      success: false,
+      error: remaining > 0 ? `Incorrect code. ${remaining} attempt(s) left.` : "Too many incorrect attempts. Request a new code.",
+    };
+  }
+  return { success: true, otpId: otp.id };
+}
+
+/** Marks a code returned by checkOTP() as used. False if a concurrent request already claimed it. */
+export async function claimOTP(otpId: string): Promise<boolean> {
+  const claimed = await prisma.otpCode.updateMany({ where: { id: otpId, used: false }, data: { used: true } });
+  return claimed.count === 1;
+}
+
 export async function verifyOTP(
   userId: string,
   type: OtpType,

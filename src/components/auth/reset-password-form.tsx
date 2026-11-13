@@ -1,5 +1,7 @@
 "use client";
 
+
+import { safeFetch } from "@/lib/safe-fetch";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -53,12 +55,12 @@ export function ResetPasswordForm() {
     }
     setStatus("loading");
     setError("");
-    const res = await fetch("/api/auth/verify-forgot-password-otp", {
+    const res = await safeFetch("/api/auth/verify-forgot-password-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, otp }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "Invalid or expired code");
       setStatus("idle");
@@ -76,12 +78,12 @@ export function ResetPasswordForm() {
       throw new Error("missing contact");
     }
     const body = method === "mobile" ? { mobile: contact, method: "mobile" } : { email: contact, method: "email" };
-    const res = await fetch("/api/auth/forgot-password", {
+    const res = await safeFetch("/api/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "Couldn't resend the code");
       throw new Error(data.error || "Resend failed");
@@ -112,12 +114,12 @@ export function ResetPasswordForm() {
       return;
     }
     setStatus("loading");
-    const res = await fetch("/api/auth/reset-password", {
+    const res = await safeFetch("/api/auth/reset-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, resetToken, newPassword }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "Password reset failed");
       setStatus("idle");
