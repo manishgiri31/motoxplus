@@ -87,6 +87,20 @@ vi.mock("@/lib/delhivery/pickup-location", () => ({
   resolveCheckoutPickup: vi.fn().mockResolvedValue({ ok: true, pickupLocationName: null }),
 }));
 vi.mock("@/lib/tax/seller-state", () => ({ getSellerState: vi.fn().mockResolvedValue("Delhi") }));
+// Dealer orders are priced with a live Delhivery quote (PR #8); these tests are about idempotency, not shipping.
+// 2 x Rs 100 + 18% GST = 236; delivery free so the totals stay as they were.
+vi.mock("@/lib/shipping/dealer-checkout", () => ({
+  quoteDealerShipping: vi.fn().mockResolvedValue({
+    ok: true,
+    orderTotal: 236,
+    shippingCost: 0,
+    grandTotal: 236,
+    freeDelivery: true,
+    source: "free",
+    pickupLocationName: null,
+  }),
+  dealerPaymentModeFor: (paymentType: string) => (paymentType === "ADVANCE_20" ? "COD" : "Prepaid"),
+}));
 vi.mock("@/lib/orders/cod", () => ({
   confirmCodOrder: vi.fn(),
   isCodAvailable: vi.fn(),
