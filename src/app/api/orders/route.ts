@@ -6,7 +6,7 @@ import { getCurrentUserId } from "@/lib/auth/current-user";
 import { resolveOrderActor, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
 import { computeOrderPricing } from "@/lib/pricing/compute";
-import { computeShippingQuote } from "@/lib/shipping/quote";
+import { quoteDealerShipping } from "@/lib/shipping/dealer-checkout";
 import { priceB2CCart, quoteB2CShipping, type B2CCheckoutError } from "@/lib/shipping/b2c-checkout";
 import { validateSchemeSelection, type SchemeItemCandidate } from "@/lib/schemes/cart-validation";
 import { computeGstSplit, UnrecognizedStateError } from "@/lib/tax/gst-split";
@@ -277,9 +277,17 @@ export async function POST(req: NextRequest) {
     };
   });
 
-  const orderTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
-  const { shippingCost } = computeShippingQuote({ channel, orderTotal });
-  const grandTotal = roundToPaise(orderTotal + shippingCost);
+  // Real Delhivery charge for the whole order (quantity included), same as the dealer checkout shows.
+  const shipping = await quoteDealerShipping({ items: cart.items, deliveryPincode, paymentType });
+  if (!shipping.ok) {
+    return NextResponse.json(
+      { error: shipping.error, code: shipping.code, unavailableProductIds: shipping.productIds },
+      { status: shipping.status }
+    );
+  }
+  const orderTotal = shipping.orderTotal;
+  const shippingCost = shipping.shippingCost;
+  const grandTotal = shipping.grandTotal;
 
   const amountDue = roundToPaise(
     paymentType === "ADVANCE_20" ? grandTotal * 0.2 : grandTotal

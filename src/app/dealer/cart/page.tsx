@@ -122,8 +122,9 @@ export default function CartPage() {
     0
   );
   const orderTotal = subtotal + gstAmount;
-  const shippingCost = orderTotal >= FREE_DELIVERY_THRESHOLD ? 0 : Math.round(orderTotal * 0.05 * 100) / 100;
-  const grandTotal = orderTotal + shippingCost;
+  // Delivery is the real Delhivery charge for the dealer's pincode, so it is calculated at checkout.
+  const isFreeDelivery = orderTotal >= FREE_DELIVERY_THRESHOLD;
+  const grandTotal = orderTotal;
   const freeDeliveryRemaining = Math.max(0, FREE_DELIVERY_THRESHOLD - orderTotal);
   const freeDeliveryProgress = Math.min(100, (orderTotal / FREE_DELIVERY_THRESHOLD) * 100);
 
@@ -284,7 +285,7 @@ export default function CartPage() {
                     />
                   </div>
                   <p className="text-[var(--text-muted)] text-12 mt-1.5">
-                    Shipping: {formatCurrency(shippingCost)} (5% of order)
+                    Shipping is calculated at checkout based on your delivery pincode.
                   </p>
                 </div>
               ) : (
@@ -308,14 +309,14 @@ export default function CartPage() {
                     <Truck size={12} />
                     Shipping
                   </span>
-                  {shippingCost === 0 ? (
+                  {isFreeDelivery ? (
                     <span className="text-green-400 font-semibold text-sm">Free</span>
                   ) : (
-                    <span className="text-[var(--text-primary)] font-semibold">{formatCurrency(shippingCost)}</span>
+                    <span className="text-[var(--text-muted)] text-sm">Calculated at checkout</span>
                   )}
                 </div>
                 <div className="border-t border-[var(--border-color)] pt-3 flex justify-between">
-                  <span className="text-[var(--text-primary)] font-bold">Grand Total</span>
+                  <span className="text-[var(--text-primary)] font-bold">{isFreeDelivery ? "Grand Total" : "Total (excl. shipping)"}</span>
                   <span className="text-red-500 font-black text-lg">{formatCurrency(grandTotal)}</span>
                 </div>
               </div>
