@@ -402,7 +402,12 @@ jobs:
             # ---------------------------------------------------------------
             step "Stopping stray Next.js processes"
             PM2_PIDS=" $(pm2 jlist 2>/dev/null | grep -oE '"pid":[0-9]+' | grep -oE '[0-9]+' | tr '\n' ' ') "
-            for pid in $(pgrep -f 'next-server' || true); do
+            # Match only real next-server processes (anchored), and never this
+            # deploy shell or its parent: a loose `pgrep -f next-server` can
+            # match the deploy's own command line and SIGTERM the job itself.
+            for pid in $(pgrep -f '^next-server' || true); do
+              [ "${pid}" = "$$" ] && continue
+              [ "${pid}" = "${PPID}" ] && continue
               case "${PM2_PIDS}" in
                 *" ${pid} "*) ;;
                 *) echo "Stopping stray next-server pid ${pid} (not managed by PM2)"; kill "${pid}" || true ;;
