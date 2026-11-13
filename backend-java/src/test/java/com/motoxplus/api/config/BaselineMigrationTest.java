@@ -105,7 +105,7 @@ class BaselineMigrationTest {
         DataSource ds = freshDatabase();
         var result = flyway(ds, "latest").migrate();
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(6); // V1 baseline script + V2 marketplace + V3 vendor onboarding + V4 listings + V5 customer type/GSTIN + V6 Delhivery warehouses
+        assertThat(result.migrationsExecuted).isEqualTo(7); // V1 baseline script + V2 marketplace + V3 vendor onboarding + V4 listings + V5 customer type/GSTIN + V6 Delhivery warehouses + V7 order idempotency key
         JdbcTemplate jdbc = new JdbcTemplate(ds);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM public.\"Order\"", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM marketplace.permission", Integer.class)).isEqualTo(23); // 22 from V2 + vendor.warehouse.manage (V6)
@@ -178,10 +178,60 @@ class BaselineMigrationTest {
                 .callbacks(new BaselineGuard()).cleanDisabled(true).load().migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).as("only V2..V6 run; V1 is adopted, not executed").isEqualTo(5);
+        assertThat(result.migrationsExecuted).as("only V2..V7 run; V1 is adopted, not executed").isEqualTo(6);
         assertThat(jdbc.queryForObject("SELECT name FROM \"User\" WHERE id = 'keep'", String.class)).isEqualTo("Keep Me");
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM public.flyway_schema_history WHERE type = 'BASELINE' AND version = '1'", Integer.class)).isEqualTo(1);
+    }
+
+    /**
+     * Production's real starting point: every migration in prisma/migrations applied by Prisma, including the ones
+     * written after the baseline (20261112000000_sync_schema created V5/V6's columns, enums and table; the next one
+     * added Order.idempotencyKey). Flyway must adopt V1 and converge V2..V7 onto that without failing.
+     */
+    @Test
+    void migratesTheLiveDatabaseWhosePrismaHistoryRanPastTheBaseline() throws Exception {
+        java.nio.file.Path dir = java.nio.file.Paths.get("..", "prisma", "migrations");
+        org.junit.jupiter.api.Assumptions.assumeTrue(java.nio.file.Files.isDirectory(dir), "prisma/migrations not checked out");
+        List<java.nio.file.Path> migrations;
+        try (var s = java.nio.file.Files.list(dir)) {
+            migrations = s.filter(java.nio.file.Files::isDirectory).sorted().toList();
+        }
+        assertThat(migrations.stream().map(p -> p.getFileName().toString()))
+                .as("the Prisma history this test replays").contains("20261112000000_sync_schema", "20261112100000_order_idempotency_key");
+
+        DataSource ds = freshDatabase();
+        JdbcTemplate jdbc = new JdbcTemplate(ds);
+        createPrismaTable(jdbc);
+        try (Connection c = ds.getConnection()) {
+            for (java.nio.file.Path m : migrations) {
+                // Whole file in one call, as Prisma sends it (DO blocks with custom dollar quotes can't be split on ';').
+                try (Statement st = c.createStatement()) {
+                    st.execute(java.nio.file.Files.readString(m.resolve("migration.sql")));
+                }
+                insertApplied(jdbc, m.getFileName().toString());
+            }
+        }
+        jdbc.update("INSERT INTO \"User\" (id, name, email, password, role, \"updatedAt\") VALUES ('d1', 'Dealer', 'd@e.test', 'x', 'DEALER', now())");
+
+        var result = Flyway.configure().dataSource(ds)
+                .schemas("public").defaultSchema("public").createSchemas(false)
+                .locations("classpath:db/migration").baselineOnMigrate(true).baselineVersion("1")
+                .callbacks(new BaselineGuard()).cleanDisabled(true).load().migrate();
+
+        assertThat(result.success).isTrue();
+        // What Prisma could not create is now there.
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_trigger WHERE tgname = 'User_customerType_guard'", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT \"customerType\"::text FROM \"User\" WHERE id = 'd1'", String.class)).isEqualTo("B2B");
+        assertThat(jdbc.queryForObject("""
+                SELECT count(*) FROM pg_constraint WHERE conrelid = 'public."DelhiveryWarehouse"'::regclass AND contype = 'c'""",
+                Integer.class)).isEqualTo(16);
+        assertThat(jdbc.queryForObject("SELECT to_regclass('public.\"DelhiveryWarehouse_one_motoxplus_idx\"') IS NOT NULL", Boolean.class)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM marketplace.permission", Integer.class)).isGreaterThan(0);
+        // Same tables and columns as a database built by Flyway alone.
+        DataSource flywayOnly = freshDatabase();
+        flyway(flywayOnly, "latest").migrate();
+        assertThat(columns(ds)).isEqualTo(columns(flywayOnly));
     }
 
     private static void createPrismaTable(JdbcTemplate jdbc) {

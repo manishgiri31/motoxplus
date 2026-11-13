@@ -24,14 +24,16 @@ EnvironmentFile=/var/www/motoxplus/.env
 # Command-line flags win over anything in .env, so these can't be changed by editing .env by accident:
 #   --server.address=127.0.0.1  only Nginx can reach the API (client IPs come from X-Real-IP, which a
 #                               direct caller could forge); --server.port=8080 even if .env has PORT=3000
-#   --app.db.migrate=false      NEVER run Flyway migrations on a normal start. Taking over the schema is a
-#   --marketplace.enabled=false separate, deliberate step (docs/marketplace/DB-TAKEOVER.md); a stray
-#                               DB_MIGRATE=true in the shared .env must not migrate production on restart.
+#   --app.db.migrate=false      NEVER run Flyway migrations on a normal start. Migrating is a separate,
+#                               deliberate step (docs/marketplace/DB-TAKEOVER.md); a stray DB_MIGRATE=true in
+#                               the shared .env must not migrate production on restart.
+#   --marketplace.enabled=true  Vendor registration/onboarding/listings. Needs Flyway V2+ applied (done on
+#                               production 2026-11-14). Set to false to switch the vendor endpoints off.
 ExecStart=/usr/bin/java -Xms128m -Xmx512m -XX:+ExitOnOutOfMemoryError \
   -jar /var/www/motoxplus/backend-java/motoxplus-api.jar \
   --server.address=127.0.0.1 --server.port=8080 \
   --app.cookie.secure=true \
-  --app.db.migrate=false --marketplace.enabled=false
+  --app.db.migrate=false --marketplace.enabled=true
 
 Restart=on-failure
 RestartSec=5

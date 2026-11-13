@@ -11,7 +11,7 @@ middleware still read, so moving it now would log every dealer and admin out.
 
 1. **Java 21 runtime** (must match `<java.version>` in `backend-java/pom.xml`; the deploy checks this)
    ```bash
-   apt install -y openjdk-21-jre-headless
+   apt install -y openjdk-21-jdk-headless   # JDK, not JRE: every deploy builds the jar on the server (mvnw)
    java -version          # must say 21 (or newer)
    ```
 2. **Service user** (no shell, no home)
