@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 const POINTS = [
   { title: "Reach dealers and riders", body: "List your parts for workshops, retailers and customers across India." },
   { title: "We arrange shipping", body: "Pack at your warehouse; MotoXPlus books the courier and pickup." },
-  { title: "Reviewed by a person", body: "Every application is checked by our team before the account goes live." },
+  { title: "Approved straight away", body: "Verify your email and mobile and your vendor account is active. Finish your business profile to start selling." },
 ];
 
 export default function VendorRegisterPage() {

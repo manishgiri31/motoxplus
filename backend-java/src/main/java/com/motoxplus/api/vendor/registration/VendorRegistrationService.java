@@ -31,8 +31,12 @@ import com.motoxplus.api.web.FieldErrorsException;
 
 /**
  * Step 1 of vendor onboarding: the login account. Mirrors the dealer flow (src/app/api/dealer/register/route.ts):
- * same uniqueness rules, same password policy and bcrypt cost, email OTP sent right away. The vendor row starts
- * PENDING with empty business fields that the onboarding steps fill in; nothing is "verified" by this call.
+ * same uniqueness rules, same password policy and bcrypt cost, email OTP sent right away.
+ *
+ * Like a dealer, a self-registered vendor is approved automatically (owner decision 2026-11-14): the Vendor row starts
+ * APPROVED and the application records an automatic APPROVED decision. Email and mobile verification still gate the
+ * portal (middleware + VendorContext), and selling stays locked until the business profile is submitted
+ * ({@link com.motoxplus.api.vendor.VendorSnapshot#profilePending()}). Admins can suspend or block at any time.
  */
 @Service
 @ConditionalOnProperty(name = "marketplace.enabled", havingValue = "true")
@@ -41,6 +45,9 @@ public class VendorRegistrationService {
     private static final BCryptPasswordEncoder BCRYPT = new BCryptPasswordEncoder(12);
     private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    /** decided_by value for the automatic approval given at registration (no admin user involved). */
+    public static final String AUTO_APPROVER = "system:auto-approval";
 
     public record Request(String fullName, String mobile, String email, String password) {}
 
@@ -100,11 +107,14 @@ public class VendorRegistrationService {
                 jdbc.update("""
                         INSERT INTO public."Vendor" (id, "userId", "vendorCode", "companyName", "ownerName", email, phone, city, state,
                                                      status, "createdAt", "updatedAt")
-                        VALUES (?, ?, ?, '', ?, ?, ?, '', '', 'PENDING'::"VendorStatus", ?, ?)
+                        VALUES (?, ?, ?, '', ?, ?, ?, '', '', 'APPROVED'::"VendorStatus", ?, ?)
                         """, vendorId, userId, uniqueVendorCode(), name, mail, mobile, now, now);
-                jdbc.update("INSERT INTO marketplace.vendor_application (vendor_id) VALUES (?)", vendorId);
+                jdbc.update("""
+                        INSERT INTO marketplace.vendor_application (vendor_id, decision, decided_at, decided_by)
+                        VALUES (?, 'APPROVED', now(), ?)
+                        """, vendorId, AUTO_APPROVER);
                 audit.record(new AuthenticatedUser(userId, mail, "VENDOR", null), "vendor.registered", "vendor", vendorId, vendorId, ip,
-                        Map.of("channel", "web"));
+                        Map.of("channel", "web", "approval", "automatic"));
             });
         } catch (DuplicateKeyException e) {
             // Lost a race with a concurrent registration of the same email/mobile.

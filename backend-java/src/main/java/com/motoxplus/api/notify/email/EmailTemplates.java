@@ -104,6 +104,18 @@ public final class EmailTemplates {
         return new Email("[Review] Vendor application — " + company, base("New vendor application", content));
     }
 
+    /** FYI to the team: an auto-approved vendor finished their business profile and can now list products. */
+    public static Email adminVendorProfileCompleted(String company, String vendorCode, String vendorUrl) {
+        String content = """
+                <div class="title">New vendor is live</div>
+                <p class="text"><strong style="color:#fff;">%s</strong> (%s) registered, verified their email and mobile, and
+                completed their business profile. The account was approved automatically and can now list products.
+                Check the documents and suspend the account if anything is wrong.</p>
+                %s
+                """.formatted(esc(company), esc(vendorCode), button(vendorUrl, "View vendor"));
+        return new Email("[New vendor] " + company, base("New vendor is live", content));
+    }
+
     static String base(String title, String content) {
         return """
                 <!DOCTYPE html>

@@ -18,7 +18,8 @@ public final class ApplicationView {
         m.put("vendorId", v.vendorId());
         m.put("vendorCode", v.vendorCode());
         m.put("state", state.name());
-        m.put("editable", state.editable());
+        m.put("editable", v.profileEditable());
+        m.put("profileComplete", !v.profilePending());
 
         Map<String, Object> account = new LinkedHashMap<>();
         account.put("fullName", v.fullName());
@@ -70,7 +71,7 @@ public final class ApplicationView {
         m.put("requiredDocuments", VendorDocuments.required(v.hasGstin()));
         m.put("missingDocuments", v.missingDocuments());
 
-        boolean submitted = v.application().submittedAt() != null || state == ApplicationState.ACTIVE;
+        boolean submitted = v.application().submittedAt() != null || (state == ApplicationState.ACTIVE && !v.profilePending());
         m.put("steps", List.of(
                 step("account", true),
                 step("email", v.emailVerified()),

@@ -108,6 +108,14 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
         jdbc.update("UPDATE \"User\" SET \"emailVerified\" = now(), \"mobileVerified\" = true WHERE id = ?", v.userId());
     }
 
+    /** Older applications (and ones an admin reopens) still go through admin review; this recreates that starting point. */
+    private Vendor asReviewedApplicant(Vendor v) {
+        jdbc.update("UPDATE \"Vendor\" SET status = 'PENDING' WHERE id = ?", v.vendorId());
+        jdbc.update("UPDATE marketplace.vendor_application SET decision = NULL, decided_at = NULL, decided_by = NULL WHERE vendor_id = ?",
+                v.vendorId());
+        return v;
+    }
+
     private JsonNode read(ResultActions r) throws Exception {
         return json.readTree(r.andReturn().getResponse().getContentAsString());
     }
@@ -153,11 +161,14 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
     // ------------------------------------------------------------------ registration
 
     @Test
-    void registrationCreatesAnUnverifiedVendorAndRejectsDuplicatesAndWeakPasswords() throws Exception {
+    void registrationCreatesAnAutoApprovedUnverifiedVendorAndRejectsDuplicatesAndWeakPasswords() throws Exception {
         Vendor v = register();
         assertThat(jdbc.queryForObject("SELECT role::text FROM \"User\" WHERE id = ?", String.class, v.userId())).isEqualTo("VENDOR");
         assertThat(jdbc.queryForObject("SELECT \"mobileVerified\" FROM \"User\" WHERE id = ?", Boolean.class, v.userId())).isFalse();
-        assertThat(jdbc.queryForObject("SELECT status::text FROM \"Vendor\" WHERE id = ?", String.class, v.vendorId())).isEqualTo("PENDING");
+        // Approved like a dealer; verification still gates everything.
+        assertThat(jdbc.queryForObject("SELECT status::text FROM \"Vendor\" WHERE id = ?", String.class, v.vendorId())).isEqualTo("APPROVED");
+        assertThat(jdbc.queryForObject("SELECT decision || '/' || decided_by FROM marketplace.vendor_application WHERE vendor_id = ?",
+                String.class, v.vendorId())).isEqualTo("APPROVED/system:auto-approval");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM \"OtpCode\" WHERE \"userId\" = ? AND type = 'EMAIL_VERIFICATION'",
                 Integer.class, v.userId())).isEqualTo(1);
         String hash = jdbc.queryForObject("SELECT password FROM \"User\" WHERE id = ?", String.class, v.userId());
@@ -188,9 +199,42 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.state").value("PENDING_VERIFICATION"));
         putJson(v, "business", BUSINESS).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("VERIFICATION_REQUIRED"));
 
+        mvc.perform(get("/api/v1/vendors/me/listings/overview").header("Authorization", v.bearer()))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("VENDOR_NOT_ACTIVE"));
+
         verifyContacts(v);
         mvc.perform(get("/api/v1/vendors/me/application").header("Authorization", v.bearer()))
-                .andExpect(jsonPath("$.state").value("DRAFT"));
+                .andExpect(jsonPath("$.state").value("ACTIVE"))
+                .andExpect(jsonPath("$.editable").value(true))
+                .andExpect(jsonPath("$.profileComplete").value(false));
+    }
+
+    @Test
+    void autoApprovedVendorCompletesProfileBeforeSelling() throws Exception {
+        Vendor v = readyToSubmit();
+        // Active, but selling waits for the business profile.
+        mvc.perform(get("/api/v1/vendors/me/listings/overview").header("Authorization", v.bearer()))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("PROFILE_INCOMPLETE"));
+
+        mvc.perform(post("/api/v1/vendors/me/application/submit").header("Authorization", v.bearer())
+                        .contentType(MediaType.APPLICATION_JSON).content(DECLARATIONS))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("ACTIVE"))
+                .andExpect(jsonPath("$.profileComplete").value(true))
+                .andExpect(jsonPath("$.editable").value(false))
+                .andExpect(jsonPath("$.decision.decision").value("APPROVED"));
+        assertThat(jdbc.queryForObject("SELECT status::text FROM \"Vendor\" WHERE id = ?", String.class, v.vendorId())).isEqualTo("APPROVED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM marketplace.audit_log WHERE entity_id = ? AND action = 'vendor.profile.completed'",
+                Integer.class, v.vendorId())).isEqualTo(1);
+
+        mvc.perform(get("/api/v1/vendors/me/listings/overview").header("Authorization", v.bearer())).andExpect(status().isOk());
+        // Registered details are locked again once complete (changes go through MotoXPlus).
+        putJson(v, "bank", "{}").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("APPLICATION_LOCKED"));
+
+        // An admin can still suspend an auto-approved vendor.
+        mvc.perform(post("/api/v1/admin/vendor-applications/" + v.vendorId() + "/suspend").header("Authorization", staff("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Counterfeit complaint under investigation\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.state").value("SUSPENDED"));
     }
 
     @Test
@@ -249,7 +293,7 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
 
     @Test
     void stateMovesToDocumentsPendingThenSubmitNeedsAllDeclarations() throws Exception {
-        Vendor v = register();
+        Vendor v = asReviewedApplicant(register());
         verifyContacts(v);
         putJson(v, "business", BUSINESS.replace("ABCDE1234F", "ABCDZ1234F")).andExpect(status().isOk());
         putJson(v, "categories", "{\"categoryIds\":[\"it-pads\",\"it-discs\"],\"vehicleSegments\":[\"PASSENGER_CAR\"]}")
@@ -302,7 +346,7 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
 
     @Test
     void reviewerRequestsChangesThenApprovesAndEveryStepIsInTheHistory() throws Exception {
-        Vendor v = readyToSubmit();
+        Vendor v = asReviewedApplicant(readyToSubmit());
         mvc.perform(post("/api/v1/vendors/me/application/submit").header("Authorization", v.bearer())
                 .contentType(MediaType.APPLICATION_JSON).content(DECLARATIONS)).andExpect(status().isOk());
         String admin = staff("ADMIN");

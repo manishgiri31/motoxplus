@@ -48,10 +48,10 @@ export const PART_CATEGORY_LIST = [
 ] as const;
 
 export const STEPS = [
-  { title: "Register", body: "Create your seller account." },
-  { title: "Verify", body: "Submit your business and KYC documents." },
+  { title: "Register", body: "Create your account and verify your email and mobile. You are approved straight away." },
+  { title: "Complete your profile", body: "Add business details, bank account and KYC documents from your dashboard." },
   { title: "List products", body: "Upload your spare-parts catalogue, pricing, stock and compatibility." },
-  { title: "Get approved", body: "MotoXPlus reviews your business and product listings." },
+  { title: "Go live", body: "Your listings appear on the MotoXPlus storefront for dealers and customers." },
   { title: "Receive orders", body: "Dealers and customers can purchase your approved products." },
   { title: "Shipping & settlement", body: "Prepare your packages for MotoXPlus-arranged pickup and track eligible vendor settlements." },
 ] as const;
@@ -67,11 +67,11 @@ export const TRANSPARENCY_POINTS = [
 export const FAQS: { q: string; a: string }[] = [
   {
     q: "Who can register as a vendor?",
-    a: "Manufacturers, wholesalers, distributors, stockists and spare-parts suppliers who sell two-wheeler automotive parts and can provide business and KYC documents. Every application is reviewed by MotoXPlus before you can sell.",
+    a: "Manufacturers, wholesalers, distributors, stockists and spare-parts suppliers who sell two-wheeler automotive parts and can provide business and KYC documents. Your account is approved as soon as you verify your email and mobile; you complete your business profile and KYC documents before your first listing goes live. MotoXPlus can suspend accounts that break the vendor agreement.",
   },
   {
     q: "Can manufacturers and wholesalers both join?",
-    a: "Yes. You choose your business type when you register - manufacturer, wholesaler, distributor, stockist, retailer or other - and the same review applies to everyone.",
+    a: "Yes. You choose your business type when you register - manufacturer, wholesaler, distributor, stockist, retailer or other - and the same requirements apply to everyone.",
   },
   {
     q: "Can I sell Hero, Honda, Bajaj and TVS spare parts?",
@@ -79,11 +79,11 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What documents are required?",
-    a: "Your PAN document, a GST certificate if you are GST-registered, business registration proof where applicable, and a cancelled cheque or other bank proof. A product catalogue is optional. MotoXPlus may ask for more information during review.",
+    a: "Your PAN document, a GST certificate if you are GST-registered, business registration proof where applicable, and a cancelled cheque or other bank proof. A product catalogue is optional. MotoXPlus may ask for more information later.",
   },
   {
     q: "Is GST mandatory for every vendor?",
-    a: "Enter your GSTIN if you have one. Whether GST registration is required for your sales depends on your circumstances and applicable law, so please check with your tax advisor. If anything further is needed for your application, we will tell you during review.",
+    a: "Enter your GSTIN if you have one. Whether GST registration is required for your sales depends on your circumstances and applicable law, so please check with your tax advisor. If anything further is needed for your application, we will contact you.",
   },
   {
     q: "Who handles product delivery?",

@@ -48,9 +48,11 @@ export function ApplicationStatus() {
     case "UNDER_REVIEW":
       return <UnderReview app={app} />;
     case "ACTIVE":
+      // Auto-approved at registration: the account works, the business profile is still to finish.
+      if (!app.profileComplete) return <Checklist app={app} />;
       return (
         <Outcome icon={<Check aria-hidden className="size-6" />} title="Your vendor account is active">
-          <p>Taking you to your dashboard…</p>
+          <p>Your business profile is complete. You can add products from your dashboard.</p>
           <Button asChild size="lg" className="mt-6">
             <Link href="/vendor/dashboard">Open vendor dashboard</Link>
           </Button>
@@ -103,17 +105,28 @@ function Checklist({ app }: { app: VendorApplication }) {
   const doneCount = ONBOARDING_STEPS.filter((s) => s.id !== "review" && stepDone(app, s.id)).length;
   const ready = doneCount === ONBOARDING_STEPS.length - 1;
   const changes = app.decision?.decision === "CHANGES_REQUESTED";
+  const active = app.state === "ACTIVE";
 
   return (
     <Panel>
       <p className="text-sm font-medium text-[var(--muted)]">Vendor code {app.vendorCode}</p>
       <h1 className="mt-1 text-[clamp(26px,3.4vw,36px)] font-semibold tracking-tight">
-        {changes ? "Update your application" : ready ? "Ready to submit" : `Welcome, ${app.account.fullName.split(" ")[0]}`}
+        {changes
+          ? "Update your application"
+          : ready
+            ? "Ready to submit"
+            : active
+              ? "Your vendor account is active"
+              : `Welcome, ${app.account.fullName.split(" ")[0]}`}
       </h1>
       <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-[var(--muted)]">
         {ready
-          ? "Everything is filled in. Review it once and submit it for approval."
-          : "Five short steps. Your progress is saved after each one, so you can stop and come back any time."}
+          ? active
+            ? "Everything is filled in. Confirm it once to start listing products."
+            : "Everything is filled in. Review it once and submit it for approval."
+          : active
+            ? "Finish your business profile to start selling: five short steps, saved as you go. Your dashboard is already open."
+            : "Five short steps. Your progress is saved after each one, so you can stop and come back any time."}
       </p>
 
       {changes && app.decision?.reason && (
@@ -154,10 +167,15 @@ function Checklist({ app }: { app: VendorApplication }) {
         })}
       </ol>
 
-      <div className="mt-8">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button asChild size="lg" iconRight={<ArrowRight aria-hidden />} className="w-full sm:w-auto">
           <Link href={next.href}>{ready ? "Review and submit" : doneCount === 0 ? `Start with ${next.label.toLowerCase()}` : `Continue: ${next.label}`}</Link>
         </Button>
+        {active && (
+          <Link href="/vendor/dashboard" className="text-center text-sm font-medium text-[var(--muted)] underline-offset-4 hover:text-[var(--ink)] hover:underline">
+            Go to dashboard
+          </Link>
+        )}
       </div>
     </Panel>
   );

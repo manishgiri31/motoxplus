@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { CreditCard, Star, ClipboardList, TrendingUp } from "lucide-react";
+import { ProfileSetupBanner } from "@/components/vendor/profile-setup-banner";
 
 export default async function VendorDashboardPage() {
   const me = await getMe();
@@ -40,7 +41,7 @@ export default async function VendorDashboardPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">
-          Welcome, {vendor.companyName}
+          Welcome, {vendor.companyName || vendor.ownerName}
         </h1>
         <div className="flex items-center gap-3 mt-2">
           <span className="text-[var(--text-muted)] text-sm">{vendor.vendorCode}</span>
@@ -49,6 +50,8 @@ export default async function VendorDashboardPage() {
           </span>
         </div>
       </div>
+
+      <ProfileSetupBanner />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -56,4 +56,19 @@ public record VendorSnapshot(
     }
 
     public ApplicationState state() { return ApplicationState.derive(this); }
+
+    /**
+     * Self-registered vendors are approved automatically (owner decision 2026-11-14, same as dealers): the account is
+     * APPROVED from the start and the business profile (details, categories, bank, documents, declarations) is filled
+     * in afterwards. Until it is submitted the vendor can use the dashboard but cannot sell. Vendors created by an
+     * admin or approved through the older review flow have no such pending profile.
+     */
+    public boolean profilePending() {
+        return "APPROVED".equals(status) && "APPROVED".equals(application.decision()) && application.submittedAt() == null;
+    }
+
+    /** The vendor may change the application / business profile right now. */
+    public boolean profileEditable() {
+        return state().editable() || (profilePending() && emailVerified && mobileVerified);
+    }
 }

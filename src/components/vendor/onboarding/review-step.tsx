@@ -16,7 +16,7 @@ export function ReviewStep() {
   return (
     <StepPage
       title="Review and submit"
-      description="Check everything once. After you submit, our team reviews your application, usually within 2 business days, and you can't edit it while it's under review."
+      description="Check everything once. After you confirm, you can start listing products; registered business and bank details can then only be changed through MotoXPlus support."
       backHref="/vendor/onboarding/documents"
     >
       {(app) => <ReviewForm app={app} />}
@@ -58,8 +58,9 @@ function ReviewForm({ app }: { app: VendorApplication }) {
     }
     setBusy(true);
     try {
-      set(await submitApplication(accepted));
-      router.push("/vendor/onboarding");
+      const next = await submitApplication(accepted);
+      set(next);
+      router.push(next.state === "ACTIVE" ? "/vendor/dashboard" : "/vendor/onboarding");
     } catch (err) {
       const { fields, message } = errorsFrom(err);
       setErrors(fields);
@@ -165,7 +166,14 @@ function ReviewForm({ app }: { app: VendorApplication }) {
         </fieldset>
       )}
 
-      {app.editable && <StepActions backHref="/vendor/onboarding/documents" busy={busy} label="Submit application" disabled={incomplete.length > 0} />}
+      {app.editable && (
+        <StepActions
+          backHref="/vendor/onboarding/documents"
+          busy={busy}
+          label={app.state === "ACTIVE" ? "Confirm and start selling" : "Submit application"}
+          disabled={incomplete.length > 0}
+        />
+      )}
     </form>
   );
 }

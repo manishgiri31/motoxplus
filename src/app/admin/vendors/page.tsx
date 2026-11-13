@@ -138,7 +138,7 @@ export default async function AdminVendorsPage(
                     <td className="px-4 py-4">
                       <Link href={`/admin/vendors/${vendor.id}`}>
                         <div className="text-[var(--text-primary)] font-bold text-sm hover:text-red-400 transition-colors">
-                          {vendor.companyName}
+                          {vendor.companyName || <span className="font-normal italic text-[var(--text-muted)]">Profile not completed</span>}
                         </div>
                         <div className="text-[var(--text-muted)] text-xs">{vendor.ownerName}</div>
                         <div className="text-gray-600 text-xs">{vendor.email}</div>

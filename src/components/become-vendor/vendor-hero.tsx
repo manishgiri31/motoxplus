@@ -14,7 +14,7 @@ const INDEX = ["Engine", "Brakes", "Suspension", "Cables", "Bearings", "Electric
 const FACTS = [
   { Icon: Users, text: "Sell to B2B dealers and B2C customers" },
   { Icon: Truck, text: "MotoXPlus arranges shipping" },
-  { Icon: BadgeCheck, text: "Every seller and listing is reviewed" },
+  { Icon: BadgeCheck, text: "Approved as soon as you verify" },
 ];
 
 export function VendorHero() {

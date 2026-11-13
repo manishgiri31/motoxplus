@@ -24,6 +24,11 @@ export interface VendorApplication {
   vendorCode: string;
   state: ApplicationState;
   editable: boolean;
+  /**
+   * False while an auto-approved vendor (approved at registration, like dealers) has not yet submitted the business
+   * profile. The account is ACTIVE and the dashboard opens, but selling stays locked until it is complete.
+   */
+  profileComplete: boolean;
   account: { fullName: string; email: string; mobile: string; emailVerified: boolean; mobileVerified: boolean };
   business: {
     businessName: string;

@@ -26,14 +26,14 @@ public class VendorContext {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Vendor account not found", "VENDOR_NOT_FOUND", null));
     }
 
-    /** The application can be changed: verified contact details, not yet submitted, not decided. */
+    /** The application can be changed: verified contact details, and not yet submitted (or an auto-approved profile still pending). */
     public VendorSnapshot editable(AuthenticatedUser user) {
         VendorSnapshot v = current(user);
         ApplicationState s = v.state();
-        if (s == ApplicationState.PENDING_VERIFICATION) {
+        if (!v.emailVerified() || !v.mobileVerified()) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Verify your email address and mobile number first", "VERIFICATION_REQUIRED", null);
         }
-        if (!s.editable()) {
+        if (!v.profileEditable()) {
             String msg = switch (s) {
                 case UNDER_REVIEW -> "Your application is under review and can't be changed right now";
                 case ACTIVE -> "Your account is active. Contact MotoXPlus to change registered business details";
@@ -49,6 +49,9 @@ public class VendorContext {
         VendorSnapshot v = current(user);
         if (v.state() != ApplicationState.ACTIVE || !v.userActive() || !v.emailVerified() || !v.mobileVerified()) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Your vendor account is not active", "VENDOR_NOT_ACTIVE", null);
+        }
+        if (v.profilePending()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Complete your business profile before you start selling", "PROFILE_INCOMPLETE", null);
         }
         return v;
     }

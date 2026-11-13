@@ -229,7 +229,8 @@ public class VendorReviewService {
                         appUrl + "/vendor/onboarding"));
             }
             case SUSPEND -> {
-                require(s, ApplicationState.ACTIVE);
+                // An auto-approved vendor is APPROVED before verifying contact details; it can be suspended then too.
+                if (!(s == ApplicationState.PENDING_VERIFICATION && "APPROVED".equals(v.status()))) require(s, ApplicationState.ACTIVE);
                 transition(admin, v, "APPROVED", "SUSPENDED", null, reason, "vendor.suspended", ip, false);
             }
             case REACTIVATE -> {

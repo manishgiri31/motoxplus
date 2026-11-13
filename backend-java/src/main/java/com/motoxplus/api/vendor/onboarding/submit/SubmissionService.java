@@ -20,8 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Review & submit: the four declarations are mandatory, every FAIL check blocks submission, and a submitted
- * application goes to UNDER_REVIEW for a person to decide (decision V2). Nothing here activates a vendor.
+ * Review & submit: the four declarations are mandatory and every FAIL check blocks submission.
+ * A self-registered vendor is already approved (see VendorRegistrationService), so for them this step completes the
+ * business profile and unlocks selling; the approval decision is kept. A vendor still PENDING (legacy / reopened
+ * applications) goes to UNDER_REVIEW for a person to decide.
  */
 @Service
 @ConditionalOnProperty(name = "marketplace.enabled", havingValue = "true")
@@ -74,6 +76,7 @@ public class SubmissionService {
         }
 
         String ua = userAgent == null ? null : userAgent.substring(0, Math.min(userAgent.length(), 300));
+        boolean autoApproved = v.profilePending();
         tx.executeWithoutResult(s -> {
             for (String a : AGREEMENTS) {
                 jdbc.update("""
@@ -81,28 +84,37 @@ public class SubmissionService {
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                         """, Cuid.next(), v.vendorId(), user.userId(), a, agreementVersion, ip, ua);
             }
-            int updated = jdbc.update("""
-                    UPDATE marketplace.vendor_application
-                    SET submitted_at = now(), agreement_version = ?, decision = NULL, decision_reason = NULL, decided_at = NULL,
-                        decided_by = NULL, updated_at = now()
-                    WHERE vendor_id = ? AND submitted_at IS NULL
-                    """, agreementVersion, v.vendorId());
+            int updated = autoApproved
+                    ? jdbc.update("""
+                            UPDATE marketplace.vendor_application SET submitted_at = now(), agreement_version = ?, updated_at = now()
+                            WHERE vendor_id = ? AND submitted_at IS NULL
+                            """, agreementVersion, v.vendorId())
+                    : jdbc.update("""
+                            UPDATE marketplace.vendor_application
+                            SET submitted_at = now(), agreement_version = ?, decision = NULL, decision_reason = NULL, decided_at = NULL,
+                                decided_by = NULL, updated_at = now()
+                            WHERE vendor_id = ? AND submitted_at IS NULL
+                            """, agreementVersion, v.vendorId());
             if (updated != 1) throw new IllegalStateException("application was submitted concurrently");
-            audit.record(user, "vendor.application.submitted", "vendor", v.vendorId(), v.vendorId(), ip,
+            audit.record(user, autoApproved ? "vendor.profile.completed" : "vendor.application.submitted", "vendor", v.vendorId(), v.vendorId(), ip,
                     Map.of("agreementVersion", agreementVersion, "checks", checks.stream().map(ApplicationChecks.Check::toMap).toList()));
         });
 
-        notifyQuietly(v);
+        notifyQuietly(v, autoApproved);
         return checks;
     }
 
-    private void notifyQuietly(VendorSnapshot v) {
+    private void notifyQuietly(VendorSnapshot v, boolean autoApproved) {
         try {
-            var toVendor = EmailTemplates.vendorApplicationSubmitted(v.fullName(), v.business().businessName());
+            var toVendor = autoApproved
+                    ? EmailTemplates.vendorApproved(v.fullName(), v.business().businessName(), appUrl + "/vendor/dashboard")
+                    : EmailTemplates.vendorApplicationSubmitted(v.fullName(), v.business().businessName());
             email.send(v.email(), toVendor.subject(), toVendor.html(), "vendor-submitted:" + v.vendorId() + ":" + System.currentTimeMillis() / 60000);
             if (reviewEmail != null && !reviewEmail.isBlank()) {
-                var toAdmin = EmailTemplates.adminNewApplication(v.business().businessName(), v.vendorCode(),
-                        appUrl + "/admin/vendors/applications/" + v.vendorId());
+                String url = appUrl + "/admin/vendors/applications/" + v.vendorId();
+                var toAdmin = autoApproved
+                        ? EmailTemplates.adminVendorProfileCompleted(v.business().businessName(), v.vendorCode(), url)
+                        : EmailTemplates.adminNewApplication(v.business().businessName(), v.vendorCode(), url);
                 email.send(reviewEmail, toAdmin.subject(), toAdmin.html());
             }
         } catch (RuntimeException ex) {

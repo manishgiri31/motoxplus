@@ -63,7 +63,7 @@ export function ApplicationProvider({ children }: { children: React.ReactNode })
     if (serverApproved !== (sessionStatus === "APPROVED")) {
       refreshed.current = true;
       update().then(() => {
-        if (serverApproved) router.replace("/vendor/dashboard");
+        if (serverApproved && app.profileComplete) router.replace("/vendor/dashboard");
         else router.refresh();
       });
     }

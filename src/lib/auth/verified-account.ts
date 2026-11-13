@@ -10,7 +10,8 @@ import { prisma } from "@/lib/prisma";
  *
  * Dealers no longer need sign-up approval: a verified dealer is ACTIVE by
  * default, so this check only rejects accounts an admin has SUSPENDED/REJECTED.
- * Vendors still require admin approval (status APPROVED).
+ * Vendors are approved automatically at registration too (status APPROVED); only an admin
+ * SUSPEND/BLOCK/REJECT takes that away.
  */
 export async function getVerifiedDealer(userId: string) {
   const dealer = await prisma.dealer.findUnique({
@@ -36,7 +37,7 @@ export async function getVerifiedVendor(userId: string) {
 }
 
 export const VENDOR_NOT_VERIFIED_MESSAGE =
-  "Your vendor account is not active. Complete email and mobile verification, and wait for MotoXPlus to approve your application.";
+  "Your vendor account is not active. Complete email and mobile verification, or contact MotoXPlus if your account has been suspended.";
 
 // B2C customers have no approval step and no email-verification requirement
 // (signup is phone-OTP only, see /api/auth/customer/register) — only
