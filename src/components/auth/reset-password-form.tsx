@@ -1,292 +1,189 @@
 "use client";
 
-
-import { safeFetch } from "@/lib/safe-fetch";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Check, CheckCircle } from "lucide-react";
-import { OtpInput } from "./otp-input";
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { AuthAlert, AuthHeading, PasswordField } from "./auth-ui";
+import { OtpInput } from "./otp-input";
 import { CountdownTimer } from "./countdown-timer";
+import { RESEND_COOLDOWN_SECONDS } from "./auth-otp-step";
+import { validateNewPassword } from "@/lib/auth/password-policy";
+import { maskEmail } from "@/lib/customer/signup";
+import { safeFetch } from "@/lib/safe-fetch";
 
-type Step = "enter-code" | "new-password" | "success";
+type Step = "code" | "password" | "done";
 
-const RESEND_COOLDOWN_SECONDS = 60;
-
-const inputCls =
-  "w-full themed-input border focus:border-red-600/60 rounded-lg px-4 py-3 text-sm outline-none transition-colors";
-
+// Step 2 of resetting a password (step 1 is /forgot-password): the 6-digit
+// code, then the new password. Rules come from the shared password policy, the
+// same one the server enforces. Resetting signs out every other session.
 export function ResetPasswordForm() {
   const params = useSearchParams();
-  const initialUid = params.get("uid") || "";
   const method = params.get("method") === "mobile" ? "mobile" : "email";
   const contact = params.get("contact") || "";
 
-  const [userId, setUserId] = useState(initialUid);
-  const [step, setStep] = useState<Step>("enter-code");
+  const [userId, setUserId] = useState(params.get("uid") || "");
+  const [step, setStep] = useState<Step>("code");
   const [otp, setOtp] = useState("");
   const [resetToken, setResetToken] = useState("");
 
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPw1, setShowPw1] = useState(false);
-  const [showPw2, setShowPw2] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmError, setConfirmError] = useState("");
 
-  const [status, setStatus] = useState<"idle" | "loading">("idle");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  if (!userId) {
-    return (
-      <div className="bg-[var(--card)] rounded-[18px] p-8 text-center">
-        <p className="text-red-400 mb-4">This reset link is invalid or has expired.</p>
-        <Link href="/forgot-password" className="text-red-400 hover:text-red-300 font-semibold">
-          Request a new code
-        </Link>
-      </div>
-    );
-  }
-
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault();
-    if (otp.length !== 6) {
-      setError("Enter the 6-digit code");
-      return;
-    }
-    setStatus("loading");
+  async function verifyCode(code: string) {
+    setLoading(true);
     setError("");
     const res = await safeFetch("/api/auth/verify-forgot-password-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, otp }),
+      body: JSON.stringify({ userId, otp: code }),
     });
     const data = await res.json().catch(() => ({}));
+    setLoading(false);
     if (!res.ok) {
       setError(data.error || "Invalid or expired code");
-      setStatus("idle");
       setOtp("");
       return;
     }
     setResetToken(data.resetToken);
-    setStatus("idle");
-    setStep("new-password");
+    setStep("password");
   }
 
-  async function handleResend() {
-    if (!contact) {
-      setError("Can't resend — please start over.");
-      throw new Error("missing contact");
-    }
-    const body = method === "mobile" ? { mobile: contact, method: "mobile" } : { email: contact, method: "email" };
+  // Submit as soon as the 6th digit is in.
+  useEffect(() => {
+    if (step === "code" && otp.length === 6 && !loading) verifyCode(otp);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp]);
+
+  async function resend() {
     const res = await safeFetch("/api/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(method === "mobile" ? { method, mobile: contact } : { method, email: contact }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "Couldn't resend the code");
-      throw new Error(data.error || "Resend failed");
+      throw new Error("resend failed");
     }
     setUserId(data.userId);
     setOtp("");
     setError("");
   }
 
-  const requirements = [
-    { label: "At least 8 characters", met: newPassword.length >= 8 },
-    { label: "One letter", met: /[A-Z]/.test(newPassword) },
-    { label: "One lowercase letter", met: /[a-z]/.test(newPassword) },
-    { label: "One number", met: /\d/.test(newPassword) },
-  ];
-  const allRequirementsMet = requirements.every((r) => r.met);
-  const confirmMismatch = confirmPassword.length > 0 && confirmPassword !== newPassword;
-
-  async function handleReset(e: React.FormEvent) {
+  async function savePassword(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
+    const problem = validateNewPassword(password);
+    setPasswordError(problem ?? "");
+    setConfirmError(confirm !== password ? "Passwords don't match" : "");
+    if (problem || confirm !== password) return;
+
+    setLoading(true);
     setError("");
-    if (!allRequirementsMet) {
-      setError("Password does not meet the requirements below");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    setStatus("loading");
     const res = await safeFetch("/api/auth/reset-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, resetToken, newPassword }),
+      body: JSON.stringify({ userId, resetToken, newPassword: password }),
     });
     const data = await res.json().catch(() => ({}));
+    setLoading(false);
     if (!res.ok) {
-      setError(data.error || "Password reset failed");
-      setStatus("idle");
+      setError(data.error || "Couldn't update the password. Start again.");
       return;
     }
-    setStatus("idle");
-    setStep("success");
+    setStep("done");
   }
 
-  if (step === "success") {
+  if (!userId || !contact) {
     return (
-      <div className="bg-[var(--card)] rounded-[18px] p-8 text-center">
-        <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
-        <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Password reset successful</h1>
-        <p className="text-[var(--text-muted)] text-sm mb-6">
-          Your password has been updated successfully. You can now sign in with your new password.
-        </p>
-        <Link
-          href="/login"
-          className="inline-block bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-normal py-3 px-8 rounded-pill transition-colors text-sm"
-        >
-          Back to login
-        </Link>
+      <div>
+        <AuthHeading title="This link has expired" subtitle="Request a new code to reset your password." />
+        <Button asChild size="lg" block>
+          <Link href="/forgot-password">Request a new code</Link>
+        </Button>
       </div>
     );
   }
 
+  if (step === "done") {
+    return (
+      <div>
+        <AuthHeading
+          title="Password updated"
+          subtitle="Sign in with your mobile number or email and the new password. You've been signed out on other devices."
+        />
+        <Button asChild size="lg" block>
+          <Link href="/login">Sign in</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (step === "password") {
+    return (
+      <div>
+        <AuthHeading title="Choose a new password" />
+        <form onSubmit={savePassword} className="space-y-5" noValidate>
+          <PasswordField
+            label="New password"
+            autoComplete="new-password"
+            autoFocus
+            showStrength
+            value={password}
+            error={passwordError}
+            onChange={(e) => { setPassword(e.target.value); setPasswordError(""); }}
+          />
+          <PasswordField
+            label="Confirm new password"
+            autoComplete="new-password"
+            value={confirm}
+            error={confirmError}
+            onChange={(e) => { setConfirm(e.target.value); setConfirmError(""); }}
+          />
+          {error && <AuthAlert>{error}</AuthAlert>}
+          <Button type="submit" size="lg" block loading={loading}>
+            {loading ? "Saving..." : "Save password"}
+          </Button>
+        </form>
+      </div>
+    );
+  }
+
+  const destination = method === "mobile" ? `+91 ••••• ••${contact.slice(-2)}` : maskEmail(contact);
   return (
-    <div className="bg-[var(--card)] rounded-[18px] p-8">
-      {step === "enter-code" && (
-        <form onSubmit={handleVerify} className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Enter reset code</h1>
-            <p className="text-[var(--text-muted)] text-sm">
-              We sent a password reset code to your {method === "mobile" ? "mobile number" : "email address"}.
-            </p>
-          </div>
-
-          <div>
-            <label className="sr-only" htmlFor="reset-otp">
-              6-digit code
-            </label>
-            <OtpInput value={otp} onChange={setOtp} disabled={status === "loading"} />
-          </div>
-
-          <div aria-live="polite">
-            {error && (
-              <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm text-center" role="alert">
-                {error}
-              </div>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={status === "loading" || otp.length !== 6}
-            className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm"
-          >
-            {status === "loading" ? (
-              <>
-                <Spinner size={15} /> Verifying...
-              </>
-            ) : (
-              "Verify code"
-            )}
-          </button>
-
-          <div className="text-center">
-            <p className="text-[var(--text-muted)] text-sm mb-1">Didn&apos;t receive the code?</p>
-            <CountdownTimer seconds={RESEND_COOLDOWN_SECONDS} onResend={handleResend} label="Resend" compact />
-          </div>
-        </form>
-      )}
-
-      {step === "new-password" && (
-        <form onSubmit={handleReset} className="space-y-4">
-          <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Create a new password</h1>
-
-          <div>
-            <label htmlFor="new-password" className="text-[var(--text-muted)] text-xs block mb-2">
-              New password
-            </label>
-            <div className="relative">
-              <input
-                id="new-password"
-                required
-                type={showPw1 ? "text" : "password"}
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter a new password"
-                className={inputCls + " pr-12"}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPw1(!showPw1)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-                aria-label={showPw1 ? "Hide password" : "Show password"}
-              >
-                {showPw1 ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
-
-          <ul className="space-y-1 text-xs">
-            {requirements.map((r) => (
-              <li key={r.label} className={`flex items-center gap-2 ${r.met ? "text-green-400" : "text-[var(--text-muted)]"}`}>
-                <Check size={13} className={r.met ? "opacity-100" : "opacity-30"} />
-                {r.label}
-              </li>
-            ))}
-          </ul>
-
-          <div>
-            <label htmlFor="confirm-password" className="text-[var(--text-muted)] text-xs block mb-2">
-              Confirm new password
-            </label>
-            <div className="relative">
-              <input
-                id="confirm-password"
-                required
-                type={showPw2 ? "text" : "password"}
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat your new password"
-                className={inputCls + " pr-12"}
-                aria-invalid={confirmMismatch}
-                aria-describedby={confirmMismatch ? "confirm-password-error" : undefined}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPw2(!showPw2)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-                aria-label={showPw2 ? "Hide password" : "Show password"}
-              >
-                {showPw2 ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            {confirmMismatch && (
-              <p id="confirm-password-error" role="alert" className="mt-2 text-xs text-red-400">
-                Passwords do not match
-              </p>
-            )}
-          </div>
-
-          {error && (
-            <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm" role="alert">
-              {error}
-            </div>
+    <div>
+      <AuthHeading
+        title="Enter the code"
+        subtitle={
+          <>
+            If an account uses <span className="font-semibold text-[var(--ink)]">{destination}</span>, we sent it a 6-digit code
+            {method === "mobile" ? " on WhatsApp" : " by email"}. It expires in 5 minutes.
+          </>
+        }
+      />
+      <div className="space-y-5">
+        <OtpInput value={otp} onChange={(v) => { setOtp(v); if (error) setError(""); }} disabled={loading} autoFocus invalid={!!error} />
+        <div aria-live="polite" className="min-h-[20px]">
+          {loading && (
+            <p className="flex items-center gap-2 text-14 text-[var(--muted)]"><Spinner size={13} /> Checking...</p>
           )}
-
-          <button
-            type="submit"
-            disabled={status === "loading" || !allRequirementsMet || !confirmPassword || confirmMismatch}
-            className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm"
-          >
-            {status === "loading" ? (
-              <>
-                <Spinner size={15} /> Resetting...
-              </>
-            ) : (
-              "Reset password"
-            )}
-          </button>
-        </form>
-      )}
+          {error && !loading && <AuthAlert>{error}</AuthAlert>}
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-[var(--line)] pt-5">
+          <CountdownTimer seconds={RESEND_COOLDOWN_SECONDS} onResend={resend} label="Resend code" compact />
+          <Link href="/forgot-password" className="inline-flex items-center gap-1 text-14 text-[var(--muted)] underline-offset-4 hover:text-[var(--ink)] hover:underline">
+            <ChevronLeft size={14} aria-hidden /> Change
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { normalizeIndianMobile } from "@/lib/phone";
@@ -11,9 +12,11 @@ import { signupDetailsSchema, fieldErrors, maskEmail } from "@/lib/customer/sign
 
 // B2C customer signup — /signup. Three actions on one route:
 //
-//   start   name + mobile + email + delivery address. Creates (or refreshes) a
-//           *pending* customer and sends two codes: WhatsApp to the mobile
-//           (MOBILE_VERIFICATION) and email (EMAIL_VERIFICATION).
+//   start   name + mobile + email + password + delivery address. Creates (or
+//           refreshes) a *pending* customer and sends two codes: WhatsApp to
+//           the mobile (MOBILE_VERIFICATION) and email (EMAIL_VERIFICATION).
+//           This is the only time a customer gets codes, apart from forgot-
+//           password; every later sign-in is mobile/email + password.
 //   verify  both codes in one request. Both are checked first and consumed
 //           only if both are right, so the account is either fully verified
 //           and signed in, or untouched. No half-verified session exists.
@@ -22,9 +25,8 @@ import { signupDetailsSchema, fieldErrors, maskEmail } from "@/lib/customer/sign
 // "Pending" = role CUSTOMER and mobile not yet verified. Any other account on
 // that number (a verified customer, a dealer, a vendor...) is told to sign in
 // instead; one phone stays one account. Returning customers sign in with the
-// phone-only code on /login (/api/auth/login-otp), unchanged.
+// password on /login (/api/auth/login), which refuses a pending signup.
 
-const startSchema = signupDetailsSchema.extend({ action: z.literal("start") });
 const verifySchema = z.object({
   action: z.literal("verify"),
   phone: z.string(),
@@ -56,15 +58,15 @@ export async function POST(req: NextRequest) {
 
   if (action === "verify") return verify(req, body);
   if (action === "resend") return resend(req, body);
-  return start(req, { ...body, action: "start" });
+  return start(req, body);
 }
 
 async function start(req: NextRequest, body: unknown) {
-  const parsed = startSchema.safeParse(body);
+  const parsed = signupDetailsSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Check the highlighted fields", fields: fieldErrors(parsed.error) }, { status: 400 });
   }
-  const { name, email, address, city, state, pincode } = parsed.data;
+  const { name, email, address, city, state, pincode, password } = parsed.data;
   const mobile = normalizeIndianMobile(parsed.data.phone)!;
 
   const limited = await enforceRateLimit(req, "OTP_SEND", mobile);
@@ -82,6 +84,8 @@ async function start(req: NextRequest, body: unknown) {
   }
 
   const delivery = { deliveryAddress: address, deliveryCity: city, deliveryState: state, deliveryPincode: pincode };
+  // Same cost factor as /api/auth/reset-password.
+  const passwordHash = await bcrypt.hash(password, 12);
 
   // A pending signup that was abandoned (wrong email typed, codes expired)
   // is simply overwritten. Nothing about it was ever verified or signed in.
@@ -91,6 +95,7 @@ async function start(req: NextRequest, body: unknown) {
         data: {
           name,
           email,
+          password: passwordHash,
           emailVerified: null,
           emailVerifiedAt: null,
           customer: { upsert: { create: delivery, update: delivery } },
@@ -100,6 +105,7 @@ async function start(req: NextRequest, body: unknown) {
         data: {
           name,
           email,
+          password: passwordHash,
           mobileNumber: mobile,
           role: "CUSTOMER",
           customerType: "B2C",

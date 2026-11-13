@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ChevronLeft, LocateFixed, Mail, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { AuthAlert, AuthHeading, SelectField, TextAction, TextField } from "./auth-ui";
+import { AuthAlert, AuthHeading, PasswordField, SelectField, TextAction, TextField } from "./auth-ui";
 import { OtpInput } from "./otp-input";
 import { CountdownTimer } from "./countdown-timer";
 import { RESEND_COOLDOWN_SECONDS } from "./auth-otp-step";
@@ -17,7 +17,7 @@ import { landingPathForRole, safeCallbackTarget } from "@/lib/auth/safe-redirect
 type Form = Record<SignupField, string>;
 type CodeField = "phoneOtp" | "emailOtp";
 
-const EMPTY: Form = { name: "", phone: "", email: "", address: "", city: "", state: "", pincode: "" };
+const EMPTY: Form = { name: "", phone: "", email: "", password: "", address: "", city: "", state: "", pincode: "" };
 
 async function post(body: object) {
   const res = await fetch("/api/auth/customer/register", {
@@ -225,7 +225,7 @@ export function CustomerSignupForm() {
     <div>
       <AuthHeading
         title="Create your account"
-        subtitle="Takes a minute. We'll confirm your mobile and email with one-time codes."
+        subtitle="Takes a minute. We verify your mobile and email once, with a code; after that you sign in with your password."
       />
 
       <form onSubmit={handleDetails} className="space-y-9" noValidate>
@@ -241,7 +241,7 @@ export function CustomerSignupForm() {
             placeholder="98765 43210"
             value={form.phone}
             error={errors.phone}
-            hint="Your sign-in. Codes arrive on WhatsApp."
+            hint="We'll send a one-time code on WhatsApp to verify it."
             onChange={set("phone")}
           />
           <TextField
@@ -255,6 +255,16 @@ export function CustomerSignupForm() {
             error={errors.email}
             hint="For order confirmations and invoices."
             onChange={set("email")}
+          />
+          <PasswordField
+            label="Create password"
+            autoComplete="new-password"
+            value={form.password}
+            // The checklist under the field already lists the rules; don't repeat them in the error.
+            error={errors.password?.startsWith("Password must be at least") ? "Meet all four rules below" : errors.password}
+            showStrength
+            hint="You'll sign in with your mobile or email and this password."
+            onChange={set("password")}
           />
         </fieldset>
 

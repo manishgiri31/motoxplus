@@ -9,6 +9,7 @@ const STATUS_BY_CODE = {
   INVALID_CREDENTIALS: 401,
   ACCOUNT_DISABLED: 403,
   ACCOUNT_LOCKED: 423,
+  NOT_VERIFIED: 403,
 } as const;
 
 // Mobile login — returns tokens in the response body instead of cookies.

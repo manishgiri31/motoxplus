@@ -36,7 +36,7 @@ function BrandMark({ className = "h-11" }: { className?: string }) {
 const POINTS = [
   { title: "Live pricing and stock", body: "Current rates and availability on every part, dealer schemes included." },
   { title: "Orders and GST invoices", body: "Place orders, download invoices and follow dispatch in one place." },
-  { title: "Sign-in you can trust", body: "Verified contact details, one-time codes, and automatic lockout after repeated failures." },
+  { title: "Sign-in you can trust", body: "Mobile and email verified once, a password you choose, and automatic lockout after repeated failures." },
 ];
 
 export function AuthPageLayout({ children, heading = "Parts, pricing and paperwork. One account.", points = POINTS, className = "" }: AuthPageLayoutProps) {

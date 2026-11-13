@@ -204,4 +204,28 @@ describe("authenticateWithPassword", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.method).toBe("password-mobile");
   });
+
+  it("refuses a customer whose signup codes were never verified, even with the right password", async () => {
+    users.push(makeUser({ email: uniqueEmail(), mobileNumber: "9123456780", role: "CUSTOMER", mobileVerified: false, emailVerified: null }));
+
+    const result = await authenticateWithPassword({ identifierRaw: "9123456780", password: PASSWORD });
+
+    expect(result).toMatchObject({ ok: false, code: "NOT_VERIFIED" });
+  });
+
+  it("signs in a verified customer with mobile + password", async () => {
+    users.push(makeUser({ email: uniqueEmail(), mobileNumber: "9123456781", role: "CUSTOMER", mobileVerified: true }));
+
+    const result = await authenticateWithPassword({ identifierRaw: "+91 91234 56781", password: PASSWORD });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("still reports a wrong password (not NOT_VERIFIED) for an unverified customer", async () => {
+    users.push(makeUser({ email: uniqueEmail(), mobileNumber: "9123456782", role: "CUSTOMER", mobileVerified: false }));
+
+    const result = await authenticateWithPassword({ identifierRaw: "9123456782", password: "wrong-password" });
+
+    expect(result).toMatchObject({ ok: false, code: "INVALID_CREDENTIALS" });
+  });
 });

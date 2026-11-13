@@ -1,202 +1,91 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Phone } from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AuthAlert, AuthHeading, TextField } from "./auth-ui";
+import { normalizeIndianMobile } from "@/lib/phone";
+import { safeFetch } from "@/lib/safe-fetch";
 
-type Method = "email" | "mobile";
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const inputCls =
-  "w-full themed-input border focus:border-red-600/60 rounded-lg px-4 py-3 text-sm outline-none transition-colors";
-
+// Step 1 of resetting a password: mobile number or email, same single box as
+// the sign-in form. A code goes to WhatsApp (mobile) or email; /reset-password
+// takes the code and the new password. The response looks the same whether or
+// not the account exists, so this screen can't be used to find accounts.
 export function ForgotPasswordForm() {
   const router = useRouter();
-  const fieldId = useId();
-
-  const [method, setMethod] = useState<Method>("email");
   const [contact, setContact] = useState("");
   const [fieldError, setFieldError] = useState("");
   const [apiError, setApiError] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading">("idle");
-
-  function switchMethod(next: Method) {
-    setMethod(next);
-    setContact("");
-    setFieldError("");
-    setApiError("");
-  }
-
-  function validate(): string | null {
-    if (method === "email") {
-      const trimmed = contact.trim();
-      if (!trimmed) return "Email address is required";
-      if (!EMAIL_REGEX.test(trimmed)) return "Enter a valid email address";
-      return null;
-    }
-    if (!contact) return "Mobile number is required";
-    if (contact.length !== 10) return "Enter a valid 10-digit mobile number";
-    return null;
-  }
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setApiError("");
-    const validationError = validate();
-    if (validationError) {
-      setFieldError(validationError);
+    if (loading) return;
+    const mobile = normalizeIndianMobile(contact);
+    const email = contact.trim().toLowerCase();
+    if (!mobile && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFieldError("Enter your 10-digit mobile number or email address");
       return;
     }
-    setFieldError("");
-    setStatus("loading");
+    const method = mobile ? "mobile" : "email";
+    const value = mobile ?? email;
 
-    const body =
-      method === "email"
-        ? { email: contact.trim().toLowerCase(), method: "email" }
-        : { mobile: contact, method: "mobile" };
-
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setApiError(data.error || "Something went wrong. Please try again.");
-        setStatus("idle");
-        return;
-      }
-      // Same generic success path whether or not the account exists — userId
-      // here is an opaque flow id in the non-existent-account case (see the
-      // forgot-password route), never a signal of account existence.
-      const params = new URLSearchParams({ uid: data.userId, method, contact: contact.trim() });
-      router.push(`/reset-password?${params.toString()}`);
-    } catch {
-      setApiError("Network error. Please try again.");
-      setStatus("idle");
+    setLoading(true);
+    setApiError("");
+    const res = await safeFetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(mobile ? { method, mobile } : { method, email }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setApiError(data.error || "Something went wrong. Please try again.");
+      setLoading(false);
+      return;
     }
+    // userId is an opaque flow id when the account doesn't exist (see the route).
+    const params = new URLSearchParams({ uid: data.userId, method, contact: value });
+    router.push(`/reset-password?${params.toString()}`);
   }
 
   return (
-    <div className="bg-[var(--card)] rounded-[18px] p-8">
-      <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Forgot your password?</h1>
-      <p className="text-[var(--text-muted)] text-sm mb-6">
-        {method === "email"
-          ? "Enter your registered email address and we'll send you a password reset code."
-          : "Enter your registered mobile number and we'll send you a password reset code."}
-      </p>
+    <div>
+      <AuthHeading
+        title="Reset your password"
+        subtitle="Enter the mobile number or email on your account. We'll send a code to set a new password."
+      />
 
-      <div className="flex gap-2 mb-6" role="tablist" aria-label="Reset method">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={method === "email"}
-          onClick={() => switchMethod("email")}
-          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
-            method === "email"
-              ? "border-red-600/60 bg-red-900/20 text-red-400"
-              : "border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"
-          }`}
-        >
-          <Mail size={13} /> Email
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={method === "mobile"}
-          onClick={() => switchMethod("mobile")}
-          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
-            method === "mobile"
-              ? "border-red-600/60 bg-red-900/20 text-red-400"
-              : "border-[var(--border-color)] text-[var(--text-muted)] hover:border-red-600/40"
-          }`}
-        >
-          <Phone size={13} /> Mobile
-        </button>
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <TextField
+          label="Mobile number or email"
+          type="text"
+          autoFocus
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          autoComplete="username"
+          placeholder="98765 43210 or you@example.com"
+          value={contact}
+          error={fieldError}
+          hint="A mobile number gets the code on WhatsApp; an email gets it by email."
+          onChange={(e) => { setContact(e.target.value); setFieldError(""); setApiError(""); }}
+        />
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <div>
-          <label htmlFor={fieldId} className="text-[var(--text-muted)] text-xs block mb-2">
-            {method === "email" ? "Email address" : "Mobile number"}
-          </label>
-          {method === "email" ? (
-            <input
-              id={fieldId}
-              type="email"
-              autoFocus
-              autoComplete="email"
-              value={contact}
-              onChange={(e) => {
-                setContact(e.target.value);
-                setFieldError("");
-              }}
-              className={inputCls}
-              placeholder="Enter your email address"
-              aria-invalid={!!fieldError}
-              aria-describedby={fieldError ? `${fieldId}-error` : undefined}
-            />
-          ) : (
-            <div className="flex gap-2">
-              <span className="themed-input border rounded-lg px-3 py-3 text-sm text-[var(--text-muted)] whitespace-nowrap">
-                +91
-              </span>
-              <input
-                id={fieldId}
-                type="tel"
-                autoFocus
-                autoComplete="tel"
-                inputMode="numeric"
-                value={contact}
-                onChange={(e) => {
-                  setContact(e.target.value.replace(/\D/g, "").slice(0, 10));
-                  setFieldError("");
-                }}
-                className={inputCls}
-                placeholder="10-digit mobile number"
-                maxLength={10}
-                aria-invalid={!!fieldError}
-                aria-describedby={fieldError ? `${fieldId}-error` : undefined}
-              />
-            </div>
-          )}
-          {fieldError && (
-            <p id={`${fieldId}-error`} role="alert" className="mt-2 text-xs text-red-400">
-              {fieldError}
-            </p>
-          )}
-        </div>
+        {apiError && <AuthAlert>{apiError}</AuthAlert>}
 
-        {apiError && (
-          <div className="bg-red-900/20 border border-red-900/40 rounded-lg px-4 py-3 text-red-400 text-sm" role="alert">
-            {apiError}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={status === "loading"}
-          className="w-full inline-flex items-center justify-center gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-bold py-4 rounded-lg transition-colors text-sm"
-        >
-          {status === "loading" ? (
-            <>
-              <Spinner size={15} /> Sending...
-            </>
-          ) : (
-            "Send reset code"
-          )}
-        </button>
-
-        <div className="text-center">
-          <Link href="/login" className="text-[var(--text-muted)] text-sm hover:text-[var(--text-secondary)] transition-colors">
-            ← Back to login
-          </Link>
-        </div>
+        <Button type="submit" size="lg" block loading={loading}>
+          {loading ? "Sending code..." : "Send code"}
+        </Button>
       </form>
+
+      <Link
+        href="/login"
+        className="mt-8 inline-flex items-center gap-1 text-14 text-[var(--muted)] underline-offset-4 hover:text-[var(--ink)] hover:underline"
+      >
+        <ChevronLeft size={14} aria-hidden /> Back to sign in
+      </Link>
     </div>
   );
 }

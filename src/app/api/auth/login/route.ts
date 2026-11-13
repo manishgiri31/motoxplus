@@ -9,6 +9,7 @@ const STATUS_BY_CODE = {
   INVALID_CREDENTIALS: 401,
   ACCOUNT_DISABLED: 403,
   ACCOUNT_LOCKED: 423,
+  NOT_VERIFIED: 403,
 } as const;
 
 export async function POST(req: NextRequest) {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
   if (!result.ok) {
     const headers = result.retryAfterSeconds ? { "Retry-After": String(Math.ceil(result.retryAfterSeconds)) } : undefined;
     return NextResponse.json(
-      { error: result.message, ...(result.retryAfterSeconds ? { retryAfterSeconds: Math.ceil(result.retryAfterSeconds) } : {}) },
+      { error: result.message, code: result.code, ...(result.retryAfterSeconds ? { retryAfterSeconds: Math.ceil(result.retryAfterSeconds) } : {}) },
       { status: STATUS_BY_CODE[result.code], headers }
     );
   }

@@ -16,7 +16,7 @@ export interface AuthenticateWithPasswordOptions {
 
 export type CredentialAuthResult =
   | { ok: true; user: UserWithRelations; method: "password-mobile" | "password-email" }
-  | { ok: false; code: "RATE_LIMITED" | "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED" | "ACCOUNT_LOCKED"; message: string; retryAfterSeconds?: number };
+  | { ok: false; code: "RATE_LIMITED" | "INVALID_CREDENTIALS" | "ACCOUNT_DISABLED" | "ACCOUNT_LOCKED" | "NOT_VERIFIED"; message: string; retryAfterSeconds?: number };
 
 function formatRetryAfter(seconds: number): string {
   const minutes = Math.ceil(seconds / 60);
@@ -110,6 +110,18 @@ export async function authenticateWithPassword(opts: AuthenticateWithPasswordOpt
   }
 
   await Promise.all([clearFailedLogins(user.id), resetRateLimit(idKey), ipKey ? resetRateLimit(ipKey) : Promise.resolve()]);
+
+  // A customer signup sets the password before the WhatsApp + email codes are
+  // entered (/api/auth/customer/register). Until both are verified the account
+  // isn't finished, so a correct password alone must not sign it in. Only
+  // reached after the password matched, so this reveals nothing to a guesser.
+  if (user.role === "CUSTOMER" && !user.mobileVerified) {
+    return {
+      ok: false,
+      code: "NOT_VERIFIED",
+      message: "Your account isn't verified yet. Sign up again with this mobile number to get new codes.",
+    };
+  }
 
   await prisma.user.update({
     where: { id: user.id },

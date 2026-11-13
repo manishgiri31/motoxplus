@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { INDIAN_STATES } from "@/lib/seller/registration";
 import { normalizeIndianMobile, isPlaceholderEmail } from "@/lib/phone";
+import { validateNewPassword } from "@/lib/auth/password-policy";
 
 // Customer (B2C) signup contract, shared by the /signup form and
 // /api/auth/customer/register so the two can't drift on what "valid" means.
@@ -9,24 +10,36 @@ export { INDIAN_STATES };
 
 export const PINCODE_REGEX = /^[1-9]\d{5}$/;
 
-export const signupDetailsSchema = z.object({
-  name: z.string().trim().min(2, "Enter your full name").max(100),
-  phone: z
-    .string()
-    .trim()
-    .refine((v) => normalizeIndianMobile(v) !== null, "Enter a valid 10-digit mobile number"),
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .email("Enter a valid email address")
-    .max(254)
-    .refine((v) => !isPlaceholderEmail(v), "Enter a valid email address"),
-  address: z.string().trim().min(5, "Enter house number, street and area").max(300),
-  city: z.string().trim().min(2, "Enter your city").max(100),
-  state: z.enum(INDIAN_STATES, { message: "Choose your state" }),
-  pincode: z.string().trim().regex(PINCODE_REGEX, "Enter a 6-digit pincode"),
-});
+export const signupDetailsSchema = z
+  .object({
+    name: z.string().trim().min(2, "Enter your full name").max(100),
+    phone: z
+      .string()
+      .trim()
+      .refine((v) => normalizeIndianMobile(v) !== null, "Enter a valid 10-digit mobile number"),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Enter a valid email address")
+      .max(254)
+      .refine((v) => !isPlaceholderEmail(v), "Enter a valid email address"),
+    address: z.string().trim().min(5, "Enter house number, street and area").max(300),
+    city: z.string().trim().min(2, "Enter your city").max(100),
+    state: z.enum(INDIAN_STATES, { message: "Choose your state" }),
+    pincode: z.string().trim().regex(PINCODE_REGEX, "Enter a 6-digit pincode"),
+    // Same policy /api/auth/reset-password enforces, so the form never
+    // accepts a password the server would reject.
+    password: z.string().superRefine((v, ctx) => {
+      const problem = validateNewPassword(v);
+      if (problem) ctx.addIssue({ code: "custom", message: problem });
+    }),
+  })
+  // Plus "not built from your own name or email", which needs the other fields.
+  .superRefine((d, ctx) => {
+    const problem = validateNewPassword(d.password, { email: d.email, name: d.name });
+    if (problem) ctx.addIssue({ code: "custom", path: ["password"], message: problem });
+  });
 
 export type SignupDetails = z.infer<typeof signupDetailsSchema>;
 export type SignupField = keyof SignupDetails;
