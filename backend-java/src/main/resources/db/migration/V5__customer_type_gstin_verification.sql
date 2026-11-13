@@ -109,9 +109,11 @@ ALTER TABLE public."Customer"
 -- ---------------------------------------------------------------------------------------------------------
 ALTER TABLE public."Invoice" ADD COLUMN IF NOT EXISTS "buyerGstin" TEXT;
 
--- Existing invoices already display the dealer's current GSTIN; freeze exactly that so nothing they show
--- changes after this migration.
+-- Freeze the dealer's GSTIN onto existing invoices, but only where it is verified (a tax invoice must never
+-- print an unconfirmed GSTIN).
 UPDATE public."Invoice" i
    SET "buyerGstin" = d."gstNumber"
   FROM public."Dealer" d
- WHERE i."dealerId" = d.id AND i."buyerGstin" IS NULL AND d."gstNumber" IS NOT NULL;
+ WHERE i."dealerId" = d.id AND i."buyerGstin" IS NULL AND d."gstNumber" IS NOT NULL
+   -- Same rule as Node's invoice creation (src/lib/invoicing/create-invoice.ts): only a verified GSTIN is printed.
+   AND d."gstVerified" = true;
