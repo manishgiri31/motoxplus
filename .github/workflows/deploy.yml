@@ -395,6 +395,32 @@ jobs:
             fi
             pm2 save --force >/dev/null 2>&1 || true
             pm2 list
+            # ---------------------------------------------------------------
+            # 8b. Stop stray Next.js processes not managed by PM2. A leftover
+            #     'next-server' on port 3000 serves an old build, so the health
+            #     check passes while pages load stale CSS.
+            # ---------------------------------------------------------------
+            step "Stopping stray Next.js processes"
+            PM2_PIDS=" $(pm2 jlist 2>/dev/null | grep -oE '"pid":[0-9]+' | grep -oE '[0-9]+' | tr '\n' ' ') "
+            for pid in $(pgrep -f 'next-server' || true); do
+              case "${PM2_PIDS}" in
+                *" ${pid} "*) ;;
+                *) echo "Stopping stray next-server pid ${pid} (not managed by PM2)"; kill "${pid}" || true ;;
+              esac
+            done
+
+            # ---------------------------------------------------------------
+            # 8c. Confirm the live page references CSS that exists in this build.
+            # ---------------------------------------------------------------
+            step "Verifying live CSS matches the build"
+            sleep 5
+            for css in $(curl -fsS --max-time 10 http://127.0.0.1:3000/ | grep -oE 'css/[a-f0-9]+\.css' | sort -u); do
+              if [ ! -f ".next/static/${css}" ]; then
+                echo "::error::Live page references ${css} which is missing from .next/static"
+                exit 1
+              fi
+            done
+            echo "Live CSS matches the .next build."
 
             # ---------------------------------------------------------------
             # 9. Health check
