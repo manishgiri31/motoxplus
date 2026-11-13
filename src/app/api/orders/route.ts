@@ -6,9 +6,8 @@ import { getCurrentUserId } from "@/lib/auth/current-user";
 import { resolveOrderActor, ACCOUNT_NOT_VERIFIED_MESSAGE } from "@/lib/auth/verified-account";
 import { enforceRateLimit, rejectOversizedBody } from "@/lib/auth/rate-limit-budgets";
 import { computeOrderPricing } from "@/lib/pricing/compute";
-import { resolveUnitPrice } from "@/lib/pricing/resolve";
-import { computeShippingQuote, FREE_DELIVERY_THRESHOLD } from "@/lib/shipping/quote";
-import { calculateShippingRate, calculateOrderWeight } from "@/lib/delhivery/rates";
+import { computeShippingQuote } from "@/lib/shipping/quote";
+import { priceB2CCart, quoteB2CShipping, type B2CCheckoutError } from "@/lib/shipping/b2c-checkout";
 import { validateSchemeSelection, type SchemeItemCandidate } from "@/lib/schemes/cart-validation";
 import { computeGstSplit, UnrecognizedStateError } from "@/lib/tax/gst-split";
 import { getSellerState } from "@/lib/tax/seller-state";
@@ -434,84 +433,23 @@ async function createB2COrder(
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
   }
 
-  const unavailable = cart.items.filter((item) => {
-    if (!item.product.isActive) return true;
-    if (item.variant) return !item.variant.isActive || item.variant.stock < item.quantity;
-    return item.product.stockStatus === "OUT_OF_STOCK";
-  });
-  if (unavailable.length > 0) {
-    return NextResponse.json(
-      {
-        error: "Some items in your cart are no longer available in the requested quantity. Please update your cart.",
-        unavailableProductIds: unavailable.map((i) => i.productId),
-      },
-      { status: 409 }
-    );
-  }
+  // Same two steps POST /api/shipping/checkout-quote runs for the checkout page, so the total shown there is
+  // the total charged here (lib/shipping/b2c-checkout.ts): fresh retail prices + availability, then the
+  // pickup warehouse and the real Delhivery rate from its pin (free at ₹25,000+).
+  const priced = priceB2CCart(cart.items);
+  if (!priced.ok) return checkoutErrorResponse(priced);
+  const { pricing, orderTotal } = priced;
 
-  // Re-resolve every line's price from Product.mrp/variant.mrp right now —
-  // never trust the cart to have snapshotted one (it never does) and never
-  // fall back to the wholesale rate (see lib/pricing/resolve.ts).
-  const unpriced: string[] = [];
-  const items = cart.items.map((item) => {
-    const unitPrice = resolveUnitPrice({ channel: "B2C", product: item.product, variant: item.variant });
-    if (unitPrice === null) unpriced.push(item.productId);
-    return {
-      productId: item.productId,
-      variantId: item.variantId,
-      variantLabel: item.variant?.label ?? null,
-      variantSku: (item.variant as any)?.sku ?? null,
-      quantity: item.quantity,
-      unitPrice: unitPrice ?? 0,
-      gstRate: item.product.gstRate,
-    };
+  const quote = await quoteB2CShipping({
+    lines: cart.items,
+    orderTotal,
+    deliveryPincode,
+    paymentMode: isCod ? "COD" : "Prepaid",
   });
-  if (unpriced.length > 0) {
-    return NextResponse.json(
-      { error: "Some items in your cart are no longer available for retail purchase. Please remove them.", unavailableProductIds: unpriced },
-      { status: 409 }
-    );
-  }
-
-  // Same warehouse rule as B2B above: ACTIVE seller warehouse required, one warehouse per order.
-  const pickup = await resolveCheckoutPickup("B2C", cart.items);
-  if (!pickup.ok) {
-    return NextResponse.json(
-      { error: pickup.error, code: pickup.code, unavailableProductIds: pickup.productIds },
-      { status: 409 }
-    );
-  }
+  if (!quote.ok) return checkoutErrorResponse(quote);
 
   const channel = "B2C" as const;
-  const pricing = computeOrderPricing({ channel, items });
-
-  const orderTotal = roundToPaise(pricing.subtotal + pricing.gstAmount);
-
-  // Real Delhivery rate from the pickup warehouse's own pin to the customer's pin.
-  // Free delivery (₹25,000+) is MotoXPlus's cost; the rate is still fetched only when we charge.
-  const warehouse = pickup.pickupLocationName
-    ? await prisma.delhiveryWarehouse.findFirst({ where: { delhiveryName: pickup.pickupLocationName }, select: { pin: true } })
-    : null;
-  const originPincode = warehouse?.pin ?? process.env.DELHIVERY_ORIGIN_PINCODE;
-  if (!originPincode) {
-    return NextResponse.json({ error: "Pickup pincode is not configured", code: "SHIPPING_RATE_UNAVAILABLE" }, { status: 503 });
-  }
-  const rate = await calculateShippingRate({
-    originPincode,
-    destinationPincode: deliveryPincode,
-    weightKg: calculateOrderWeight(cart.items),
-    paymentMode: isCod ? "COD" : "Prepaid",
-    codAmount: isCod ? orderTotal : 0, // COD amount is the order total; the shipping share is added after, so this is the rate's input only
-  });
-  // Never charge the customer the ₹100 fallback that calculateShippingRate returns when Delhivery and the slabs both fail.
-  if (rate.source === "default" && orderTotal < FREE_DELIVERY_THRESHOLD) {
-    return NextResponse.json(
-      { error: "Delivery charge could not be calculated right now. Please try again in a few minutes.", code: "SHIPPING_RATE_UNAVAILABLE" },
-      { status: 503 }
-    );
-  }
-  const shippingCost = orderTotal >= FREE_DELIVERY_THRESHOLD ? 0 : roundToPaise(rate.shippingCost);
-  const grandTotal = roundToPaise(orderTotal + shippingCost);
+  const { pickupLocationName, shippingCost, grandTotal } = quote;
   const amountDue = grandTotal; // FULL_100 now; a COD order still owes the whole total at delivery
 
   const placeOfSupply = deliveryState;
@@ -537,7 +475,7 @@ async function createB2COrder(
         customerId,
         idempotencyKey,
         channel,
-        pickupLocationName: pickup.pickupLocationName,
+        pickupLocationName,
         subtotal: pricing.subtotal,
         gstAmount: pricing.gstAmount,
         shippingCost,
@@ -613,4 +551,11 @@ async function createB2COrder(
     .catch((err) => console.error("[Orders] Could not save customer delivery address:", err));
 
   return NextResponse.json({ order: isCod ? await prisma.order.findUnique({ where: { id: order.id } }) : order });
+}
+
+function checkoutErrorResponse(err: B2CCheckoutError) {
+  return NextResponse.json(
+    { error: err.error, code: err.code, ...(err.productIds ? { unavailableProductIds: err.productIds } : {}) },
+    { status: err.status }
+  );
 }

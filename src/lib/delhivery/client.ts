@@ -43,7 +43,8 @@ export async function delhiveryFetch<T>(
       }
 
       if (response.status === 401) {
-        throw new Error("DELHIVERY_AUTH_ERROR: Invalid or expired API token");
+        // Host included (never the token): a valid production token sent to a staging host also gets 401.
+        throw new Error(`DELHIVERY_AUTH_ERROR: Invalid or expired API token for ${baseUrl}`);
       }
 
       if (!response.ok) {

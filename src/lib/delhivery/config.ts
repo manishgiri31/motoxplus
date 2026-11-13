@@ -35,12 +35,24 @@ function firstEnv(names: string[]): { name: string; value: string } | null {
   return null;
 }
 
+/**
+ * A token copied straight from .env.example ("your_delhivery_api_token" is 24 characters, so it passed the
+ * old length-only check) reaches Delhivery and comes back 401 "Login or API Key Required" — which
+ * checkServiceability reports to the customer as "Unable to check serviceability" for every pincode.
+ * Reject it here, with the env var's name in the error, instead of at Delhivery.
+ */
+export function looksLikePlaceholderToken(token: string): boolean {
+  return /^your[_-]|placeholder|changeme|replace[_-]?me|xxxx/i.test(token);
+}
+
+const DEFAULT_BASE_URL = "https://track.delhivery.com";
+
 const envSchema = z.object({
   DELHIVERY_BASE_URL: z
-    .string()
-    .trim()
-    .min(1)
-    .default("https://track.delhivery.com")
+    // `DELHIVERY_BASE_URL=` (empty) used to skip the default and fail min(1); a trailing slash used to
+    // produce "//c/api/..." paths.
+    .preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().trim().default(DEFAULT_BASE_URL))
+    .transform((v) => v.replace(/\/+$/, ""))
     .refine((v) => {
       try {
         new URL(v);
@@ -119,8 +131,14 @@ export function getDelhiveryConfig(channel: DelhiveryChannel = "B2C"): Delhivery
 
   const wanted = B2C_ENV;
   const token = firstEnv(wanted.token);
+  const tokenOk = !!token && token.value.length >= 20 && !looksLikePlaceholderToken(token.value);
   if (!token || token.value.length < 20) {
     issues.push(`${wanted.token[0]}: missing, empty, or under 20 characters (channel ${channel})`);
+  } else if (looksLikePlaceholderToken(token.value)) {
+    issues.push(
+      `${token.name}: is still the .env.example placeholder, not a real Delhivery API token (channel ${channel}). ` +
+        `Note .env.local overrides .env in Next.js.`
+    );
   }
   // Distinct from DELHIVERY_PICKUP_NAME (which feeds return_name — the RTO/
   // return address contact). This is the immutable registered pickup_location
@@ -130,7 +148,7 @@ export function getDelhiveryConfig(channel: DelhiveryChannel = "B2C"): Delhivery
     issues.push(`${wanted.pickupLocation[0]}: is required (channel ${channel})`);
   }
 
-  if (!parsed.success || !token || token.value.length < 20 || !locationName) {
+  if (!parsed.success || !token || !tokenOk || !locationName) {
     throw new DelhiveryConfigError(`[Delhivery config] Invalid environment configuration:\n  ${issues.join("\n  ")}`);
   }
 
