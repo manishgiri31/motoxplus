@@ -52,7 +52,12 @@ public class VendorRegistrationService {
     /** decided_by value for the automatic approval given at registration (no admin user involved). */
     public static final String AUTO_APPROVER = "system:auto-approval";
 
-    public record Request(String fullName, String mobile, String email, String password) {}
+    /** businessName is optional (the one-step signup asks for it); it pre-fills the business profile. */
+    public record Request(String fullName, String mobile, String email, String password, String businessName) {
+        public Request(String fullName, String mobile, String email, String password) {
+            this(fullName, mobile, email, password, null);
+        }
+    }
 
     public record Registered(String userId, String vendorId, String email) {}
 
@@ -77,10 +82,12 @@ public class VendorRegistrationService {
         String name = in.fullName() == null ? "" : in.fullName().trim().replaceAll("\\s+", " ");
         String mail = in.email() == null ? "" : in.email().trim().toLowerCase(Locale.ROOT);
         String mobile = PhoneUtil.normalizeIndianMobile(in.mobile());
+        String business = in.businessName() == null ? "" : in.businessName().trim().replaceAll("\\s+", " ");
 
         Map<String, String> errors = new LinkedHashMap<>();
         if (name.length() < 2) errors.put("fullName", "Full name is required");
         else if (name.length() > 100) errors.put("fullName", "Full name must be at most 100 characters");
+        if (business.length() > 120) errors.put("businessName", "Business name must be at most 120 characters");
         if (mobile == null) errors.put("mobile", "Enter a valid 10-digit Indian mobile number");
         if (mail.isEmpty()) errors.put("email", "Email address is required");
         else if (mail.length() > 254 || !EMAIL.matcher(mail).matches()) errors.put("email", "Enter a valid email address");
@@ -107,6 +114,9 @@ public class VendorRegistrationService {
                         VALUES (?, ?, ?, ?, 'VENDOR'::"UserRole", ?, false, true, ?, ?)
                         """, userId, name, mail, hash, mobile, now, now);
                 insertVendorProfile(vendorId, userId, name, mail, mobile, now);
+                if (!business.isEmpty()) {
+                    jdbc.update("UPDATE public.\"Vendor\" SET \"companyName\" = ? WHERE id = ?", business, vendorId);
+                }
                 audit.record(new AuthenticatedUser(userId, mail, "VENDOR", null), "vendor.registered", "vendor", vendorId, vendorId, ip,
                         Map.of("channel", "web", "approval", "automatic"));
             });

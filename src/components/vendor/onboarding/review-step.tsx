@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Checkbox } from "@/components/ui/field";
 import { usePartCategoryTree } from "@/components/catalog/use-part-category-tree";
 import { vehicleSegmentLabel } from "@/lib/catalog/vehicle-segments";
@@ -35,6 +36,7 @@ type DeclKey = (typeof DECLARATIONS)[number]["key"];
 
 function ReviewForm({ app }: { app: VendorApplication }) {
   const router = useRouter();
+  const { update } = useSession();
   const { set } = useApplication();
   const [accepted, setAccepted] = React.useState<Record<DeclKey, boolean>>({
     acceptTerms: false,
@@ -60,7 +62,13 @@ function ReviewForm({ app }: { app: VendorApplication }) {
     try {
       const next = await submitApplication(accepted);
       set(next);
-      router.push(next.state === "ACTIVE" ? "/vendor/dashboard" : "/vendor/onboarding");
+      if (next.state === "ACTIVE") {
+        // The session still says "profile pending" (the middleware would send them straight back); refresh it first.
+        await update().catch(() => undefined);
+        window.location.assign("/vendor/dashboard");
+        return;
+      }
+      router.push("/vendor/onboarding");
     } catch (err) {
       const { fields, message } = errorsFrom(err);
       setErrors(fields);

@@ -60,7 +60,8 @@ export function ApplicationProvider({ children }: { children: React.ReactNode })
     if (!app || refreshed.current) return;
     const sessionStatus = session?.user?.vendorStatus;
     const serverApproved = app.state === "ACTIVE";
-    if (serverApproved !== (sessionStatus === "APPROVED")) {
+    const pendingMismatch = serverApproved && app.profileComplete === (session?.user?.vendorProfilePending === true);
+    if (serverApproved !== (sessionStatus === "APPROVED") || pendingMismatch) {
       refreshed.current = true;
       update().then(() => {
         if (serverApproved && app.profileComplete) router.replace("/vendor/dashboard");

@@ -7,6 +7,7 @@ import type { Adapter } from "next-auth/adapters";
 import { authenticateWithPassword } from "@/lib/auth/credentials";
 import { createSession } from "@/lib/auth/session";
 import { buildSessionClaims } from "@/lib/auth/identity";
+import { isVendorProfilePending } from "@/lib/auth/vendor-profile";
 
 function getClientIP(headers?: Record<string, any>): string | undefined {
   const forwarded = headers?.["x-forwarded-for"];
@@ -80,6 +81,7 @@ export const authOptions: NextAuthOptions = {
         // session so the user can be routed to the right verification step.
         return {
           ...buildSessionClaims(user),
+          vendorProfilePending: user.role === "VENDOR" ? await isVendorProfilePending(user.vendor?.id) : false,
           email: user.email,
           name: user.name,
           sessionId,
@@ -101,6 +103,7 @@ export const authOptions: NextAuthOptions = {
         token.mobileVerified = (user as { mobileVerified?: boolean }).mobileVerified;
         token.dealerStatus = (user as { dealerStatus?: string }).dealerStatus;
         token.vendorStatus = (user as { vendorStatus?: string }).vendorStatus;
+        token.vendorProfilePending = (user as { vendorProfilePending?: boolean }).vendorProfilePending ?? false;
         token.sessionId = (user as { sessionId?: string }).sessionId;
       }
 
@@ -118,6 +121,8 @@ export const authOptions: NextAuthOptions = {
           token.mobileVerified = fresh.mobileVerified;
           token.dealerStatus = fresh.dealer?.status ?? undefined;
           token.vendorStatus = fresh.vendor?.status ?? undefined;
+          // Re-read after the vendor submits the business profile, so the dashboard opens at once.
+          token.vendorProfilePending = fresh.role === "VENDOR" ? await isVendorProfilePending(fresh.vendor?.id) : false;
         }
       }
 
@@ -136,6 +141,7 @@ export const authOptions: NextAuthOptions = {
         session.user.mobileVerified = token.mobileVerified as boolean | undefined;
         session.user.dealerStatus = token.dealerStatus as string | undefined;
         session.user.vendorStatus = token.vendorStatus as string | undefined;
+        session.user.vendorProfilePending = token.vendorProfilePending === true;
       }
       return session;
     },

@@ -65,7 +65,7 @@ public class KycDocumentsService {
     }
 
     public void upload(AuthenticatedUser user, String documentType, MultipartFile file, String ip) {
-        VendorSnapshot v = vendors.editable(user);
+        VendorSnapshot v = vendors.documentsWritable(user);
         String type = documentType == null ? "" : documentType.trim().toUpperCase();
         if (!VendorDocuments.uploadable(type)) throw FieldErrorsException.invalid("documentType", "Unknown document type");
         if (file == null || file.isEmpty()) throw FieldErrorsException.invalid(type, "This file is empty");
@@ -116,7 +116,7 @@ public class KycDocumentsService {
     }
 
     public void remove(AuthenticatedUser user, String documentType, String ip) {
-        VendorSnapshot v = vendors.editable(user);
+        VendorSnapshot v = vendors.documentsWritable(user);
         String type = documentType == null ? "" : documentType.trim().toUpperCase();
         List<VendorSnapshot.Document> docs = v.documents().stream().filter(d -> d.documentType().equals(type)).toList();
         if (docs.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "Document not found", "NOT_FOUND", null);

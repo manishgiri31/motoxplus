@@ -1,10 +1,9 @@
 package com.motoxplus.api.vendor;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** Which KYC documents a vendor uploads (public."VendorDocumentType"), and which are mandatory. */
+/** Which KYC documents a vendor may upload (public."VendorDocumentType"); all of them are optional. */
 public final class VendorDocuments {
     private VendorDocuments() {}
 
@@ -26,11 +25,12 @@ public final class VendorDocuments {
 
     public static final long MAX_BYTES = 5L * 1024 * 1024;
 
-    /** PAN and bank proof always; the GST certificate whenever a GSTIN was given. Aadhaar is never asked for. */
+    /**
+     * None: every KYC document is optional (owner decision 2026-11-14). Vendors may upload any of them, from
+     * onboarding or later, and the reviewer sees what is there. Aadhaar is never asked for.
+     */
     public static List<String> required(boolean hasGstin) {
-        List<String> r = new ArrayList<>(List.of(PAN, BANK_PROOF));
-        if (hasGstin) r.add(1, GST);
-        return r;
+        return List.of();
     }
 
     public static boolean uploadable(String type) { return LABELS.containsKey(type); }

@@ -7,8 +7,6 @@ import { VendorCTA } from "@/components/become-vendor/vendor-cta";
 import { VendorFAQ } from "@/components/become-vendor/vendor-faq";
 import { VendorHero } from "@/components/become-vendor/vendor-hero";
 import { VendorHowItWorks } from "@/components/become-vendor/vendor-how-it-works";
-import { VendorRegisterSection } from "@/components/become-vendor/vendor-register-section";
-import { SELLER_SIGNUP_OPEN } from "@/lib/seller/config";
 import { VendorTransparency } from "@/components/become-vendor/vendor-transparency";
 import { VendorTypes } from "@/components/become-vendor/vendor-types";
 
@@ -44,9 +42,6 @@ export default function BecomeVendorPage() {
       <VendorTypes />
       <VendorHowItWorks />
       <VendorTransparency />
-      {/* Registration is its own flow (/become-vendor/register); the in-page section is only the interest form used
-          while signup is closed. */}
-      {!SELLER_SIGNUP_OPEN && <VendorRegisterSection />}
       <VendorFAQ />
       <VendorCTA />
     </div>

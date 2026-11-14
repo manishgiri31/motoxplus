@@ -76,6 +76,11 @@ export default withAuth(
         if (token?.vendorStatus !== "APPROVED" && !onboarding) {
           return NextResponse.redirect(new URL("/vendor/onboarding", req.url));
         }
+        // Owner rule (2026-11-14): until the business profile is complete, a vendor always lands on profile
+        // completion, never the dashboard. The flag is refreshed when they submit (useSession().update()).
+        if (token?.vendorProfilePending === true && !onboarding) {
+          return NextResponse.redirect(new URL("/vendor/onboarding", req.url));
+        }
       } else if (token?.dealerStatus === "SUSPENDED" || token?.dealerStatus === "REJECTED") {
         return NextResponse.redirect(new URL("/pending-approval", req.url));
       }

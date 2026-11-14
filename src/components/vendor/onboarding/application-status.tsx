@@ -122,10 +122,10 @@ function Checklist({ app }: { app: VendorApplication }) {
       <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-[var(--muted)]">
         {ready
           ? active
-            ? "Everything is filled in. Confirm it once to start listing products."
+            ? "Everything is filled in. Confirm it once to open your dashboard and start listing products."
             : "Everything is filled in. Review it once and submit it for approval."
           : active
-            ? "Finish your business profile to start selling: five short steps, saved as you go. Your dashboard is already open."
+            ? "Finish your business profile to open your vendor dashboard: five short steps, saved as you go. Documents are optional."
             : "Five short steps. Your progress is saved after each one, so you can stop and come back any time."}
       </p>
 
@@ -171,11 +171,7 @@ function Checklist({ app }: { app: VendorApplication }) {
         <Button asChild size="lg" iconRight={<ArrowRight aria-hidden />} className="w-full sm:w-auto">
           <Link href={next.href}>{ready ? "Review and submit" : doneCount === 0 ? `Start with ${next.label.toLowerCase()}` : `Continue: ${next.label}`}</Link>
         </Button>
-        {active && (
-          <Link href="/vendor/dashboard" className="text-center text-sm font-medium text-[var(--muted)] underline-offset-4 hover:text-[var(--ink)] hover:underline">
-            Go to dashboard
-          </Link>
-        )}
+
       </div>
     </Panel>
   );

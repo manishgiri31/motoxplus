@@ -28,6 +28,7 @@ const navItems = [
   { icon: ClipboardList, label: "Purchase Orders", href: "/vendor/purchase-orders" },
   { icon: FileText, label: "My Invoices", href: "/vendor/invoices" },
   { icon: CreditCard, label: "Payments", href: "/vendor/payments" },
+  { icon: FileText, label: "KYC documents", href: "/vendor/onboarding/documents" },
   { icon: User, label: "My Profile", href: "/vendor/profile" },
 ];
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { encode } from "next-auth/jwt";
 import { createSession } from "./session";
 import { buildSessionClaims, type UserWithRelations } from "./identity";
+import { isVendorProfilePending } from "./vendor-profile";
 import { COOKIE_ACCESS, COOKIE_REFRESH, ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from "./jwt";
 
 // Mirrors authOptions.session.maxAge in src/lib/auth.ts — kept in sync
@@ -39,7 +40,10 @@ export async function establishWebSession(user: UserWithRelations, opts: Establi
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) throw new Error("NEXTAUTH_SECRET must be set — refusing to establish a web session with no secret to sign it");
 
-  const claims = buildSessionClaims(user);
+  const claims = {
+    ...buildSessionClaims(user),
+    vendorProfilePending: user.role === "VENDOR" ? await isVendorProfilePending(user.vendor?.id) : false,
+  };
   const nextAuthToken = await encode({
     token: { ...claims, sub: user.id, email: user.email, name: user.name },
     secret,

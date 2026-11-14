@@ -35,11 +35,14 @@ export function StepPage({
   title,
   description,
   backHref,
+  writable,
   children,
 }: {
   title: string;
   description: string;
   backHref?: string;
+  /** Whether this page can still be changed; defaults to the application being editable. */
+  writable?: (app: VendorApplication) => boolean;
   children: (app: VendorApplication) => React.ReactNode;
 }) {
   const { status, reload } = useApplication();
@@ -75,7 +78,7 @@ export function StepPage({
     <Panel>
       <h1 className="text-[clamp(24px,3vw,32px)] font-semibold tracking-tight">{title}</h1>
       <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-[var(--muted)]">{description}</p>
-      {!app.editable && (
+      {!(writable ? writable(app) : app.editable) && (
         <div className="mt-6">
           <Banner tone="info">
             {app.state === "UNDER_REVIEW"

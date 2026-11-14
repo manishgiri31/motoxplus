@@ -6,6 +6,7 @@ import { checkIPRateLimit } from "@/lib/auth/rate-limit";
 import { revokeSession } from "@/lib/auth/session";
 import { establishWebSession, setWebSessionCookies } from "@/lib/auth/web-session";
 import { WORKSPACE_INFO, switchError, type Workspace } from "@/lib/auth/workspaces";
+import { isVendorProfilePending } from "@/lib/auth/vendor-profile";
 
 /**
  * POST /api/auth/switch-workspace { workspace: "DEALER" | "CUSTOMER" | "VENDOR" }
@@ -56,8 +57,11 @@ export async function POST(req: NextRequest) {
     deviceInfo: getDeviceInfo(req),
   });
 
+  // A vendor whose business profile isn't finished lands on profile completion, never the dashboard.
   const redirectTo =
-    target === "VENDOR" && updated.vendor?.status !== "APPROVED" ? "/vendor/onboarding" : WORKSPACE_INFO[target].home;
+    target === "VENDOR" && (updated.vendor?.status !== "APPROVED" || (await isVendorProfilePending(updated.vendor?.id)))
+      ? "/vendor/onboarding"
+      : WORKSPACE_INFO[target].home;
   const res = NextResponse.json({ workspace: target, redirectTo });
   setWebSessionCookies(res, session);
   return res;

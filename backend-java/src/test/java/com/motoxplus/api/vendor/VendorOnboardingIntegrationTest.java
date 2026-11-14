@@ -179,6 +179,14 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.fieldErrors.email").value("Email already registered"));
 
+        // One-step signup also sends the business name; it lands on the vendor row and pre-fills the business step.
+        JsonNode withBusiness = read(mvc.perform(post("/api/v1/vendors/register").contentType(MediaType.APPLICATION_JSON).header("X-Real-IP", "10.1.1.3")
+                        .content("{\"fullName\":\"Meena Rao\",\"businessName\":\"  Rao   Auto Parts \",\"mobile\":\"9876501234\",\"email\":\"rao-"
+                                + UUID.randomUUID().toString().substring(0, 6) + "@example.test\",\"password\":\"Spare-Parts-2026\"}"))
+                .andExpect(status().isCreated()));
+        assertThat(jdbc.queryForObject("SELECT \"companyName\" FROM \"Vendor\" WHERE id = ?", String.class, withBusiness.get("vendorId").asString()))
+                .isEqualTo("Rao Auto Parts");
+
         mvc.perform(post("/api/v1/vendors/register").contentType(MediaType.APPLICATION_JSON).header("X-Real-IP", "10.1.1.2")
                         .content("{\"fullName\":\"A\",\"mobile\":\"123\",\"email\":\"bad\",\"password\":\"password\"}"))
                 .andExpect(status().isBadRequest())
@@ -259,8 +267,10 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
                 Integer.class, v.vendorId())).isEqualTo(1);
 
         mvc.perform(get("/api/v1/vendors/me/listings/overview").header("Authorization", v.bearer())).andExpect(status().isOk());
-        // Registered details are locked again once complete (changes go through MotoXPlus).
+        // Registered details are locked again once complete (changes go through MotoXPlus)...
         putJson(v, "bank", "{}").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("APPLICATION_LOCKED"));
+        // ...but optional documents can still be added later.
+        upload(v, "ADDRESS_PROOF", PDF, "address.pdf").andExpect(status().isOk()).andExpect(jsonPath("$.documentsEditable").value(true));
 
         // An admin can still suspend an auto-approved vendor.
         mvc.perform(post("/api/v1/admin/vendor-applications/" + v.vendorId() + "/suspend").header("Authorization", staff("ADMIN"))
@@ -323,7 +333,7 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    void stateMovesToDocumentsPendingThenSubmitNeedsAllDeclarations() throws Exception {
+    void documentsAreOptionalAndSubmitNeedsAllDeclarations() throws Exception {
         Vendor v = asReviewedApplicant(register());
         verifyContacts(v);
         putJson(v, "business", BUSINESS.replace("ABCDE1234F", "ABCDZ1234F")).andExpect(status().isOk());
@@ -334,17 +344,12 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
         putJson(v, "bank", """
                 {"accountHolder":"Someone Else","bankName":"SBI","accountNumber":"123456789012","ifsc":"SBIN0001234"}""")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.state").value("DOCUMENTS_PENDING"))
-                .andExpect(jsonPath("$.missingDocuments.length()").value(3));
-
-        mvc.perform(post("/api/v1/vendors/me/application/submit").header("Authorization", v.bearer())
-                        .contentType(MediaType.APPLICATION_JSON).content(DECLARATIONS))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.fieldErrors.REQUIRED_DOCUMENTS").exists());
-
-        upload(v, "PAN_CARD", PDF, "p.pdf").andExpect(status().isOk());
-        upload(v, "GST_CERTIFICATE", PDF, "g.pdf").andExpect(status().isOk());
-        upload(v, "CANCELLED_CHEQUE", PNG, "c.png").andExpect(status().isOk()).andExpect(jsonPath("$.state").value("DRAFT"));
+                // No document is required (owner decision 2026-11-14): nothing is missing, the documents step is done.
+                .andExpect(jsonPath("$.state").value("DRAFT"))
+                .andExpect(jsonPath("$.requiredDocuments").isEmpty())
+                .andExpect(jsonPath("$.missingDocuments").isEmpty())
+                .andExpect(jsonPath("$.steps[6].id").value("documents"))
+                .andExpect(jsonPath("$.steps[6].done").value(true));
 
         mvc.perform(post("/api/v1/vendors/me/application/submit").header("Authorization", v.bearer())
                         .contentType(MediaType.APPLICATION_JSON).content(DECLARATIONS.replace("\"declareGenuineProducts\":true", "\"declareGenuineProducts\":false")))
@@ -369,6 +374,7 @@ class VendorOnboardingIntegrationTest extends IntegrationTestBase {
         boolean holderWarn = false;
         for (JsonNode c : detail.get("checks")) {
             if (c.get("code").asString().equals("ACCOUNT_HOLDER_NAME")) holderWarn = c.get("result").asString().equals("WARN");
+            if (c.get("code").asString().equals("DOCUMENTS")) assertThat(c.get("result").asString()).isEqualTo("WARN");
         }
         assertThat(holderWarn).isTrue();
     }

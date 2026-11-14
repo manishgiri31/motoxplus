@@ -20,6 +20,9 @@ public final class ApplicationView {
         m.put("state", state.name());
         m.put("editable", v.profileEditable());
         m.put("profileComplete", !v.profilePending());
+        // Optional KYC documents can still be added by an active vendor (VendorContext#documentsWritable).
+        m.put("documentsEditable", v.profileEditable()
+                || (state == ApplicationState.ACTIVE && v.userActive() && v.emailVerified() && v.mobileVerified()));
 
         Map<String, Object> account = new LinkedHashMap<>();
         account.put("fullName", v.fullName());
@@ -27,6 +30,8 @@ public final class ApplicationView {
         account.put("mobile", v.mobile());
         account.put("emailVerified", v.emailVerified());
         account.put("mobileVerified", v.mobileVerified());
+        // The name given at signup, before the business step is saved (pre-fills that step).
+        account.put("businessName", v.business().businessName());
         m.put("account", account);
 
         var b = v.business();

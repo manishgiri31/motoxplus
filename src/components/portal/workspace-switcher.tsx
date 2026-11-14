@@ -14,7 +14,7 @@ export interface WorkspaceUser {
 
 /** Where to add the profile this account doesn't have yet (same login; only business details are asked for). */
 const ADD_PROFILE: Partial<Record<Workspace, { href: string; label: string }>> = {
-  VENDOR: { href: "/become-vendor/register", label: "Start selling: add a vendor profile" },
+  VENDOR: { href: "/become-vendor#start", label: "Start selling: add a vendor profile" },
   DEALER: { href: "/become-dealer", label: "Buy at dealer prices: add a dealer profile" },
 };
 

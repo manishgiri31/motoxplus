@@ -17,6 +17,7 @@ import {
   type DocumentType,
   type VendorApplication,
 } from "@/lib/vendor/onboarding";
+import { ApiError } from "@/lib/api/client";
 import { errorsFrom, useApplication } from "./application-context";
 import { Banner, StepPage } from "./step-page";
 
@@ -24,8 +25,9 @@ export function DocumentsStep() {
   return (
     <StepPage
       title="Business and bank documents"
-      description="PDF, JPG or PNG, up to 5 MB each. Documents are stored privately and only MotoXPlus reviewers can open them. We never ask for Aadhaar."
+      description="Optional. Upload now or later from your dashboard; PDF, JPG or PNG, up to 5 MB each. Documents are stored privately and only MotoXPlus reviewers can open them. We never ask for Aadhaar."
       backHref="/vendor/onboarding/bank"
+      writable={(app) => app.documentsEditable ?? app.editable}
     >
       {(app) => <DocumentList app={app} />}
     </StepPage>
@@ -61,7 +63,7 @@ function DocumentList({ app }: { app: VendorApplication }) {
             </p>
           )}
           <Button size="lg" disabled={missing.length > 0} onClick={() => router.push("/vendor/onboarding/review")} className="w-full sm:w-auto">
-            Continue to review
+            {app.documents.length === 0 ? "Skip for now" : "Continue to review"}
           </Button>
         </div>
       </div>
@@ -90,7 +92,13 @@ function DocumentRow({ app, type, required }: { app: VendorApplication; type: Do
       set(await uploadDocument(type, file));
     } catch (e) {
       const { fields, message } = errorsFrom(e);
-      setError(fields[type] ?? fields.documentType ?? message);
+      // 5xx = document storage unavailable; documents are optional, so say the vendor can carry on.
+      const unavailable = e instanceof ApiError && e.status >= 500;
+      setError(
+        fields[type] ??
+          fields.documentType ??
+          (unavailable ? "Document upload isn't available right now. Documents are optional: continue and upload this later." : message)
+      );
     } finally {
       setBusy(null);
     }
@@ -171,7 +179,7 @@ function DocumentRow({ app, type, required }: { app: VendorApplication; type: Do
               View
             </Button>
           )}
-          {app.editable && (
+          {(app.documentsEditable ?? app.editable) && (
             <Button
               type="button"
               variant={doc ? "ghost" : "secondary"}
@@ -183,7 +191,7 @@ function DocumentRow({ app, type, required }: { app: VendorApplication; type: Do
               {busy === "upload" ? "Uploading…" : doc ? "Replace" : "Upload"}
             </Button>
           )}
-          {doc && app.editable && (
+          {doc && (app.documentsEditable ?? app.editable) && (
             <button
               type="button"
               onClick={remove}

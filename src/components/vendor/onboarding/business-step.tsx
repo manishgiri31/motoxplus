@@ -13,7 +13,7 @@ type Values = { businessName: string; businessType: string; pan: string; gstin: 
 function initial(app: VendorApplication): Values {
   const b = app.business;
   return {
-    businessName: b?.businessName ?? "",
+    businessName: b?.businessName ?? app.account.businessName ?? "",
     businessType: b?.businessType ?? "",
     pan: b?.pan ?? "",
     gstin: b?.gstin ?? "",

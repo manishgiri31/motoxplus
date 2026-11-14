@@ -49,7 +49,7 @@ export const PART_CATEGORY_LIST = [
 
 export const STEPS = [
   { title: "Register", body: "Create your account and verify your email and mobile. You are approved straight away." },
-  { title: "Complete your profile", body: "Add business details, bank account and KYC documents from your dashboard." },
+  { title: "Complete your profile", body: "Add business details and bank account; KYC documents are optional. Then your dashboard opens." },
   { title: "List products", body: "Upload your spare-parts catalogue, pricing, stock and compatibility." },
   { title: "Go live", body: "Your listings appear on the MotoXPlus storefront for dealers and customers." },
   { title: "Receive orders", body: "Dealers and customers can purchase your approved products." },
@@ -67,7 +67,7 @@ export const TRANSPARENCY_POINTS = [
 export const FAQS: { q: string; a: string }[] = [
   {
     q: "Who can register as a vendor?",
-    a: "Manufacturers, wholesalers, distributors, stockists and spare-parts suppliers who sell two-wheeler automotive parts and can provide business and KYC documents. Your account is approved as soon as you verify your email and mobile; you complete your business profile and KYC documents before your first listing goes live. MotoXPlus can suspend accounts that break the vendor agreement.",
+    a: "Manufacturers, wholesalers, distributors, stockists and spare-parts suppliers who sell two-wheeler automotive parts and have a bank account in the business's name. Your account is approved as soon as you verify your email and mobile; you complete your business profile (business details and bank account; documents are optional) before your dashboard opens. MotoXPlus can suspend accounts that break the vendor agreement.",
   },
   {
     q: "Can manufacturers and wholesalers both join?",
@@ -78,8 +78,8 @@ export const FAQS: { q: string; a: string }[] = [
     a: "Yes, you can list parts for the vehicle brands you supply, including Hero, Honda, Bajaj, TVS and Royal Enfield. Each listing, including its vehicle compatibility, is reviewed before it goes live, and you are responsible for describing your parts accurately.",
   },
   {
-    q: "What documents are required?",
-    a: "Your PAN document, a GST certificate if you are GST-registered, business registration proof where applicable, and a cancelled cheque or other bank proof. A product catalogue is optional. MotoXPlus may ask for more information later.",
+    q: "Do I need to upload documents?",
+    a: "No, documents are optional. You can add your PAN card, GST certificate, business registration proof, a cancelled cheque or an address proof whenever you like from your vendor account; they help us verify your business faster. MotoXPlus may ask for more information later.",
   },
   {
     q: "Is GST mandatory for every vendor?",

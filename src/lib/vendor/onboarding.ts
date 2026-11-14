@@ -29,7 +29,9 @@ export interface VendorApplication {
    * profile. The account is ACTIVE and the dashboard opens, but selling stays locked until it is complete.
    */
   profileComplete: boolean;
-  account: { fullName: string; email: string; mobile: string; emailVerified: boolean; mobileVerified: boolean };
+  /** Optional KYC documents can be added/replaced now (also true for an active vendor after onboarding). */
+  documentsEditable?: boolean;
+  account: { fullName: string; email: string; mobile: string; emailVerified: boolean; mobileVerified: boolean; businessName?: string };
   business: {
     businessName: string;
     businessType: string;
@@ -65,7 +67,7 @@ export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number]["id"];
 
 export const DOCUMENT_INFO: Record<DocumentType, { label: string; hint: string }> = {
   PAN_CARD: { label: "PAN card", hint: "The business PAN entered in your business details." },
-  GST_CERTIFICATE: { label: "GST certificate", hint: "Required because you entered a GSTIN." },
+  GST_CERTIFICATE: { label: "GST certificate", hint: "For the GSTIN in your business details." },
   BUSINESS_REGISTRATION: { label: "Business registration proof", hint: "Udyam, shop & establishment, incorporation certificate or partnership deed." },
   CANCELLED_CHEQUE: { label: "Cancelled cheque or bank proof", hint: "Must show the account holder name and account number you entered." },
   ADDRESS_PROOF: { label: "Business address proof", hint: "Utility bill, rent agreement or property document for the registered address." },
@@ -127,7 +129,7 @@ export const submitApplication = (body: {
   declareAccurateInformation: boolean;
 }) => apiFetch<VendorApplication>(`${BASE}/submit`, { method: "POST", json: body });
 
-export const registerVendor = (body: { fullName: string; mobile: string; email: string; password: string }) =>
+export const registerVendor = (body: { fullName: string; mobile: string; email: string; password: string; businessName?: string }) =>
   apiFetch<{ userId: string; vendorId: string; email: string; status: string }>("/vendors/register", {
     method: "POST",
     json: body,

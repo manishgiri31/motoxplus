@@ -14,6 +14,8 @@ declare module "next-auth" {
     mobileVerified?: boolean;
     dealerStatus?: string;
     vendorStatus?: string;
+    /** Self-registered vendor whose business profile isn't finished yet (lib/auth/vendor-profile.ts). */
+    vendorProfilePending?: boolean;
     sessionId?: string;
   }
   interface Session {
@@ -32,6 +34,8 @@ declare module "next-auth" {
       mobileVerified?: boolean;
       dealerStatus?: string;
       vendorStatus?: string;
+    /** Self-registered vendor whose business profile isn't finished yet (lib/auth/vendor-profile.ts). */
+    vendorProfilePending?: boolean;
     };
   }
 }
@@ -49,6 +53,8 @@ declare module "next-auth/jwt" {
     mobileVerified?: boolean;
     dealerStatus?: string;
     vendorStatus?: string;
+    /** Self-registered vendor whose business profile isn't finished yet (lib/auth/vendor-profile.ts). */
+    vendorProfilePending?: boolean;
     sessionId?: string;
   }
 }

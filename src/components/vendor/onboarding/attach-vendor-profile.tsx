@@ -6,7 +6,7 @@ import { AuthAlert, AuthHeading } from "@/components/auth/auth-ui";
 import { ApiError, NetworkError, apiFetch } from "@/lib/api/client";
 
 /**
- * /become-vendor/register for someone already signed in as a dealer or customer: no second account. The vendor
+ * /become-vendor (#start) for someone already signed in as a dealer or customer: no second account. The vendor
  * profile is added to this login (Java POST /api/v1/vendors/attach), the workspace switches to VENDOR, and the
  * business-profile steps open. Email, mobile and password stay exactly as they are.
  */

@@ -44,6 +44,16 @@ public class VendorContext {
         return v;
     }
 
+    /**
+     * Documents are optional and may be added at any time: while the application is editable, or later by an active
+     * vendor (e.g. after skipping them during onboarding). Under-review, rejected, suspended and blocked accounts can't.
+     */
+    public VendorSnapshot documentsWritable(AuthenticatedUser user) {
+        VendorSnapshot v = current(user);
+        if (v.state() == ApplicationState.ACTIVE && v.userActive() && v.emailVerified() && v.mobileVerified()) return v;
+        return editable(user);
+    }
+
     /** An approved vendor whose login is fully verified and active: the gate for selling features (Phase 3+). */
     public VendorSnapshot active(AuthenticatedUser user) {
         VendorSnapshot v = current(user);

@@ -1,6 +1,5 @@
 package com.motoxplus.api.vendor.onboarding.submit;
 
-import com.motoxplus.api.vendor.VendorDocuments;
 import com.motoxplus.api.vendor.VendorSnapshot;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -38,9 +37,9 @@ public final class ApplicationChecks {
         out.add(v.categoriesComplete() ? pass("PARTS_CATEGORIES", "Parts categories and vehicle segments selected")
                 : fail("PARTS_CATEGORIES", "Select the parts you manufacture or supply"));
         out.add(v.bankComplete() ? pass("BANK_ACCOUNT", "Bank account added") : fail("BANK_ACCOUNT", "Add your bank account"));
-        List<String> missing = v.missingDocuments();
-        out.add(missing.isEmpty() ? pass("REQUIRED_DOCUMENTS", "Required documents uploaded")
-                : fail("REQUIRED_DOCUMENTS", "Upload: " + String.join(", ", missing.stream().map(VendorDocuments.LABELS::get).toList())));
+        // Documents are optional; the reviewer only sees whether any were given.
+        out.add(v.documents().isEmpty() ? warn("DOCUMENTS", "No KYC documents uploaded (optional)")
+                : pass("DOCUMENTS", v.documents().size() + " KYC document(s) uploaded"));
         if (!v.businessComplete()) return out; // the remaining checks need business details
 
         String pan = v.business().pan();
