@@ -20,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${APP_URL}/privacy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
     { url: `${APP_URL}/terms`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
     { url: `${APP_URL}/cancellation-policy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
+    { url: `${APP_URL}/delete-account`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
     { url: `${APP_URL}/vehicles`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     ...VEHICLE_CATEGORIES.map((c) => ({
       url: `${APP_URL}/vehicles/${c.slug}`,
